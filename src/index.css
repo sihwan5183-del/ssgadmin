@@ -44,6 +44,14 @@
     --warning: 38 95% 60%;
     --warning-foreground: 240 18% 6%;
 
+    /* 수익/지출 시맨틱 — Emerald / Rose */
+    --revenue: 152 76% 50%;
+    --revenue-soft: 152 76% 50% / 0.15;
+    --expense: 350 85% 62%;
+    --expense-soft: 350 85% 62% / 0.15;
+    --gradient-revenue: linear-gradient(135deg, hsl(152 76% 45%), hsl(168 75% 50%));
+    --gradient-expense: linear-gradient(135deg, hsl(350 85% 60%), hsl(330 85% 60%));
+
     --border: 250 15% 18%;
     --input: 250 15% 16%;
     --ring: 270 90% 65%;
