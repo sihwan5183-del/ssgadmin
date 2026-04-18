@@ -1,13 +1,15 @@
 import { Bell, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ScopeToggle } from "./ScopeToggle";
 
 interface HeaderProps {
   title: string;
   subtitle?: string;
+  showScopeToggle?: boolean;
 }
 
-export const Header = ({ title, subtitle }: HeaderProps) => {
+export const Header = ({ title, subtitle, showScopeToggle = true }: HeaderProps) => {
   return (
     <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
       <div>
@@ -21,8 +23,9 @@ export const Header = ({ title, subtitle }: HeaderProps) => {
         {subtitle && <p className="mt-1.5 text-sm text-muted-foreground">{subtitle}</p>}
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="relative hidden md:block w-72">
+      <div className="flex items-center gap-3 flex-wrap">
+        {showScopeToggle && <ScopeToggle />}
+        <div className="relative hidden md:block w-60 lg:w-72">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
             placeholder="고객명 · 직원 · 모델 검색"
