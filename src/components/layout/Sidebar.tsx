@@ -16,7 +16,7 @@ const navItems = [
   { to: "/activities", label: "활동 관리", icon: Activity },
   { to: "/expenses", label: "지출 / ROI", icon: Wallet },
   { to: "/ranking", label: "랭킹", icon: Trophy },
-  { to: "/team", label: "권한 / 팀", icon: Users },
+  { to: "/team", label: "권한 / 뷰", icon: Users },
 ];
 
 export const Sidebar = () => {
