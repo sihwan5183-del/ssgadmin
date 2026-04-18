@@ -5,6 +5,7 @@ import { ChannelDonut } from "@/components/dashboard/ChannelDonut";
 import { RecentActivities } from "@/components/dashboard/RecentActivities";
 import { RankingPanel } from "@/components/dashboard/RankingPanel";
 import { PerformanceLedger } from "@/components/dashboard/PerformanceLedger";
+import { ChannelModelAnalysis } from "@/components/dashboard/ChannelModelAnalysis";
 import { summaryStats, formatShortKRW } from "@/data/mockData";
 import { TrendingUp, Wallet, Target, UserPlus } from "lucide-react";
 
