@@ -65,6 +65,11 @@ const Index = () => {
         <PerformanceLedger />
       </section>
 
+      {/* 채널별 판매 모델 상세 현황 */}
+      <section className="mb-6">
+        <ChannelModelAnalysis />
+      </section>
+
       {/* 활동 + 랭킹 — Bento Bottom */}
       <section className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <div className="lg:col-span-3">
