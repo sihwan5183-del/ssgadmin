@@ -23,18 +23,19 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AppShell>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/input" element={<InputPage />} />
-            <Route path="/activities" element={<ActivitiesPage />} />
-            <Route path="/expenses" element={<ExpensesPage />} />
-            <Route path="/ranking" element={<RankingPage />} />
-            <Route path="/team" element={<TeamPage />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AppShell>
-      </BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/input" element={<InputPage />} />
+              <Route path="/activities" element={<ActivitiesPage />} />
+              <Route path="/expenses" element={<ExpensesPage />} />
+              <Route path="/ranking" element={<RankingPage />} />
+              <Route path="/team" element={<TeamPage />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AppShell>
+        </BrowserRouter>
+      </ViewScopeProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
