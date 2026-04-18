@@ -4,6 +4,7 @@ import { PerformanceChart } from "@/components/dashboard/PerformanceChart";
 import { ChannelDonut } from "@/components/dashboard/ChannelDonut";
 import { RecentActivities } from "@/components/dashboard/RecentActivities";
 import { RankingPanel } from "@/components/dashboard/RankingPanel";
+import { PerformanceLedger } from "@/components/dashboard/PerformanceLedger";
 import { summaryStats, formatShortKRW } from "@/data/mockData";
 import { TrendingUp, Wallet, Target, UserPlus } from "lucide-react";
 
@@ -56,6 +57,11 @@ const Index = () => {
           <PerformanceChart />
         </div>
         <ChannelDonut />
+      </section>
+
+      {/* 실적장표(건) 상세 분석 — 탭 */}
+      <section className="mb-6">
+        <PerformanceLedger />
       </section>
 
       {/* 활동 + 랭킹 — Bento Bottom */}
