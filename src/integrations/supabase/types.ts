@@ -14,7 +14,168 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string
+          id: string
+          team: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          id?: string
+          team?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          id?: string
+          team?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sales: {
+        Row: {
+          birth_date: string | null
+          bundle: string | null
+          cash_account: string | null
+          cash_bank: string | null
+          cash_holder: string | null
+          cash_open: boolean | null
+          cash_support_amount: number | null
+          channel: string | null
+          created_at: string
+          created_by: string
+          customer_name: string | null
+          delivery_type: string | null
+          device_model: string | null
+          device_serial: string | null
+          distributor_amount: number | null
+          extra_subsidy: number | null
+          id: string
+          manager: string | null
+          moyo_excluded: boolean | null
+          net_fee: number | null
+          note: string | null
+          open_date: string | null
+          open_method: string | null
+          open_month: string | null
+          phone: string | null
+          product: string | null
+          rate_plan: string | null
+          receivable_amount: number | null
+          receivable_paid: string | null
+          sale_type: string | null
+          seq: number | null
+          status: string | null
+          tracking_no: string | null
+          unit_price: number | null
+          updated_at: string
+          usim_model: string | null
+          usim_serial: string | null
+          vas_fee: number | null
+          vas1: string | null
+          vas2: string | null
+          voucher: string | null
+          voucher_returned: string | null
+        }
+        Insert: {
+          birth_date?: string | null
+          bundle?: string | null
+          cash_account?: string | null
+          cash_bank?: string | null
+          cash_holder?: string | null
+          cash_open?: boolean | null
+          cash_support_amount?: number | null
+          channel?: string | null
+          created_at?: string
+          created_by: string
+          customer_name?: string | null
+          delivery_type?: string | null
+          device_model?: string | null
+          device_serial?: string | null
+          distributor_amount?: number | null
+          extra_subsidy?: number | null
+          id?: string
+          manager?: string | null
+          moyo_excluded?: boolean | null
+          net_fee?: number | null
+          note?: string | null
+          open_date?: string | null
+          open_method?: string | null
+          open_month?: string | null
+          phone?: string | null
+          product?: string | null
+          rate_plan?: string | null
+          receivable_amount?: number | null
+          receivable_paid?: string | null
+          sale_type?: string | null
+          seq?: number | null
+          status?: string | null
+          tracking_no?: string | null
+          unit_price?: number | null
+          updated_at?: string
+          usim_model?: string | null
+          usim_serial?: string | null
+          vas_fee?: number | null
+          vas1?: string | null
+          vas2?: string | null
+          voucher?: string | null
+          voucher_returned?: string | null
+        }
+        Update: {
+          birth_date?: string | null
+          bundle?: string | null
+          cash_account?: string | null
+          cash_bank?: string | null
+          cash_holder?: string | null
+          cash_open?: boolean | null
+          cash_support_amount?: number | null
+          channel?: string | null
+          created_at?: string
+          created_by?: string
+          customer_name?: string | null
+          delivery_type?: string | null
+          device_model?: string | null
+          device_serial?: string | null
+          distributor_amount?: number | null
+          extra_subsidy?: number | null
+          id?: string
+          manager?: string | null
+          moyo_excluded?: boolean | null
+          net_fee?: number | null
+          note?: string | null
+          open_date?: string | null
+          open_method?: string | null
+          open_month?: string | null
+          phone?: string | null
+          product?: string | null
+          rate_plan?: string | null
+          receivable_amount?: number | null
+          receivable_paid?: string | null
+          sale_type?: string | null
+          seq?: number | null
+          status?: string | null
+          tracking_no?: string | null
+          unit_price?: number | null
+          updated_at?: string
+          usim_model?: string | null
+          usim_serial?: string | null
+          vas_fee?: number | null
+          vas1?: string | null
+          vas2?: string | null
+          voucher?: string | null
+          voucher_returned?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
