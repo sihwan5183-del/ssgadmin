@@ -4,6 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ViewScopeProvider } from "@/contexts/ViewScopeContext";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppShell } from "@/components/layout/AppShell";
 import Index from "./pages/Index.tsx";
 import InputPage from "./pages/InputPage.tsx";
@@ -11,6 +13,7 @@ import ActivitiesPage from "./pages/ActivitiesPage.tsx";
 import ExpensesPage from "./pages/ExpensesPage.tsx";
 import RankingPage from "./pages/RankingPage.tsx";
 import TeamPage from "./pages/TeamPage.tsx";
+import AuthPage from "./pages/AuthPage.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -18,24 +21,35 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <ViewScopeProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AppShell>
+      <BrowserRouter>
+        <AuthProvider>
+          <ViewScopeProvider>
+            <Toaster />
+            <Sonner />
             <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/input" element={<InputPage />} />
-              <Route path="/activities" element={<ActivitiesPage />} />
-              <Route path="/expenses" element={<ExpensesPage />} />
-              <Route path="/ranking" element={<RankingPage />} />
-              <Route path="/team" element={<TeamPage />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
+              <Route path="/auth" element={<AuthPage />} />
+              <Route
+                path="*"
+                element={
+                  <ProtectedRoute>
+                    <AppShell>
+                      <Routes>
+                        <Route path="/" element={<Index />} />
+                        <Route path="/input" element={<InputPage />} />
+                        <Route path="/activities" element={<ActivitiesPage />} />
+                        <Route path="/expenses" element={<ExpensesPage />} />
+                        <Route path="/ranking" element={<RankingPage />} />
+                        <Route path="/team" element={<TeamPage />} />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </AppShell>
+                  </ProtectedRoute>
+                }
+              />
             </Routes>
-          </AppShell>
-        </BrowserRouter>
-      </ViewScopeProvider>
+          </ViewScopeProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );

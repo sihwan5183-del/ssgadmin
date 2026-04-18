@@ -7,8 +7,11 @@ import {
   Trophy,
   Users,
   Sparkles,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const navItems = [
   { to: "/", label: "대시보드", icon: LayoutDashboard },
@@ -21,6 +24,11 @@ const navItems = [
 
 export const Sidebar = () => {
   const location = useLocation();
+  const { user, signOut } = useAuth();
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success("로그아웃 되었습니다");
+  };
   return (
     <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-64 flex-col glass-strong border-r border-border/40 z-40">
       <div className="px-6 py-7 flex items-center gap-3">
@@ -56,9 +64,14 @@ export const Sidebar = () => {
       </nav>
 
       <div className="m-3 p-4 rounded-2xl glass border border-border/40">
-        <div className="text-xs text-muted-foreground">로그인</div>
-        <div className="mt-1 font-semibold text-sm">대표 / 기획팀</div>
-        <div className="mt-3 text-[11px] text-muted-foreground">전체 분석 권한 활성</div>
+        <div className="text-xs text-muted-foreground">로그인 계정</div>
+        <div className="mt-1 font-semibold text-sm truncate">{user?.email ?? "-"}</div>
+        <button
+          onClick={handleSignOut}
+          className="mt-3 w-full flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground py-2 rounded-lg border border-border/40 hover:border-primary/40 transition-colors"
+        >
+          <LogOut className="size-3.5" /> 로그아웃
+        </button>
       </div>
     </aside>
   );
