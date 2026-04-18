@@ -1,6 +1,6 @@
 import { subscriptionTypes, modelPolicyShare, usimStats } from "@/data/performanceData";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { ArrowUpRight, Sim } from "lucide-react";
+import { ArrowUpRight, CreditCard } from "lucide-react";
 
 export const MobileBreakdown = () => {
   const totalSub = subscriptionTypes.reduce((s, t) => s + t.count, 0);
@@ -112,7 +112,7 @@ export const MobileBreakdown = () => {
 const UsimTile = ({ label, value, hint, highlight }: { label: string; value: number; hint: string; highlight?: boolean }) => (
   <div className={`rounded-xl p-4 border ${highlight ? "bg-gradient-soft border-primary/30" : "bg-card/40 border-border/40"}`}>
     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-      <Sim className="size-3.5" /> {label}
+      <CreditCard className="size-3.5" /> {label}
     </div>
     <div className="mt-2 text-2xl font-bold tabular-nums">{value}<span className="text-sm text-muted-foreground ml-1">건</span></div>
     <div className="text-[11px] text-muted-foreground mt-0.5">{hint}</div>
