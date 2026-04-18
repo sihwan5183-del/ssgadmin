@@ -42,6 +42,8 @@ export default {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
         },
+        revenue: "hsl(var(--revenue))",
+        expense: "hsl(var(--expense))",
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
@@ -73,6 +75,8 @@ export default {
         "gradient-primary": "var(--gradient-primary)",
         "gradient-soft": "var(--gradient-soft)",
         "gradient-mesh": "var(--gradient-mesh)",
+        "gradient-revenue": "var(--gradient-revenue)",
+        "gradient-expense": "var(--gradient-expense)",
       },
       boxShadow: {
         glow: "var(--shadow-glow)",

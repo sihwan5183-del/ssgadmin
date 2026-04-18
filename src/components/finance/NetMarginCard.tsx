@@ -1,0 +1,63 @@
+import { totals, netMargin, formatKRWShort } from "@/data/financeData";
+import { ArrowRight, Minus, Equal } from "lucide-react";
+
+export const NetMarginCard = () => {
+  const items = [
+    { label: "총 리베이트", value: totals.totalRebate, tone: "revenue" as const, op: null },
+    { label: "고객 지원금(오퍼)", value: totals.totalOffer, tone: "expense" as const, op: "minus" as const },
+    { label: "마케팅비", value: totals.totalSpend, tone: "expense" as const, op: "minus" as const },
+  ];
+  const marginRate = Math.round((netMargin / totals.totalRebate) * 100);
+
+  return (
+    <div className="glass rounded-2xl p-5">
+      <div className="flex items-baseline justify-between mb-3">
+        <div>
+          <h4 className="text-base font-semibold tracking-tight">순수익 (Net Margin) 계산</h4>
+          <p className="text-xs text-muted-foreground mt-0.5">총 리베이트 − (지원금 + 마케팅비)</p>
+        </div>
+        <div className="text-right">
+          <div className="text-3xl font-bold text-gradient tabular-nums">{formatKRWShort(netMargin)}</div>
+          <div className="text-[11px] text-muted-foreground tabular-nums">마진율 {marginRate}%</div>
+        </div>
+      </div>
+
+      <div className="flex items-stretch gap-2 overflow-x-auto pb-1">
+        {items.map((it, i) => (
+          <div key={it.label} className="flex items-center gap-2 flex-1 min-w-[140px]">
+            {i > 0 && (
+              <div className="grid place-items-center size-7 rounded-lg bg-muted/50 text-muted-foreground shrink-0">
+                <Minus className="size-3.5" />
+              </div>
+            )}
+            <div
+              className={`flex-1 rounded-xl p-3 border ${
+                it.tone === "revenue"
+                  ? "border-revenue/30 bg-[hsl(var(--revenue-soft))]"
+                  : "border-expense/30 bg-[hsl(var(--expense-soft))]"
+              }`}
+            >
+              <div className="text-[11px] text-muted-foreground">{it.label}</div>
+              <div
+                className={`mt-1 text-base font-bold tabular-nums ${
+                  it.tone === "revenue" ? "text-revenue" : "text-expense"
+                }`}
+              >
+                {formatKRWShort(it.value)}
+              </div>
+            </div>
+          </div>
+        ))}
+        <div className="grid place-items-center size-7 rounded-lg bg-muted/50 text-muted-foreground shrink-0 self-center">
+          <Equal className="size-3.5" />
+        </div>
+        <div className="flex-1 min-w-[140px] rounded-xl p-3 bg-gradient-primary text-primary-foreground shadow-glow">
+          <div className="text-[11px] opacity-80 flex items-center gap-1">
+            순수익 <ArrowRight className="size-3" />
+          </div>
+          <div className="mt-1 text-base font-bold tabular-nums">{formatKRWShort(netMargin)}</div>
+        </div>
+      </div>
+    </div>
+  );
+};
