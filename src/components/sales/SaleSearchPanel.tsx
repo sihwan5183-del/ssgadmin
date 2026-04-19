@@ -187,10 +187,6 @@ export const SaleSearchPanel = () => {
     setPendingNote(sale.pending_note ?? "");
     setPendingResolved(sale.pending_resolved ?? true);
   };
-  const openDetail = (sale: SaleHit) => {
-    setSelected(sale);
-    setEditForm(sale);
-  };
 
   const saveEdit = async () => {
     if (!selected) return;
@@ -199,6 +195,16 @@ export const SaleSearchPanel = () => {
     EDITABLE_FIELDS.forEach(({ key }) => {
       if (editForm[key] !== selected[key]) payload[key as string] = editForm[key];
     });
+    // 미처리 항목 변경 감지
+    const pendingChanged =
+      JSON.stringify(selected.pending_items ?? []) !== JSON.stringify(pendingItems) ||
+      (selected.pending_note ?? "") !== pendingNote ||
+      (selected.pending_resolved ?? true) !== pendingResolved;
+    if (pendingChanged) {
+      payload.pending_items = pendingItems;
+      payload.pending_note = pendingNote || null;
+      payload.pending_resolved = pendingItems.length === 0 ? true : pendingResolved;
+    }
     if (Object.keys(payload).length === 0) {
       toast.info("변경된 내용이 없습니다");
       return;
@@ -208,26 +214,44 @@ export const SaleSearchPanel = () => {
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success("저장되었습니다");
-    setSelected({ ...selected, ...editForm } as SaleHit);
+    const { data } = await supabase.from("sales").select(SELECT_COLS).eq("id", selected.id).maybeSingle();
+    if (data) openDetail(data as SaleHit);
+    refreshCounts();
+    search();
+  };
+
+  const performApproval = async (next: ApprovalStatus, overrideReasonValue?: string) => {
+    if (!selected || !isAdmin) return;
+    const update: Record<string, unknown> = { approval_status: next };
+    if (next === "확정" && overrideReasonValue) {
+      update.approval_override_reason = overrideReasonValue;
+    } else if (next !== "확정") {
+      update.approval_override_reason = null;
+    }
+    const { error } = await supabase
+      .from("sales")
+      .update(update as never)
+      .eq("id", selected.id);
+    if (error) return toast.error(error.message);
+    toast.success(`상태를 '${next}'(으)로 변경했습니다`);
+    const { data } = await supabase.from("sales").select(SELECT_COLS).eq("id", selected.id).maybeSingle();
+    if (data) openDetail(data as SaleHit);
+    refreshCounts();
     search();
   };
 
   const updateApproval = async (next: ApprovalStatus) => {
     if (!selected || !isAdmin) return;
-    const { error } = await supabase
-      .from("sales")
-      .update({ approval_status: next } as never)
-      .eq("id", selected.id);
-    if (error) return toast.error(error.message);
-    toast.success(`상태를 '${next}'(으)로 변경했습니다`);
-    // 다시 조회
-    const { data } = await supabase.from("sales").select(SELECT_COLS).eq("id", selected.id).maybeSingle();
-    if (data) {
-      setSelected(data as SaleHit);
-      setEditForm(data as SaleHit);
+    // 미처리가 남아있는 상태에서 '확정'으로 변경 시도 → 사유 입력 필수
+    const hasUnhandled =
+      (selected.pending_items?.length ?? 0) > 0 && selected.pending_resolved === false;
+    if (next === "확정" && hasUnhandled) {
+      setPendingApprovalTarget(next);
+      setOverrideReason("");
+      setOverrideOpen(true);
+      return;
     }
-    refreshPendingCount();
-    search();
+    await performApproval(next);
   };
 
   return (
