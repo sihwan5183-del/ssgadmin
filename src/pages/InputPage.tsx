@@ -85,7 +85,10 @@ const InputPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rows, setRows] = useState<SaleRow[]>([]);
   const [busy, setBusy] = useState(false);
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
+  const { startDate, endDate, label: periodLabel } = usePeriod();
 
   const set = <K extends keyof SaleRow>(k: K, v: SaleRow[K] | undefined) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -97,21 +100,43 @@ const InputPage = () => {
   };
 
   const load = async () => {
-    const { data, error } = await supabase
+    const from = page * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    const { data, error, count } = await supabase
       .from("sales")
-      .select("*")
+      .select("*", { count: "exact" })
+      .gte("open_date", startDate)
+      .lte("open_date", endDate)
+      .order("open_date", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
-      .limit(50);
+      .range(from, to);
     if (error) {
       toast.error("목록 불러오기 실패", { description: error.message });
       return;
     }
     setRows((data ?? []) as SaleRow[]);
+    setTotal(count ?? 0);
   };
 
   useEffect(() => {
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, startDate, endDate]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [startDate, endDate]);
+
+  const handleExport = async () => {
+    const { data, error } = await supabase
+      .from("sales")
+      .select("*")
+      .gte("open_date", startDate)
+      .lte("open_date", endDate)
+      .order("open_date", { ascending: false, nullsFirst: false });
+    if (error) return toast.error("엑셀 내보내기 실패", { description: error.message });
+    exportToExcel(data ?? [], SALES_COLUMNS, `실적장표_${periodLabel.replace(/\s/g, "")}`, "실적");
+  };
 
   const reset = () => {
     setForm(emptyForm);
