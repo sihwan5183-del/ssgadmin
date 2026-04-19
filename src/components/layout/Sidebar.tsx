@@ -27,7 +27,6 @@ const navItems = [
   { to: "/", label: "대시보드", icon: LayoutDashboard },
   { to: "/input", label: "실적 입력", icon: PlusCircle },
   { to: "/regulars", label: "단골 관리", icon: HeartHandshake },
-  { to: "/regular-input", label: "단골 등록 (구)", icon: HeartHandshake },
   { to: "/activities", label: "활동 관리", icon: Activity },
   { to: "/missing-docs", label: "서류 미첨부", icon: FileWarning },
   { to: "/expenses", label: "지출 / ROI", icon: Wallet },
