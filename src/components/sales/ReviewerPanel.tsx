@@ -11,7 +11,16 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
+
+interface ChecklistItem { key: string; label: string }
+const DEFAULT_CHECKLIST: ChecklistItem[] = [
+  { key: "docs_match", label: "가입 서류 일치" },
+  { key: "plan_match", label: "요금제 확인" },
+  { key: "price_match", label: "단가 확인" },
+  { key: "bundle_match", label: "결합 확인" },
+];
 
 export type ApprovalStatus = "승인대기" | "확정" | "반려" | "수정요청" | "환수" | "취소";
 
@@ -38,6 +47,7 @@ interface SaleSnapshot {
   approved_at: string | null;
   pending_items: string[] | null;
   pending_resolved: boolean | null;
+  custom_fields?: Record<string, any> | null;
 }
 
 interface Props {
@@ -57,19 +67,43 @@ const STATUS_META: Record<string, { tone: string; icon: typeof CheckCircle2; lab
 export function ReviewerPanel({ sale, onChanged }: Props) {
   const { user } = useAuth();
   const { isAdmin } = useRole();
+  const { settings } = useAppSettings();
   const isOwner = user?.id === sale.created_by;
   const status = (sale.approval_status ?? "승인대기") as ApprovalStatus;
   const meta = STATUS_META[status] ?? STATUS_META["승인대기"];
   const StatusIcon = meta.icon;
 
+  // 어드민에서 정의한 체크리스트 (없으면 기본값)
+  const checklistItems: ChecklistItem[] = Array.isArray(settings["review.checklist"]) && settings["review.checklist"].length > 0
+    ? (settings["review.checklist"] as ChecklistItem[])
+    : DEFAULT_CHECKLIST;
+
+  const savedChecks = (sale.custom_fields?.review_checklist ?? {}) as Record<string, boolean>;
   const [reason, setReason] = useState("");
   const [fields, setFields] = useState<string[]>(sale.revision_fields ?? []);
+  const [checks, setChecks] = useState<Record<string, boolean>>(savedChecks);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     setReason("");
     setFields(sale.revision_fields ?? []);
-  }, [sale.id, sale.revision_fields]);
+    setChecks((sale.custom_fields?.review_checklist ?? {}) as Record<string, boolean>);
+  }, [sale.id, sale.revision_fields, sale.custom_fields]);
+
+  const checkedCount = checklistItems.filter((i) => checks[i.key]).length;
+  const allChecked = checkedCount === checklistItems.length;
+
+  const toggleCheck = async (key: string) => {
+    if (!isAdmin) return;
+    const next = { ...checks, [key]: !checks[key] };
+    setChecks(next);
+    await supabase
+      .from("sales")
+      .update({
+        custom_fields: { ...(sale.custom_fields ?? {}), review_checklist: next },
+      } as never)
+      .eq("id", sale.id);
+  };
 
   const isUnderRevision = status === "반려" || status === "수정요청";
   const showRevisionContext = isUnderRevision || (sale.revision_reason && (status === "승인대기" || status === "확정"));
