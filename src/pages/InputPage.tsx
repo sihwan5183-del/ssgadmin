@@ -631,6 +631,23 @@ const InputPage = () => {
           </Field>
         </FormSection>
 
+        {/* 관리자 동적 필드 */}
+        {dynamicFields.length > 0 && (
+          <FormSection title="추가 항목 (관리자 정의)">
+            <Grid cols={3}>
+              <DynamicFieldRenderer
+                fields={dynamicFields}
+                values={customFields}
+                onChange={setCustomFields}
+              />
+            </Grid>
+          </FormSection>
+        )}
+
+        <div className="text-[11px] text-muted-foreground text-right -mb-2">
+          수익 자동계산 수식: <code className="font-mono text-primary/80">{netFeeFormula}</code>
+        </div>
+
         <div className="flex gap-3">
           {editingId && (
             <Button type="button" variant="outline" onClick={reset} className="h-12 rounded-2xl">
@@ -642,6 +659,15 @@ const InputPage = () => {
           </Button>
         </div>
       </form>
+
+      <ExcelMappingDialog
+        open={mappingOpen}
+        onOpenChange={setMappingOpen}
+        tableName="sales"
+        file={mappingFile}
+        targets={targets}
+        onConfirm={handleMappingConfirm}
+      />
 
       {/* 최근 판매 원장 */}
       <section className="glass-strong rounded-2xl p-5 md:p-6 shadow-card-elevated">
