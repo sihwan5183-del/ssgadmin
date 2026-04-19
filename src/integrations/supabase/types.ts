@@ -129,6 +129,7 @@ export type Database = {
           channel: string | null
           created_at: string
           created_by: string
+          custom_fields: Json
           expense_type: string | null
           id: string
           media: string
@@ -144,6 +145,7 @@ export type Database = {
           channel?: string | null
           created_at?: string
           created_by: string
+          custom_fields?: Json
           expense_type?: string | null
           id?: string
           media: string
@@ -159,6 +161,7 @@ export type Database = {
           channel?: string | null
           created_at?: string
           created_by?: string
+          custom_fields?: Json
           expense_type?: string | null
           id?: string
           media?: string
@@ -199,6 +202,7 @@ export type Database = {
           color: string | null
           created_at: string
           created_by: string
+          custom_fields: Json
           id: string
           model: string
           note: string | null
@@ -214,6 +218,7 @@ export type Database = {
           color?: string | null
           created_at?: string
           created_by: string
+          custom_fields?: Json
           id?: string
           model: string
           note?: string | null
@@ -229,6 +234,7 @@ export type Database = {
           color?: string | null
           created_at?: string
           created_by?: string
+          custom_fields?: Json
           id?: string
           model?: string
           note?: string | null
@@ -238,6 +244,96 @@ export type Database = {
           stock_in_date?: string | null
           supplier?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      excel_mappings: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_default: boolean
+          mapping: Json
+          preset_name: string
+          table_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          mapping: Json
+          preset_name: string
+          table_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          mapping?: Json
+          preset_name?: string
+          table_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      field_definitions: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          default_value: string | null
+          field_key: string
+          field_type: string
+          id: string
+          label: string
+          options: Json | null
+          required: boolean
+          section: string | null
+          sort_order: number
+          table_name: string
+          updated_at: string
+          visible_in_form: boolean
+          visible_in_list: boolean
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          default_value?: string | null
+          field_key: string
+          field_type?: string
+          id?: string
+          label: string
+          options?: Json | null
+          required?: boolean
+          section?: string | null
+          sort_order?: number
+          table_name: string
+          updated_at?: string
+          visible_in_form?: boolean
+          visible_in_list?: boolean
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          default_value?: string | null
+          field_key?: string
+          field_type?: string
+          id?: string
+          label?: string
+          options?: Json | null
+          required?: boolean
+          section?: string | null
+          sort_order?: number
+          table_name?: string
+          updated_at?: string
+          visible_in_form?: boolean
+          visible_in_list?: boolean
         }
         Relationships: []
       }
@@ -424,6 +520,7 @@ export type Database = {
           channel: string | null
           created_at: string
           created_by: string
+          custom_fields: Json
           customer_name: string | null
           delivery_type: string | null
           device_model: string | null
@@ -468,6 +565,7 @@ export type Database = {
           channel?: string | null
           created_at?: string
           created_by: string
+          custom_fields?: Json
           customer_name?: string | null
           delivery_type?: string | null
           device_model?: string | null
@@ -512,6 +610,7 @@ export type Database = {
           channel?: string | null
           created_at?: string
           created_by?: string
+          custom_fields?: Json
           customer_name?: string | null
           delivery_type?: string | null
           device_model?: string | null

@@ -21,7 +21,11 @@ import {
   ShieldCheck,
   Trash2,
   Lock,
+  Database,
+  Calculator,
 } from "lucide-react";
+import { DynamicFieldsManager } from "@/components/admin/DynamicFieldsManager";
+import { FormulaEditor } from "@/components/admin/FormulaEditor";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole, type AppRole } from "@/hooks/useRole";
@@ -134,12 +138,18 @@ export default function AdminPage() {
       />
 
       <Tabs defaultValue="widgets" className="space-y-5">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="widgets" className="gap-2">
             <Layout className="size-4" /> 대시보드 위젯
           </TabsTrigger>
           <TabsTrigger value="targets" className="gap-2">
             <Target className="size-4" /> 목표치
+          </TabsTrigger>
+          <TabsTrigger value="fields" className="gap-2">
+            <Database className="size-4" /> 동적 필드
+          </TabsTrigger>
+          <TabsTrigger value="formula" className="gap-2">
+            <Calculator className="size-4" /> 수익 수식
           </TabsTrigger>
           <TabsTrigger value="master" className="gap-2">
             <ListChecks className="size-4" /> 마스터 데이터
@@ -148,6 +158,14 @@ export default function AdminPage() {
             <ShieldCheck className="size-4" /> 사용자 권한
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="fields">
+          <DynamicFieldsManager />
+        </TabsContent>
+
+        <TabsContent value="formula">
+          <FormulaEditor />
+        </TabsContent>
 
         {/* === 위젯 토글 === */}
         <TabsContent value="widgets">

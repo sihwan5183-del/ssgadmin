@@ -18,6 +18,11 @@ import { usePeriod } from "@/contexts/PeriodContext";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { exportToExcel, SALES_COLUMNS } from "@/lib/excelExport";
 import { cn } from "@/lib/utils";
+import { useFieldDefinitions } from "@/hooks/useFieldDefinitions";
+import { useNetFeeFormula } from "@/hooks/useNetFeeFormula";
+import { DynamicFieldRenderer } from "@/components/admin/DynamicFieldRenderer";
+import { ExcelMappingDialog, type MappingTarget } from "@/components/admin/ExcelMappingDialog";
+import { Sparkles } from "lucide-react";
 
 const PAGE_SIZE = 25;
 
@@ -82,13 +87,19 @@ const InputPage = () => {
   const { options: DELIVERY_TYPES } = useFieldOptions("delivery_type");
   const { options: BANKS } = useFieldOptions("bank");
   const [form, setForm] = useState<Partial<SaleRow>>(emptyForm);
+  const [customFields, setCustomFields] = useState<Record<string, any>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rows, setRows] = useState<SaleRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
+  const mappingFileRef = useRef<HTMLInputElement>(null);
+  const [mappingOpen, setMappingOpen] = useState(false);
+  const [mappingFile, setMappingFile] = useState<File | null>(null);
   const { startDate, endDate, label: periodLabel } = usePeriod();
+  const { fields: dynamicFields } = useFieldDefinitions("sales");
+  const { calc: calcNetFee, formula: netFeeFormula } = useNetFeeFormula();
 
   const set = <K extends keyof SaleRow>(k: K, v: SaleRow[K] | undefined) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -140,6 +151,7 @@ const InputPage = () => {
 
   const reset = () => {
     setForm(emptyForm);
+    setCustomFields({});
     setEditingId(null);
   };
 
@@ -147,16 +159,23 @@ const InputPage = () => {
     e.preventDefault();
     if (!user) return;
     setBusy(true);
-    const payload = {
-      ...form,
-      created_by: user.id,
+    const baseNumeric = {
       unit_price: num(form.unit_price),
       vas_fee: num(form.vas_fee),
       receivable_amount: num(form.receivable_amount),
       distributor_amount: num(form.distributor_amount),
       extra_subsidy: num(form.extra_subsidy),
       cash_support_amount: num(form.cash_support_amount),
-      net_fee: num(form.net_fee),
+    };
+    const payload = {
+      ...form,
+      created_by: user.id,
+      ...baseNumeric,
+      // 관리자가 정의한 수식으로 자동 계산 (사용자 입력값이 있으면 우선)
+      net_fee: form.net_fee != null && form.net_fee !== 0
+        ? num(form.net_fee)
+        : calcNetFee(baseNumeric),
+      custom_fields: customFields,
     };
     try {
       if (editingId) {
@@ -180,7 +199,60 @@ const InputPage = () => {
   const onEdit = (r: SaleRow) => {
     setEditingId(r.id);
     setForm(r);
+    setCustomFields(((r as any).custom_fields as Record<string, any>) ?? {});
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // === 매핑 엔진 업로드 ===
+  const targets: MappingTarget[] = [
+    ...SALES_COLUMNS.map(([k, l]) => ({ field_key: k, label: l })),
+    ...dynamicFields.map((f) => ({ field_key: `custom_fields.${f.field_key}`, label: f.label })),
+  ];
+
+  const onMappingFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setMappingFile(f);
+    setMappingOpen(true);
+    if (mappingFileRef.current) mappingFileRef.current.value = "";
+  };
+
+  const handleMappingConfirm = async (mapped: Record<string, any>[]): Promise<void> => {
+    if (!user) return;
+    const records = mapped
+      .filter((r) => Object.values(r).some((v) => v !== "" && v != null))
+      .map((r) => {
+        const custom: Record<string, any> = {};
+        const base: Record<string, any> = { created_by: user.id };
+        for (const [k, v] of Object.entries(r)) {
+          if (k.startsWith("custom_fields.")) {
+            custom[k.slice("custom_fields.".length)] = v;
+          } else {
+            base[k] = v;
+          }
+        }
+        // 숫자 컬럼 변환
+        ["unit_price", "vas_fee", "receivable_amount", "distributor_amount", "extra_subsidy", "cash_support_amount", "net_fee"].forEach((k) => {
+          if (base[k] != null) base[k] = num(base[k]);
+        });
+        if (base.net_fee == null || base.net_fee === 0) base.net_fee = calcNetFee(base);
+        base.custom_fields = custom;
+        return base;
+      });
+    if (!records.length) {
+      toast.error("등록할 데이터가 없습니다");
+      return;
+    }
+    const chunk = 200;
+    for (let i = 0; i < records.length; i += chunk) {
+      const { error } = await supabase.from("sales").insert(records.slice(i, i + chunk) as any);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+    }
+    toast.success(`${records.length}건 등록되었습니다`);
+    load();
   };
 
   const onDelete = async (id: string) => {
@@ -321,13 +393,20 @@ const InputPage = () => {
             </div>
           </div>
         </div>
-        <div>
+        <div className="flex gap-2">
           <input
             ref={fileRef}
             type="file"
             accept=".xlsx,.xls"
             className="hidden"
             onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+          />
+          <input
+            ref={mappingFileRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={onMappingFile}
           />
           <Button
             type="button"
@@ -337,7 +416,17 @@ const InputPage = () => {
             className="rounded-xl"
           >
             <Upload className="size-4 mr-2" />
-            엑셀 선택
+            기본 양식 업로드
+          </Button>
+          <Button
+            type="button"
+            onClick={() => mappingFileRef.current?.click()}
+            disabled={busy}
+            variant="outline"
+            className="rounded-xl"
+          >
+            <Sparkles className="size-4 mr-2" />
+            매핑 업로드
           </Button>
         </div>
       </section>
@@ -548,6 +637,23 @@ const InputPage = () => {
           </Field>
         </FormSection>
 
+        {/* 관리자 동적 필드 */}
+        {dynamicFields.length > 0 && (
+          <FormSection title="추가 항목 (관리자 정의)">
+            <Grid cols={3}>
+              <DynamicFieldRenderer
+                fields={dynamicFields}
+                values={customFields}
+                onChange={setCustomFields}
+              />
+            </Grid>
+          </FormSection>
+        )}
+
+        <div className="text-[11px] text-muted-foreground text-right -mb-2">
+          수익 자동계산 수식: <code className="font-mono text-primary/80">{netFeeFormula}</code>
+        </div>
+
         <div className="flex gap-3">
           {editingId && (
             <Button type="button" variant="outline" onClick={reset} className="h-12 rounded-2xl">
@@ -559,6 +665,15 @@ const InputPage = () => {
           </Button>
         </div>
       </form>
+
+      <ExcelMappingDialog
+        open={mappingOpen}
+        onOpenChange={setMappingOpen}
+        tableName="sales"
+        file={mappingFile}
+        targets={targets}
+        onConfirm={handleMappingConfirm}
+      />
 
       {/* 최근 판매 원장 */}
       <section className="glass-strong rounded-2xl p-5 md:p-6 shadow-card-elevated">
