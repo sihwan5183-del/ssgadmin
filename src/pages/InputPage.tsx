@@ -25,6 +25,7 @@ import { ExcelMappingDialog, type MappingTarget } from "@/components/admin/Excel
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
 import { MoneyInput } from "@/components/ui/money-input";
+import { ModelAutocomplete } from "@/components/ui/model-autocomplete";
 import { Sparkles, AlertTriangle, Wallet, Banknote, Building2 } from "lucide-react";
 
 const PAGE_SIZE = 25;
@@ -572,7 +573,11 @@ const InputPage = () => {
           </Grid>
           <Grid cols={2}>
             <Field label="단말기">
-              <Input value={form.device_model ?? ""} onChange={(e) => set("device_model", e.target.value)} placeholder="UIP17PR-256" className="h-11 bg-input/60" />
+              <ModelAutocomplete
+                value={form.device_model ?? ""}
+                onChange={(v) => set("device_model", v)}
+                placeholder="942 / S26 / SM-S942N 등"
+              />
             </Field>
             <Field label="단말 일련번호">
               <Input value={form.device_serial ?? ""} onChange={(e) => set("device_serial", e.target.value)} className="h-11 bg-input/60" />
