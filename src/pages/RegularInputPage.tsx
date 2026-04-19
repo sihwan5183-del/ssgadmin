@@ -1,0 +1,365 @@
+import { useEffect, useState } from "react";
+import { Header } from "@/components/layout/Header";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { HeartHandshake, Trash2, Send, RefreshCw } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useFieldOptions } from "@/hooks/useFieldOptions";
+import { toast } from "sonner";
+
+interface Regular {
+  id: string;
+  channel: string;
+  customer_name: string;
+  phone: string | null;
+  birth_date: string | null;
+  manager: string | null;
+  coupon_sent: boolean;
+  converted: boolean;
+  registered_date: string;
+  note: string | null;
+  created_at: string;
+  created_by: string;
+}
+
+const today = () => new Date().toISOString().slice(0, 10);
+
+const RegularInputPage = () => {
+  const { user } = useAuth();
+  const { options: channelOptions } = useFieldOptions("channel");
+  const [list, setList] = useState<Regular[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [form, setForm] = useState({
+    channel: "",
+    customer_name: "",
+    phone: "",
+    birth_date: "",
+    manager: "",
+    coupon_sent: false,
+    converted: false,
+    registered_date: today(),
+    note: "",
+  });
+
+  const fetchList = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("regulars")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (error) toast.error("조회 실패: " + error.message);
+    setList((data ?? []) as Regular[]);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchList();
+  }, []);
+
+  const reset = () =>
+    setForm({
+      channel: "",
+      customer_name: "",
+      phone: "",
+      birth_date: "",
+      manager: "",
+      coupon_sent: false,
+      converted: false,
+      registered_date: today(),
+      note: "",
+    });
+
+  const submit = async () => {
+    if (!user) return toast.error("로그인이 필요합니다");
+    if (!form.channel) return toast.error("채널을 선택해주세요");
+    if (!form.customer_name.trim()) return toast.error("고객명을 입력해주세요");
+
+    setSubmitting(true);
+    const { error } = await supabase.from("regulars").insert({
+      created_by: user.id,
+      channel: form.channel,
+      customer_name: form.customer_name.trim(),
+      phone: form.phone || null,
+      birth_date: form.birth_date || null,
+      manager: form.manager || null,
+      coupon_sent: form.coupon_sent,
+      converted: form.converted,
+      registered_date: form.registered_date,
+      note: form.note || null,
+    });
+    setSubmitting(false);
+    if (error) return toast.error("등록 실패: " + error.message);
+    toast.success("단골 등록 완료");
+    reset();
+    fetchList();
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm("이 단골 기록을 삭제할까요?")) return;
+    const { error } = await supabase.from("regulars").delete().eq("id", id);
+    if (error) return toast.error("삭제 실패: " + error.message);
+    toast.success("삭제되었습니다");
+    fetchList();
+  };
+
+  const toggle = async (id: string, field: "coupon_sent" | "converted", value: boolean) => {
+    const { error } = await supabase.from("regulars").update({ [field]: value }).eq("id", id);
+    if (error) return toast.error("업데이트 실패: " + error.message);
+    fetchList();
+  };
+
+  // 채널별 합계
+  const totals = list.reduce<Record<string, number>>((acc, r) => {
+    acc[r.channel] = (acc[r.channel] ?? 0) + 1;
+    return acc;
+  }, {});
+  const couponCount = list.filter((r) => r.coupon_sent).length;
+  const convertCount = list.filter((r) => r.converted).length;
+
+  return (
+    <>
+      <Header
+        title="단골 등록"
+        subtitle="채널별로 단골 고객을 직접 등록하고 쿠폰·자사 전환 여부를 관리하세요"
+      />
+
+      {/* 요약 KPI */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <Card className="p-5 glass">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <HeartHandshake className="size-4 text-primary" />
+            전체 단골
+          </div>
+          <div className="mt-2 text-3xl font-bold tabular-nums">
+            {list.length}
+            <span className="text-sm text-muted-foreground ml-1">명</span>
+          </div>
+        </Card>
+        <Card className="p-5 glass">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Send className="size-4 text-blue-300" />
+            쿠폰 발송
+          </div>
+          <div className="mt-2 text-3xl font-bold tabular-nums">
+            {couponCount}
+            <span className="text-sm text-muted-foreground ml-1">건</span>
+          </div>
+        </Card>
+        <Card className="p-5 glass">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <RefreshCw className="size-4 text-pink-300" />
+            자사 전환
+          </div>
+          <div className="mt-2 text-3xl font-bold tabular-nums">
+            {convertCount}
+            <span className="text-sm text-muted-foreground ml-1">건</span>
+          </div>
+        </Card>
+        <Card className="p-5 glass">
+          <div className="text-xs text-muted-foreground mb-2">최다 채널</div>
+          <div className="flex flex-wrap gap-1">
+            {Object.entries(totals)
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 3)
+              .map(([ch, n]) => (
+                <Badge key={ch} variant="outline" className="text-xs">
+                  {ch} {n}
+                </Badge>
+              ))}
+            {Object.keys(totals).length === 0 && (
+              <span className="text-xs text-muted-foreground">데이터 없음</span>
+            )}
+          </div>
+        </Card>
+      </section>
+
+      {/* 입력 폼 */}
+      <Card className="p-6 glass mb-6">
+        <h3 className="text-base font-semibold mb-4 flex items-center gap-2">
+          <HeartHandshake className="size-4 text-primary" />새 단골 등록
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs">채널 *</Label>
+            <Select
+              value={form.channel}
+              onValueChange={(v) => setForm({ ...form, channel: v })}
+            >
+              <SelectTrigger><SelectValue placeholder="인입 경로 선택" /></SelectTrigger>
+              <SelectContent>
+                {channelOptions.map((o) => (
+                  <SelectItem key={o} value={o}>{o}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">고객명 *</Label>
+            <Input
+              value={form.customer_name}
+              onChange={(e) => setForm({ ...form, customer_name: e.target.value })}
+              placeholder="홍길동"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">전화번호</Label>
+            <Input
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              placeholder="010-0000-0000"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">생년월일</Label>
+            <Input
+              value={form.birth_date}
+              onChange={(e) => setForm({ ...form, birth_date: e.target.value })}
+              placeholder="900101"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">담당자</Label>
+            <Input
+              value={form.manager}
+              onChange={(e) => setForm({ ...form, manager: e.target.value })}
+              placeholder="담당 직원"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">등록일</Label>
+            <Input
+              type="date"
+              value={form.registered_date}
+              onChange={(e) => setForm({ ...form, registered_date: e.target.value })}
+            />
+          </div>
+
+          <div className="flex items-center gap-3 px-3 rounded-md border border-border/50 bg-background/40">
+            <Switch
+              checked={form.coupon_sent}
+              onCheckedChange={(v) => setForm({ ...form, coupon_sent: v })}
+            />
+            <Label className="text-xs cursor-pointer">쿠폰 발송 완료</Label>
+          </div>
+
+          <div className="flex items-center gap-3 px-3 rounded-md border border-border/50 bg-background/40">
+            <Switch
+              checked={form.converted}
+              onCheckedChange={(v) => setForm({ ...form, converted: v })}
+            />
+            <Label className="text-xs cursor-pointer">자사 전환됨</Label>
+          </div>
+
+          <div className="space-y-1.5 md:col-span-2 lg:col-span-4">
+            <Label className="text-xs">메모</Label>
+            <Textarea
+              value={form.note}
+              onChange={(e) => setForm({ ...form, note: e.target.value })}
+              placeholder="고객 특이사항, 관심 상품 등"
+              rows={2}
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 mt-5">
+          <Button variant="outline" onClick={reset}>초기화</Button>
+          <Button onClick={submit} disabled={submitting}>
+            {submitting ? "등록 중..." : "단골 등록"}
+          </Button>
+        </div>
+      </Card>
+
+      {/* 등록된 단골 리스트 */}
+      <Card className="p-6 glass">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-semibold">등록된 단골 목록</h3>
+          <Badge variant="outline">{list.length}건</Badge>
+        </div>
+
+        {loading ? (
+          <p className="text-sm text-muted-foreground py-8 text-center">불러오는 중...</p>
+        ) : list.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-8 text-center">
+            아직 등록된 단골이 없습니다. 위에서 첫 단골을 등록해주세요.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-xs text-muted-foreground border-b border-border/40">
+                <tr>
+                  <th className="text-left py-2 px-2">등록일</th>
+                  <th className="text-left py-2 px-2">채널</th>
+                  <th className="text-left py-2 px-2">고객명</th>
+                  <th className="text-left py-2 px-2">전화번호</th>
+                  <th className="text-left py-2 px-2">담당자</th>
+                  <th className="text-center py-2 px-2">쿠폰</th>
+                  <th className="text-center py-2 px-2">전환</th>
+                  <th className="text-left py-2 px-2">메모</th>
+                  <th className="text-right py-2 px-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {list.map((r) => (
+                  <tr key={r.id} className="border-b border-border/20 hover:bg-accent/20">
+                    <td className="py-2 px-2 tabular-nums text-xs">{r.registered_date}</td>
+                    <td className="py-2 px-2">
+                      <Badge variant="outline" className="text-xs">{r.channel}</Badge>
+                    </td>
+                    <td className="py-2 px-2 font-medium">{r.customer_name}</td>
+                    <td className="py-2 px-2 text-muted-foreground tabular-nums">{r.phone ?? "-"}</td>
+                    <td className="py-2 px-2 text-muted-foreground">{r.manager ?? "-"}</td>
+                    <td className="py-2 px-2 text-center">
+                      <Switch
+                        checked={r.coupon_sent}
+                        onCheckedChange={(v) => toggle(r.id, "coupon_sent", v)}
+                      />
+                    </td>
+                    <td className="py-2 px-2 text-center">
+                      <Switch
+                        checked={r.converted}
+                        onCheckedChange={(v) => toggle(r.id, "converted", v)}
+                      />
+                    </td>
+                    <td className="py-2 px-2 text-xs text-muted-foreground max-w-[200px] truncate">
+                      {r.note ?? "-"}
+                    </td>
+                    <td className="py-2 px-2 text-right">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => remove(r.id)}
+                        className="size-7"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </>
+  );
+};
+
+export default RegularInputPage;
