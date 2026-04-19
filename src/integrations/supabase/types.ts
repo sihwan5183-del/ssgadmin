@@ -14,6 +14,113 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_campaign_daily: {
+        Row: {
+          campaign_id: string
+          clicks: number
+          conversions: number
+          created_at: string
+          id: string
+          impressions: number
+          log_date: string
+          note: string | null
+          spend: number
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          clicks?: number
+          conversions?: number
+          created_at?: string
+          id?: string
+          impressions?: number
+          log_date: string
+          note?: string | null
+          spend?: number
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          clicks?: number
+          conversions?: number
+          created_at?: string
+          id?: string
+          impressions?: number
+          log_date?: string
+          note?: string | null
+          spend?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_campaign_daily_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ad_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_campaigns: {
+        Row: {
+          channel: string | null
+          clicks: number
+          conversions: number
+          created_at: string
+          created_by: string
+          end_date: string
+          id: string
+          image_url: string | null
+          impressions: number
+          landing_url: string | null
+          media: string
+          note: string | null
+          start_date: string
+          status: string
+          topic: string
+          total_budget: number
+          updated_at: string
+        }
+        Insert: {
+          channel?: string | null
+          clicks?: number
+          conversions?: number
+          created_at?: string
+          created_by: string
+          end_date: string
+          id?: string
+          image_url?: string | null
+          impressions?: number
+          landing_url?: string | null
+          media: string
+          note?: string | null
+          start_date: string
+          status?: string
+          topic: string
+          total_budget?: number
+          updated_at?: string
+        }
+        Update: {
+          channel?: string | null
+          clicks?: number
+          conversions?: number
+          created_at?: string
+          created_by?: string
+          end_date?: string
+          id?: string
+          image_url?: string | null
+          impressions?: number
+          landing_url?: string | null
+          media?: string
+          note?: string | null
+          start_date?: string
+          status?: string
+          topic?: string
+          total_budget?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ad_spend: {
         Row: {
           amount: number
