@@ -87,7 +87,7 @@ const APPROVAL_META: Record<ApprovalStatus, { className: string; icon: typeof Ch
 };
 
 const SELECT_COLS =
-  "id, created_by, customer_name, phone, device_serial, device_model, channel, product, rate_plan, status, open_date, manager, unit_price, net_fee, note, approval_status, locked, approved_at, pending_items, pending_note, pending_resolved, approval_override_reason";
+  "id, created_by, customer_name, phone, device_serial, device_model, channel, product, rate_plan, status, open_date, manager, unit_price, net_fee, note, approval_status, locked, approved_at, pending_items, pending_note, pending_resolved, approval_override_reason, distributor_amount, cash_support_amount, cash_open, receivable_amount, receivable_paid";
 
 export const SaleSearchPanel = () => {
   const { user } = useAuth();
