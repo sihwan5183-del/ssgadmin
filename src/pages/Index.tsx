@@ -33,8 +33,8 @@ const Index = () => {
           [1] 최상단 — 영업 성과 (가장 중요)
           ============================================ */}
       <HeroPerformance />
-      <ActivationBreakdown />
       <ChannelActivationBreakdown />
+      <ActivationBreakdown />
 
       {/* ============================================
           [2] 중간 — 수익 및 효율
