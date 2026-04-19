@@ -8,6 +8,7 @@ import {
   Trophy,
   Users,
   Sparkles,
+  Settings2,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,7 @@ const navItems = [
   { to: "/expenses", label: "지출 / ROI", icon: Wallet },
   { to: "/ad-spend", label: "광고비 입력", icon: Megaphone },
   { to: "/ranking", label: "랭킹", icon: Trophy },
+  { to: "/field-options", label: "입력 항목 관리", icon: Settings2 },
   { to: "/team", label: "권한 / 뷰", icon: Users },
 ];
 
