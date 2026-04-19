@@ -11,6 +11,7 @@ import {
   Settings2,
   ShieldCheck,
   LogOut,
+  HeartHandshake,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +21,7 @@ import { toast } from "sonner";
 const navItems = [
   { to: "/", label: "대시보드", icon: LayoutDashboard },
   { to: "/input", label: "실적 입력", icon: PlusCircle },
+  { to: "/regular-input", label: "단골 등록", icon: HeartHandshake },
   { to: "/activities", label: "활동 관리", icon: Activity },
   { to: "/expenses", label: "지출 / ROI", icon: Wallet },
   { to: "/expense-input", label: "지출 비용 입력", icon: Megaphone },

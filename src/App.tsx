@@ -10,6 +10,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import Index from "./pages/Index.tsx";
 import InputPage from "./pages/InputPage.tsx";
 import ActivitiesPage from "./pages/ActivitiesPage.tsx";
+import RegularInputPage from "./pages/RegularInputPage.tsx";
 import ExpensesPage from "./pages/ExpensesPage.tsx";
 import ExpenseInputPage from "./pages/ExpenseInputPage.tsx";
 import FieldOptionsPage from "./pages/FieldOptionsPage.tsx";
@@ -40,6 +41,7 @@ const App = () => (
                         <Route path="/" element={<Index />} />
                         <Route path="/input" element={<InputPage />} />
                         <Route path="/activities" element={<ActivitiesPage />} />
+                        <Route path="/regular-input" element={<RegularInputPage />} />
                         <Route path="/expenses" element={<ExpensesPage />} />
                         <Route path="/ad-spend" element={<ExpenseInputPage />} />
                         <Route path="/expense-input" element={<ExpenseInputPage />} />
