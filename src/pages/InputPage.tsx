@@ -217,7 +217,7 @@ const InputPage = () => {
     if (mappingFileRef.current) mappingFileRef.current.value = "";
   };
 
-  const handleMappingConfirm = async (mapped: Record<string, any>[]) => {
+  const handleMappingConfirm = async (mapped: Record<string, any>[]): Promise<void> => {
     if (!user) return;
     const records = mapped
       .filter((r) => Object.values(r).some((v) => v !== "" && v != null))
