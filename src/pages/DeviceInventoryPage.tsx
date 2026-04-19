@@ -68,7 +68,6 @@ const emptyForm = {
 
 export default function DeviceInventoryPage() {
   const { user } = useAuth();
-  const { stores, byId } = useStores();
   const { agingDays, fallbackPrice, isAged, daysSince } = useInventoryAging();
   const [rows, setRows] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
@@ -537,21 +536,6 @@ export default function DeviceInventoryPage() {
                 onChange={(e) => setForm({ ...form, purchase_price: Number(e.target.value) || 0 })}
               />
             </Field>
-            <Field label="현재 매장">
-              <Select
-                value={form.current_store_id}
-                onValueChange={(v) => setForm({ ...form, current_store_id: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="매장 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  {stores.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
             <Field label="상태">
               <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as Status })}>
                 <SelectTrigger>
@@ -667,17 +651,6 @@ export default function DeviceInventoryPage() {
         </DialogContent>
       </Dialog>
 
-      {/* 매장 이동 다이얼로그 */}
-      {transferDevice && (
-        <TransferDialog
-          open={!!transferDevice}
-          onOpenChange={(v) => !v && setTransferDevice(null)}
-          deviceId={transferDevice.id}
-          deviceLabel={`${transferDevice.model} · ${transferDevice.serial_no ?? "-"}`}
-          fromStoreId={transferDevice.current_store_id}
-          onCreated={load}
-        />
-      )}
     </div>
   );
 }
