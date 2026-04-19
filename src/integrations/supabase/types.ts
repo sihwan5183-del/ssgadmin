@@ -18,9 +18,11 @@ export type Database = {
         Row: {
           amount: number
           campaign: string | null
+          category: string
           channel: string | null
           created_at: string
           created_by: string
+          expense_type: string | null
           id: string
           media: string
           note: string | null
@@ -31,9 +33,11 @@ export type Database = {
         Insert: {
           amount?: number
           campaign?: string | null
+          category?: string
           channel?: string | null
           created_at?: string
           created_by: string
+          expense_type?: string | null
           id?: string
           media: string
           note?: string | null
@@ -44,9 +48,11 @@ export type Database = {
         Update: {
           amount?: number
           campaign?: string | null
+          category?: string
           channel?: string | null
           created_at?: string
           created_by?: string
+          expense_type?: string | null
           id?: string
           media?: string
           note?: string | null
