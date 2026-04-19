@@ -293,7 +293,7 @@ const RegularsPage = () => {
               <SelectTrigger className="mt-1.5"><SelectValue placeholder="채널 선택" /></SelectTrigger>
               <SelectContent>
                 {channelOptions.map((o) => (
-                  <SelectItem key={o.id} value={o.value}>{o.value}</SelectItem>
+                  <SelectItem key={o} value={o}>{o}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
