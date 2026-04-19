@@ -767,7 +767,16 @@ const InputPage = () => {
                     <td className="px-3 py-2.5">{r.manager ?? "-"}</td>
                     <td className="px-3 py-2.5">{r.product ?? "-"}</td>
                     <td className="px-3 py-2.5">{r.sale_type ?? "-"}</td>
-                    <td className="px-3 py-2.5">{r.customer_name ?? "-"}</td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span>{r.customer_name ?? "-"}</span>
+                        {hasPending && (
+                          <Badge variant="outline" className="text-[9px] gap-0.5 border-amber-500/40 text-amber-300 bg-amber-500/10 px-1.5 py-0">
+                            <AlertTriangle className="size-2.5" /> 미처리 {r.pending_items?.length}
+                          </Badge>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-3 py-2.5 text-muted-foreground">{r.device_model ?? "-"}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums">{(r.unit_price ?? 0).toLocaleString("ko-KR")}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-revenue">{(r.net_fee ?? 0).toLocaleString("ko-KR")}</td>
