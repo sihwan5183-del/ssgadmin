@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Header } from "@/components/layout/Header";
 import { SaleSearchPanel } from "@/components/sales/SaleSearchPanel";
+import { LiveFeedSection } from "@/components/sales/LiveFeedSection";
 import { useViewScope } from "@/contexts/ViewScopeContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -457,8 +458,10 @@ const ActivitiesPage = () => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="search">
+        <TabsContent value="search" className="space-y-6">
           <SaleSearchPanel />
+          <div className="pt-2 border-t border-border/40" />
+          <LiveFeedSection />
         </TabsContent>
 
         <TabsContent value="missing-docs">
