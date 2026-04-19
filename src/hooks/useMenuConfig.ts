@@ -42,9 +42,8 @@ export function useMenuConfig() {
 
   useEffect(() => {
     refresh();
-    const ch = supabase
-      .channel("menu-config")
-      .on("postgres_changes", { event: "*", schema: "public", table: "menu_groups" }, refresh)
+    const ch = supabase.channel(`menu-config-${Math.random().toString(36).slice(2)}`);
+    ch.on("postgres_changes", { event: "*", schema: "public", table: "menu_groups" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "menu_items" }, refresh)
       .subscribe();
     return () => {
