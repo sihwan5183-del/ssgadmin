@@ -54,14 +54,10 @@ export const settlementGap = [
 ];
 
 // === 헬퍼 ===
-export const formatM = (n: number) => `${(n / 1_000_000).toFixed(1)}M`;
+export const formatM = (n: number) => "₩" + n.toLocaleString("ko-KR");
 export const formatKRW = (n: number) => "₩" + n.toLocaleString("ko-KR");
-export const formatKRWShort = (n: number) => {
-  if (Math.abs(n) >= 100_000_000) return `₩${(n / 100_000_000).toFixed(2)}억`;
-  if (Math.abs(n) >= 1_000_000) return `₩${(n / 1_000_000).toFixed(1)}M`;
-  if (Math.abs(n) >= 10_000) return `₩${(n / 10_000).toFixed(0)}만`;
-  return formatKRW(n);
-};
+// 모든 금액을 원 단위 풀표기로 통일 (축약 없음)
+export const formatKRWShort = (n: number) => "₩" + Math.round(n).toLocaleString("ko-KR");
 
 // 종합 계산
 export const totals = {
