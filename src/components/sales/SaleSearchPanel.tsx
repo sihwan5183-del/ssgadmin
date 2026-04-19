@@ -262,9 +262,12 @@ export const SaleSearchPanel = () => {
         <span className="text-xs text-muted-foreground ml-2">
           고객명 · 전화번호 · 단말기 일련번호(IMEI)
         </span>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2 flex-wrap">
           <Badge variant="outline" className="border-amber-500/40 text-amber-300 bg-amber-500/10 gap-1">
             <AlertCircle className="size-3" /> 미승인 {pendingCount}건
+          </Badge>
+          <Badge variant="outline" className="border-amber-500/40 text-amber-300 bg-amber-500/10 gap-1">
+            <AlertTriangle className="size-3" /> 미처리 {unhandledCount}건
           </Badge>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/40 border border-border/40">
             <Switch
@@ -276,7 +279,20 @@ export const SaleSearchPanel = () => {
               }}
             />
             <Label htmlFor="pending-only" className="text-xs cursor-pointer">
-              미승인 건만 보기
+              미승인만
+            </Label>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/40 border border-border/40">
+            <Switch
+              id="unhandled-only"
+              checked={unhandledOnly}
+              onCheckedChange={(v) => {
+                setUnhandledOnly(v);
+                search(undefined, undefined, v);
+              }}
+            />
+            <Label htmlFor="unhandled-only" className="text-xs cursor-pointer">
+              미처리만
             </Label>
           </div>
         </div>
