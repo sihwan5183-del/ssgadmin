@@ -115,7 +115,8 @@ const RegularInputPage = () => {
   };
 
   const toggle = async (id: string, field: "coupon_sent" | "converted", value: boolean) => {
-    const { error } = await supabase.from("regulars").update({ [field]: value }).eq("id", id);
+    const update = field === "coupon_sent" ? { coupon_sent: value } : { converted: value };
+    const { error } = await supabase.from("regulars").update(update).eq("id", id);
     if (error) return toast.error("업데이트 실패: " + error.message);
     fetchList();
   };
