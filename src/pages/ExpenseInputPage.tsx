@@ -201,6 +201,7 @@ export default function ExpenseInputPage() {
         title="지출 비용 입력"
         subtitle="광고비와 그 외 운영 지출을 모두 기록하면 지출/ROI 대시보드에 자동 반영됩니다"
         showScopeToggle={false}
+        showPeriodFilter
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -375,9 +376,14 @@ export default function ExpenseInputPage() {
       </div>
 
       <Card className="p-6 glass">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold">최근 지출 내역</h3>
-          <span className="text-xs text-muted-foreground">{rows.length}건</span>
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <h3 className="font-semibold">지출 내역 — {periodLabel}</h3>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
+              <Download className="size-4" /> 엑셀로 내보내기
+            </Button>
+            <span className="text-xs text-muted-foreground">총 {total.toLocaleString()}건</span>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -426,6 +432,7 @@ export default function ExpenseInputPage() {
             </tbody>
           </table>
         </div>
+        <PaginationBar page={page} pageSize={PAGE_SIZE} total={total} onChange={setPage} />
       </Card>
     </div>
   );
