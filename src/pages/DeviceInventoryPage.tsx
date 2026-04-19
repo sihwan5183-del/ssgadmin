@@ -166,7 +166,6 @@ export default function DeviceInventoryPage() {
       note: d.note ?? "",
       stock_in_date: d.stock_in_date ?? todayISO(),
       purchase_price: Number(d.purchase_price ?? 0),
-      current_store_id: d.current_store_id ?? "",
     });
     setDialogOpen(true);
   };
@@ -186,7 +185,6 @@ export default function DeviceInventoryPage() {
       note: form.note || null,
       stock_in_date: form.stock_in_date || todayISO(),
       purchase_price: Number(form.purchase_price) || 0,
-      current_store_id: form.current_store_id || null,
       created_by: user.id,
     };
     if (editing) {
@@ -406,18 +404,10 @@ export default function DeviceInventoryPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={storeFilter} onValueChange={setStoreFilter}>
-          <SelectTrigger className="w-44 h-11 bg-input/60">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">전체 매장</SelectItem>
-            {stores.map((s) => (
-              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
+
+      <Card className="glass border-border/40 overflow-hidden">
+        <div className="overflow-x-auto">
 
       <Tabs defaultValue="list">
         <TabsList>
