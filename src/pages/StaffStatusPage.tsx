@@ -140,6 +140,52 @@ export default function StaffStatusPage() {
     })();
   }, [selected, startDate, endDate]);
 
+  // === Aggregated leaderboard for ALL visible staff ===
+  const [allSales, setAllSales] = useState<SaleRow[]>([]);
+  const [allLoading, setAllLoading] = useState(false);
+
+  useEffect(() => {
+    if (roleLoading || profiles.length === 0) return;
+    setAllLoading(true);
+    (async () => {
+      const ids = profiles.map((p) => p.user_id);
+      const { data } = await supabase
+        .from("sales")
+        .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, approval_status, pending_resolved, pending_items, distributor_amount, net_fee")
+        .in("created_by", ids)
+        .gte("open_date", startDate)
+        .lte("open_date", endDate);
+      setAllSales((data ?? []) as SaleRow[]);
+      setAllLoading(false);
+    })();
+  }, [profiles, startDate, endDate, roleLoading]);
+
+  const leaderboard = useMemo(() => {
+    const byUser = new Map<string, SaleRow[]>();
+    allSales.forEach((s) => {
+      const arr = byUser.get(s.created_by) ?? [];
+      arr.push(s);
+      byUser.set(s.created_by, arr);
+    });
+    const rows = filteredProfiles.map((p) => {
+      const list = byUser.get(p.user_id) ?? [];
+      const { total } = calcTotalIncentive(list as any, incentiveRates);
+      const distributorTotal = list.reduce((sum, s) => sum + Number(s.distributor_amount ?? 0), 0);
+      const netFeeTotal = list.reduce((sum, s) => sum + Number(s.net_fee ?? 0), 0);
+      const pendingCount = list.filter((s) => s.pending_resolved === false).length;
+      return {
+        profile: p,
+        salesCount: list.length,
+        incentive: total,
+        distributorTotal,
+        netFeeTotal,
+        pendingCount,
+      };
+    });
+    rows.sort((a, b) => b.incentive - a.incentive || b.salesCount - a.salesCount);
+    return rows;
+  }, [allSales, filteredProfiles, incentiveRates]);
+
   // === Incentive computation ===
   const incentive = useMemo(() => {
     const { total, breakdowns } = calcTotalIncentive(sales as any, incentiveRates);
