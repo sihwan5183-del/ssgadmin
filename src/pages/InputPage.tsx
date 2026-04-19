@@ -340,7 +340,18 @@ const InputPage = () => {
         <FormSection title="가입 정보">
           <Grid cols={3}>
             <Field label="가입상품 *">
-              <Select value={form.product ?? ""} onValueChange={(v) => set("product", v)}>
+              <Select
+                value={form.product ?? ""}
+                onValueChange={(v) => {
+                  // 상품 변경 시, 기존 요금제가 새 상품 매핑에 없으면 초기화
+                  setForm((f) => {
+                    const allowed = getPlansForProduct(v);
+                    const keepRate =
+                      !f.rate_plan || allowed.length === 0 || allowed.includes(f.rate_plan);
+                    return { ...f, product: v, rate_plan: keepRate ? f.rate_plan : null };
+                  });
+                }}
+              >
                 <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
                 <SelectContent>{PRODUCTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
               </Select>
