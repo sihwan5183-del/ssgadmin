@@ -35,6 +35,7 @@ const adminItems = [
 export const Sidebar = () => {
   const location = useLocation();
   const { user, signOut } = useAuth();
+  const { isAdmin } = useRole();
   const handleSignOut = async () => {
     await signOut();
     toast.success("로그아웃 되었습니다");
@@ -52,9 +53,10 @@ export const Sidebar = () => {
       </div>
 
       <nav className="px-3 py-4 flex-1 space-y-1">
-        {navItems.map((item) => {
+        {[...navItems, ...(isAdmin ? adminItems : [])].map((item) => {
           const active = location.pathname === item.to;
           const Icon = item.icon;
+          const isAdminLink = adminItems.some((a) => a.to === item.to);
           return (
             <NavLink
               key={item.to}
@@ -63,11 +65,15 @@ export const Sidebar = () => {
                 "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-300",
                 active
                   ? "bg-sidebar-accent text-sidebar-accent-foreground ring-gradient relative"
-                  : "text-sidebar-foreground/80 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent/60"
+                  : "text-sidebar-foreground/80 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent/60",
+                isAdminLink && "mt-3 border-t border-border/40 pt-4 rounded-xl"
               )}
             >
               <Icon className={cn("size-4", active && "text-primary-glow")} />
               <span className="font-medium">{item.label}</span>
+              {isAdminLink && (
+                <span className="ml-auto text-[9px] text-primary uppercase tracking-wider font-semibold">admin</span>
+              )}
             </NavLink>
           );
         })}
