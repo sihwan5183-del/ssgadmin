@@ -12,28 +12,28 @@
   :root {
     /* 베이스 — 클린 화이트 캔버스 */
     --background: 0 0% 100%;
-    --foreground: 330 25% 12%;
+    --foreground: 240 10% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 330 25% 12%;
+    --card-foreground: 240 10% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 330 25% 12%;
+    --popover-foreground: 240 10% 12%;
 
     /* U+ 시그니처 마젠타 — 메인 액센트 */
-    --primary: 330 100% 45%;
+    --primary: 330 100% 42%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 330 100% 60%;
+    --primary-glow: 330 100% 50%;
 
     /* 라이트 핑크 — 보조 */
     --secondary: 330 30% 96%;
-    --secondary-foreground: 330 60% 25%;
+    --secondary-foreground: 330 60% 22%;
 
-    --muted: 330 15% 96%;
-    --muted-foreground: 330 10% 42%;
+    --muted: 240 8% 95%;
+    --muted-foreground: 240 6% 38%;
 
     --accent: 330 60% 95%;
-    --accent-foreground: 330 80% 30%;
+    --accent-foreground: 330 80% 25%;
 
     --destructive: 0 75% 55%;
     --destructive-foreground: 0 0% 100%;
