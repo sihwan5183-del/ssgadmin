@@ -28,10 +28,11 @@ import { toast } from "sonner";
 import { SaleDocuments } from "./SaleDocuments";
 import { SaleAuditLog } from "./SaleAuditLog";
 import { PendingItemsEditor } from "./PendingItemsEditor";
+import { ReviewerPanel } from "./ReviewerPanel";
 import { MoneyInput } from "@/components/ui/money-input";
 import { useSearchParams } from "react-router-dom";
 
-type ApprovalStatus = "승인대기" | "확정" | "환수" | "취소";
+type ApprovalStatus = "승인대기" | "확정" | "반려" | "수정요청" | "환수" | "취소";
 
 interface SaleHit {
   id: string;
@@ -61,6 +62,10 @@ interface SaleHit {
   cash_open: boolean | null;
   receivable_amount: number | null;
   receivable_paid: string | null;
+  revision_fields: string[] | null;
+  revision_reason: string | null;
+  revision_requested_at: string | null;
+  re_review_requested_at: string | null;
 }
 
 const EDITABLE_FIELDS: Array<{ key: keyof SaleHit; label: string; type?: string }> = [
@@ -82,12 +87,14 @@ const EDITABLE_FIELDS: Array<{ key: keyof SaleHit; label: string; type?: string 
 const APPROVAL_META: Record<ApprovalStatus, { className: string; icon: typeof CheckCircle2 }> = {
   승인대기: { className: "border-amber-500/40 text-amber-300 bg-amber-500/10", icon: AlertCircle },
   확정: { className: "border-emerald-500/40 text-emerald-300 bg-emerald-500/10", icon: CheckCircle2 },
+  반려: { className: "border-destructive/40 text-destructive bg-destructive/10", icon: XCircle },
+  수정요청: { className: "border-orange-500/40 text-orange-300 bg-orange-500/10", icon: Edit3 },
   환수: { className: "border-orange-500/40 text-orange-300 bg-orange-500/10", icon: RotateCcw },
   취소: { className: "border-destructive/40 text-destructive bg-destructive/10", icon: XCircle },
 };
 
 const SELECT_COLS =
-  "id, created_by, customer_name, phone, device_serial, device_model, channel, product, rate_plan, status, open_date, manager, unit_price, net_fee, note, approval_status, locked, approved_at, pending_items, pending_note, pending_resolved, approval_override_reason, distributor_amount, cash_support_amount, cash_open, receivable_amount, receivable_paid";
+  "id, created_by, customer_name, phone, device_serial, device_model, channel, product, rate_plan, status, open_date, manager, unit_price, net_fee, note, approval_status, locked, approved_at, pending_items, pending_note, pending_resolved, approval_override_reason, distributor_amount, cash_support_amount, cash_open, receivable_amount, receivable_paid, revision_fields, revision_reason, revision_requested_at, re_review_requested_at";
 
 export const SaleSearchPanel = () => {
   const { user } = useAuth();
