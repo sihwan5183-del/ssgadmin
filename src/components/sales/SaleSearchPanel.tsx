@@ -394,7 +394,7 @@ export const SaleSearchPanel = () => {
 
       {/* 상세/수정 다이얼로그 */}
       <Dialog open={!!selected} onOpenChange={(v) => !v && setSelected(null)}>
-        <DialogContent className="max-w-3xl max-h-[88vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 flex-wrap">
               실적 상세
@@ -427,6 +427,7 @@ export const SaleSearchPanel = () => {
           </DialogHeader>
 
           {selected && (
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
             <Tabs defaultValue="edit">
               <TabsList>
                 <TabsTrigger value="edit">
@@ -435,14 +436,11 @@ export const SaleSearchPanel = () => {
                 <TabsTrigger value="pending">
                   <AlertTriangle className="size-3.5 mr-1" /> 미처리
                 </TabsTrigger>
-                <TabsTrigger value="approval">
-                  <ShieldCheck className="size-3.5 mr-1" /> 검수
-                </TabsTrigger>
                 <TabsTrigger value="docs">
                   <FileText className="size-3.5 mr-1" /> 가입 서류
                 </TabsTrigger>
                 <TabsTrigger value="audit">
-                  <History className="size-3.5 mr-1" /> 변경 이력
+                  <History className="size-3.5 mr-1" /> 검수 타임라인
                 </TabsTrigger>
               </TabsList>
 
