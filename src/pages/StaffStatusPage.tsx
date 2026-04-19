@@ -9,9 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Users, FileWarning, AlertTriangle, TrendingUp, Wallet, Activity } from "lucide-react";
+import { Search, Users, FileWarning, AlertTriangle, TrendingUp, Wallet, Activity, Coins, Target, TrendingUpIcon, Sparkles } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { formatKRWShort } from "@/data/financeData";
+import { useIncentiveRates } from "@/hooks/useIncentiveRates";
+import { calcTotalIncentive, forecastIncentive } from "@/lib/incentiveEngine";
+import { Progress } from "@/components/ui/progress";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 
 interface Profile {
   user_id: string;
@@ -24,6 +29,7 @@ interface SaleRow {
   created_by: string;
   customer_name: string | null;
   device_model: string | null;
+  product: string | null;
   channel: string | null;
   sale_type: string | null;
   open_date: string | null;
@@ -91,7 +97,7 @@ export default function StaffStatusPage() {
     (async () => {
       const { data } = await supabase
         .from("sales")
-        .select("id, created_by, customer_name, device_model, channel, sale_type, open_date, manager, approval_status, pending_resolved, pending_items, distributor_amount, net_fee")
+        .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, approval_status, pending_resolved, pending_items, distributor_amount, net_fee")
         .eq("created_by", selected.user_id)
         .gte("open_date", startDate)
         .lte("open_date", endDate)
