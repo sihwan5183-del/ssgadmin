@@ -113,6 +113,7 @@ export default function AdCalendarPage() {
   const { isAdmin } = useRole();
   const { year, month, setYear, setMonth } = usePeriod();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [salesByDate, setSalesByDate] = useState<Map<string, Map<string, number>>>(new Map());
   const [loading, setLoading] = useState(true);
   const [openForm, setOpenForm] = useState(false);
   const [openDetail, setOpenDetail] = useState<Campaign | null>(null);
@@ -136,14 +137,33 @@ export default function AdCalendarPage() {
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("ad_campaigns")
-      .select("*")
-      .lte("start_date", monthEnd)
-      .gte("end_date", monthStart)
-      .order("start_date", { ascending: true });
+    const [{ data, error }, { data: salesData }] = await Promise.all([
+      supabase
+        .from("ad_campaigns")
+        .select("*")
+        .lte("start_date", monthEnd)
+        .gte("end_date", monthStart)
+        .order("start_date", { ascending: true }),
+      supabase
+        .from("sales")
+        .select("open_date, channel, media:channel")
+        .gte("open_date", monthStart)
+        .lte("open_date", monthEnd),
+    ]);
     if (error) toast.error("캠페인 불러오기 실패: " + error.message);
     else setCampaigns((data ?? []) as Campaign[]);
+
+    // 날짜별 매체별 개통건수 (sales.channel을 매체로 사용)
+    const map = new Map<string, Map<string, number>>();
+    ((salesData as any[]) ?? []).forEach((s) => {
+      if (!s.open_date) return;
+      const dayMap = map.get(s.open_date) ?? new Map<string, number>();
+      const ch = (s.channel as string) || "기타";
+      dayMap.set(ch, (dayMap.get(ch) ?? 0) + 1);
+      dayMap.set("__total__", (dayMap.get("__total__") ?? 0) + 1);
+      map.set(s.open_date, dayMap);
+    });
+    setSalesByDate(map);
     setLoading(false);
   };
 
