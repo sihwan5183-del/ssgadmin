@@ -131,7 +131,8 @@ const RegularsPage = () => {
   };
 
   const toggleField = async (id: string, field: "coupon_sent" | "converted", value: boolean) => {
-    const { error } = await supabase.from("regulars").update({ [field]: value }).eq("id", id);
+    const update: Partial<Regular> = { [field]: value } as Partial<Regular>;
+    const { error } = await supabase.from("regulars").update(update).eq("id", id);
     if (error) toast.error(error.message);
     else load();
   };
