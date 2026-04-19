@@ -14,6 +14,7 @@ import {
   HeartHandshake,
   Link2,
   Smartphone,
+  CalendarRange,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,6 +28,7 @@ const navItems = [
   { to: "/activities", label: "활동 관리", icon: Activity },
   { to: "/expenses", label: "지출 / ROI", icon: Wallet },
   { to: "/expense-input", label: "지출 비용 입력", icon: Megaphone },
+  { to: "/ad-calendar", label: "광고 캘린더", icon: CalendarRange },
   { to: "/ranking", label: "랭킹", icon: Trophy },
   { to: "/device-inventory", label: "단말기 재고", icon: Smartphone },
   { to: "/field-options", label: "입력 항목 관리", icon: Settings2 },
