@@ -11,7 +11,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Smartphone, Upload, Plus, Trash2, Pencil, Camera, FileSpreadsheet, Search, X, Loader2 } from "lucide-react";
+import { Smartphone, Upload, Plus, Trash2, Pencil, Camera, FileSpreadsheet, Search, X, Loader2, Download } from "lucide-react";
+import { exportToExcel, DEVICE_INVENTORY_COLUMNS } from "@/lib/excelExport";
 
 const STATUSES = ["재고", "예약", "판매완료", "반품"] as const;
 type Status = typeof STATUSES[number];
@@ -276,6 +277,9 @@ export default function DeviceInventoryPage() {
         <div className="flex flex-wrap gap-2">
           <input ref={xlsxInputRef} type="file" accept=".xlsx,.xls" onChange={handleXlsx} className="hidden" />
           <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleImage} className="hidden" />
+          <Button variant="outline" onClick={() => exportToExcel(filtered, DEVICE_INVENTORY_COLUMNS, "단말기재고", "재고")}>
+            <Download className="size-4 mr-2" /> 엑셀 내보내기
+          </Button>
           <Button variant="outline" onClick={() => xlsxInputRef.current?.click()}>
             <FileSpreadsheet className="size-4 mr-2" /> 엑셀 업로드
           </Button>
