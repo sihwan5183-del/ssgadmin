@@ -477,6 +477,16 @@ const InputPage = () => {
             <Sparkles className="size-4 mr-2" />
             매핑 업로드
           </Button>
+          <Button
+            type="button"
+            onClick={handleExportOffers}
+            disabled={busy}
+            variant="outline"
+            className="rounded-xl border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+          >
+            <Download className="size-4 mr-2" />
+            오퍼(지원금) 다운로드
+          </Button>
         </div>
       </section>
 
