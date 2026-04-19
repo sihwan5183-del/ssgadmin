@@ -1,13 +1,27 @@
-import { createContext, useContext, useMemo, useState, ReactNode } from "react";
+import { createContext, useContext, useMemo, useState, ReactNode, useCallback } from "react";
+
+export type PeriodMode = "month" | "day" | "range";
 
 interface PeriodCtx {
+  mode: PeriodMode;
+  setMode: (m: PeriodMode) => void;
+  // month mode
   year: number;
   month: number; // 0 = 전체(연 단위), 1~12
   setYear: (y: number) => void;
   setMonth: (m: number) => void;
-  /** 시작일(inclusive) ISO yyyy-mm-dd */
+  // day / range mode
+  /** day mode 단일 날짜 또는 range 시작 */
+  customStart: string | null;
+  /** range 종료 (day 모드면 same as customStart) */
+  customEnd: string | null;
+  setCustomStart: (d: string | null) => void;
+  setCustomEnd: (d: string | null) => void;
+  setCustomRange: (start: string, end: string) => void;
+  setSingleDay: (d: string) => void;
+  /** 시작일(inclusive) yyyy-mm-dd */
   startDate: string;
-  /** 종료일(inclusive) ISO yyyy-mm-dd */
+  /** 종료일(inclusive) yyyy-mm-dd */
   endDate: string;
   /** 직전 동일 길이 구간 — 증감 비교용 */
   prevStartDate: string;
@@ -18,8 +32,20 @@ interface PeriodCtx {
 const Ctx = createContext<PeriodCtx | null>(null);
 
 const pad = (n: number) => String(n).padStart(2, "0");
+const isoDate = (d: Date) =>
+  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const addDays = (iso: string, n: number) => {
+  const d = new Date(iso + "T00:00:00");
+  d.setDate(d.getDate() + n);
+  return isoDate(d);
+};
+const daysBetween = (a: string, b: string) =>
+  Math.round(
+    (new Date(b + "T00:00:00").getTime() - new Date(a + "T00:00:00").getTime()) /
+      86400000,
+  ) + 1;
 
-const toRange = (year: number, month: number) => {
+const monthRange = (year: number, month: number) => {
   if (month === 0) {
     return {
       start: `${year}-01-01`,
@@ -45,25 +71,77 @@ const toRange = (year: number, month: number) => {
   };
 };
 
+const formatLabel = (start: string, end: string) => {
+  if (start === end) return start.replace(/-/g, ".");
+  return `${start.replace(/-/g, ".")} ~ ${end.replace(/-/g, ".")}`;
+};
+
 export const PeriodProvider = ({ children }: { children: ReactNode }) => {
   const now = new Date();
+  const [mode, setMode] = useState<PeriodMode>("month");
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
+  const [customStart, setCustomStart] = useState<string | null>(null);
+  const [customEnd, setCustomEnd] = useState<string | null>(null);
+
+  const setSingleDay = useCallback((d: string) => {
+    setMode("day");
+    setCustomStart(d);
+    setCustomEnd(d);
+  }, []);
+
+  const setCustomRange = useCallback((start: string, end: string) => {
+    setMode("range");
+    setCustomStart(start);
+    setCustomEnd(end);
+  }, []);
 
   const value = useMemo<PeriodCtx>(() => {
-    const r = toRange(year, month);
+    if ((mode === "day" || mode === "range") && customStart && customEnd) {
+      const len = daysBetween(customStart, customEnd);
+      const prevEnd = addDays(customStart, -1);
+      const prevStart = addDays(prevEnd, -(len - 1));
+      return {
+        mode,
+        setMode,
+        year,
+        month,
+        setYear,
+        setMonth,
+        customStart,
+        customEnd,
+        setCustomStart,
+        setCustomEnd,
+        setCustomRange,
+        setSingleDay,
+        startDate: customStart,
+        endDate: customEnd,
+        prevStartDate: prevStart,
+        prevEndDate: prevEnd,
+        label: formatLabel(customStart, customEnd),
+      };
+    }
+    const r = monthRange(year, month);
     return {
+      mode: "month",
+      setMode,
       year,
       month,
       setYear,
       setMonth,
+      customStart,
+      customEnd,
+      setCustomStart,
+      setCustomEnd,
+      setCustomRange,
+      setSingleDay,
       startDate: r.start,
       endDate: r.end,
       prevStartDate: r.prevStart,
       prevEndDate: r.prevEnd,
       label: r.label,
     };
-  }, [year, month]);
+  }, [mode, year, month, customStart, customEnd, setCustomRange, setSingleDay]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 };
