@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, PlusCircle, Megaphone, Receipt, Download, Building2, Banknote, Wallet } from "lucide-react";
+import { Trash2, PlusCircle, Megaphone, Receipt, Download, Building2, Banknote, Wallet, TrendingUp, Coins } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
@@ -58,20 +58,38 @@ export default function ExpenseInputPage() {
   const [total, setTotal] = useState(0);
   const { startDate, endDate, label: periodLabel } = usePeriod();
 
-  // sales 자동 집계 — 총 유통망지원금 / 현금개통 / 입금금액
-  const [salesAgg, setSalesAgg] = useState({ distributor: 0, cash: 0, receivable: 0 });
+  // sales 자동 집계 — 기간 합계 + 오늘 현금시재
+  const [salesAgg, setSalesAgg] = useState({
+    distributor: 0,
+    cash: 0,
+    receivable: 0,
+    todayCash: 0,
+    todayReceivable: 0,
+  });
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
+      const today = todayISO();
+      // 기간 합계
+      const { data: periodData } = await supabase
         .from("sales")
         .select("distributor_amount, cash_support_amount, cash_open, receivable_amount, receivable_paid")
         .gte("open_date", startDate)
         .lte("open_date", endDate);
-      const agg = { distributor: 0, cash: 0, receivable: 0 };
-      (data ?? []).forEach((r: any) => {
+      // 오늘 현금시재 (open_date=오늘 & cash_open) + (receivable_paid=오늘)
+      const { data: todayData } = await supabase
+        .from("sales")
+        .select("cash_support_amount, cash_open, receivable_amount, receivable_paid, open_date")
+        .or(`open_date.eq.${today},receivable_paid.eq.${today}`);
+
+      const agg = { distributor: 0, cash: 0, receivable: 0, todayCash: 0, todayReceivable: 0 };
+      (periodData ?? []).forEach((r: any) => {
         agg.distributor += Number(r.distributor_amount ?? 0);
         if (r.cash_open) agg.cash += Number(r.cash_support_amount ?? 0);
         if (r.receivable_paid) agg.receivable += Number(r.receivable_amount ?? 0);
+      });
+      (todayData ?? []).forEach((r: any) => {
+        if (r.cash_open && r.open_date === today) agg.todayCash += Number(r.cash_support_amount ?? 0);
+        if (r.receivable_paid === today) agg.todayReceivable += Number(r.receivable_amount ?? 0);
       });
       setSalesAgg(agg);
     })();
