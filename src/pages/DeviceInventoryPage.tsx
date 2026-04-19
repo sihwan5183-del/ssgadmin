@@ -25,9 +25,6 @@ type Device = {
   color: string | null;
   capacity: string | null;
   status: string;
-  stock_in_date: string | null;
-  purchase_price: number | null;
-  supplier: string | null;
   note: string | null;
 };
 
@@ -44,9 +41,6 @@ const emptyForm = {
   color: "",
   capacity: "",
   status: "재고" as Status,
-  stock_in_date: new Date().toISOString().slice(0, 10),
-  purchase_price: 0,
-  supplier: "",
   note: "",
 };
 
@@ -86,7 +80,7 @@ export default function DeviceInventoryPage() {
     return rows.filter((r) => {
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (!q) return true;
-      return [r.model, r.serial_no, r.color, r.capacity, r.supplier, r.note]
+      return [r.model, r.serial_no, r.color, r.capacity, r.note]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
     });
@@ -121,9 +115,6 @@ export default function DeviceInventoryPage() {
       color: d.color ?? "",
       capacity: d.capacity ?? "",
       status: (d.status as Status) ?? "재고",
-      stock_in_date: d.stock_in_date ?? new Date().toISOString().slice(0, 10),
-      purchase_price: Number(d.purchase_price ?? 0),
-      supplier: d.supplier ?? "",
       note: d.note ?? "",
     });
     setDialogOpen(true);
@@ -137,7 +128,6 @@ export default function DeviceInventoryPage() {
     }
     const payload = {
       ...form,
-      purchase_price: Number(form.purchase_price) || 0,
       created_by: user.id,
     };
     if (editing) {
@@ -188,9 +178,6 @@ export default function DeviceInventoryPage() {
           color: pick(r, "색상", "Color") ? String(pick(r, "색상", "Color")) : null,
           capacity: pick(r, "용량", "Capacity") ? String(pick(r, "용량", "Capacity")) : null,
           status: String(pick(r, "상태", "Status") ?? "재고"),
-          stock_in_date: pick(r, "입고일", "Date") ? String(pick(r, "입고일", "Date")).slice(0, 10) : new Date().toISOString().slice(0, 10),
-          purchase_price: Number(pick(r, "매입가", "Price") ?? 0) || 0,
-          supplier: pick(r, "공급처", "Supplier") ? String(pick(r, "공급처", "Supplier")) : null,
           note: pick(r, "메모", "Note") ? String(pick(r, "메모", "Note")) : null,
           created_by: user.id,
         }))
@@ -253,7 +240,7 @@ export default function DeviceInventoryPage() {
     if (!user || ocrResults.length === 0) return;
     const records = ocrResults
       .filter((r) => r.model.trim())
-      .map((r) => ({ ...r, purchase_price: Number(r.purchase_price) || 0, created_by: user.id }));
+      .map((r) => ({ ...r, created_by: user.id }));
     if (records.length === 0) return toast.error("저장할 항목이 없습니다");
     const { error } = await supabase.from("device_inventory").insert(records);
     if (error) return toast.error(error.message);
@@ -313,7 +300,7 @@ export default function DeviceInventoryPage() {
         <div className="relative flex-1 min-w-[240px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
-            placeholder="모델, 일련번호, 색상, 공급처 검색…"
+            placeholder="모델, 일련번호, 색상 검색…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 h-11 bg-input/60"
@@ -351,22 +338,20 @@ export default function DeviceInventoryPage() {
                     <th className="text-left px-3 py-2.5">색상</th>
                     <th className="text-left px-3 py-2.5">용량</th>
                     <th className="text-left px-3 py-2.5">상태</th>
-                    <th className="text-left px-3 py-2.5">입고일</th>
-                    <th className="text-right px-3 py-2.5">매입가</th>
-                    <th className="text-left px-3 py-2.5">공급처</th>
+                    <th className="text-left px-3 py-2.5">메모</th>
                     <th className="text-right px-3 py-2.5">관리</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={9} className="text-center py-10 text-muted-foreground">
+                      <td colSpan={7} className="text-center py-10 text-muted-foreground">
                         불러오는 중…
                       </td>
                     </tr>
                   ) : filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="text-center py-10 text-muted-foreground">
+                      <td colSpan={7} className="text-center py-10 text-muted-foreground">
                         등록된 단말기가 없습니다
                       </td>
                     </tr>
@@ -393,11 +378,7 @@ export default function DeviceInventoryPage() {
                               </SelectContent>
                             </Select>
                           </td>
-                          <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{r.stock_in_date ?? "-"}</td>
-                          <td className="px-3 py-2.5 text-right tabular-nums">
-                            {(r.purchase_price ?? 0).toLocaleString("ko-KR")}
-                          </td>
-                          <td className="px-3 py-2.5">{r.supplier ?? "-"}</td>
+                          <td className="px-3 py-2.5 text-muted-foreground">{r.note ?? "-"}</td>
                           <td className="px-3 py-2.5 text-right">
                             {mine && (
                               <div className="flex justify-end gap-1">
@@ -487,19 +468,6 @@ export default function DeviceInventoryPage() {
                   ))}
                 </SelectContent>
               </Select>
-            </Field>
-            <Field label="입고일">
-              <Input type="date" value={form.stock_in_date} onChange={(e) => setForm({ ...form, stock_in_date: e.target.value })} />
-            </Field>
-            <Field label="매입가 (₩)">
-              <Input
-                type="number"
-                value={form.purchase_price}
-                onChange={(e) => setForm({ ...form, purchase_price: Number(e.target.value) })}
-              />
-            </Field>
-            <Field label="공급처">
-              <Input value={form.supplier} onChange={(e) => setForm({ ...form, supplier: e.target.value })} />
             </Field>
             <Field label="메모" full>
               <Input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
