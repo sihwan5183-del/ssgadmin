@@ -1,59 +1,64 @@
 import { NavLink, useLocation } from "react-router-dom";
-import {
-  LayoutDashboard,
-  PlusCircle,
-  Activity,
-  Wallet,
-  Megaphone,
-  Trophy,
-  Users,
-  Sparkles,
-  Settings2,
-  ShieldCheck,
-  LogOut,
-  HeartHandshake,
-  Link2,
-  Smartphone,
-  CalendarRange,
-  Store as StoreIcon,
-  UserCog,
-  History,
-} from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { ChevronDown, LogOut, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
+import { useMenuConfig, type MenuRole } from "@/hooks/useMenuConfig";
+import { resolveIcon } from "@/lib/menuIcons";
 import { toast } from "sonner";
-
-const navItems = [
-  { to: "/", label: "대시보드", icon: LayoutDashboard },
-  { to: "/input", label: "실적 입력", icon: PlusCircle },
-  { to: "/regulars", label: "단골 관리", icon: HeartHandshake },
-  { to: "/activities", label: "활동 관리", icon: Activity },
-  { to: "/recent-activities", label: "최근 영업활동", icon: History },
-  { to: "/expenses", label: "지출 / ROI", icon: Wallet },
-  { to: "/expense-input", label: "지출 비용 입력", icon: Megaphone },
-  { to: "/ad-calendar", label: "광고 캘린더", icon: CalendarRange },
-  { to: "/ranking", label: "랭킹", icon: Trophy },
-  { to: "/staff-status", label: "직원별 현황", icon: UserCog },
-  { to: "/device-inventory", label: "단말기 재고", icon: Smartphone },
-  { to: "/field-options", label: "입력 항목 관리", icon: Settings2 },
-  { to: "/team", label: "권한 / 뷰", icon: Users },
-];
-
-const adminItems = [
-  { to: "/stores", label: "매장 관리", icon: StoreIcon },
-  { to: "/product-rate-plans", label: "상품-요금제 매핑", icon: Link2 },
-  { to: "/admin", label: "시스템 설정", icon: ShieldCheck },
-];
 
 export const Sidebar = () => {
   const location = useLocation();
   const { user, signOut } = useAuth();
-  const { isAdmin } = useRole();
+  const { isAdmin, isManager, loading: roleLoading } = useRole();
+  const { groups, items, loading } = useMenuConfig();
+
+  const currentRole: MenuRole = isAdmin ? "admin" : isManager ? "manager" : "user";
+
+  const visibleGroups = useMemo(() => {
+    return groups
+      .filter((g) => g.active && g.visible_roles.includes(currentRole))
+      .map((g) => ({
+        ...g,
+        items: items
+          .filter(
+            (i) =>
+              i.active &&
+              i.group_id === g.id &&
+              i.visible_roles.includes(currentRole) &&
+              (!i.is_admin_only || isAdmin)
+          )
+          .sort((a, b) => a.sort_order - b.sort_order),
+      }))
+      .filter((g) => g.items.length > 0);
+  }, [groups, items, currentRole, isAdmin]);
+
+  const [openIds, setOpenIds] = useState<Record<string, boolean>>({});
+
+  // Auto-open the group containing the active route
+  useEffect(() => {
+    const activeGroup = visibleGroups.find((g) =>
+      g.items.some((i) => i.path === location.pathname)
+    );
+    if (activeGroup && openIds[activeGroup.id] === undefined) {
+      setOpenIds((p) => ({ ...p, [activeGroup.id]: true }));
+    }
+    // Default: open all on first load
+    if (Object.keys(openIds).length === 0 && visibleGroups.length > 0) {
+      const init: Record<string, boolean> = {};
+      visibleGroups.forEach((g) => (init[g.id] = true));
+      setOpenIds(init);
+    }
+  }, [visibleGroups, location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggle = (id: string) => setOpenIds((p) => ({ ...p, [id]: !p[id] }));
+
   const handleSignOut = async () => {
     await signOut();
     toast.success("로그아웃 되었습니다");
   };
+
   return (
     <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-64 flex-col glass-strong border-r border-border/40 z-40">
       <div className="px-6 py-7 flex items-center gap-3">
@@ -66,29 +71,60 @@ export const Sidebar = () => {
         </div>
       </div>
 
-      <nav className="px-3 py-4 flex-1 space-y-1">
-        {[...navItems, ...(isAdmin ? adminItems : [])].map((item) => {
-          const active = location.pathname === item.to;
-          const Icon = item.icon;
-          const isAdminLink = adminItems.some((a) => a.to === item.to);
+      <nav className="px-3 py-2 flex-1 overflow-y-auto space-y-1">
+        {(loading || roleLoading) && (
+          <div className="px-3 py-4 text-xs text-muted-foreground">메뉴 불러오는 중…</div>
+        )}
+        {!loading && visibleGroups.map((g) => {
+          const GroupIcon = resolveIcon(g.icon);
+          const isOpen = openIds[g.id] ?? true;
+          const hasActive = g.items.some((i) => i.path === location.pathname);
           return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-300",
-                active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground ring-gradient relative"
-                  : "text-sidebar-foreground/80 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent/60",
-                isAdminLink && "mt-3 border-t border-border/40 pt-4 rounded-xl"
+            <div key={g.id} className="mb-1">
+              <button
+                onClick={() => toggle(g.id)}
+                className={cn(
+                  "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] uppercase tracking-wider font-semibold transition-colors",
+                  hasActive
+                    ? "text-primary-glow"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <GroupIcon className="size-3.5" />
+                <span className="flex-1 text-left">{g.name}</span>
+                <ChevronDown
+                  className={cn("size-3.5 transition-transform", !isOpen && "-rotate-90")}
+                />
+              </button>
+              {isOpen && (
+                <div className="mt-0.5 space-y-0.5">
+                  {g.items.map((item) => {
+                    const Icon = resolveIcon(item.icon);
+                    const active = location.pathname === item.path;
+                    return (
+                      <NavLink
+                        key={item.id}
+                        to={item.path}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 ml-2 rounded-xl text-sm transition-all duration-300",
+                          active
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground ring-gradient relative"
+                            : "text-sidebar-foreground/80 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent/60"
+                        )}
+                      >
+                        <Icon className={cn("size-4", active && "text-primary-glow")} />
+                        <span className="font-medium">{item.label}</span>
+                        {item.is_admin_only && (
+                          <span className="ml-auto text-[9px] text-primary uppercase tracking-wider font-semibold">
+                            admin
+                          </span>
+                        )}
+                      </NavLink>
+                    );
+                  })}
+                </div>
               )}
-            >
-              <Icon className={cn("size-4", active && "text-primary-glow")} />
-              <span className="font-medium">{item.label}</span>
-              {isAdminLink && (
-                <span className="ml-auto text-[9px] text-primary uppercase tracking-wider font-semibold">admin</span>
-              )}
-            </NavLink>
+            </div>
           );
         })}
       </nav>
