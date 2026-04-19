@@ -47,54 +47,49 @@ export const SystemAuditLog = () => {
 
   const load = async () => {
     setLoading(true);
-    const tasks: Promise<UnifiedRow[]>[] = [];
+    const merged: UnifiedRow[] = [];
 
     if (source === "all" || source === "sales") {
-      tasks.push(
-        supabase
-          .from("sales_audit_log")
-          .select("*")
-          .order("changed_at", { ascending: false })
-          .limit(200)
-          .then(({ data }) =>
-            (data ?? []).map((r: any) => ({
-              id: `s_${r.id}`,
-              source: "sales" as const,
-              table_name: "sales",
-              record_id: r.sale_id,
-              action: r.action,
-              changed_by: r.changed_by,
-              changed_at: r.changed_at,
-              changes: r.changes ?? {},
-            })),
-          ),
+      const { data } = await supabase
+        .from("sales_audit_log")
+        .select("*")
+        .order("changed_at", { ascending: false })
+        .limit(200);
+      (data ?? []).forEach((r: any) =>
+        merged.push({
+          id: `s_${r.id}`,
+          source: "sales",
+          table_name: "sales",
+          record_id: r.sale_id,
+          action: r.action,
+          changed_by: r.changed_by,
+          changed_at: r.changed_at,
+          changes: r.changes ?? {},
+        }),
       );
     }
 
     if (source === "all" || source === "master") {
-      tasks.push(
-        supabase
-          .from("master_audit_log")
-          .select("*")
-          .order("changed_at", { ascending: false })
-          .limit(200)
-          .then(({ data }) =>
-            (data ?? []).map((r: any) => ({
-              id: `m_${r.id}`,
-              source: "master" as const,
-              table_name: r.table_name,
-              record_id: r.record_id,
-              action: r.action,
-              changed_by: r.changed_by,
-              changed_at: r.changed_at,
-              changes: r.changes ?? {},
-            })),
-          ),
+      const { data } = await supabase
+        .from("master_audit_log" as never)
+        .select("*")
+        .order("changed_at", { ascending: false })
+        .limit(200);
+      ((data as any[]) ?? []).forEach((r: any) =>
+        merged.push({
+          id: `m_${r.id}`,
+          source: "master",
+          table_name: r.table_name,
+          record_id: r.record_id,
+          action: r.action,
+          changed_by: r.changed_by,
+          changed_at: r.changed_at,
+          changes: r.changes ?? {},
+        }),
       );
     }
 
-    const results = await Promise.all(tasks);
-    const merged = results.flat().sort(
+    merged.sort(
       (a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime(),
     );
 
