@@ -11,10 +11,29 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Smartphone, Upload, Plus, Trash2, Pencil, Camera, FileSpreadsheet, Search, X, Loader2, Download } from "lucide-react";
+import {
+  Smartphone,
+  Upload,
+  Plus,
+  Trash2,
+  Pencil,
+  Camera,
+  FileSpreadsheet,
+  Search,
+  X,
+  Loader2,
+  Download,
+  AlertTriangle,
+  ArrowRightLeft,
+  Store as StoreIcon,
+} from "lucide-react";
 import { exportToExcel, DEVICE_INVENTORY_COLUMNS } from "@/lib/excelExport";
+import { useStores } from "@/hooks/useStores";
+import { useInventoryAging } from "@/hooks/useInventoryAging";
+import { TransferDialog } from "@/components/inventory/TransferDialog";
+import { TransferList } from "@/components/inventory/TransferList";
 
-const STATUSES = ["재고", "예약", "판매완료", "반품"] as const;
+const STATUSES = ["재고", "판매중", "이동중", "개통완료", "반품"] as const;
 type Status = typeof STATUSES[number];
 
 type Device = {
@@ -26,14 +45,20 @@ type Device = {
   capacity: string | null;
   status: string;
   note: string | null;
+  stock_in_date: string | null;
+  purchase_price: number | null;
+  current_store_id: string | null;
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  재고: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-  예약: "bg-amber-500/15 text-amber-300 border-amber-500/30",
-  판매완료: "bg-sky-500/15 text-sky-300 border-sky-500/30",
-  반품: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+  재고: "bg-primary/15 text-primary border-primary/30",
+  판매중: "bg-warning/15 text-warning border-warning/30",
+  이동중: "bg-secondary/15 text-secondary-foreground border-secondary/30",
+  개통완료: "bg-muted/40 text-muted-foreground border-border",
+  반품: "bg-destructive/15 text-destructive border-destructive/30",
 };
+
+const todayISO = () => new Date().toISOString().slice(0, 10);
 
 const emptyForm = {
   model: "",
@@ -42,14 +67,21 @@ const emptyForm = {
   capacity: "",
   status: "재고" as Status,
   note: "",
+  stock_in_date: todayISO(),
+  purchase_price: 0,
+  current_store_id: "" as string,
 };
 
 export default function DeviceInventoryPage() {
   const { user } = useAuth();
+  const { stores, byId } = useStores();
+  const { agingDays, fallbackPrice, isAged, daysSince } = useInventoryAging();
   const [rows, setRows] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [storeFilter, setStoreFilter] = useState<string>("all");
+  const [agedOnly, setAgedOnly] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Device | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -57,6 +89,7 @@ export default function DeviceInventoryPage() {
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrResults, setOcrResults] = useState<Array<typeof emptyForm>>([]);
   const [ocrPreview, setOcrPreview] = useState<string | null>(null);
+  const [transferDevice, setTransferDevice] = useState<Device | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const xlsxInputRef = useRef<HTMLInputElement>(null);
 
@@ -73,38 +106,59 @@ export default function DeviceInventoryPage() {
 
   useEffect(() => {
     load();
+    const ch = supabase
+      .channel("device-inventory-rt")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "device_inventory" },
+        () => load(),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
   }, []);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (storeFilter !== "all" && r.current_store_id !== storeFilter) return false;
+      if (agedOnly && !isAged(r.stock_in_date)) return false;
       if (!q) return true;
       return [r.model, r.serial_no, r.color, r.capacity, r.note]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
     });
-  }, [rows, search, statusFilter]);
+  }, [rows, search, statusFilter, storeFilter, agedOnly, isAged]);
 
   const counts = useMemo(() => {
-    const c: Record<string, number> = { 재고: 0, 예약: 0, 판매완료: 0, 반품: 0 };
+    const c: Record<string, number> = {};
+    STATUSES.forEach((s) => (c[s] = 0));
     rows.forEach((r) => (c[r.status] = (c[r.status] ?? 0) + 1));
     return c;
   }, [rows]);
 
-  const groupedByModel = useMemo(() => {
-    const m = new Map<string, Device[]>();
-    filtered.forEach((d) => {
-      const k = d.model || "(미지정)";
-      if (!m.has(k)) m.set(k, []);
-      m.get(k)!.push(d);
-    });
-    return Array.from(m.entries()).sort((a, b) => b[1].length - a[1].length);
-  }, [filtered]);
+  const agedCount = useMemo(
+    () => rows.filter((r) => r.status !== "개통완료" && isAged(r.stock_in_date)).length,
+    [rows, isAged],
+  );
+
+  const totalAsset = useMemo(
+    () =>
+      rows
+        .filter((r) => r.status !== "개통완료" && r.status !== "반품")
+        .reduce(
+          (s, r) =>
+            s + (Number(r.purchase_price) > 0 ? Number(r.purchase_price) : fallbackPrice),
+          0,
+        ),
+    [rows, fallbackPrice],
+  );
 
   const openCreate = () => {
     setEditing(null);
-    setForm(emptyForm);
+    setForm({ ...emptyForm, stock_in_date: todayISO() });
     setDialogOpen(true);
   };
   const openEdit = (d: Device) => {
@@ -116,6 +170,9 @@ export default function DeviceInventoryPage() {
       capacity: d.capacity ?? "",
       status: (d.status as Status) ?? "재고",
       note: d.note ?? "",
+      stock_in_date: d.stock_in_date ?? todayISO(),
+      purchase_price: Number(d.purchase_price ?? 0),
+      current_store_id: d.current_store_id ?? "",
     });
     setDialogOpen(true);
   };
@@ -126,8 +183,16 @@ export default function DeviceInventoryPage() {
       toast.error("모델명을 입력하세요");
       return;
     }
-    const payload = {
-      ...form,
+    const payload: any = {
+      model: form.model,
+      serial_no: form.serial_no || null,
+      color: form.color || null,
+      capacity: form.capacity || null,
+      status: form.status,
+      note: form.note || null,
+      stock_in_date: form.stock_in_date || todayISO(),
+      purchase_price: Number(form.purchase_price) || 0,
+      current_store_id: form.current_store_id || null,
       created_by: user.id,
     };
     if (editing) {
@@ -157,7 +222,6 @@ export default function DeviceInventoryPage() {
     load();
   };
 
-  // 엑셀 업로드
   const handleXlsx = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!user) return;
     const file = e.target.files?.[0];
@@ -179,6 +243,8 @@ export default function DeviceInventoryPage() {
           capacity: pick(r, "용량", "Capacity") ? String(pick(r, "용량", "Capacity")) : null,
           status: String(pick(r, "상태", "Status") ?? "재고"),
           note: pick(r, "메모", "Note") ? String(pick(r, "메모", "Note")) : null,
+          stock_in_date: pick(r, "입고일", "StockInDate") ? String(pick(r, "입고일", "StockInDate")) : todayISO(),
+          purchase_price: Number(pick(r, "매입가", "PurchasePrice")) || 0,
           created_by: user.id,
         }))
         .filter((r) => r.model);
@@ -194,7 +260,6 @@ export default function DeviceInventoryPage() {
     }
   };
 
-  // 이미지 OCR
   const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -220,11 +285,12 @@ export default function DeviceInventoryPage() {
         setOcrResults(
           devices.map((d) => ({
             ...emptyForm,
+            stock_in_date: todayISO(),
             model: d.model ?? "",
             serial_no: d.serial_no ?? "",
             color: d.color ?? "",
             capacity: d.capacity ?? "",
-          }))
+          })),
         );
         toast.success(`${devices.length}개 단말기 정보를 인식했습니다`);
       }
@@ -240,7 +306,17 @@ export default function DeviceInventoryPage() {
     if (!user || ocrResults.length === 0) return;
     const records = ocrResults
       .filter((r) => r.model.trim())
-      .map((r) => ({ ...r, created_by: user.id }));
+      .map((r) => ({
+        model: r.model,
+        serial_no: r.serial_no || null,
+        color: r.color || null,
+        capacity: r.capacity || null,
+        status: r.status,
+        note: r.note || null,
+        stock_in_date: r.stock_in_date || todayISO(),
+        purchase_price: Number(r.purchase_price) || 0,
+        created_by: user.id,
+      }));
     if (records.length === 0) return toast.error("저장할 항목이 없습니다");
     const { error } = await supabase.from("device_inventory").insert(records);
     if (error) return toast.error(error.message);
@@ -259,7 +335,9 @@ export default function DeviceInventoryPage() {
             <Smartphone className="size-6 text-primary-glow" />
             단말기 재고 관리
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">엑셀·이미지·수동 입력으로 보유 단말기를 관리합니다</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            엑셀·이미지·수동 입력 · 입고일 기준 {agingDays}일 초과 시 우선판매 강조
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <input ref={xlsxInputRef} type="file" accept=".xlsx,.xls" onChange={handleXlsx} className="hidden" />
@@ -285,14 +363,31 @@ export default function DeviceInventoryPage() {
         </div>
       </div>
 
-      {/* 상태별 집계 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {/* 상단 KPI */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
         {STATUSES.map((s) => (
           <Card key={s} className="p-4 glass border-border/40">
             <div className="text-xs text-muted-foreground">{s}</div>
-            <div className="text-3xl font-bold tabular-nums mt-1">{counts[s] ?? 0}</div>
+            <div className="text-2xl font-bold tabular-nums mt-1">{counts[s] ?? 0}</div>
           </Card>
         ))}
+        <Card
+          className={`p-4 glass cursor-pointer transition-colors ${
+            agedOnly ? "border-destructive ring-1 ring-destructive/40" : "border-destructive/40"
+          }`}
+          onClick={() => setAgedOnly((v) => !v)}
+        >
+          <div className="text-xs text-destructive flex items-center gap-1">
+            <AlertTriangle className="size-3" /> 장기({agingDays}일+)
+          </div>
+          <div className="text-2xl font-bold tabular-nums mt-1 text-destructive">{agedCount}</div>
+        </Card>
+        <Card className="p-4 glass border-border/40 col-span-2 md:col-span-2 lg:col-span-1">
+          <div className="text-xs text-muted-foreground">총 재고 자산</div>
+          <div className="text-xl font-bold tabular-nums mt-1">
+            {totalAsset.toLocaleString("ko-KR")}원
+          </div>
+        </Card>
       </div>
 
       {/* 검색 / 필터 */}
@@ -307,15 +402,24 @@ export default function DeviceInventoryPage() {
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40 h-11 bg-input/60">
+          <SelectTrigger className="w-36 h-11 bg-input/60">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체 상태</SelectItem>
             {STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
-              </SelectItem>
+              <SelectItem key={s} value={s}>{s}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={storeFilter} onValueChange={setStoreFilter}>
+          <SelectTrigger className="w-44 h-11 bg-input/60">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">전체 매장</SelectItem>
+            {stores.map((s) => (
+              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -323,8 +427,8 @@ export default function DeviceInventoryPage() {
 
       <Tabs defaultValue="list">
         <TabsList>
-          <TabsTrigger value="list">리스트 뷰</TabsTrigger>
-          <TabsTrigger value="grouped">모델별 카드</TabsTrigger>
+          <TabsTrigger value="list">리스트</TabsTrigger>
+          <TabsTrigger value="transfers">매장 이동 이력</TabsTrigger>
         </TabsList>
 
         <TabsContent value="list" className="mt-4">
@@ -335,61 +439,103 @@ export default function DeviceInventoryPage() {
                   <tr>
                     <th className="text-left px-3 py-2.5">모델</th>
                     <th className="text-left px-3 py-2.5">일련번호</th>
-                    <th className="text-left px-3 py-2.5">색상</th>
-                    <th className="text-left px-3 py-2.5">용량</th>
+                    <th className="text-left px-3 py-2.5">색/용량</th>
+                    <th className="text-left px-3 py-2.5">매장</th>
+                    <th className="text-left px-3 py-2.5">입고일</th>
+                    <th className="text-left px-3 py-2.5">매입가</th>
                     <th className="text-left px-3 py-2.5">상태</th>
-                    <th className="text-left px-3 py-2.5">메모</th>
                     <th className="text-right px-3 py-2.5">관리</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-10 text-muted-foreground">
-                        불러오는 중…
-                      </td>
+                      <td colSpan={8} className="text-center py-10 text-muted-foreground">불러오는 중…</td>
                     </tr>
                   ) : filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-10 text-muted-foreground">
-                        등록된 단말기가 없습니다
-                      </td>
+                      <td colSpan={8} className="text-center py-10 text-muted-foreground">표시할 데이터가 없습니다</td>
                     </tr>
                   ) : (
                     filtered.map((r) => {
                       const mine = r.created_by === user?.id;
+                      const days = daysSince(r.stock_in_date);
+                      const aged = r.status !== "개통완료" && isAged(r.stock_in_date);
+                      const storeName = byId(r.current_store_id)?.name ?? "-";
                       return (
-                        <tr key={r.id} className="border-t border-border/30 hover:bg-muted/20">
-                          <td className="px-3 py-2.5 font-medium">{r.model}</td>
+                        <tr
+                          key={r.id}
+                          className={`border-t border-border/30 hover:bg-muted/20 ${
+                            aged ? "bg-destructive/5" : ""
+                          }`}
+                        >
+                          <td className="px-3 py-2.5 font-medium">
+                            <div className="flex items-center gap-2">
+                              {r.model}
+                              {aged && (
+                                <Badge variant="destructive" className="text-[10px]">
+                                  우선판매 {days}일
+                                </Badge>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{r.serial_no ?? "-"}</td>
-                          <td className="px-3 py-2.5">{r.color ?? "-"}</td>
-                          <td className="px-3 py-2.5">{r.capacity ?? "-"}</td>
+                          <td className="px-3 py-2.5 text-muted-foreground">
+                            {[r.color, r.capacity].filter(Boolean).join(" / ") || "-"}
+                          </td>
                           <td className="px-3 py-2.5">
-                            <Select value={r.status} onValueChange={(v) => updateStatus(r.id, v)} disabled={!mine}>
+                            <span className="inline-flex items-center gap-1">
+                              <StoreIcon className="size-3 text-muted-foreground" />
+                              {storeName}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2.5 tabular-nums text-xs">
+                            {r.stock_in_date ?? "-"}
+                            <div className="text-[10px] text-muted-foreground">
+                              {days > 0 ? `${days}일 경과` : "오늘"}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 tabular-nums">
+                            {Number(r.purchase_price ?? 0).toLocaleString("ko-KR")}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <Select
+                              value={r.status}
+                              onValueChange={(v) => updateStatus(r.id, v)}
+                              disabled={!mine}
+                            >
                               <SelectTrigger className={`h-7 w-28 text-xs border ${STATUS_COLOR[r.status] ?? ""}`}>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
                                 {STATUSES.map((s) => (
-                                  <SelectItem key={s} value={s}>
-                                    {s}
-                                  </SelectItem>
+                                  <SelectItem key={s} value={s}>{s}</SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           </td>
-                          <td className="px-3 py-2.5 text-muted-foreground">{r.note ?? "-"}</td>
                           <td className="px-3 py-2.5 text-right">
-                            {mine && (
-                              <div className="flex justify-end gap-1">
-                                <Button size="sm" variant="ghost" onClick={() => openEdit(r)}>
-                                  <Pencil className="size-3.5" />
-                                </Button>
-                                <Button size="sm" variant="ghost" onClick={() => remove(r.id)}>
-                                  <Trash2 className="size-3.5 text-destructive" />
-                                </Button>
-                              </div>
-                            )}
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                title="매장 이동 요청"
+                                onClick={() => setTransferDevice(r)}
+                                disabled={stores.length === 0}
+                              >
+                                <ArrowRightLeft className="size-3.5" />
+                              </Button>
+                              {mine && (
+                                <>
+                                  <Button size="sm" variant="ghost" onClick={() => openEdit(r)}>
+                                    <Pencil className="size-3.5" />
+                                  </Button>
+                                  <Button size="sm" variant="ghost" onClick={() => remove(r.id)}>
+                                    <Trash2 className="size-3.5 text-destructive" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -401,38 +547,8 @@ export default function DeviceInventoryPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="grouped" className="mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {groupedByModel.length === 0 ? (
-              <div className="text-center text-muted-foreground py-10 col-span-full">표시할 데이터가 없습니다</div>
-            ) : (
-              groupedByModel.map(([model, list]) => {
-                const c: Record<string, number> = {};
-                list.forEach((d) => (c[d.status] = (c[d.status] ?? 0) + 1));
-                return (
-                  <Card key={model} className="p-5 glass border-border/40">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="text-xs text-muted-foreground">모델</div>
-                        <div className="text-lg font-semibold">{model}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-xs text-muted-foreground">총</div>
-                        <div className="text-3xl font-bold tabular-nums text-primary-glow">{list.length}</div>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {STATUSES.map((s) => (
-                        <Badge key={s} variant="outline" className={`${STATUS_COLOR[s] ?? ""} border`}>
-                          {s} {c[s] ?? 0}
-                        </Badge>
-                      ))}
-                    </div>
-                  </Card>
-                );
-              })
-            )}
-          </div>
+        <TabsContent value="transfers" className="mt-4">
+          <TransferList />
         </TabsContent>
       </Tabs>
 
@@ -455,6 +571,35 @@ export default function DeviceInventoryPage() {
             <Field label="용량">
               <Input value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} />
             </Field>
+            <Field label="입고일">
+              <Input
+                type="date"
+                value={form.stock_in_date}
+                onChange={(e) => setForm({ ...form, stock_in_date: e.target.value })}
+              />
+            </Field>
+            <Field label="매입가 (원)">
+              <Input
+                type="number"
+                value={form.purchase_price}
+                onChange={(e) => setForm({ ...form, purchase_price: Number(e.target.value) || 0 })}
+              />
+            </Field>
+            <Field label="현재 매장">
+              <Select
+                value={form.current_store_id}
+                onValueChange={(v) => setForm({ ...form, current_store_id: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="매장 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {stores.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
             <Field label="상태">
               <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as Status })}>
                 <SelectTrigger>
@@ -462,9 +607,7 @@ export default function DeviceInventoryPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {STATUSES.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -474,9 +617,7 @@ export default function DeviceInventoryPage() {
             </Field>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              취소
-            </Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>취소</Button>
             <Button onClick={save}>{editing ? "수정" : "등록"}</Button>
           </DialogFooter>
         </DialogContent>
@@ -508,7 +649,7 @@ export default function DeviceInventoryPage() {
             )}
             {ocrResults.length > 0 && (
               <div className="space-y-2">
-                <div className="text-sm font-medium">인식된 단말기 ({ocrResults.length}건) — 수정 후 저장</div>
+                <div className="text-sm font-medium">인식된 단말기 ({ocrResults.length}건)</div>
                 {ocrResults.map((r, i) => (
                   <Card key={i} className="p-3 glass border-border/40">
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-2 items-end">
@@ -566,15 +707,25 @@ export default function DeviceInventoryPage() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOcrOpen(false)}>
-              취소
-            </Button>
+            <Button variant="outline" onClick={() => setOcrOpen(false)}>취소</Button>
             <Button onClick={saveOcrResults} disabled={ocrResults.length === 0}>
               {ocrResults.length}건 저장
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 매장 이동 다이얼로그 */}
+      {transferDevice && (
+        <TransferDialog
+          open={!!transferDevice}
+          onOpenChange={(v) => !v && setTransferDevice(null)}
+          deviceId={transferDevice.id}
+          deviceLabel={`${transferDevice.model} · ${transferDevice.serial_no ?? "-"}`}
+          fromStoreId={transferDevice.current_store_id}
+          onCreated={load}
+        />
+      )}
     </div>
   );
 }
