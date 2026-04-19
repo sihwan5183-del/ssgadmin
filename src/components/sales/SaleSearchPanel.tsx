@@ -10,18 +10,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
   Search, Edit3, FileText, History, Save, Phone, User, Smartphone, Lock,
-  ShieldCheck, AlertCircle, CheckCircle2, XCircle, RotateCcw,
+  ShieldCheck, AlertCircle, CheckCircle2, XCircle, RotateCcw, AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { SaleDocuments } from "./SaleDocuments";
 import { SaleAuditLog } from "./SaleAuditLog";
+import { PendingItemsEditor } from "./PendingItemsEditor";
 import { useSearchParams } from "react-router-dom";
 
 type ApprovalStatus = "승인대기" | "확정" | "환수" | "취소";
@@ -45,6 +51,10 @@ interface SaleHit {
   approval_status: ApprovalStatus | null;
   locked: boolean | null;
   approved_at: string | null;
+  pending_items: string[] | null;
+  pending_note: string | null;
+  pending_resolved: boolean | null;
+  approval_override_reason: string | null;
 }
 
 const EDITABLE_FIELDS: Array<{ key: keyof SaleHit; label: string; type?: string }> = [
@@ -71,7 +81,7 @@ const APPROVAL_META: Record<ApprovalStatus, { className: string; icon: typeof Ch
 };
 
 const SELECT_COLS =
-  "id, created_by, customer_name, phone, device_serial, device_model, channel, product, rate_plan, status, open_date, manager, unit_price, net_fee, note, approval_status, locked, approved_at";
+  "id, created_by, customer_name, phone, device_serial, device_model, channel, product, rate_plan, status, open_date, manager, unit_price, net_fee, note, approval_status, locked, approved_at, pending_items, pending_note, pending_resolved, approval_override_reason";
 
 export const SaleSearchPanel = () => {
   const { user } = useAuth();
