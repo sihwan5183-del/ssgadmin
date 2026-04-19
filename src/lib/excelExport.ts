@@ -10,7 +10,7 @@ import { toast } from "sonner";
  */
 export const exportToExcel = <T extends Record<string, any>>(
   rows: T[],
-  columns: Array<[keyof T & string, string]>,
+  columns: Array<[string, string]>,
   fileName: string,
   sheetName = "Sheet1",
 ) => {
