@@ -58,6 +58,25 @@ export default function ExpenseInputPage() {
   const [total, setTotal] = useState(0);
   const { startDate, endDate, label: periodLabel } = usePeriod();
 
+  // sales 자동 집계 — 총 유통망지원금 / 현금개통 / 입금금액
+  const [salesAgg, setSalesAgg] = useState({ distributor: 0, cash: 0, receivable: 0 });
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("sales")
+        .select("distributor_amount, cash_support_amount, cash_open, receivable_amount, receivable_paid")
+        .gte("open_date", startDate)
+        .lte("open_date", endDate);
+      const agg = { distributor: 0, cash: 0, receivable: 0 };
+      (data ?? []).forEach((r: any) => {
+        agg.distributor += Number(r.distributor_amount ?? 0);
+        if (r.cash_open) agg.cash += Number(r.cash_support_amount ?? 0);
+        if (r.receivable_paid) agg.receivable += Number(r.receivable_amount ?? 0);
+      });
+      setSalesAgg(agg);
+    })();
+  }, [startDate, endDate]);
+
   const [adForm, setAdForm] = useState({
     spend_date: todayISO(),
     media: "",
