@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 const items = [
   { to: "/", label: "홈", icon: LayoutDashboard },
   { to: "/input", label: "실적", icon: PlusCircle },
-  { to: "/ad-spend", label: "광고비", icon: Megaphone },
+  { to: "/expense-input", label: "지출입력", icon: Megaphone },
   { to: "/expenses", label: "지출", icon: Wallet },
   { to: "/field-options", label: "항목", icon: Settings2 },
 ];

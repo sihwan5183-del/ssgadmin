@@ -20,7 +20,7 @@ const navItems = [
   { to: "/input", label: "실적 입력", icon: PlusCircle },
   { to: "/activities", label: "활동 관리", icon: Activity },
   { to: "/expenses", label: "지출 / ROI", icon: Wallet },
-  { to: "/ad-spend", label: "광고비 입력", icon: Megaphone },
+  { to: "/expense-input", label: "지출 비용 입력", icon: Megaphone },
   { to: "/ranking", label: "랭킹", icon: Trophy },
   { to: "/field-options", label: "입력 항목 관리", icon: Settings2 },
   { to: "/team", label: "권한 / 뷰", icon: Users },
