@@ -1,6 +1,5 @@
-import { subscriptionTypes, modelPolicyShare, usimStats } from "@/data/performanceData";
+import { subscriptionTypes, modelPolicyShare } from "@/data/performanceData";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { ArrowUpRight, CreditCard } from "lucide-react";
 
 export const MobileBreakdown = () => {
   const totalSub = subscriptionTypes.reduce((s, t) => s + t.count, 0);
