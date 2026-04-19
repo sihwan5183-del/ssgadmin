@@ -158,6 +158,37 @@ const InputPage = () => {
     exportToExcel(data ?? [], SALES_COLUMNS, `실적장표_${periodLabel.replace(/\s/g, "")}`, "실적");
   };
 
+  const handleExportOffers = async () => {
+    const { data, error } = await supabase
+      .from("sales")
+      .select(
+        "seq, open_date, channel, manager, customer_name, phone, product, sale_type, device_model, rate_plan, unit_price, vas_fee, distributor_amount, extra_subsidy, cash_support_amount, receivable_amount, receivable_paid, cash_open, cash_bank, cash_account, cash_holder, voucher, voucher_returned, net_fee, approval_status, note",
+      )
+      .gte("open_date", startDate)
+      .lte("open_date", endDate)
+      .order("open_date", { ascending: false, nullsFirst: false });
+    if (error) return toast.error("오퍼 내보내기 실패", { description: error.message });
+    // 지원금이 1원이라도 있는 행만 (또는 미수금/현금개통/상품권 발생 건도 포함)
+    const filtered = (data ?? []).filter((r: any) =>
+      Number(r.distributor_amount ?? 0) > 0 ||
+      Number(r.extra_subsidy ?? 0) > 0 ||
+      Number(r.cash_support_amount ?? 0) > 0 ||
+      Number(r.receivable_amount ?? 0) > 0 ||
+      r.cash_open === true ||
+      (r.voucher && String(r.voucher).trim() !== ""),
+    );
+    const mapped = filtered.map((r: any) => ({
+      ...r,
+      cash_open: r.cash_open ? "Y" : "",
+    }));
+    exportToExcel(
+      mapped,
+      OFFER_COLUMNS,
+      `오퍼_지원금관리_${periodLabel.replace(/\s/g, "")}`,
+      "오퍼관리",
+    );
+  };
+
   const reset = () => {
     setForm(emptyForm);
     setCustomFields({});
