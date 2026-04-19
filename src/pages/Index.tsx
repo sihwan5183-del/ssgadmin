@@ -9,6 +9,7 @@ import { RecentActivities } from "@/components/dashboard/RecentActivities";
 import { RankingPanel } from "@/components/dashboard/RankingPanel";
 import { PerformanceLedger } from "@/components/dashboard/PerformanceLedger";
 import { ChannelModelAnalysis } from "@/components/dashboard/ChannelModelAnalysis";
+import { OverallModelAnalysis } from "@/components/dashboard/OverallModelAnalysis";
 import { AdScheduleWidget } from "@/components/dashboard/AdScheduleWidget";
 import { InventoryWidget } from "@/components/dashboard/InventoryWidget";
 import { summaryStats, formatShortKRW } from "@/data/mockData";
@@ -81,6 +82,10 @@ const Index = () => {
 
       <section className="mb-6">
         <PerformanceLedger />
+      </section>
+
+      <section className="mb-6">
+        <OverallModelAnalysis />
       </section>
 
       <section className="mb-6">
