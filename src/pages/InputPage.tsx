@@ -387,13 +387,20 @@ const InputPage = () => {
             </div>
           </div>
         </div>
-        <div>
+        <div className="flex gap-2">
           <input
             ref={fileRef}
             type="file"
             accept=".xlsx,.xls"
             className="hidden"
             onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+          />
+          <input
+            ref={mappingFileRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={onMappingFile}
           />
           <Button
             type="button"
@@ -403,7 +410,17 @@ const InputPage = () => {
             className="rounded-xl"
           >
             <Upload className="size-4 mr-2" />
-            엑셀 선택
+            기본 양식 업로드
+          </Button>
+          <Button
+            type="button"
+            onClick={() => mappingFileRef.current?.click()}
+            disabled={busy}
+            variant="outline"
+            className="rounded-xl"
+          >
+            <Sparkles className="size-4 mr-2" />
+            매핑 업로드
           </Button>
         </div>
       </section>
