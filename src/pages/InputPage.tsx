@@ -23,7 +23,8 @@ import { useNetFeeFormula } from "@/hooks/useNetFeeFormula";
 import { DynamicFieldRenderer } from "@/components/admin/DynamicFieldRenderer";
 import { ExcelMappingDialog, type MappingTarget } from "@/components/admin/ExcelMappingDialog";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
-import { Sparkles } from "lucide-react";
+import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
+import { Sparkles, AlertTriangle } from "lucide-react";
 
 const PAGE_SIZE = 25;
 
@@ -89,6 +90,9 @@ const InputPage = () => {
   const { options: BANKS } = useFieldOptions("bank");
   const [form, setForm] = useState<Partial<SaleRow>>(emptyForm);
   const [customFields, setCustomFields] = useState<Record<string, any>>({});
+  const [pendingItems, setPendingItems] = useState<string[]>([]);
+  const [pendingNote, setPendingNote] = useState<string>("");
+  const [pendingResolved, setPendingResolved] = useState<boolean>(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rows, setRows] = useState<SaleRow[]>([]);
   const [busy, setBusy] = useState(false);
@@ -153,6 +157,9 @@ const InputPage = () => {
   const reset = () => {
     setForm(emptyForm);
     setCustomFields({});
+    setPendingItems([]);
+    setPendingNote("");
+    setPendingResolved(true);
     setEditingId(null);
   };
 
@@ -177,6 +184,9 @@ const InputPage = () => {
         ? num(form.net_fee)
         : calcNetFee(baseNumeric),
       custom_fields: customFields,
+      pending_items: pendingItems,
+      pending_note: pendingNote || null,
+      pending_resolved: pendingItems.length === 0 ? true : pendingResolved,
     };
     try {
       if (editingId) {
@@ -201,6 +211,9 @@ const InputPage = () => {
     setEditingId(r.id);
     setForm(r);
     setCustomFields(((r as any).custom_fields as Record<string, any>) ?? {});
+    setPendingItems(((r as any).pending_items as string[]) ?? []);
+    setPendingNote(((r as any).pending_note as string) ?? "");
+    setPendingResolved(((r as any).pending_resolved as boolean) ?? true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
