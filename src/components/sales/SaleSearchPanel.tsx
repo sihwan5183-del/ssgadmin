@@ -392,6 +392,11 @@ export const SaleSearchPanel = () => {
                   <Lock className="size-3" /> 읽기 전용
                 </Badge>
               )}
+              {(selected?.pending_items?.length ?? 0) > 0 && selected?.pending_resolved === false && (
+                <Badge variant="outline" className="text-[10px] gap-1 border-amber-500/40 text-amber-300 bg-amber-500/10">
+                  <AlertTriangle className="size-3" /> 미처리 {selected?.pending_items?.length}
+                </Badge>
+              )}
             </DialogTitle>
           </DialogHeader>
 
@@ -400,6 +405,9 @@ export const SaleSearchPanel = () => {
               <TabsList>
                 <TabsTrigger value="edit">
                   <Edit3 className="size-3.5 mr-1" /> 정보
+                </TabsTrigger>
+                <TabsTrigger value="pending">
+                  <AlertTriangle className="size-3.5 mr-1" /> 미처리
                 </TabsTrigger>
                 <TabsTrigger value="approval">
                   <ShieldCheck className="size-3.5 mr-1" /> 검수
