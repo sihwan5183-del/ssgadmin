@@ -10,7 +10,8 @@ export type FieldKey =
   | "rate_plan"
   | "delivery_type"
   | "bank"
-  | "media";
+  | "media"
+  | "expense_type";
 
 export interface FieldOption {
   id: string;
