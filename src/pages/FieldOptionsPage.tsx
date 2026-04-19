@@ -19,6 +19,7 @@ const FIELDS: { key: string; label: string; hint: string }[] = [
   { key: "delivery_type", label: "발송유형", hint: "택배, 퀵, 매장방문" },
   { key: "bank", label: "은행", hint: "국민, 신한, 카카오뱅크 등" },
   { key: "media", label: "광고 매체", hint: "네이버, 메타, 유튜브 등" },
+  { key: "expense_type", label: "지출 항목", hint: "임대료, 통신비, 운영비 등" },
 ];
 
 interface Row {
