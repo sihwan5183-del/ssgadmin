@@ -408,10 +408,27 @@ const InputPage = () => {
           </Grid>
           <Grid cols={3}>
             <Field label="개통요금제">
-              <Select value={form.rate_plan ?? ""} onValueChange={(v) => set("rate_plan", v)}>
-                <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
-                <SelectContent>{RATE_PLANS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
-              </Select>
+              {(() => {
+                const mapped = getPlansForProduct(form.product);
+                const plans = mapped.length > 0 ? mapped : RATE_PLANS;
+                const placeholder = !form.product
+                  ? "가입상품을 먼저 선택하세요"
+                  : mapped.length === 0
+                    ? "전체 요금제 (매핑 미설정)"
+                    : "선택";
+                return (
+                  <Select value={form.rate_plan ?? ""} onValueChange={(v) => set("rate_plan", v)}>
+                    <SelectTrigger className="h-11 bg-input/60">
+                      <SelectValue placeholder={placeholder} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {plans.map((p) => (
+                        <SelectItem key={p} value={p}>{p}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                );
+              })()}
             </Field>
             <Field label="부가서비스 1">
               <Input value={form.vas1 ?? ""} onChange={(e) => set("vas1", e.target.value)} className="h-11 bg-input/60" />
