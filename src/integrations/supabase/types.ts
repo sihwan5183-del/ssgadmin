@@ -149,6 +149,39 @@ export type Database = {
         }
         Relationships: []
       }
+      product_rate_plans: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          product: string
+          rate_plan: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          product: string
+          rate_plan: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          product?: string
+          rate_plan?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
