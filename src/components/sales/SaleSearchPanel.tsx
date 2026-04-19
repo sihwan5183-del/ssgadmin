@@ -648,6 +648,7 @@ export const SaleSearchPanel = () => {
                   approved_at: selected.approved_at,
                   pending_items: selected.pending_items,
                   pending_resolved: selected.pending_resolved,
+                  custom_fields: (selected as any).custom_fields ?? null,
                 }}
                 onChanged={async () => {
                   const { data } = await supabase.from("sales").select(SELECT_COLS).eq("id", selected.id).maybeSingle();
