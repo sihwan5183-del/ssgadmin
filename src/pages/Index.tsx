@@ -85,6 +85,10 @@ const Index = () => {
       </section>
 
       <section className="mb-6">
+        <OverallModelAnalysis />
+      </section>
+
+      <section className="mb-6">
         <ChannelModelAnalysis />
       </section>
 
