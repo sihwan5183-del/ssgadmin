@@ -22,6 +22,7 @@ import { useFieldDefinitions } from "@/hooks/useFieldDefinitions";
 import { useNetFeeFormula } from "@/hooks/useNetFeeFormula";
 import { DynamicFieldRenderer } from "@/components/admin/DynamicFieldRenderer";
 import { ExcelMappingDialog, type MappingTarget } from "@/components/admin/ExcelMappingDialog";
+import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { Sparkles } from "lucide-react";
 
 const PAGE_SIZE = 25;
@@ -648,6 +649,23 @@ const InputPage = () => {
               />
             </Grid>
           </FormSection>
+        )}
+
+        {/* 가입 서류 — 저장된 실적에 한해 업로드 가능 */}
+        {editingId ? (
+          <FormSection title="가입 서류" icon={<Upload className="size-3" />}>
+            <SaleDocuments
+              saleId={editingId}
+              saleMeta={{
+                open_date: form.open_date as string | null | undefined,
+                customer_name: form.customer_name as string | null | undefined,
+              }}
+            />
+          </FormSection>
+        ) : (
+          <div className="rounded-xl border border-dashed border-border/40 p-3 text-center text-xs text-muted-foreground">
+            💡 가입 서류는 실적을 먼저 저장한 뒤 수정 모드에서 업로드할 수 있습니다.
+          </div>
         )}
 
         <div className="text-[11px] text-muted-foreground text-right -mb-2">

@@ -479,6 +479,42 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          link: string | null
+          message: string | null
+          metadata: Json | null
+          read_at: string | null
+          recipient_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          link?: string | null
+          message?: string | null
+          metadata?: Json | null
+          read_at?: string | null
+          recipient_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          link?: string | null
+          message?: string | null
+          metadata?: Json | null
+          read_at?: string | null
+          recipient_id?: string
+          title?: string
+        }
+        Relationships: []
+      }
       product_rate_plans: {
         Row: {
           active: boolean
@@ -586,6 +622,50 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      sale_documents: {
+        Row: {
+          created_at: string
+          doc_type: string | null
+          file_name: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          sale_id: string
+          storage_path: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          doc_type?: string | null
+          file_name: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          sale_id: string
+          storage_path: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          doc_type?: string | null
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          sale_id?: string
+          storage_path?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_documents_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sales: {
         Row: {
@@ -724,6 +804,41 @@ export type Database = {
           voucher_returned?: string | null
         }
         Relationships: []
+      }
+      sales_audit_log: {
+        Row: {
+          action: string
+          changed_at: string
+          changed_by: string | null
+          changes: Json
+          id: string
+          sale_id: string
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          changed_by?: string | null
+          changes?: Json
+          id?: string
+          sale_id: string
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          changed_by?: string | null
+          changes?: Json
+          id?: string
+          sale_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_audit_log_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stores: {
         Row: {

@@ -1,8 +1,6 @@
-import { Bell, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { ScopeToggle } from "./ScopeToggle";
 import { PeriodFilter } from "./PeriodFilter";
+import { NotificationBell } from "./NotificationBell";
 
 interface HeaderProps {
   title: string;
@@ -36,9 +34,7 @@ export const Header = ({
         {showPeriodFilter && <PeriodFilter />}
         {showScopeToggle && <ScopeToggle />}
         {rightSlot}
-        <Button variant="ghost" size="icon" className="rounded-full glass">
-          <Bell className="size-4" />
-        </Button>
+        <NotificationBell />
         <div className="size-10 rounded-full bg-gradient-primary grid place-items-center text-sm font-semibold text-primary-foreground shadow-glow">
           기획
         </div>

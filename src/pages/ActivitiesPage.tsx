@@ -1,6 +1,7 @@
 import { Header } from "@/components/layout/Header";
 import { Badge } from "@/components/ui/badge";
 import { Carrot, MapPin, Send, RefreshCw, ArrowUpRight } from "lucide-react";
+import { SaleSearchPanel } from "@/components/sales/SaleSearchPanel";
 import {
   Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell,
 } from "recharts";
@@ -61,6 +62,9 @@ const ActivitiesPage = () => {
         title="활동 관리"
         subtitle={scope === "personal" ? "내가 등록한 단골·쿠폰·전환 현황" : "팀 전체 단골·쿠폰·전환 현황"}
       />
+
+      {/* 실적 검색/수정 */}
+      <SaleSearchPanel />
 
       {/* 상단 KPI */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
