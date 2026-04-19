@@ -22,7 +22,8 @@ import AdminPage from "./pages/AdminPage.tsx";
 import ProductRatePlansPage from "./pages/ProductRatePlansPage.tsx";
 import DeviceInventoryPage from "./pages/DeviceInventoryPage.tsx";
 import AdCalendarPage from "./pages/AdCalendarPage.tsx";
-import StoresPage from "./pages/StoresPage.tsx";
+import DeviceModelsPage from "./pages/DeviceModelsPage.tsx";
+import IncentiveRatesPage from "./pages/IncentiveRatesPage.tsx";
 import AuthPage from "./pages/AuthPage.tsx";
 import MissingDocsPage from "./pages/MissingDocsPage.tsx";
 import StaffStatusPage from "./pages/StaffStatusPage.tsx";
@@ -68,7 +69,8 @@ const App = () => (
                         <Route path="/product-rate-plans" element={<ProductRatePlansPage />} />
                         <Route path="/device-inventory" element={<DeviceInventoryPage />} />
                         <Route path="/ad-calendar" element={<AdCalendarPage />} />
-                        <Route path="/stores" element={<StoresPage />} />
+                        <Route path="/device-models" element={<DeviceModelsPage />} />
+                        <Route path="/incentive-rates" element={<IncentiveRatesPage />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </AppShell>
