@@ -199,7 +199,54 @@ const InputPage = () => {
   const onEdit = (r: SaleRow) => {
     setEditingId(r.id);
     setForm(r);
+    setCustomFields(((r as any).custom_fields as Record<string, any>) ?? {});
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // === 매핑 엔진 업로드 ===
+  const targets: MappingTarget[] = [
+    ...SALES_COLUMNS.map(([k, l]) => ({ field_key: k, label: l })),
+    ...dynamicFields.map((f) => ({ field_key: `custom_fields.${f.field_key}`, label: f.label })),
+  ];
+
+  const onMappingFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setMappingFile(f);
+    setMappingOpen(true);
+    if (mappingFileRef.current) mappingFileRef.current.value = "";
+  };
+
+  const handleMappingConfirm = async (mapped: Record<string, any>[]) => {
+    if (!user) return;
+    const records = mapped
+      .filter((r) => Object.values(r).some((v) => v !== "" && v != null))
+      .map((r) => {
+        const custom: Record<string, any> = {};
+        const base: Record<string, any> = { created_by: user.id };
+        for (const [k, v] of Object.entries(r)) {
+          if (k.startsWith("custom_fields.")) {
+            custom[k.slice("custom_fields.".length)] = v;
+          } else {
+            base[k] = v;
+          }
+        }
+        // 숫자 컬럼 변환
+        ["unit_price", "vas_fee", "receivable_amount", "distributor_amount", "extra_subsidy", "cash_support_amount", "net_fee"].forEach((k) => {
+          if (base[k] != null) base[k] = num(base[k]);
+        });
+        if (base.net_fee == null || base.net_fee === 0) base.net_fee = calcNetFee(base);
+        base.custom_fields = custom;
+        return base;
+      });
+    if (!records.length) return toast.error("등록할 데이터가 없습니다");
+    const chunk = 200;
+    for (let i = 0; i < records.length; i += chunk) {
+      const { error } = await supabase.from("sales").insert(records.slice(i, i + chunk) as any);
+      if (error) return toast.error(error.message);
+    }
+    toast.success(`${records.length}건 등록되었습니다`);
+    load();
   };
 
   const onDelete = async (id: string) => {
