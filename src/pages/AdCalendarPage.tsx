@@ -495,12 +495,30 @@ export default function AdCalendarPage() {
                   )}
                 </div>
 
-                {spend > 0 && (
-                  <div className="mt-1.5 pt-1.5 border-t border-border/20 text-[10px] text-muted-foreground tabular-nums flex items-center justify-between">
-                    <span>지출</span>
-                    <span className="font-semibold text-foreground">₩{fmtKRW(Math.round(spend))}</span>
-                  </div>
-                )}
+                {(() => {
+                  const dayMap = salesByDate.get(key);
+                  const opens = dayMap?.get("__total__") ?? 0;
+                  const cpa = opens > 0 && spend > 0 ? Math.round(spend / opens) : 0;
+                  if (spend === 0 && opens === 0) return null;
+                  return (
+                    <div className="mt-1.5 pt-1.5 border-t border-border/20 grid grid-cols-3 gap-1 text-[9px] tabular-nums">
+                      <div className="text-center">
+                        <div className="text-muted-foreground">지출</div>
+                        <div className="font-semibold text-foreground">₩{fmtKRW(Math.round(spend))}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-muted-foreground">개통</div>
+                        <div className="font-semibold text-emerald-300">{opens}건</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-muted-foreground">CPA</div>
+                        <div className="font-semibold text-primary-glow">
+                          {cpa > 0 ? `₩${fmtKRW(cpa)}` : "-"}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}

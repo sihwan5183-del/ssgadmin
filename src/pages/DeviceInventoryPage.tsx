@@ -460,22 +460,33 @@ export default function DeviceInventoryPage() {
                     filtered.map((r) => {
                       const mine = r.created_by === user?.id;
                       const days = daysSince(r.stock_in_date);
-                      const aged = r.status !== "개통완료" && isAged(r.stock_in_date);
+                      const isOpen = r.status !== "개통완료";
+                      // 30/60/90일 단계별 색상
+                      let agingClass = "";
+                      let agingBadge: { label: string; cls: string } | null = null;
+                      if (isOpen && days >= 90) {
+                        agingClass = "bg-destructive/10 border-l-2 border-destructive";
+                        agingBadge = { label: `장기 ${days}일`, cls: "bg-destructive text-destructive-foreground" };
+                      } else if (isOpen && days >= 60) {
+                        agingClass = "bg-warning/10 border-l-2 border-warning";
+                        agingBadge = { label: `${days}일`, cls: "bg-warning text-warning-foreground" };
+                      } else if (isOpen && days >= 30) {
+                        agingClass = "bg-amber-500/5 border-l-2 border-amber-500/60";
+                        agingBadge = { label: `${days}일`, cls: "bg-amber-500/20 text-amber-300 border border-amber-500/40" };
+                      }
                       const storeName = byId(r.current_store_id)?.name ?? "-";
                       return (
                         <tr
                           key={r.id}
-                          className={`border-t border-border/30 hover:bg-muted/20 ${
-                            aged ? "bg-destructive/5" : ""
-                          }`}
+                          className={`border-t border-border/30 hover:bg-muted/20 ${agingClass}`}
                         >
                           <td className="px-3 py-2.5 font-medium">
                             <div className="flex items-center gap-2">
                               {r.model}
-                              {aged && (
-                                <Badge variant="destructive" className="text-[10px]">
-                                  우선판매 {days}일
-                                </Badge>
+                              {agingBadge && (
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded ${agingBadge.cls}`}>
+                                  {agingBadge.label}
+                                </span>
                               )}
                             </div>
                           </td>
