@@ -599,6 +599,89 @@ export type Database = {
         }
         Relationships: []
       }
+      menu_groups: {
+        Row: {
+          active: boolean
+          created_at: string
+          icon: string
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+          visible_roles: string[]
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          icon?: string
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+          visible_roles?: string[]
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          icon?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+          visible_roles?: string[]
+        }
+        Relationships: []
+      }
+      menu_items: {
+        Row: {
+          active: boolean
+          created_at: string
+          group_id: string | null
+          icon: string
+          id: string
+          is_admin_only: boolean
+          label: string
+          path: string
+          sort_order: number
+          updated_at: string
+          visible_roles: string[]
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          group_id?: string | null
+          icon?: string
+          id?: string
+          is_admin_only?: boolean
+          label: string
+          path: string
+          sort_order?: number
+          updated_at?: string
+          visible_roles?: string[]
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          group_id?: string | null
+          icon?: string
+          id?: string
+          is_admin_only?: boolean
+          label?: string
+          path?: string
+          sort_order?: number
+          updated_at?: string
+          visible_roles?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_items_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "menu_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
