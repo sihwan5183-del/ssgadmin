@@ -259,33 +259,39 @@ export type Database = {
       device_models: {
         Row: {
           active: boolean
+          aliases: string[]
           created_at: string
           created_by: string | null
           id: string
           manufacturer: string
           model_name: string
+          official_name: string | null
           retail_price: number
           sort_order: number
           updated_at: string
         }
         Insert: {
           active?: boolean
+          aliases?: string[]
           created_at?: string
           created_by?: string | null
           id?: string
           manufacturer?: string
           model_name: string
+          official_name?: string | null
           retail_price?: number
           sort_order?: number
           updated_at?: string
         }
         Update: {
           active?: boolean
+          aliases?: string[]
           created_at?: string
           created_by?: string | null
           id?: string
           manufacturer?: string
           model_name?: string
+          official_name?: string | null
           retail_price?: number
           sort_order?: number
           updated_at?: string
@@ -1152,6 +1158,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      normalize_device_model: { Args: { _raw: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "manager" | "user"
