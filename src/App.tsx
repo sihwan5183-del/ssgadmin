@@ -11,7 +11,7 @@ import Index from "./pages/Index.tsx";
 import InputPage from "./pages/InputPage.tsx";
 import ActivitiesPage from "./pages/ActivitiesPage.tsx";
 import ExpensesPage from "./pages/ExpensesPage.tsx";
-import AdSpendPage from "./pages/AdSpendPage.tsx";
+import ExpenseInputPage from "./pages/ExpenseInputPage.tsx";
 import FieldOptionsPage from "./pages/FieldOptionsPage.tsx";
 import RankingPage from "./pages/RankingPage.tsx";
 import TeamPage from "./pages/TeamPage.tsx";
@@ -40,7 +40,8 @@ const App = () => (
                         <Route path="/input" element={<InputPage />} />
                         <Route path="/activities" element={<ActivitiesPage />} />
                         <Route path="/expenses" element={<ExpensesPage />} />
-                        <Route path="/ad-spend" element={<AdSpendPage />} />
+                        <Route path="/ad-spend" element={<ExpenseInputPage />} />
+                        <Route path="/expense-input" element={<ExpenseInputPage />} />
                         <Route path="/field-options" element={<FieldOptionsPage />} />
                         <Route path="/ranking" element={<RankingPage />} />
                         <Route path="/team" element={<TeamPage />} />
