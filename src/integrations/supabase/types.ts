@@ -86,6 +86,54 @@ export type Database = {
         }
         Relationships: []
       }
+      device_inventory: {
+        Row: {
+          capacity: string | null
+          color: string | null
+          created_at: string
+          created_by: string
+          id: string
+          model: string
+          note: string | null
+          purchase_price: number | null
+          serial_no: string | null
+          status: string
+          stock_in_date: string | null
+          supplier: string | null
+          updated_at: string
+        }
+        Insert: {
+          capacity?: string | null
+          color?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          model: string
+          note?: string | null
+          purchase_price?: number | null
+          serial_no?: string | null
+          status?: string
+          stock_in_date?: string | null
+          supplier?: string | null
+          updated_at?: string
+        }
+        Update: {
+          capacity?: string | null
+          color?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          model?: string
+          note?: string | null
+          purchase_price?: number | null
+          serial_no?: string | null
+          status?: string
+          stock_in_date?: string | null
+          supplier?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       field_labels: {
         Row: {
           display_name: string
