@@ -31,6 +31,8 @@ import { PendingItemsEditor } from "./PendingItemsEditor";
 import { ReviewerPanel } from "./ReviewerPanel";
 import { MoneyInput } from "@/components/ui/money-input";
 import { useSearchParams } from "react-router-dom";
+import { usePeriod } from "@/contexts/PeriodContext";
+import { CalendarDays } from "lucide-react";
 
 type ApprovalStatus = "승인대기" | "확정" | "반려" | "수정요청" | "환수" | "취소";
 
@@ -99,6 +101,7 @@ const SELECT_COLS =
 export const SaleSearchPanel = () => {
   const { user } = useAuth();
   const { isAdmin } = useRole();
+  const { startDate, endDate, label, setSingleDay } = usePeriod();
   const [params, setParams] = useSearchParams();
   const [q, setQ] = useState("");
   const [pendingOnly, setPendingOnly] = useState(false);
@@ -146,10 +149,6 @@ export const SaleSearchPanel = () => {
     const onlyPending = pendingOverride ?? pendingOnly;
     const onlyUnhandled = unhandledOverride ?? unhandledOnly;
 
-    if (!term && !onlyPending && !onlyUnhandled) {
-      setResults([]);
-      return;
-    }
     setSearching(true);
     let query = supabase.from("sales").select(SELECT_COLS);
 
@@ -161,17 +160,28 @@ export const SaleSearchPanel = () => {
     }
     if (onlyPending) query = query.eq("approval_status", "승인대기");
     if (onlyUnhandled) query = query.eq("pending_resolved", false);
+    // 기간 필터 적용 (검색어 없이 기간만으로도 조회 가능)
+    query = query.gte("open_date", startDate).lte("open_date", endDate);
 
-    const { data, error } = await query.order("created_at", { ascending: false }).limit(100);
+    const { data, error } = await query
+      .order("open_date", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(200);
     setSearching(false);
     if (error) return toast.error(error.message);
     setResults((data ?? []) as SaleHit[]);
   };
 
-  // URL ?sale=ID 자동 오픈 + ?pending=1 자동 미처리 필터
+  // URL ?sale=ID 자동 오픈 + ?pending=1 미처리 필터 + ?date=YYYY-MM-DD 단일일자
   useEffect(() => {
     const id = params.get("sale");
     const wantPending = params.get("pending") === "1";
+    const dateParam = params.get("date");
+    if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+      setSingleDay(dateParam);
+      params.delete("date");
+      setParams(params, { replace: true });
+    }
     if (wantPending) {
       setUnhandledOnly(true);
       search(undefined, undefined, true);
@@ -192,6 +202,12 @@ export const SaleSearchPanel = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 기간 변경 시 자동 재조회
+  useEffect(() => {
+    search();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate]);
 
   const openDetail = (sale: SaleHit) => {
     setSelected(sale);
@@ -341,53 +357,100 @@ export const SaleSearchPanel = () => {
       {results.length > 0 && (
         <div className="mt-4 rounded-xl border border-border/40 overflow-hidden">
           <div className="px-3 py-2 bg-muted/40 text-xs text-muted-foreground flex items-center justify-between">
-            <span>검색 결과 {results.length}건 (최근순)</span>
-            <span>클릭하면 상세 / 수정 / 검수</span>
+            <span className="flex items-center gap-2">
+              <CalendarDays className="size-3" /> {label} · 검색 결과 {results.length}건 (날짜 내림차순)
+            </span>
+            <span>날짜별로 묶음 · 합계 표시</span>
           </div>
-          <div className="max-h-96 overflow-y-auto divide-y divide-border/30">
-            {results.map((r) => {
-              const ap = (r.approval_status ?? "승인대기") as ApprovalStatus;
-              const meta = APPROVAL_META[ap];
-              const Icon = meta.icon;
-              const hasUnhandled = (r.pending_items?.length ?? 0) > 0 && r.pending_resolved === false;
-              return (
-                <button
-                  key={r.id}
-                  onClick={() => openDetail(r)}
-                  className={`w-full text-left px-3 py-2.5 hover:bg-muted/30 transition-colors flex items-center gap-3 ${
-                    hasUnhandled ? "bg-amber-500/[0.07] hover:bg-amber-500/[0.12]" : ""
-                  }`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium flex items-center gap-2 flex-wrap">
-                      <User className="size-3 text-muted-foreground" />
-                      {r.customer_name ?? "(이름없음)"}
-                      <Badge variant="outline" className={`text-[10px] gap-1 ${meta.className}`}>
-                        <Icon className="size-3" /> {ap}
-                      </Badge>
-                      {hasUnhandled && (
-                        <Badge variant="outline" className="text-[10px] gap-1 border-amber-500/40 text-amber-300 bg-amber-500/10">
-                          <AlertTriangle className="size-3" /> 미처리 {r.pending_items?.length}
-                        </Badge>
-                      )}
-                      {r.locked && (
-                        <Badge variant="outline" className="text-[10px] gap-1 border-border/60">
-                          <Lock className="size-3" /> 잠금
-                        </Badge>
-                      )}
-                      {r.status && <Badge variant="outline" className="text-[10px]">{r.status}</Badge>}
+          <div className="max-h-[32rem] overflow-y-auto">
+            {(() => {
+              // group by open_date
+              const groups = new Map<string, SaleHit[]>();
+              results.forEach((r) => {
+                const k = r.open_date ?? "(날짜없음)";
+                const arr = groups.get(k) ?? [];
+                arr.push(r);
+                groups.set(k, arr);
+              });
+              const keys = Array.from(groups.keys()).sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
+              return keys.map((dateKey) => {
+                const list = groups.get(dateKey)!;
+                const dailyNet = list.reduce((s, r) => s + Number(r.net_fee ?? 0), 0);
+                const dailyConfirmed = list.filter((r) => r.approval_status === "확정").length;
+                const dailyPending = list.filter((r) => r.pending_resolved === false && (r.pending_items?.length ?? 0) > 0).length;
+                return (
+                  <div key={dateKey}>
+                    <div className="sticky top-0 z-10 px-3 py-2 bg-card/80 backdrop-blur border-y border-border/40 flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <CalendarDays className="size-3.5 text-primary-glow" />
+                        <span className="text-sm font-semibold tabular-nums">{dateKey}</span>
+                        <Badge variant="outline" className="border-border/50 text-[10px]">{list.length}건</Badge>
+                        {dailyConfirmed > 0 && (
+                          <Badge variant="outline" className="border-emerald-500/40 text-emerald-300 bg-emerald-500/10 text-[10px]">
+                            확정 {dailyConfirmed}
+                          </Badge>
+                        )}
+                        {dailyPending > 0 && (
+                          <Badge variant="outline" className="border-amber-500/40 text-amber-300 bg-amber-500/10 text-[10px]">
+                            미처리 {dailyPending}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        일별 순수익 합계 <span className="font-bold tabular-nums text-foreground">₩{dailyNet.toLocaleString("ko-KR")}</span>
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground flex items-center gap-3 mt-1 flex-wrap">
-                      <span className="flex items-center gap-1"><Phone className="size-3" />{r.phone ?? "-"}</span>
-                      <span className="flex items-center gap-1"><Smartphone className="size-3" />{r.device_serial ?? "-"}</span>
-                      <span>{r.open_date ?? "-"}</span>
-                      <span>{r.channel ?? "-"} / {r.product ?? "-"}</span>
+                    <div className="divide-y divide-border/30">
+                      {list.map((r) => {
+                        const ap = (r.approval_status ?? "승인대기") as ApprovalStatus;
+                        const meta = APPROVAL_META[ap];
+                        const Icon = meta.icon;
+                        const hasUnhandled = (r.pending_items?.length ?? 0) > 0 && r.pending_resolved === false;
+                        return (
+                          <button
+                            key={r.id}
+                            onClick={() => openDetail(r)}
+                            className={`w-full text-left px-3 py-2.5 hover:bg-muted/30 transition-colors flex items-center gap-3 ${
+                              hasUnhandled ? "bg-amber-500/[0.07] hover:bg-amber-500/[0.12]" : ""
+                            }`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium flex items-center gap-2 flex-wrap">
+                                <User className="size-3 text-muted-foreground" />
+                                {r.customer_name ?? "(이름없음)"}
+                                <Badge variant="outline" className={`text-[10px] gap-1 ${meta.className}`}>
+                                  <Icon className="size-3" /> {ap}
+                                </Badge>
+                                {hasUnhandled && (
+                                  <Badge variant="outline" className="text-[10px] gap-1 border-amber-500/40 text-amber-300 bg-amber-500/10">
+                                    <AlertTriangle className="size-3" /> 미처리 {r.pending_items?.length}
+                                  </Badge>
+                                )}
+                                {r.locked && (
+                                  <Badge variant="outline" className="text-[10px] gap-1 border-border/60">
+                                    <Lock className="size-3" /> 잠금
+                                  </Badge>
+                                )}
+                                {r.status && <Badge variant="outline" className="text-[10px]">{r.status}</Badge>}
+                              </div>
+                              <div className="text-xs text-muted-foreground flex items-center gap-3 mt-1 flex-wrap">
+                                <span className="flex items-center gap-1"><Phone className="size-3" />{r.phone ?? "-"}</span>
+                                <span className="flex items-center gap-1"><Smartphone className="size-3" />{r.device_serial ?? "-"}</span>
+                                <span>{r.channel ?? "-"} / {r.product ?? "-"}</span>
+                                {r.net_fee != null && (
+                                  <span className="text-foreground/80 tabular-nums">순수익 ₩{Number(r.net_fee).toLocaleString("ko-KR")}</span>
+                                )}
+                              </div>
+                            </div>
+                            <Edit3 className="size-3.5 text-muted-foreground" />
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
-                  <Edit3 className="size-3.5 text-muted-foreground" />
-                </button>
-              );
-            })}
+                );
+              });
+            })()}
           </div>
         </div>
       )}
