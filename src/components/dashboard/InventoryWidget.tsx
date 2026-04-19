@@ -87,7 +87,7 @@ export const InventoryWidget = () => {
           <div className="text-[10px] text-muted-foreground mt-0.5">
             보유 {rows.length}대
             {fallbackPrice === 0 && rows.some((r) => !r.purchase_price) && (
-              <span className="ml-1 text-amber-400">· 매입가 미입력 일부</span>
+              <span className="ml-1 text-warning">· 매입가 미입력 일부</span>
             )}
           </div>
         </div>
