@@ -25,11 +25,13 @@ import {
   Calculator,
   Smartphone,
   History,
+  Coins,
 } from "lucide-react";
 import { DynamicFieldsManager } from "@/components/admin/DynamicFieldsManager";
 import { FormulaEditor } from "@/components/admin/FormulaEditor";
 import { DeviceModelsManager } from "@/components/admin/DeviceModelsManager";
 import { SystemAuditLog } from "@/components/admin/SystemAuditLog";
+import { IncentiveRatesManager } from "@/components/admin/IncentiveRatesManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole, type AppRole } from "@/hooks/useRole";
@@ -164,10 +166,17 @@ export default function AdminPage() {
           <TabsTrigger value="users" className="gap-2">
             <ShieldCheck className="size-4" /> 사용자 권한
           </TabsTrigger>
+          <TabsTrigger value="incentive" className="gap-2">
+            <Coins className="size-4" /> 인센티브 단가
+          </TabsTrigger>
           <TabsTrigger value="audit" className="gap-2">
             <History className="size-4" /> 시스템 로그
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="incentive">
+          <IncentiveRatesManager />
+        </TabsContent>
 
         <TabsContent value="fields">
           <DynamicFieldsManager />
