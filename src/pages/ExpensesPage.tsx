@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Header } from "@/components/layout/Header";
 import { MediaSpendStack } from "@/components/finance/MediaSpendStack";
 import { CpaChart } from "@/components/finance/CpaChart";
@@ -7,25 +8,72 @@ import { OfferTrendChart } from "@/components/finance/OfferTrendChart";
 import { ChannelMarginRanking } from "@/components/finance/ChannelMarginRanking";
 import { SettlementGap } from "@/components/finance/SettlementGap";
 import { totals, netMargin, formatKRWShort } from "@/data/financeData";
-import { TrendingUp, TrendingDown, Sparkles, Target } from "lucide-react";
+import { TrendingUp, TrendingDown, Sparkles, Target, Banknote, Wallet, HandCoins } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { usePeriod } from "@/contexts/PeriodContext";
+
+interface SalesAgg {
+  distributor: number;
+  cashOpen: number;
+  customerDeposit: number;
+  adSpend: number;
+}
 
 const ExpensesPage = () => {
-  const roi = Math.round(((totals.totalRebate - totals.totalSpend - totals.totalOffer) / totals.totalSpend) * 100);
+  const { startDate, endDate, label } = usePeriod();
+  const [agg, setAgg] = useState<SalesAgg>({ distributor: 0, cashOpen: 0, customerDeposit: 0, adSpend: 0 });
+
+  useEffect(() => {
+    (async () => {
+      const [{ data: salesRows }, { data: spendRows }] = await Promise.all([
+        supabase
+          .from("sales")
+          .select("distributor_amount, cash_support_amount, receivable_amount, receivable_paid")
+          .gte("open_date", startDate)
+          .lte("open_date", endDate),
+        supabase
+          .from("ad_spend")
+          .select("amount")
+          .gte("spend_date", startDate)
+          .lte("spend_date", endDate),
+      ]);
+      const distributor = (salesRows ?? []).reduce((s, r: any) => s + Number(r.distributor_amount ?? 0), 0);
+      const cashOpen = (salesRows ?? []).reduce((s, r: any) => s + Number(r.cash_support_amount ?? 0), 0);
+      const customerDeposit = (salesRows ?? []).reduce(
+        (s, r: any) => (r.receivable_paid ? s + Number(r.receivable_amount ?? 0) : s),
+        0,
+      );
+      const adSpend = (spendRows ?? []).reduce((s, r: any) => s + Number(r.amount ?? 0), 0);
+      setAgg({ distributor, cashOpen, customerDeposit, adSpend });
+    })();
+  }, [startDate, endDate]);
+
+  // 실측 KPI: 총지출 = 광고비 + 유통망지원금 / 실질마진 = 리베이트 + 고객입금 - 유통망 - 광고비
+  const totalExpense = agg.adSpend + agg.distributor;
+  const realNetMargin = totals.totalRebate + agg.customerDeposit - agg.distributor - agg.adSpend;
+  const roi = totalExpense > 0 ? Math.round((realNetMargin / totalExpense) * 100) : 0;
   const cpaAvg = Math.round(totals.totalSpend / totals.totalSuccess);
 
   return (
     <>
       <Header
         title="수익 · 지출 상세 분석"
-        subtitle="실적장표(금액) + 지출장표 통합 뷰"
+        subtitle={`실적장표(금액) + 지출장표 통합 뷰 · ${label}`}
       />
 
       {/* 상단 KPI */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <KpiTile label="총 수익(리베이트)" value={formatKRWShort(totals.totalRebate)} tone="revenue" Icon={TrendingUp} hint="당월 누적" />
-        <KpiTile label="총 지출(광고+오퍼)" value={formatKRWShort(totals.totalSpend + totals.totalOffer)} tone="expense" Icon={TrendingDown} hint="마케팅비 + 지원금" />
-        <KpiTile label="순수익 (Net)" value={formatKRWShort(netMargin)} tone="primary" Icon={Sparkles} hint="리베이트 − 지원금 − 광고비" />
+        <KpiTile label="총 지출 (광고+유통망)" value={formatKRWShort(totalExpense)} tone="expense" Icon={TrendingDown} hint={`광고 ${formatKRWShort(agg.adSpend)} + 유통망 ${formatKRWShort(agg.distributor)}`} />
+        <KpiTile label="실질 마진" value={formatKRWShort(realNetMargin)} tone="primary" Icon={Sparkles} hint="리베이트 + 고객입금 − 유통망 − 광고" />
         <KpiTile label="평균 CPA" value={formatKRWShort(cpaAvg)} tone="expense" Icon={Target} hint={`ROI ${roi}%`} />
+      </section>
+
+      {/* 오퍼/현금 ROI 항목 — 지출 분류 카드 */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <KpiTile label="유통망 지원금 (지출)" value={formatKRWShort(agg.distributor)} tone="expense" Icon={HandCoins} hint="실적 자동 집계 · 총지출 반영" />
+        <KpiTile label="현금개통 금액 (시재)" value={formatKRWShort(agg.cashOpen)} tone="primary" Icon={Banknote} hint="고객 현금 완납 · 시재 유입" />
+        <KpiTile label="고객입금 금액 (수익)" value={formatKRWShort(agg.customerDeposit)} tone="revenue" Icon={Wallet} hint="입금완료 건만 · 실질마진 가산" />
       </section>
 
       {/* 1. 지출 상세 */}
