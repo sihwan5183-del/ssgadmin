@@ -23,9 +23,13 @@ import {
   Lock,
   Database,
   Calculator,
+  Smartphone,
+  History,
 } from "lucide-react";
 import { DynamicFieldsManager } from "@/components/admin/DynamicFieldsManager";
 import { FormulaEditor } from "@/components/admin/FormulaEditor";
+import { DeviceModelsManager } from "@/components/admin/DeviceModelsManager";
+import { SystemAuditLog } from "@/components/admin/SystemAuditLog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole, type AppRole } from "@/hooks/useRole";
@@ -154,8 +158,14 @@ export default function AdminPage() {
           <TabsTrigger value="master" className="gap-2">
             <ListChecks className="size-4" /> 마스터 데이터
           </TabsTrigger>
+          <TabsTrigger value="models" className="gap-2">
+            <Smartphone className="size-4" /> 모델 마스터
+          </TabsTrigger>
           <TabsTrigger value="users" className="gap-2">
             <ShieldCheck className="size-4" /> 사용자 권한
+          </TabsTrigger>
+          <TabsTrigger value="audit" className="gap-2">
+            <History className="size-4" /> 시스템 로그
           </TabsTrigger>
         </TabsList>
 
@@ -165,6 +175,14 @@ export default function AdminPage() {
 
         <TabsContent value="formula">
           <FormulaEditor />
+        </TabsContent>
+
+        <TabsContent value="models">
+          <DeviceModelsManager />
+        </TabsContent>
+
+        <TabsContent value="audit">
+          <SystemAuditLog />
         </TabsContent>
 
         {/* === 위젯 토글 === */}

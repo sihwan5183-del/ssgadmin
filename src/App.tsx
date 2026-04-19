@@ -23,6 +23,7 @@ import DeviceInventoryPage from "./pages/DeviceInventoryPage.tsx";
 import AdCalendarPage from "./pages/AdCalendarPage.tsx";
 import StoresPage from "./pages/StoresPage.tsx";
 import AuthPage from "./pages/AuthPage.tsx";
+import MissingDocsPage from "./pages/MissingDocsPage.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ const App = () => (
                         <Route path="/" element={<Index />} />
                         <Route path="/input" element={<InputPage />} />
                         <Route path="/activities" element={<ActivitiesPage />} />
+                        <Route path="/missing-docs" element={<MissingDocsPage />} />
                         <Route path="/regular-input" element={<RegularInputPage />} />
                         <Route path="/expenses" element={<ExpensesPage />} />
                         <Route path="/ad-spend" element={<ExpenseInputPage />} />

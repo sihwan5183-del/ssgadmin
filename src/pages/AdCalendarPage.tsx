@@ -113,6 +113,7 @@ export default function AdCalendarPage() {
   const { isAdmin } = useRole();
   const { year, month, setYear, setMonth } = usePeriod();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [salesByDate, setSalesByDate] = useState<Map<string, Map<string, number>>>(new Map());
   const [loading, setLoading] = useState(true);
   const [openForm, setOpenForm] = useState(false);
   const [openDetail, setOpenDetail] = useState<Campaign | null>(null);
@@ -136,14 +137,33 @@ export default function AdCalendarPage() {
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("ad_campaigns")
-      .select("*")
-      .lte("start_date", monthEnd)
-      .gte("end_date", monthStart)
-      .order("start_date", { ascending: true });
+    const [{ data, error }, { data: salesData }] = await Promise.all([
+      supabase
+        .from("ad_campaigns")
+        .select("*")
+        .lte("start_date", monthEnd)
+        .gte("end_date", monthStart)
+        .order("start_date", { ascending: true }),
+      supabase
+        .from("sales")
+        .select("open_date, channel, media:channel")
+        .gte("open_date", monthStart)
+        .lte("open_date", monthEnd),
+    ]);
     if (error) toast.error("캠페인 불러오기 실패: " + error.message);
     else setCampaigns((data ?? []) as Campaign[]);
+
+    // 날짜별 매체별 개통건수 (sales.channel을 매체로 사용)
+    const map = new Map<string, Map<string, number>>();
+    ((salesData as any[]) ?? []).forEach((s) => {
+      if (!s.open_date) return;
+      const dayMap = map.get(s.open_date) ?? new Map<string, number>();
+      const ch = (s.channel as string) || "기타";
+      dayMap.set(ch, (dayMap.get(ch) ?? 0) + 1);
+      dayMap.set("__total__", (dayMap.get("__total__") ?? 0) + 1);
+      map.set(s.open_date, dayMap);
+    });
+    setSalesByDate(map);
     setLoading(false);
   };
 
@@ -475,12 +495,30 @@ export default function AdCalendarPage() {
                   )}
                 </div>
 
-                {spend > 0 && (
-                  <div className="mt-1.5 pt-1.5 border-t border-border/20 text-[10px] text-muted-foreground tabular-nums flex items-center justify-between">
-                    <span>지출</span>
-                    <span className="font-semibold text-foreground">₩{fmtKRW(Math.round(spend))}</span>
-                  </div>
-                )}
+                {(() => {
+                  const dayMap = salesByDate.get(key);
+                  const opens = dayMap?.get("__total__") ?? 0;
+                  const cpa = opens > 0 && spend > 0 ? Math.round(spend / opens) : 0;
+                  if (spend === 0 && opens === 0) return null;
+                  return (
+                    <div className="mt-1.5 pt-1.5 border-t border-border/20 grid grid-cols-3 gap-1 text-[9px] tabular-nums">
+                      <div className="text-center">
+                        <div className="text-muted-foreground">지출</div>
+                        <div className="font-semibold text-foreground">₩{fmtKRW(Math.round(spend))}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-muted-foreground">개통</div>
+                        <div className="font-semibold text-emerald-300">{opens}건</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-muted-foreground">CPA</div>
+                        <div className="font-semibold text-primary-glow">
+                          {cpa > 0 ? `₩${fmtKRW(cpa)}` : "-"}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}

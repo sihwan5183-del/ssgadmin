@@ -256,6 +256,42 @@ export type Database = {
         }
         Relationships: []
       }
+      device_models: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          manufacturer: string
+          model_name: string
+          retail_price: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          manufacturer?: string
+          model_name: string
+          retail_price?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          manufacturer?: string
+          model_name?: string
+          retail_price?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       device_transfers: {
         Row: {
           approved_at: string | null
@@ -476,6 +512,36 @@ export type Database = {
           sort_order?: number
           updated_at?: string
           value?: string
+        }
+        Relationships: []
+      }
+      master_audit_log: {
+        Row: {
+          action: string
+          changed_at: string
+          changed_by: string | null
+          changes: Json
+          id: string
+          record_id: string | null
+          table_name: string
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          changed_by?: string | null
+          changes?: Json
+          id?: string
+          record_id?: string | null
+          table_name: string
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          changed_by?: string | null
+          changes?: Json
+          id?: string
+          record_id?: string | null
+          table_name?: string
         }
         Relationships: []
       }
