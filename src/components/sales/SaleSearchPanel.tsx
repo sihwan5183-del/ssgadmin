@@ -172,10 +172,16 @@ export const SaleSearchPanel = () => {
     setResults((data ?? []) as SaleHit[]);
   };
 
-  // URL ?sale=ID 자동 오픈 + ?pending=1 자동 미처리 필터
+  // URL ?sale=ID 자동 오픈 + ?pending=1 미처리 필터 + ?date=YYYY-MM-DD 단일일자
   useEffect(() => {
     const id = params.get("sale");
     const wantPending = params.get("pending") === "1";
+    const dateParam = params.get("date");
+    if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+      setSingleDay(dateParam);
+      params.delete("date");
+      setParams(params, { replace: true });
+    }
     if (wantPending) {
       setUnhandledOnly(true);
       search(undefined, undefined, true);
@@ -196,6 +202,12 @@ export const SaleSearchPanel = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 기간 변경 시 자동 재조회
+  useEffect(() => {
+    search();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate]);
 
   const openDetail = (sale: SaleHit) => {
     setSelected(sale);
