@@ -460,6 +460,25 @@ export const SaleSearchPanel = () => {
                 </DialogFooter>
               </TabsContent>
 
+              <TabsContent value="pending" className="mt-4">
+                <PendingItemsEditor
+                  items={pendingItems}
+                  note={pendingNote}
+                  resolved={pendingResolved}
+                  onItemsChange={setPendingItems}
+                  onNoteChange={setPendingNote}
+                  onResolvedChange={setPendingResolved}
+                  disabled={!canEdit}
+                  showResolvedToggle
+                />
+                <DialogFooter className="mt-4">
+                  <Button onClick={saveEdit} disabled={!canEdit || saving}>
+                    <Save className="size-4 mr-1.5" />
+                    {saving ? "저장 중…" : "미처리 저장"}
+                  </Button>
+                </DialogFooter>
+              </TabsContent>
+
               <TabsContent value="approval" className="mt-4 space-y-4">
                 <div className="rounded-lg border border-border/40 bg-card/40 p-4 space-y-2">
                   <div className="flex items-center justify-between">
@@ -481,6 +500,22 @@ export const SaleSearchPanel = () => {
                     </div>
                   )}
                 </div>
+
+                {(selected.pending_items?.length ?? 0) > 0 && selected.pending_resolved === false && (
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-200 flex items-start gap-2">
+                    <AlertTriangle className="size-3.5 mt-0.5 shrink-0" />
+                    <div>
+                      이 실적에는 <b>{selected.pending_items?.length}건의 미처리 항목</b>이 남아 있습니다
+                      ({selected.pending_items?.join(", ")}).
+                      '확정'으로 변경하려면 사유 입력이 필요합니다.
+                    </div>
+                  </div>
+                )}
+                {selected.approval_override_reason && (
+                  <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-xs text-orange-200">
+                    <b>강제 승인 사유:</b> {selected.approval_override_reason}
+                  </div>
+                )}
 
                 {!isAdmin ? (
                   <div className="text-xs text-muted-foreground rounded-lg border border-border/40 px-3 py-2">
