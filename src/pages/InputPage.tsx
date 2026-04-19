@@ -69,6 +69,9 @@ type SaleRow = {
   tracking_no: string | null;
   note: string | null;
   bundle: string | null;
+  pending_items?: string[] | null;
+  pending_note?: string | null;
+  pending_resolved?: boolean | null;
 };
 
 const emptyForm: Partial<SaleRow> = {
@@ -752,8 +755,13 @@ const InputPage = () => {
             <tbody>
               {rows.map((r) => {
                 const mine = r.created_by === user?.id;
+                const hasPending = (r.pending_items?.length ?? 0) > 0 && r.pending_resolved === false;
                 return (
-                  <tr key={r.id} className={cn("border-b border-border/20 hover:bg-white/[0.03]", mine && "bg-primary/[0.04]")}>
+                  <tr key={r.id} className={cn(
+                    "border-b border-border/20 hover:bg-white/[0.03]",
+                    mine && "bg-primary/[0.04]",
+                    hasPending && "bg-amber-500/[0.07] hover:bg-amber-500/[0.12]"
+                  )}>
                     <td className="px-3 py-2.5">{r.open_date ?? "-"}</td>
                     <td className="px-3 py-2.5">{r.channel ?? "-"}</td>
                     <td className="px-3 py-2.5">{r.manager ?? "-"}</td>
