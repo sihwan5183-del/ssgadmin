@@ -562,12 +562,17 @@ const InputPage = () => {
 
       {/* 최근 판매 원장 */}
       <section className="glass-strong rounded-2xl p-5 md:p-6 shadow-card-elevated">
-        <div className="flex items-baseline justify-between mb-4">
+        <div className="flex items-baseline justify-between mb-4 flex-wrap gap-3">
           <div>
-            <h3 className="text-base font-semibold">최근 판매 원장 (최신 50건)</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">본인이 입력한 건만 수정·삭제할 수 있습니다.</p>
+            <h3 className="text-base font-semibold">판매 원장 — {periodLabel}</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">개통일 기준으로 필터링되며, 본인이 입력한 건만 수정·삭제할 수 있습니다.</p>
           </div>
-          <Badge className="bg-primary/15 text-primary-glow border-primary/30">{rows.length}건</Badge>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleExport} className="rounded-xl gap-2">
+              <Download className="size-4" /> 엑셀로 내보내기
+            </Button>
+            <Badge className="bg-primary/15 text-primary-glow border-primary/30">총 {total.toLocaleString()}건</Badge>
+          </div>
         </div>
         <div className="overflow-x-auto -mx-2">
           <table className="w-full text-xs min-w-[900px]">
@@ -617,11 +622,12 @@ const InputPage = () => {
                 );
               })}
               {rows.length === 0 && (
-                <tr><td colSpan={10} className="text-center py-10 text-muted-foreground">아직 저장된 판매 데이터가 없습니다.</td></tr>
+                <tr><td colSpan={10} className="text-center py-10 text-muted-foreground">선택한 기간에 데이터가 없습니다.</td></tr>
               )}
             </tbody>
           </table>
         </div>
+        <PaginationBar page={page} pageSize={PAGE_SIZE} total={total} onChange={setPage} />
       </section>
     </>
   );
