@@ -32,6 +32,7 @@ import { FormulaEditor } from "@/components/admin/FormulaEditor";
 import { DeviceModelsManager } from "@/components/admin/DeviceModelsManager";
 import { SystemAuditLog } from "@/components/admin/SystemAuditLog";
 import { IncentiveRatesManager } from "@/components/admin/IncentiveRatesManager";
+import { ReviewChecklistManager } from "@/components/admin/ReviewChecklistManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole, type AppRole } from "@/hooks/useRole";
@@ -169,10 +170,17 @@ export default function AdminPage() {
           <TabsTrigger value="incentive" className="gap-2">
             <Coins className="size-4" /> 인센티브 단가
           </TabsTrigger>
+          <TabsTrigger value="checklist" className="gap-2">
+            <ListChecks className="size-4" /> 검수 체크리스트
+          </TabsTrigger>
           <TabsTrigger value="audit" className="gap-2">
             <History className="size-4" /> 시스템 로그
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="checklist">
+          <ReviewChecklistManager />
+        </TabsContent>
 
         <TabsContent value="incentive">
           <IncentiveRatesManager />
