@@ -569,6 +569,46 @@ export const SaleSearchPanel = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* 미처리 강제 승인 사유 다이얼로그 */}
+      <AlertDialog open={overrideOpen} onOpenChange={setOverrideOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="size-4 text-amber-400" /> 완료 전 승인 경고
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              이 실적에는 미처리 항목이 남아있습니다
+              {selected?.pending_items?.length ? ` (${selected.pending_items.join(", ")})` : ""}.
+              그래도 '확정'으로 변경하려면 사유를 입력하세요.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            value={overrideReason}
+            onChange={(e) => setOverrideReason(e.target.value)}
+            placeholder="예: 정산 마감 일정상 선승인, 서류는 3일 내 보완 예정"
+            rows={3}
+            className="bg-input/60"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!overrideReason.trim()) {
+                  toast.error("승인 사유를 입력하세요");
+                  return;
+                }
+                const target = pendingApprovalTarget ?? "확정";
+                setOverrideOpen(false);
+                await performApproval(target, overrideReason.trim());
+                setPendingApprovalTarget(null);
+              }}
+            >
+              사유와 함께 확정
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
