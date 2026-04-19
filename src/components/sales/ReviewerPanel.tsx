@@ -222,6 +222,32 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
         </Button>
       )}
 
+      {/* 검수 체크리스트 (어드민만 토글 가능, 모두에게 표시) */}
+      <div className="rounded-lg border border-border/40 p-3 space-y-2">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-semibold flex items-center gap-1.5">
+            <CheckCircle2 className="size-3.5 text-emerald-400" />
+            검수 체크리스트
+          </span>
+          <Badge variant="outline" className={`text-[10px] ${allChecked ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10" : "border-amber-500/40 text-amber-300 bg-amber-500/10"}`}>
+            {checkedCount} / {checklistItems.length}
+          </Badge>
+        </div>
+        <div className="grid grid-cols-2 gap-1.5">
+          {checklistItems.map((item) => (
+            <label
+              key={item.key}
+              className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-xs transition-colors ${
+                isAdmin ? "cursor-pointer hover:border-primary/30" : "cursor-default opacity-90"
+              } ${checks[item.key] ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200" : "border-border/40"}`}
+            >
+              <Checkbox checked={!!checks[item.key]} onCheckedChange={() => toggleCheck(item.key)} disabled={!isAdmin} />
+              <span>{item.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
       {/* Admin actions */}
       {isAdmin ? (
         <div className="space-y-3">

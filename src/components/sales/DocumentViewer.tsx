@@ -131,13 +131,13 @@ export const DocumentViewer = ({ doc, onClose, viewerName }: Props) => {
             aria-hidden
           >
             <div
-              className="absolute inset-[-30%] flex flex-col gap-16 opacity-[0.18]"
+              className="absolute inset-[-30%] flex flex-col gap-20 opacity-[0.08]"
               style={{ transform: "rotate(-22deg)" }}
             >
               {wmRows.map((_, i) => (
                 <div
                   key={i}
-                  className="whitespace-nowrap text-foreground/90 text-base font-semibold tracking-widest"
+                  className="whitespace-nowrap text-foreground text-sm font-medium tracking-widest"
                 >
                   {Array.from({ length: 6 })
                     .map(() => `🔒 ${watermark}`)
