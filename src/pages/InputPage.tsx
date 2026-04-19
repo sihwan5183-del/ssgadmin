@@ -9,12 +9,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Check, Upload, Zap, Trash2, Pencil, X, FileSpreadsheet } from "lucide-react";
+import { Check, Upload, Zap, Trash2, Pencil, X, FileSpreadsheet, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { useProductRatePlans } from "@/hooks/useProductRatePlans";
+import { usePeriod } from "@/contexts/PeriodContext";
+import { PaginationBar } from "@/components/ui/pagination-bar";
+import { exportToExcel, SALES_COLUMNS } from "@/lib/excelExport";
 import { cn } from "@/lib/utils";
+
+const PAGE_SIZE = 25;
 
 type SaleRow = {
   id: string;
@@ -80,7 +85,10 @@ const InputPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rows, setRows] = useState<SaleRow[]>([]);
   const [busy, setBusy] = useState(false);
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
+  const { startDate, endDate, label: periodLabel } = usePeriod();
 
   const set = <K extends keyof SaleRow>(k: K, v: SaleRow[K] | undefined) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -92,21 +100,43 @@ const InputPage = () => {
   };
 
   const load = async () => {
-    const { data, error } = await supabase
+    const from = page * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    const { data, error, count } = await supabase
       .from("sales")
-      .select("*")
+      .select("*", { count: "exact" })
+      .gte("open_date", startDate)
+      .lte("open_date", endDate)
+      .order("open_date", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
-      .limit(50);
+      .range(from, to);
     if (error) {
       toast.error("목록 불러오기 실패", { description: error.message });
       return;
     }
     setRows((data ?? []) as SaleRow[]);
+    setTotal(count ?? 0);
   };
 
   useEffect(() => {
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, startDate, endDate]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [startDate, endDate]);
+
+  const handleExport = async () => {
+    const { data, error } = await supabase
+      .from("sales")
+      .select("*")
+      .gte("open_date", startDate)
+      .lte("open_date", endDate)
+      .order("open_date", { ascending: false, nullsFirst: false });
+    if (error) return toast.error("엑셀 내보내기 실패", { description: error.message });
+    exportToExcel(data ?? [], SALES_COLUMNS, `실적장표_${periodLabel.replace(/\s/g, "")}`, "실적");
+  };
 
   const reset = () => {
     setForm(emptyForm);
@@ -276,7 +306,7 @@ const InputPage = () => {
 
   return (
     <>
-      <Header title="실적 입력 / 원장" subtitle="엑셀 '실적장표' 시트와 동일한 모든 항목을 1건 단위로 저장합니다" showScopeToggle={false} />
+      <Header title="실적 입력 / 원장" subtitle="엑셀 '실적장표' 시트와 동일한 모든 항목을 1건 단위로 저장합니다" showScopeToggle={false} showPeriodFilter />
 
       {/* 엑셀 업로드 */}
       <section className="glass rounded-2xl p-5 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-card-elevated">
@@ -532,12 +562,17 @@ const InputPage = () => {
 
       {/* 최근 판매 원장 */}
       <section className="glass-strong rounded-2xl p-5 md:p-6 shadow-card-elevated">
-        <div className="flex items-baseline justify-between mb-4">
+        <div className="flex items-baseline justify-between mb-4 flex-wrap gap-3">
           <div>
-            <h3 className="text-base font-semibold">최근 판매 원장 (최신 50건)</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">본인이 입력한 건만 수정·삭제할 수 있습니다.</p>
+            <h3 className="text-base font-semibold">판매 원장 — {periodLabel}</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">개통일 기준으로 필터링되며, 본인이 입력한 건만 수정·삭제할 수 있습니다.</p>
           </div>
-          <Badge className="bg-primary/15 text-primary-glow border-primary/30">{rows.length}건</Badge>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleExport} className="rounded-xl gap-2">
+              <Download className="size-4" /> 엑셀로 내보내기
+            </Button>
+            <Badge className="bg-primary/15 text-primary-glow border-primary/30">총 {total.toLocaleString()}건</Badge>
+          </div>
         </div>
         <div className="overflow-x-auto -mx-2">
           <table className="w-full text-xs min-w-[900px]">
@@ -587,11 +622,12 @@ const InputPage = () => {
                 );
               })}
               {rows.length === 0 && (
-                <tr><td colSpan={10} className="text-center py-10 text-muted-foreground">아직 저장된 판매 데이터가 없습니다.</td></tr>
+                <tr><td colSpan={10} className="text-center py-10 text-muted-foreground">선택한 기간에 데이터가 없습니다.</td></tr>
               )}
             </tbody>
           </table>
         </div>
+        <PaginationBar page={page} pageSize={PAGE_SIZE} total={total} onChange={setPage} />
       </section>
     </>
   );
