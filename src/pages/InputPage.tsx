@@ -239,11 +239,17 @@ const InputPage = () => {
         base.custom_fields = custom;
         return base;
       });
-    if (!records.length) return toast.error("등록할 데이터가 없습니다");
+    if (!records.length) {
+      toast.error("등록할 데이터가 없습니다");
+      return;
+    }
     const chunk = 200;
     for (let i = 0; i < records.length; i += chunk) {
       const { error } = await supabase.from("sales").insert(records.slice(i, i + chunk) as any);
-      if (error) return toast.error(error.message);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
     }
     toast.success(`${records.length}건 등록되었습니다`);
     load();
