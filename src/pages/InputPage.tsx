@@ -651,6 +651,19 @@ const InputPage = () => {
           </Field>
         </FormSection>
 
+        {/* 미처리 항목 */}
+        <FormSection title="미처리 항목" icon={<AlertTriangle className="size-3" />}>
+          <PendingItemsEditor
+            items={pendingItems}
+            note={pendingNote}
+            resolved={pendingResolved}
+            onItemsChange={setPendingItems}
+            onNoteChange={setPendingNote}
+            onResolvedChange={setPendingResolved}
+            showResolvedToggle={!!editingId}
+          />
+        </FormSection>
+
         {/* 관리자 동적 필드 */}
         {dynamicFields.length > 0 && (
           <FormSection title="추가 항목 (관리자 정의)">
