@@ -149,10 +149,6 @@ export const SaleSearchPanel = () => {
     const onlyPending = pendingOverride ?? pendingOnly;
     const onlyUnhandled = unhandledOverride ?? unhandledOnly;
 
-    if (!term && !onlyPending && !onlyUnhandled) {
-      setResults([]);
-      return;
-    }
     setSearching(true);
     let query = supabase.from("sales").select(SELECT_COLS);
 
@@ -164,8 +160,13 @@ export const SaleSearchPanel = () => {
     }
     if (onlyPending) query = query.eq("approval_status", "승인대기");
     if (onlyUnhandled) query = query.eq("pending_resolved", false);
+    // 기간 필터 적용 (검색어 없이 기간만으로도 조회 가능)
+    query = query.gte("open_date", startDate).lte("open_date", endDate);
 
-    const { data, error } = await query.order("created_at", { ascending: false }).limit(100);
+    const { data, error } = await query
+      .order("open_date", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(200);
     setSearching(false);
     if (error) return toast.error(error.message);
     setResults((data ?? []) as SaleHit[]);
