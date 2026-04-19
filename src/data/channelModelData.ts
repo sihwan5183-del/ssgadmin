@@ -105,6 +105,33 @@ export const getChannelTop5 = (channel: string) => {
     }));
 };
 
+// 전체(모든 채널 합산) 모델별 개통 현황
+export const getOverallModelStats = () => {
+  const map = new Map<string, { count: number; rebateSum: number }>();
+  channelModelData.forEach((row) => {
+    row.models.forEach((m) => {
+      const cur = map.get(m.name) ?? { count: 0, rebateSum: 0 };
+      cur.count += m.count;
+      cur.rebateSum += m.avgRebate * m.count;
+      map.set(m.name, cur);
+    });
+  });
+  const totalCount = Array.from(map.values()).reduce((s, v) => s + v.count, 0);
+  return models.map((m) => {
+    const stat = map.get(m.name) ?? { count: 0, rebateSum: 0 };
+    const avgRebate = stat.count > 0 ? Math.round(stat.rebateSum / stat.count) : 0;
+    return {
+      name: m.name,
+      count: stat.count,
+      avgRebate,
+      revenue: stat.rebateSum,
+      share: totalCount > 0 ? (stat.count / totalCount) * 100 : 0,
+      isStrategy: m.isStrategy,
+      color: m.color,
+    };
+  }).sort((a, b) => b.count - a.count);
+};
+
 // 채널별 정책/일반 모델 비중
 export const getChannelPolicyShare = () =>
   channelModelData.map((row) => {
