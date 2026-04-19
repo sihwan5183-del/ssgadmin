@@ -14,11 +14,16 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, PlusCircle, Megaphone, Receipt } from "lucide-react";
+import { Trash2, PlusCircle, Megaphone, Receipt, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
+import { usePeriod } from "@/contexts/PeriodContext";
+import { PaginationBar } from "@/components/ui/pagination-bar";
+import { exportToExcel, AD_SPEND_COLUMNS } from "@/lib/excelExport";
 import { toast } from "sonner";
+
+const PAGE_SIZE = 25;
 
 interface ExpenseRow {
   id: string;
@@ -49,6 +54,9 @@ export default function ExpenseInputPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<"광고비" | "기타지출">("광고비");
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
+  const { startDate, endDate, label: periodLabel } = usePeriod();
 
   const [adForm, setAdForm] = useState({
     spend_date: todayISO(),
@@ -69,19 +77,42 @@ export default function ExpenseInputPage() {
 
   const fetchRows = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    const from = page * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    const { data, error, count } = await supabase
       .from("ad_spend")
-      .select("*")
+      .select("*", { count: "exact" })
+      .gte("spend_date", startDate)
+      .lte("spend_date", endDate)
       .order("spend_date", { ascending: false })
-      .limit(150);
+      .range(from, to);
     if (error) toast.error("불러오기 실패: " + error.message);
-    else setRows((data ?? []) as ExpenseRow[]);
+    else {
+      setRows((data ?? []) as ExpenseRow[]);
+      setTotal(count ?? 0);
+    }
     setLoading(false);
   };
 
   useEffect(() => {
     fetchRows();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, startDate, endDate]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [startDate, endDate]);
+
+  const handleExport = async () => {
+    const { data, error } = await supabase
+      .from("ad_spend")
+      .select("*")
+      .gte("spend_date", startDate)
+      .lte("spend_date", endDate)
+      .order("spend_date", { ascending: false });
+    if (error) return toast.error("엑셀 내보내기 실패: " + error.message);
+    exportToExcel(data ?? [], AD_SPEND_COLUMNS, `지출내역_${periodLabel.replace(/\s/g, "")}`, "지출");
+  };
 
   const totals = useMemo(() => {
     const ad = rows.filter((r) => r.category === "광고비");
