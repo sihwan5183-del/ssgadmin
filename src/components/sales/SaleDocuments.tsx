@@ -5,8 +5,9 @@ import { useStores } from "@/hooks/useStores";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Upload, FileText, Image as ImageIcon, Trash2, Eye, Loader2, FileUp } from "lucide-react";
+import { FileText, Image as ImageIcon, Trash2, Eye, Loader2, FileUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DocumentViewer } from "./DocumentViewer";
 
 interface Props {
   saleId: string;
@@ -45,6 +46,7 @@ export const SaleDocuments = ({ saleId, saleMeta, storeNameFallback, readOnly }:
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [viewing, setViewing] = useState<Doc | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -116,12 +118,8 @@ export const SaleDocuments = ({ saleId, saleMeta, storeNameFallback, readOnly }:
     load();
   };
 
-  const view = async (doc: Doc) => {
-    const { data, error } = await supabase.storage
-      .from("sale-documents")
-      .createSignedUrl(doc.storage_path, 60 * 5);
-    if (error || !data?.signedUrl) return toast.error("미리보기 URL 생성 실패");
-    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  const view = (doc: Doc) => {
+    setViewing(doc);
   };
 
   const remove = async (doc: Doc) => {
@@ -238,6 +236,8 @@ export const SaleDocuments = ({ saleId, saleMeta, storeNameFallback, readOnly }:
           </ul>
         )}
       </div>
+
+      <DocumentViewer doc={viewing} onClose={() => setViewing(null)} />
     </div>
   );
 };
