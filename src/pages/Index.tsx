@@ -13,6 +13,7 @@ import { OverallModelAnalysis } from "@/components/dashboard/OverallModelAnalysi
 import { AdScheduleWidget } from "@/components/dashboard/AdScheduleWidget";
 import { InventoryWidget } from "@/components/dashboard/InventoryWidget";
 import { PendingItemsCard } from "@/components/dashboard/PendingItemsCard";
+import { MyReviewAlerts } from "@/components/dashboard/MyReviewAlerts";
 import { summaryStats, formatShortKRW } from "@/data/mockData";
 import { TrendingUp, Wallet, Megaphone, Target } from "lucide-react";
 import { useMarketingSpend } from "@/hooks/useMarketingSpend";
@@ -29,6 +30,9 @@ const Index = () => {
         title="영업기획팀 전략 대시보드"
         subtitle="2025년 11월 · 영업 성과 → 수익 분석 → 현장 활동 순으로 한눈에"
       />
+
+      {/* === 본인 검수 피드백 (반려/수정요청) === */}
+      <MyReviewAlerts />
 
       {/* ============================================
           [1] 최상단 — 영업 성과 (가장 중요)
