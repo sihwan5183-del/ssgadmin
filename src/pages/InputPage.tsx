@@ -503,9 +503,6 @@ const InputPage = () => {
 
         <FormSection title="최종 / 배송">
           <Grid cols={3}>
-            <Field label="최종 수수료 (₩)">
-              <Input type="number" value={form.net_fee ?? ""} onChange={(e) => set("net_fee", Number(e.target.value))} className="h-11 bg-input/60 tabular-nums" />
-            </Field>
             <Field label="발송유형">
               <Select value={form.delivery_type ?? ""} onValueChange={(v) => set("delivery_type", v)}>
                 <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
