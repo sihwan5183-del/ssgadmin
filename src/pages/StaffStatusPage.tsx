@@ -140,6 +140,52 @@ export default function StaffStatusPage() {
     })();
   }, [selected, startDate, endDate]);
 
+  // === Aggregated leaderboard for ALL visible staff ===
+  const [allSales, setAllSales] = useState<SaleRow[]>([]);
+  const [allLoading, setAllLoading] = useState(false);
+
+  useEffect(() => {
+    if (roleLoading || profiles.length === 0) return;
+    setAllLoading(true);
+    (async () => {
+      const ids = profiles.map((p) => p.user_id);
+      const { data } = await supabase
+        .from("sales")
+        .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, approval_status, pending_resolved, pending_items, distributor_amount, net_fee")
+        .in("created_by", ids)
+        .gte("open_date", startDate)
+        .lte("open_date", endDate);
+      setAllSales((data ?? []) as SaleRow[]);
+      setAllLoading(false);
+    })();
+  }, [profiles, startDate, endDate, roleLoading]);
+
+  const leaderboard = useMemo(() => {
+    const byUser = new Map<string, SaleRow[]>();
+    allSales.forEach((s) => {
+      const arr = byUser.get(s.created_by) ?? [];
+      arr.push(s);
+      byUser.set(s.created_by, arr);
+    });
+    const rows = filteredProfiles.map((p) => {
+      const list = byUser.get(p.user_id) ?? [];
+      const { total } = calcTotalIncentive(list as any, incentiveRates);
+      const distributorTotal = list.reduce((sum, s) => sum + Number(s.distributor_amount ?? 0), 0);
+      const netFeeTotal = list.reduce((sum, s) => sum + Number(s.net_fee ?? 0), 0);
+      const pendingCount = list.filter((s) => s.pending_resolved === false).length;
+      return {
+        profile: p,
+        salesCount: list.length,
+        incentive: total,
+        distributorTotal,
+        netFeeTotal,
+        pendingCount,
+      };
+    });
+    rows.sort((a, b) => b.incentive - a.incentive || b.salesCount - a.salesCount);
+    return rows;
+  }, [allSales, filteredProfiles, incentiveRates]);
+
   // === Incentive computation ===
   const incentive = useMemo(() => {
     const { total, breakdowns } = calcTotalIncentive(sales as any, incentiveRates);
@@ -244,10 +290,99 @@ export default function StaffStatusPage() {
           </div>
         </Card>
 
+        {/* ============================================
+            전직원 실적 한눈에 (Leaderboard)
+            ============================================ */}
+        {canViewAll && (
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Users className="size-4 text-primary-glow" />
+                전 직원 실적 한눈에
+                <Badge variant="outline" className="border-border/50 text-muted-foreground ml-1">
+                  {leaderboard.length}명
+                </Badge>
+              </h3>
+              {allLoading && <span className="text-xs text-muted-foreground">불러오는 중…</span>}
+            </div>
+            {leaderboard.length === 0 ? (
+              <Card className="glass p-8 text-center text-muted-foreground text-sm">
+                해당 기간에 등록된 실적이 없습니다
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                {leaderboard.map((row, idx) => {
+                  const isSelected = selectedId === row.profile.user_id;
+                  const rank = idx + 1;
+                  return (
+                    <button
+                      key={row.profile.user_id}
+                      onClick={() => setSelectedId(row.profile.user_id)}
+                      className={`group text-left p-4 rounded-xl border glass transition-all hover:-translate-y-0.5 hover:shadow-elevated ${
+                        isSelected
+                          ? "border-primary/60 bg-primary/[0.06]"
+                          : "border-border/40 hover:border-primary/40"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`size-7 rounded-lg grid place-items-center text-[11px] font-bold shrink-0 ${
+                            rank === 1 ? "bg-amber-500/20 text-amber-300" :
+                            rank === 2 ? "bg-slate-400/20 text-slate-200" :
+                            rank === 3 ? "bg-orange-500/20 text-orange-300" :
+                            "bg-card/60 text-muted-foreground"
+                          }`}>
+                            #{rank}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold truncate">{row.profile.display_name}</div>
+                            {row.profile.team && (
+                              <div className="text-[10px] text-muted-foreground truncate">{row.profile.team}</div>
+                            )}
+                          </div>
+                        </div>
+                        {row.pendingCount > 0 && (
+                          <Badge variant="outline" className="border-amber-500/40 text-amber-300 bg-amber-500/10 text-[10px] shrink-0">
+                            미처리 {row.pendingCount}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <div className="text-[10px] text-muted-foreground">개통 건수</div>
+                          <div className="text-base font-bold tabular-nums">{row.salesCount}건</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-muted-foreground">인센티브</div>
+                          <div className="text-base font-bold text-amber-300 tabular-nums">
+                            {formatKRWShort(row.incentive)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-muted-foreground">유통망 지원금</div>
+                          <div className="text-sm font-semibold tabular-nums text-foreground/90">
+                            {formatKRWShort(row.distributorTotal)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-muted-foreground">회수 마진</div>
+                          <div className="text-sm font-semibold text-emerald-300 tabular-nums">
+                            {formatKRWShort(row.netFeeTotal)}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
+
         {!selected ? (
           <Card className="p-12 text-center glass">
             <Users className="size-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground">상단에서 직원을 선택하세요</p>
+            <p className="text-muted-foreground">위 카드에서 직원을 선택하면 상세 현황이 표시됩니다</p>
           </Card>
         ) : (
           <>
