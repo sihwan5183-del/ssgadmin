@@ -223,11 +223,11 @@ export default function ExpenseInputPage() {
         showPeriodFilter
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         <Card className="p-5 glass">
           <div className="text-xs text-muted-foreground">전체 지출 누적</div>
           <div className="mt-2 text-2xl font-bold text-gradient">{formatKRW(totals.total)}</div>
-          <div className="text-[11px] text-muted-foreground mt-1">최근 150건 기준</div>
+          <div className="text-[11px] text-muted-foreground mt-1">기간 내 지출 합</div>
         </Card>
         <Card className="p-5 glass">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -242,6 +242,27 @@ export default function ExpenseInputPage() {
           </div>
           <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(totals.etcTotal)}</div>
           <div className="text-[11px] text-muted-foreground mt-1">임대료 · 통신비 · 운영비 등</div>
+        </Card>
+        <Card className="p-5 glass border-primary/20">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Building2 className="size-3.5" /> 총 유통망지원금
+          </div>
+          <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(salesAgg.distributor)}</div>
+          <div className="text-[11px] text-muted-foreground mt-1">실적 자동 집계 (distributor_amount)</div>
+        </Card>
+        <Card className="p-5 glass border-primary/20">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Banknote className="size-3.5" /> 현금개통
+          </div>
+          <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(salesAgg.cash)}</div>
+          <div className="text-[11px] text-muted-foreground mt-1">cash_open 건의 현금지원금</div>
+        </Card>
+        <Card className="p-5 glass border-primary/20">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Wallet className="size-3.5" /> 입금금액
+          </div>
+          <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(salesAgg.receivable)}</div>
+          <div className="text-[11px] text-muted-foreground mt-1">receivable_paid 일자 입력된 건</div>
         </Card>
       </div>
 
