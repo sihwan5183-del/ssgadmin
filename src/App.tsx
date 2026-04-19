@@ -25,6 +25,7 @@ import AdCalendarPage from "./pages/AdCalendarPage.tsx";
 import StoresPage from "./pages/StoresPage.tsx";
 import AuthPage from "./pages/AuthPage.tsx";
 import MissingDocsPage from "./pages/MissingDocsPage.tsx";
+import StaffStatusPage from "./pages/StaffStatusPage.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -58,6 +59,7 @@ const App = () => (
                         <Route path="/field-options" element={<FieldOptionsPage />} />
                         <Route path="/ranking" element={<RankingPage />} />
                         <Route path="/team" element={<TeamPage />} />
+                        <Route path="/staff-status" element={<StaffStatusPage />} />
                         <Route path="/admin" element={<AdminPage />} />
                         <Route path="/product-rate-plans" element={<ProductRatePlansPage />} />
                         <Route path="/device-inventory" element={<DeviceInventoryPage />} />
