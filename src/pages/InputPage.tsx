@@ -24,7 +24,8 @@ import { DynamicFieldRenderer } from "@/components/admin/DynamicFieldRenderer";
 import { ExcelMappingDialog, type MappingTarget } from "@/components/admin/ExcelMappingDialog";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
-import { Sparkles, AlertTriangle } from "lucide-react";
+import { MoneyInput } from "@/components/ui/money-input";
+import { Sparkles, AlertTriangle, Wallet, Banknote, Building2 } from "lucide-react";
 
 const PAGE_SIZE = 25;
 
