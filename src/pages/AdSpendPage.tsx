@@ -38,6 +38,8 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 
 export default function AdSpendPage() {
   const { user } = useAuth();
+  const { options: MEDIA_OPTIONS } = useFieldOptions("media");
+  const { options: CHANNELS } = useFieldOptions("channel");
   const [rows, setRows] = useState<AdSpendRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
