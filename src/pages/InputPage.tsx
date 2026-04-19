@@ -435,22 +435,27 @@ const InputPage = () => {
         </FormSection>
 
         <FormSection title="지원금">
-          <div className="flex items-center gap-3">
-            <Switch checked={!!form.cash_open} onCheckedChange={(v) => set("cash_open", v)} />
-            <Label className="text-xs">현금개통</Label>
-          </div>
-          <Grid cols={2}>
+          <Grid cols={3}>
             <Field label="유통망 지원금 (₩)">
               <Input type="number" value={form.distributor_amount ?? ""} onChange={(e) => set("distributor_amount", Number(e.target.value))} className="h-11 bg-input/60 tabular-nums" />
             </Field>
             <Field label="추가지원금 (₩)">
               <Input type="number" value={form.extra_subsidy ?? ""} onChange={(e) => set("extra_subsidy", Number(e.target.value))} className="h-11 bg-input/60 tabular-nums" />
             </Field>
-          </Grid>
-          <Grid cols={4}>
-            <Field label="현금 입금금액 (₩)">
-              <Input type="number" value={form.cash_support_amount ?? ""} onChange={(e) => set("cash_support_amount", Number(e.target.value))} className="h-11 bg-input/60 tabular-nums" />
+            <Field label="현금개통 지원금 (₩)">
+              <Input
+                type="number"
+                value={form.cash_support_amount ?? ""}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  set("cash_support_amount", v);
+                  set("cash_open", v > 0);
+                }}
+                className="h-11 bg-input/60 tabular-nums"
+              />
             </Field>
+          </Grid>
+          <Grid cols={3}>
             <Field label="은행">
               <Select value={form.cash_bank ?? ""} onValueChange={(v) => set("cash_bank", v)}>
                 <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
