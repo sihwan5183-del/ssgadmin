@@ -53,74 +53,56 @@ export const OverallModelAnalysis = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        {/* 막대 차트 */}
+        {/* Bar — 모델별 총 판매 (채널별 차트와 동일한 스타일) */}
         <div className="lg:col-span-3 glass rounded-2xl p-5">
           <div className="flex items-baseline justify-between mb-3">
-            <h4 className="text-base font-semibold tracking-tight flex items-center gap-2">
-              <Layers className="size-4 text-primary" />
-              모델별 총 판매 건수
-            </h4>
+            <h4 className="text-base font-semibold tracking-tight">모델별 총 판매 비중</h4>
             <span className="text-[11px] text-muted-foreground">단위: 건</span>
           </div>
-          <div className="h-96">
+          <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats} margin={{ top: 10, right: 10, left: -10, bottom: 70 }}>
+              <BarChart data={stats} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                 <XAxis
                   dataKey="name"
                   stroke="hsl(var(--muted-foreground))"
+                  fontSize={11}
                   tickLine={false}
                   axisLine={false}
                   interval={0}
-                  height={80}
-                  tick={({ x, y, payload }) => (
-                    <g transform={`translate(${x},${y})`}>
-                      <text
-                        dy={10}
-                        textAnchor="end"
-                        transform="rotate(-35)"
-                        fill="hsl(var(--muted-foreground))"
-                        fontSize={11}
-                      >
-                        {payload.value}
+                  tick={({ x, y, payload }) => {
+                    const label = String(payload.value);
+                    const short = label.length > 8 ? label.slice(0, 7) + "…" : label;
+                    return (
+                      <text x={x} y={y + 14} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize={11}>
+                        {short}
                       </text>
-                    </g>
-                  )}
+                    );
+                  }}
                 />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
                 <Tooltip
                   cursor={{ fill: "hsl(var(--primary) / 0.08)" }}
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null;
-                    const p: any = payload[0].payload;
-                    return (
-                      <div className="rounded-xl border border-border bg-popover/95 backdrop-blur-md px-3 py-2 shadow-card-elevated text-xs">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <span className="size-2.5 rounded-full" style={{ background: p.color }} />
-                          <span className="font-semibold">{p.name}</span>
-                          {p.isStrategy && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary-glow border border-primary/30">
-                              전략
-                            </span>
-                          )}
-                        </div>
-                        <div className="space-y-0.5 tabular-nums">
-                          <div className="flex justify-between gap-4">
-                            <span className="text-muted-foreground">판매 건수</span>
-                            <span className="font-semibold">{p.count.toLocaleString()}건</span>
-                          </div>
-                          <div className="flex justify-between gap-4">
-                            <span className="text-muted-foreground">점유율</span>
-                            <span className="font-semibold text-primary-glow">{p.share.toFixed(1)}%</span>
-                          </div>
-                          <div className="flex justify-between gap-4">
-                            <span className="text-muted-foreground">평균 리베이트</span>
-                            <span className="font-semibold">{formatKRW(p.avgRebate)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
+                  contentStyle={{
+                    background: "hsl(240 18% 8% / 0.95)",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: 12,
+                    fontSize: 12,
                   }}
+                  formatter={(v: number, _n, p: any) => [
+                    `${v}건 · 점유율 ${p.payload.share.toFixed(1)}%`,
+                    p.payload.name,
+                  ]}
+                />
+                <Legend
+                  wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+                  iconType="circle"
+                  payload={stats.map((m) => ({
+                    value: m.name,
+                    type: "circle",
+                    id: m.name,
+                    color: m.color,
+                  }))}
                 />
                 <Bar dataKey="count" radius={[8, 8, 0, 0]}>
                   {stats.map((m) => (
