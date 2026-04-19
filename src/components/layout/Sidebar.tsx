@@ -56,8 +56,8 @@ export const Sidebar = () => {
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-300",
                 active
-                  ? "bg-gradient-soft text-foreground ring-gradient relative"
-                  : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground ring-gradient relative"
+                  : "text-sidebar-foreground/80 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent/60"
               )}
             >
               <Icon className={cn("size-4", active && "text-primary-glow")} />
