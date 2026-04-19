@@ -554,78 +554,6 @@ export const SaleSearchPanel = () => {
                 </DialogFooter>
               </TabsContent>
 
-              <TabsContent value="approval" className="mt-4 space-y-4">
-                <div className="rounded-lg border border-border/40 bg-card/40 p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs text-muted-foreground">현재 승인 상태</Label>
-                    {(() => {
-                      const ap = (selected.approval_status ?? "승인대기") as ApprovalStatus;
-                      const meta = APPROVAL_META[ap];
-                      const Icon = meta.icon;
-                      return (
-                        <Badge variant="outline" className={`gap-1 ${meta.className}`}>
-                          <Icon className="size-3.5" /> {ap}
-                        </Badge>
-                      );
-                    })()}
-                  </div>
-                  {selected.approved_at && (
-                    <div className="text-xs text-muted-foreground">
-                      확정일시: {new Date(selected.approved_at).toLocaleString("ko-KR")}
-                    </div>
-                  )}
-                </div>
-
-                {(selected.pending_items?.length ?? 0) > 0 && selected.pending_resolved === false && (
-                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-200 flex items-start gap-2">
-                    <AlertTriangle className="size-3.5 mt-0.5 shrink-0" />
-                    <div>
-                      이 실적에는 <b>{selected.pending_items?.length}건의 미처리 항목</b>이 남아 있습니다
-                      ({selected.pending_items?.join(", ")}).
-                      '확정'으로 변경하려면 사유 입력이 필요합니다.
-                    </div>
-                  </div>
-                )}
-                {selected.approval_override_reason && (
-                  <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-xs text-orange-200">
-                    <b>강제 승인 사유:</b> {selected.approval_override_reason}
-                  </div>
-                )}
-
-                {!isAdmin ? (
-                  <div className="text-xs text-muted-foreground rounded-lg border border-border/40 px-3 py-2">
-                    승인 / 환수 / 취소는 관리자(기획팀)만 변경할 수 있습니다.
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">상태 변경</Label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {(["승인대기", "확정", "환수", "취소"] as ApprovalStatus[]).map((s) => {
-                        const meta = APPROVAL_META[s];
-                        const Icon = meta.icon;
-                        const active = (selected.approval_status ?? "승인대기") === s;
-                        return (
-                          <Button
-                            key={s}
-                            variant={active ? "default" : "outline"}
-                            onClick={() => updateApproval(s)}
-                            disabled={active}
-                            className="justify-start"
-                          >
-                            <Icon className="size-4 mr-1.5" />
-                            {s}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                    <p className="text-[11px] text-muted-foreground mt-2">
-                      '확정' 선택 시 자동으로 잠금 처리되어 일반 직원은 수정/삭제할 수 없습니다.
-                      다른 상태로 변경하면 잠금이 해제됩니다.
-                    </p>
-                  </div>
-                )}
-              </TabsContent>
-
               <TabsContent value="docs" className="mt-4">
                 <SaleDocuments
                   saleId={selected.id}
@@ -641,6 +569,37 @@ export const SaleSearchPanel = () => {
                 <SaleAuditLog saleId={selected.id} />
               </TabsContent>
             </Tabs>
+
+            {/* === 항상 보이는 검수/메모 사이드 패널 === */}
+            <aside className="lg:sticky lg:top-2 self-start space-y-4">
+              <ReviewerPanel
+                sale={{
+                  id: selected.id,
+                  created_by: selected.created_by,
+                  customer_name: selected.customer_name,
+                  approval_status: selected.approval_status,
+                  revision_fields: selected.revision_fields,
+                  revision_reason: selected.revision_reason,
+                  revision_requested_at: selected.revision_requested_at,
+                  re_review_requested_at: selected.re_review_requested_at,
+                  approved_at: selected.approved_at,
+                  pending_items: selected.pending_items,
+                  pending_resolved: selected.pending_resolved,
+                }}
+                onChanged={async () => {
+                  const { data } = await supabase.from("sales").select(SELECT_COLS).eq("id", selected.id).maybeSingle();
+                  if (data) openDetail(data as SaleHit);
+                  refreshCounts();
+                  search();
+                }}
+              />
+              {selected.approval_override_reason && (
+                <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-xs text-orange-200">
+                  <b>강제 승인 사유:</b> {selected.approval_override_reason}
+                </div>
+              )}
+            </aside>
+            </div>
           )}
         </DialogContent>
       </Dialog>
