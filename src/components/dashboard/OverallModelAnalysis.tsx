@@ -94,16 +94,21 @@ export const OverallModelAnalysis = () => {
                     p.payload.name,
                   ]}
                 />
-                <Legend
-                  wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
-                  iconType="circle"
-                  payload={stats.map((m) => ({
-                    value: m.name,
-                    type: "circle" as const,
-                    id: m.name,
-                    color: m.color,
-                  })) as any}
-                />
+                {(() => {
+                  const LegendAny = Legend as any;
+                  return (
+                    <LegendAny
+                      wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+                      iconType="circle"
+                      payload={stats.map((m) => ({
+                        value: m.name,
+                        type: "circle",
+                        id: m.name,
+                        color: m.color,
+                      }))}
+                    />
+                  );
+                })()}
                 <Bar dataKey="count" radius={[8, 8, 0, 0]}>
                   {stats.map((m) => (
                     <Cell key={m.name} fill={m.color} />
