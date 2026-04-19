@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
-import { Smartphone, Sparkles } from "lucide-react";
-import { mobileBreakdownStats, strategyProductStats } from "@/data/mockData";
+import { Smartphone, Sparkles, Sim } from "lucide-react";
+import { mobileBreakdownStats, strategyProductStats, usimChannelStats } from "@/data/mockData";
 
 export const ActivationBreakdown = () => {
   const totalMobile = mobileBreakdownStats.reduce((s, r) => s + r.count, 0);

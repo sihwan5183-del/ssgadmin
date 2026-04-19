@@ -17,11 +17,20 @@ export const summaryStats = {
   todayDelta: 18.2,
 };
 
-// 모바일 유형별 건수 (당월 누적)
+// 모바일 유형별 건수 (당월 누적) — 신규는 USIM 단독개통이라 별도 섹션으로 분리
 export const mobileBreakdownStats = [
-  { label: "MNP (번호이동)", count: 168, share: 43.4 },
-  { label: "기변", count: 142, share: 36.7 },
-  { label: "신규", count: 77, share: 19.9 },
+  { label: "MNP (번호이동)", count: 168, share: 54.2 },
+  { label: "기변", count: 142, share: 45.8 },
+];
+
+// USIM 단독개통(=USIM MNP) — 채널별 건수
+export const usimChannelStats = [
+  { channel: "당근", count: 28, color: "hsl(35 95% 60%)" },
+  { channel: "모요", count: 19, color: "hsl(270 90% 65%)" },
+  { channel: "도그마루", count: 12, color: "hsl(320 90% 65%)" },
+  { channel: "오프라인", count: 9, color: "hsl(195 90% 60%)" },
+  { channel: "캠페인", count: 6, color: "hsl(150 70% 55%)" },
+  { channel: "기타", count: 3, color: "hsl(220 15% 55%)" },
 ];
 
 // 채널별 개통 현황 (당월 누적 / 오늘)
