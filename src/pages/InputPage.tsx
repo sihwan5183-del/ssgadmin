@@ -9,12 +9,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Check, Upload, Zap, Trash2, Pencil, X, FileSpreadsheet } from "lucide-react";
+import { Check, Upload, Zap, Trash2, Pencil, X, FileSpreadsheet, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { useProductRatePlans } from "@/hooks/useProductRatePlans";
+import { usePeriod } from "@/contexts/PeriodContext";
+import { PaginationBar } from "@/components/ui/pagination-bar";
+import { exportToExcel, SALES_COLUMNS } from "@/lib/excelExport";
 import { cn } from "@/lib/utils";
+
+const PAGE_SIZE = 25;
 
 type SaleRow = {
   id: string;
