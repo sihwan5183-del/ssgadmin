@@ -18,6 +18,11 @@ import { usePeriod } from "@/contexts/PeriodContext";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { exportToExcel, SALES_COLUMNS } from "@/lib/excelExport";
 import { cn } from "@/lib/utils";
+import { useFieldDefinitions } from "@/hooks/useFieldDefinitions";
+import { useNetFeeFormula } from "@/hooks/useNetFeeFormula";
+import { DynamicFieldRenderer } from "@/components/admin/DynamicFieldRenderer";
+import { ExcelMappingDialog, type MappingTarget } from "@/components/admin/ExcelMappingDialog";
+import { Sparkles } from "lucide-react";
 
 const PAGE_SIZE = 25;
 
@@ -82,13 +87,19 @@ const InputPage = () => {
   const { options: DELIVERY_TYPES } = useFieldOptions("delivery_type");
   const { options: BANKS } = useFieldOptions("bank");
   const [form, setForm] = useState<Partial<SaleRow>>(emptyForm);
+  const [customFields, setCustomFields] = useState<Record<string, any>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rows, setRows] = useState<SaleRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
+  const mappingFileRef = useRef<HTMLInputElement>(null);
+  const [mappingOpen, setMappingOpen] = useState(false);
+  const [mappingFile, setMappingFile] = useState<File | null>(null);
   const { startDate, endDate, label: periodLabel } = usePeriod();
+  const { fields: dynamicFields } = useFieldDefinitions("sales");
+  const { calc: calcNetFee, formula: netFeeFormula } = useNetFeeFormula();
 
   const set = <K extends keyof SaleRow>(k: K, v: SaleRow[K] | undefined) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -140,6 +151,7 @@ const InputPage = () => {
 
   const reset = () => {
     setForm(emptyForm);
+    setCustomFields({});
     setEditingId(null);
   };
 
@@ -147,16 +159,23 @@ const InputPage = () => {
     e.preventDefault();
     if (!user) return;
     setBusy(true);
-    const payload = {
-      ...form,
-      created_by: user.id,
+    const baseNumeric = {
       unit_price: num(form.unit_price),
       vas_fee: num(form.vas_fee),
       receivable_amount: num(form.receivable_amount),
       distributor_amount: num(form.distributor_amount),
       extra_subsidy: num(form.extra_subsidy),
       cash_support_amount: num(form.cash_support_amount),
-      net_fee: num(form.net_fee),
+    };
+    const payload = {
+      ...form,
+      created_by: user.id,
+      ...baseNumeric,
+      // 관리자가 정의한 수식으로 자동 계산 (사용자 입력값이 있으면 우선)
+      net_fee: form.net_fee != null && form.net_fee !== 0
+        ? num(form.net_fee)
+        : calcNetFee(baseNumeric),
+      custom_fields: customFields,
     };
     try {
       if (editingId) {
