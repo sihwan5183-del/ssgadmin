@@ -12,6 +12,7 @@ import Index from "./pages/Index.tsx";
 import InputPage from "./pages/InputPage.tsx";
 import ActivitiesPage from "./pages/ActivitiesPage.tsx";
 import RegularInputPage from "./pages/RegularInputPage.tsx";
+import RegularsPage from "./pages/RegularsPage.tsx";
 import ExpensesPage from "./pages/ExpensesPage.tsx";
 import ExpenseInputPage from "./pages/ExpenseInputPage.tsx";
 import FieldOptionsPage from "./pages/FieldOptionsPage.tsx";
@@ -50,6 +51,7 @@ const App = () => (
                         <Route path="/activities" element={<ActivitiesPage />} />
                         <Route path="/missing-docs" element={<MissingDocsPage />} />
                         <Route path="/regular-input" element={<RegularInputPage />} />
+                        <Route path="/regulars" element={<RegularsPage />} />
                         <Route path="/expenses" element={<ExpensesPage />} />
                         <Route path="/ad-spend" element={<ExpenseInputPage />} />
                         <Route path="/expense-input" element={<ExpenseInputPage />} />
