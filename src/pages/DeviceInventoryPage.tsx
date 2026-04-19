@@ -24,14 +24,9 @@ import {
   Loader2,
   Download,
   AlertTriangle,
-  ArrowRightLeft,
-  Store as StoreIcon,
 } from "lucide-react";
 import { exportToExcel, DEVICE_INVENTORY_COLUMNS } from "@/lib/excelExport";
-import { useStores } from "@/hooks/useStores";
 import { useInventoryAging } from "@/hooks/useInventoryAging";
-import { TransferDialog } from "@/components/inventory/TransferDialog";
-import { TransferList } from "@/components/inventory/TransferList";
 
 const STATUSES = ["재고", "판매중", "이동중", "개통완료", "반품"] as const;
 type Status = typeof STATUSES[number];
@@ -69,7 +64,6 @@ const emptyForm = {
   note: "",
   stock_in_date: todayISO(),
   purchase_price: 0,
-  current_store_id: "" as string,
 };
 
 export default function DeviceInventoryPage() {
