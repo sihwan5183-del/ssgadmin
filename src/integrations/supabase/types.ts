@@ -56,6 +56,39 @@ export type Database = {
         }
         Relationships: []
       }
+      field_options: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          field: string
+          id: string
+          sort_order: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          field: string
+          id?: string
+          sort_order?: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          field?: string
+          id?: string
+          sort_order?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
