@@ -470,6 +470,57 @@ export const SaleSearchPanel = () => {
                     </div>
                   ))}
                 </div>
+
+                {/* 오퍼(지원금) 관리 — 지출 대시보드 자동 집계 */}
+                <div className="mt-5 rounded-xl border border-primary/20 bg-primary/[0.04] p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <ShieldCheck className="size-3.5 text-primary-glow" />
+                    <h4 className="text-sm font-semibold">오퍼(지원금) 관리</h4>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mb-3">
+                    아래 3개 항목은 <span className="text-foreground font-medium">지출 대시보드</span>에 자동 집계됩니다. 천 단위 콤마가 자동 표시됩니다.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">① 유통망 지원금 (₩)</Label>
+                      <MoneyInput
+                        value={editForm.distributor_amount ?? 0}
+                        onChange={(v) => setEditForm({ ...editForm, distributor_amount: v })}
+                        disabled={!canEdit}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">② 현금개통 금액 (₩)</Label>
+                      <MoneyInput
+                        value={editForm.cash_support_amount ?? 0}
+                        onChange={(v) =>
+                          setEditForm({
+                            ...editForm,
+                            cash_support_amount: v,
+                            cash_open: v > 0,
+                          })
+                        }
+                        disabled={!canEdit}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">③ 고객입금 금액 (₩)</Label>
+                      <MoneyInput
+                        value={editForm.receivable_amount ?? 0}
+                        onChange={(v) => setEditForm({ ...editForm, receivable_amount: v })}
+                        disabled={!canEdit}
+                      />
+                      <Input
+                        value={editForm.receivable_paid ?? ""}
+                        onChange={(e) => setEditForm({ ...editForm, receivable_paid: e.target.value })}
+                        placeholder="입금 유/완료/일자 (예: 2026-04-19)"
+                        disabled={!canEdit}
+                        className="h-9 bg-input/60 text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <DialogFooter className="mt-4">
                   <Button variant="outline" onClick={() => setSelected(null)}>닫기</Button>
                   <Button onClick={saveEdit} disabled={!canEdit || saving}>
