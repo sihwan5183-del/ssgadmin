@@ -101,6 +101,7 @@ const SELECT_COLS =
 export const SaleSearchPanel = () => {
   const { user } = useAuth();
   const { isAdmin } = useRole();
+  const { startDate, endDate, label, setSingleDay } = usePeriod();
   const [params, setParams] = useSearchParams();
   const [q, setQ] = useState("");
   const [pendingOnly, setPendingOnly] = useState(false);
