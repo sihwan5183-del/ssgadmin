@@ -74,7 +74,7 @@ export const OverallModelAnalysis = () => {
                     const label = String(payload.value);
                     const short = label.length > 8 ? label.slice(0, 7) + "…" : label;
                     return (
-                      <text x={x} y={y + 14} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize={11}>
+                      <text x={x} y={(y as number) + 14} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize={11}>
                         {short}
                       </text>
                     );
@@ -99,10 +99,10 @@ export const OverallModelAnalysis = () => {
                   iconType="circle"
                   payload={stats.map((m) => ({
                     value: m.name,
-                    type: "circle",
+                    type: "circle" as const,
                     id: m.name,
                     color: m.color,
-                  }))}
+                  })) as any}
                 />
                 <Bar dataKey="count" radius={[8, 8, 0, 0]}>
                   {stats.map((m) => (
