@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { SaleDocuments } from "./SaleDocuments";
 import { SaleAuditLog } from "./SaleAuditLog";
 import { PendingItemsEditor } from "./PendingItemsEditor";
+import { MoneyInput } from "@/components/ui/money-input";
 import { useSearchParams } from "react-router-dom";
 
 type ApprovalStatus = "승인대기" | "확정" | "환수" | "취소";
