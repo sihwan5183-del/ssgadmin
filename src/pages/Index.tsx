@@ -12,6 +12,7 @@ import { ChannelModelAnalysis } from "@/components/dashboard/ChannelModelAnalysi
 import { OverallModelAnalysis } from "@/components/dashboard/OverallModelAnalysis";
 import { AdScheduleWidget } from "@/components/dashboard/AdScheduleWidget";
 import { InventoryWidget } from "@/components/dashboard/InventoryWidget";
+import { PendingItemsCard } from "@/components/dashboard/PendingItemsCard";
 import { summaryStats, formatShortKRW } from "@/data/mockData";
 import { TrendingUp, Wallet, Megaphone, Target } from "lucide-react";
 import { useMarketingSpend } from "@/hooks/useMarketingSpend";
@@ -39,7 +40,7 @@ const Index = () => {
       {/* ============================================
           [2] 중간 — 수익 및 효율
           ============================================ */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <section className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <StatCard
           label="당월 순이익"
           value={formatShortKRW(summaryStats.netProfit)}
@@ -71,6 +72,7 @@ const Index = () => {
           accent="secondary"
           hint="순이익 ÷ 마케팅 비용"
         />
+        <PendingItemsCard />
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">

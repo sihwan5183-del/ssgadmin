@@ -23,7 +23,8 @@ import { useNetFeeFormula } from "@/hooks/useNetFeeFormula";
 import { DynamicFieldRenderer } from "@/components/admin/DynamicFieldRenderer";
 import { ExcelMappingDialog, type MappingTarget } from "@/components/admin/ExcelMappingDialog";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
-import { Sparkles } from "lucide-react";
+import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
+import { Sparkles, AlertTriangle } from "lucide-react";
 
 const PAGE_SIZE = 25;
 
@@ -68,6 +69,9 @@ type SaleRow = {
   tracking_no: string | null;
   note: string | null;
   bundle: string | null;
+  pending_items?: string[] | null;
+  pending_note?: string | null;
+  pending_resolved?: boolean | null;
 };
 
 const emptyForm: Partial<SaleRow> = {
@@ -89,6 +93,9 @@ const InputPage = () => {
   const { options: BANKS } = useFieldOptions("bank");
   const [form, setForm] = useState<Partial<SaleRow>>(emptyForm);
   const [customFields, setCustomFields] = useState<Record<string, any>>({});
+  const [pendingItems, setPendingItems] = useState<string[]>([]);
+  const [pendingNote, setPendingNote] = useState<string>("");
+  const [pendingResolved, setPendingResolved] = useState<boolean>(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rows, setRows] = useState<SaleRow[]>([]);
   const [busy, setBusy] = useState(false);
@@ -153,6 +160,9 @@ const InputPage = () => {
   const reset = () => {
     setForm(emptyForm);
     setCustomFields({});
+    setPendingItems([]);
+    setPendingNote("");
+    setPendingResolved(true);
     setEditingId(null);
   };
 
@@ -177,6 +187,9 @@ const InputPage = () => {
         ? num(form.net_fee)
         : calcNetFee(baseNumeric),
       custom_fields: customFields,
+      pending_items: pendingItems,
+      pending_note: pendingNote || null,
+      pending_resolved: pendingItems.length === 0 ? true : pendingResolved,
     };
     try {
       if (editingId) {
@@ -201,6 +214,9 @@ const InputPage = () => {
     setEditingId(r.id);
     setForm(r);
     setCustomFields(((r as any).custom_fields as Record<string, any>) ?? {});
+    setPendingItems(((r as any).pending_items as string[]) ?? []);
+    setPendingNote(((r as any).pending_note as string) ?? "");
+    setPendingResolved(((r as any).pending_resolved as boolean) ?? true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -638,6 +654,19 @@ const InputPage = () => {
           </Field>
         </FormSection>
 
+        {/* 미처리 항목 */}
+        <FormSection title="미처리 항목" icon={<AlertTriangle className="size-3" />}>
+          <PendingItemsEditor
+            items={pendingItems}
+            note={pendingNote}
+            resolved={pendingResolved}
+            onItemsChange={setPendingItems}
+            onNoteChange={setPendingNote}
+            onResolvedChange={setPendingResolved}
+            showResolvedToggle={!!editingId}
+          />
+        </FormSection>
+
         {/* 관리자 동적 필드 */}
         {dynamicFields.length > 0 && (
           <FormSection title="추가 항목 (관리자 정의)">
@@ -726,14 +755,28 @@ const InputPage = () => {
             <tbody>
               {rows.map((r) => {
                 const mine = r.created_by === user?.id;
+                const hasPending = (r.pending_items?.length ?? 0) > 0 && r.pending_resolved === false;
                 return (
-                  <tr key={r.id} className={cn("border-b border-border/20 hover:bg-white/[0.03]", mine && "bg-primary/[0.04]")}>
+                  <tr key={r.id} className={cn(
+                    "border-b border-border/20 hover:bg-white/[0.03]",
+                    mine && "bg-primary/[0.04]",
+                    hasPending && "bg-amber-500/[0.07] hover:bg-amber-500/[0.12]"
+                  )}>
                     <td className="px-3 py-2.5">{r.open_date ?? "-"}</td>
                     <td className="px-3 py-2.5">{r.channel ?? "-"}</td>
                     <td className="px-3 py-2.5">{r.manager ?? "-"}</td>
                     <td className="px-3 py-2.5">{r.product ?? "-"}</td>
                     <td className="px-3 py-2.5">{r.sale_type ?? "-"}</td>
-                    <td className="px-3 py-2.5">{r.customer_name ?? "-"}</td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span>{r.customer_name ?? "-"}</span>
+                        {hasPending && (
+                          <Badge variant="outline" className="text-[9px] gap-0.5 border-amber-500/40 text-amber-300 bg-amber-500/10 px-1.5 py-0">
+                            <AlertTriangle className="size-2.5" /> 미처리 {r.pending_items?.length}
+                          </Badge>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-3 py-2.5 text-muted-foreground">{r.device_model ?? "-"}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums">{(r.unit_price ?? 0).toLocaleString("ko-KR")}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-revenue">{(r.net_fee ?? 0).toLocaleString("ko-KR")}</td>

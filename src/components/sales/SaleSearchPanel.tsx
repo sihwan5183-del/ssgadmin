@@ -10,18 +10,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
   Search, Edit3, FileText, History, Save, Phone, User, Smartphone, Lock,
-  ShieldCheck, AlertCircle, CheckCircle2, XCircle, RotateCcw,
+  ShieldCheck, AlertCircle, CheckCircle2, XCircle, RotateCcw, AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { SaleDocuments } from "./SaleDocuments";
 import { SaleAuditLog } from "./SaleAuditLog";
+import { PendingItemsEditor } from "./PendingItemsEditor";
 import { useSearchParams } from "react-router-dom";
 
 type ApprovalStatus = "승인대기" | "확정" | "환수" | "취소";
@@ -45,6 +51,10 @@ interface SaleHit {
   approval_status: ApprovalStatus | null;
   locked: boolean | null;
   approved_at: string | null;
+  pending_items: string[] | null;
+  pending_note: string | null;
+  pending_resolved: boolean | null;
+  approval_override_reason: string | null;
 }
 
 const EDITABLE_FIELDS: Array<{ key: keyof SaleHit; label: string; type?: string }> = [
@@ -71,7 +81,7 @@ const APPROVAL_META: Record<ApprovalStatus, { className: string; icon: typeof Ch
 };
 
 const SELECT_COLS =
-  "id, created_by, customer_name, phone, device_serial, device_model, channel, product, rate_plan, status, open_date, manager, unit_price, net_fee, note, approval_status, locked, approved_at";
+  "id, created_by, customer_name, phone, device_serial, device_model, channel, product, rate_plan, status, open_date, manager, unit_price, net_fee, note, approval_status, locked, approved_at, pending_items, pending_note, pending_resolved, approval_override_reason";
 
 export const SaleSearchPanel = () => {
   const { user } = useAuth();
@@ -80,11 +90,21 @@ export const SaleSearchPanel = () => {
   const [q, setQ] = useState("");
   const [pendingOnly, setPendingOnly] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [unhandledOnly, setUnhandledOnly] = useState(false);
+  const [unhandledCount, setUnhandledCount] = useState(0);
   const [results, setResults] = useState<SaleHit[]>([]);
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<SaleHit | null>(null);
   const [editForm, setEditForm] = useState<Partial<SaleHit>>({});
   const [saving, setSaving] = useState(false);
+  // 미처리 편집 상태
+  const [pendingItems, setPendingItems] = useState<string[]>([]);
+  const [pendingNote, setPendingNote] = useState<string>("");
+  const [pendingResolved, setPendingResolved] = useState<boolean>(true);
+  // 미처리 있는데 확정 시도 시 사유 입력
+  const [overrideOpen, setOverrideOpen] = useState(false);
+  const [overrideReason, setOverrideReason] = useState("");
+  const [pendingApprovalTarget, setPendingApprovalTarget] = useState<ApprovalStatus | null>(null);
 
   const isLocked = !!selected?.locked;
   const canEdit = useMemo(() => {
@@ -94,24 +114,26 @@ export const SaleSearchPanel = () => {
     return selected.created_by === user.id;
   }, [selected, user, isAdmin, isLocked]);
 
-  // 미승인 건수 카운트
-  const refreshPendingCount = async () => {
-    const { count } = await supabase
-      .from("sales")
-      .select("id", { count: "exact", head: true })
-      .eq("approval_status", "승인대기");
-    setPendingCount(count ?? 0);
+  // 미승인 / 미처리 카운트
+  const refreshCounts = async () => {
+    const [{ count: c1 }, { count: c2 }] = await Promise.all([
+      supabase.from("sales").select("id", { count: "exact", head: true }).eq("approval_status", "승인대기"),
+      supabase.from("sales").select("id", { count: "exact", head: true }).eq("pending_resolved", false),
+    ]);
+    setPendingCount(c1 ?? 0);
+    setUnhandledCount(c2 ?? 0);
   };
 
   useEffect(() => {
-    refreshPendingCount();
+    refreshCounts();
   }, []);
 
-  const search = async (override?: string, pendingOverride?: boolean) => {
+  const search = async (override?: string, pendingOverride?: boolean, unhandledOverride?: boolean) => {
     const term = (override ?? q).trim();
     const onlyPending = pendingOverride ?? pendingOnly;
+    const onlyUnhandled = unhandledOverride ?? unhandledOnly;
 
-    if (!term && !onlyPending) {
+    if (!term && !onlyPending && !onlyUnhandled) {
       setResults([]);
       return;
     }
@@ -125,6 +147,7 @@ export const SaleSearchPanel = () => {
       );
     }
     if (onlyPending) query = query.eq("approval_status", "승인대기");
+    if (onlyUnhandled) query = query.eq("pending_resolved", false);
 
     const { data, error } = await query.order("created_at", { ascending: false }).limit(100);
     setSearching(false);
@@ -132,26 +155,37 @@ export const SaleSearchPanel = () => {
     setResults((data ?? []) as SaleHit[]);
   };
 
-  // URL ?sale=ID로 들어왔을 때 자동 오픈 (알림에서 진입)
+  // URL ?sale=ID 자동 오픈 + ?pending=1 자동 미처리 필터
   useEffect(() => {
     const id = params.get("sale");
-    if (!id) return;
-    (async () => {
-      const { data } = await supabase
-        .from("sales")
-        .select(SELECT_COLS)
-        .eq("id", id)
-        .maybeSingle();
-      if (data) openDetail(data as SaleHit);
-      params.delete("sale");
+    const wantPending = params.get("pending") === "1";
+    if (wantPending) {
+      setUnhandledOnly(true);
+      search(undefined, undefined, true);
+      params.delete("pending");
       setParams(params, { replace: true });
-    })();
+    }
+    if (id) {
+      (async () => {
+        const { data } = await supabase
+          .from("sales")
+          .select(SELECT_COLS)
+          .eq("id", id)
+          .maybeSingle();
+        if (data) openDetail(data as SaleHit);
+        params.delete("sale");
+        setParams(params, { replace: true });
+      })();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openDetail = (sale: SaleHit) => {
     setSelected(sale);
     setEditForm(sale);
+    setPendingItems(sale.pending_items ?? []);
+    setPendingNote(sale.pending_note ?? "");
+    setPendingResolved(sale.pending_resolved ?? true);
   };
 
   const saveEdit = async () => {
@@ -161,6 +195,16 @@ export const SaleSearchPanel = () => {
     EDITABLE_FIELDS.forEach(({ key }) => {
       if (editForm[key] !== selected[key]) payload[key as string] = editForm[key];
     });
+    // 미처리 항목 변경 감지
+    const pendingChanged =
+      JSON.stringify(selected.pending_items ?? []) !== JSON.stringify(pendingItems) ||
+      (selected.pending_note ?? "") !== pendingNote ||
+      (selected.pending_resolved ?? true) !== pendingResolved;
+    if (pendingChanged) {
+      payload.pending_items = pendingItems;
+      payload.pending_note = pendingNote || null;
+      payload.pending_resolved = pendingItems.length === 0 ? true : pendingResolved;
+    }
     if (Object.keys(payload).length === 0) {
       toast.info("변경된 내용이 없습니다");
       return;
@@ -170,26 +214,44 @@ export const SaleSearchPanel = () => {
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success("저장되었습니다");
-    setSelected({ ...selected, ...editForm } as SaleHit);
+    const { data } = await supabase.from("sales").select(SELECT_COLS).eq("id", selected.id).maybeSingle();
+    if (data) openDetail(data as SaleHit);
+    refreshCounts();
+    search();
+  };
+
+  const performApproval = async (next: ApprovalStatus, overrideReasonValue?: string) => {
+    if (!selected || !isAdmin) return;
+    const update: Record<string, unknown> = { approval_status: next };
+    if (next === "확정" && overrideReasonValue) {
+      update.approval_override_reason = overrideReasonValue;
+    } else if (next !== "확정") {
+      update.approval_override_reason = null;
+    }
+    const { error } = await supabase
+      .from("sales")
+      .update(update as never)
+      .eq("id", selected.id);
+    if (error) return toast.error(error.message);
+    toast.success(`상태를 '${next}'(으)로 변경했습니다`);
+    const { data } = await supabase.from("sales").select(SELECT_COLS).eq("id", selected.id).maybeSingle();
+    if (data) openDetail(data as SaleHit);
+    refreshCounts();
     search();
   };
 
   const updateApproval = async (next: ApprovalStatus) => {
     if (!selected || !isAdmin) return;
-    const { error } = await supabase
-      .from("sales")
-      .update({ approval_status: next } as never)
-      .eq("id", selected.id);
-    if (error) return toast.error(error.message);
-    toast.success(`상태를 '${next}'(으)로 변경했습니다`);
-    // 다시 조회
-    const { data } = await supabase.from("sales").select(SELECT_COLS).eq("id", selected.id).maybeSingle();
-    if (data) {
-      setSelected(data as SaleHit);
-      setEditForm(data as SaleHit);
+    // 미처리가 남아있는 상태에서 '확정'으로 변경 시도 → 사유 입력 필수
+    const hasUnhandled =
+      (selected.pending_items?.length ?? 0) > 0 && selected.pending_resolved === false;
+    if (next === "확정" && hasUnhandled) {
+      setPendingApprovalTarget(next);
+      setOverrideReason("");
+      setOverrideOpen(true);
+      return;
     }
-    refreshPendingCount();
-    search();
+    await performApproval(next);
   };
 
   return (
@@ -200,9 +262,12 @@ export const SaleSearchPanel = () => {
         <span className="text-xs text-muted-foreground ml-2">
           고객명 · 전화번호 · 단말기 일련번호(IMEI)
         </span>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2 flex-wrap">
           <Badge variant="outline" className="border-amber-500/40 text-amber-300 bg-amber-500/10 gap-1">
             <AlertCircle className="size-3" /> 미승인 {pendingCount}건
+          </Badge>
+          <Badge variant="outline" className="border-amber-500/40 text-amber-300 bg-amber-500/10 gap-1">
+            <AlertTriangle className="size-3" /> 미처리 {unhandledCount}건
           </Badge>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/40 border border-border/40">
             <Switch
@@ -214,7 +279,20 @@ export const SaleSearchPanel = () => {
               }}
             />
             <Label htmlFor="pending-only" className="text-xs cursor-pointer">
-              미승인 건만 보기
+              미승인만
+            </Label>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/40 border border-border/40">
+            <Switch
+              id="unhandled-only"
+              checked={unhandledOnly}
+              onCheckedChange={(v) => {
+                setUnhandledOnly(v);
+                search(undefined, undefined, v);
+              }}
+            />
+            <Label htmlFor="unhandled-only" className="text-xs cursor-pointer">
+              미처리만
             </Label>
           </div>
         </div>
@@ -245,11 +323,14 @@ export const SaleSearchPanel = () => {
               const ap = (r.approval_status ?? "승인대기") as ApprovalStatus;
               const meta = APPROVAL_META[ap];
               const Icon = meta.icon;
+              const hasUnhandled = (r.pending_items?.length ?? 0) > 0 && r.pending_resolved === false;
               return (
                 <button
                   key={r.id}
                   onClick={() => openDetail(r)}
-                  className="w-full text-left px-3 py-2.5 hover:bg-muted/30 transition-colors flex items-center gap-3"
+                  className={`w-full text-left px-3 py-2.5 hover:bg-muted/30 transition-colors flex items-center gap-3 ${
+                    hasUnhandled ? "bg-amber-500/[0.07] hover:bg-amber-500/[0.12]" : ""
+                  }`}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium flex items-center gap-2 flex-wrap">
@@ -258,6 +339,11 @@ export const SaleSearchPanel = () => {
                       <Badge variant="outline" className={`text-[10px] gap-1 ${meta.className}`}>
                         <Icon className="size-3" /> {ap}
                       </Badge>
+                      {hasUnhandled && (
+                        <Badge variant="outline" className="text-[10px] gap-1 border-amber-500/40 text-amber-300 bg-amber-500/10">
+                          <AlertTriangle className="size-3" /> 미처리 {r.pending_items?.length}
+                        </Badge>
+                      )}
                       {r.locked && (
                         <Badge variant="outline" className="text-[10px] gap-1 border-border/60">
                           <Lock className="size-3" /> 잠금
@@ -306,6 +392,11 @@ export const SaleSearchPanel = () => {
                   <Lock className="size-3" /> 읽기 전용
                 </Badge>
               )}
+              {(selected?.pending_items?.length ?? 0) > 0 && selected?.pending_resolved === false && (
+                <Badge variant="outline" className="text-[10px] gap-1 border-amber-500/40 text-amber-300 bg-amber-500/10">
+                  <AlertTriangle className="size-3" /> 미처리 {selected?.pending_items?.length}
+                </Badge>
+              )}
             </DialogTitle>
           </DialogHeader>
 
@@ -314,6 +405,9 @@ export const SaleSearchPanel = () => {
               <TabsList>
                 <TabsTrigger value="edit">
                   <Edit3 className="size-3.5 mr-1" /> 정보
+                </TabsTrigger>
+                <TabsTrigger value="pending">
+                  <AlertTriangle className="size-3.5 mr-1" /> 미처리
                 </TabsTrigger>
                 <TabsTrigger value="approval">
                   <ShieldCheck className="size-3.5 mr-1" /> 검수
@@ -366,6 +460,25 @@ export const SaleSearchPanel = () => {
                 </DialogFooter>
               </TabsContent>
 
+              <TabsContent value="pending" className="mt-4">
+                <PendingItemsEditor
+                  items={pendingItems}
+                  note={pendingNote}
+                  resolved={pendingResolved}
+                  onItemsChange={setPendingItems}
+                  onNoteChange={setPendingNote}
+                  onResolvedChange={setPendingResolved}
+                  disabled={!canEdit}
+                  showResolvedToggle
+                />
+                <DialogFooter className="mt-4">
+                  <Button onClick={saveEdit} disabled={!canEdit || saving}>
+                    <Save className="size-4 mr-1.5" />
+                    {saving ? "저장 중…" : "미처리 저장"}
+                  </Button>
+                </DialogFooter>
+              </TabsContent>
+
               <TabsContent value="approval" className="mt-4 space-y-4">
                 <div className="rounded-lg border border-border/40 bg-card/40 p-4 space-y-2">
                   <div className="flex items-center justify-between">
@@ -387,6 +500,22 @@ export const SaleSearchPanel = () => {
                     </div>
                   )}
                 </div>
+
+                {(selected.pending_items?.length ?? 0) > 0 && selected.pending_resolved === false && (
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-200 flex items-start gap-2">
+                    <AlertTriangle className="size-3.5 mt-0.5 shrink-0" />
+                    <div>
+                      이 실적에는 <b>{selected.pending_items?.length}건의 미처리 항목</b>이 남아 있습니다
+                      ({selected.pending_items?.join(", ")}).
+                      '확정'으로 변경하려면 사유 입력이 필요합니다.
+                    </div>
+                  </div>
+                )}
+                {selected.approval_override_reason && (
+                  <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-xs text-orange-200">
+                    <b>강제 승인 사유:</b> {selected.approval_override_reason}
+                  </div>
+                )}
 
                 {!isAdmin ? (
                   <div className="text-xs text-muted-foreground rounded-lg border border-border/40 px-3 py-2">
@@ -440,6 +569,46 @@ export const SaleSearchPanel = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* 미처리 강제 승인 사유 다이얼로그 */}
+      <AlertDialog open={overrideOpen} onOpenChange={setOverrideOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="size-4 text-amber-400" /> 완료 전 승인 경고
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              이 실적에는 미처리 항목이 남아있습니다
+              {selected?.pending_items?.length ? ` (${selected.pending_items.join(", ")})` : ""}.
+              그래도 '확정'으로 변경하려면 사유를 입력하세요.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            value={overrideReason}
+            onChange={(e) => setOverrideReason(e.target.value)}
+            placeholder="예: 정산 마감 일정상 선승인, 서류는 3일 내 보완 예정"
+            rows={3}
+            className="bg-input/60"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!overrideReason.trim()) {
+                  toast.error("승인 사유를 입력하세요");
+                  return;
+                }
+                const target = pendingApprovalTarget ?? "확정";
+                setOverrideOpen(false);
+                await performApproval(target, overrideReason.trim());
+                setPendingApprovalTarget(null);
+              }}
+            >
+              사유와 함께 확정
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };

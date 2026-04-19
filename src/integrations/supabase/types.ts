@@ -735,6 +735,7 @@ export type Database = {
       }
       sales: {
         Row: {
+          approval_override_reason: string | null
           approval_status: string
           approved_at: string | null
           approved_by: string | null
@@ -764,6 +765,9 @@ export type Database = {
           open_date: string | null
           open_method: string | null
           open_month: string | null
+          pending_items: Json
+          pending_note: string | null
+          pending_resolved: boolean
           phone: string | null
           product: string | null
           rate_plan: string | null
@@ -784,6 +788,7 @@ export type Database = {
           voucher_returned: string | null
         }
         Insert: {
+          approval_override_reason?: string | null
           approval_status?: string
           approved_at?: string | null
           approved_by?: string | null
@@ -813,6 +818,9 @@ export type Database = {
           open_date?: string | null
           open_method?: string | null
           open_month?: string | null
+          pending_items?: Json
+          pending_note?: string | null
+          pending_resolved?: boolean
           phone?: string | null
           product?: string | null
           rate_plan?: string | null
@@ -833,6 +841,7 @@ export type Database = {
           voucher_returned?: string | null
         }
         Update: {
+          approval_override_reason?: string | null
           approval_status?: string
           approved_at?: string | null
           approved_by?: string | null
@@ -862,6 +871,9 @@ export type Database = {
           open_date?: string | null
           open_method?: string | null
           open_month?: string | null
+          pending_items?: Json
+          pending_note?: string | null
+          pending_resolved?: boolean
           phone?: string | null
           product?: string | null
           rate_plan?: string | null
