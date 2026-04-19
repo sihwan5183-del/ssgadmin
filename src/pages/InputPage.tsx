@@ -430,10 +430,10 @@ const InputPage = () => {
                 );
               })()}
             </Field>
-            <Field label="부가서비스 1">
+            <Field label="부가서비스 1 (주셋톱)">
               <Input value={form.vas1 ?? ""} onChange={(e) => set("vas1", e.target.value)} className="h-11 bg-input/60" />
             </Field>
-            <Field label="부가서비스 2">
+            <Field label="부가서비스 2 (부셋톱)">
               <Input value={form.vas2 ?? ""} onChange={(e) => set("vas2", e.target.value)} className="h-11 bg-input/60" />
             </Field>
           </Grid>
@@ -444,7 +444,7 @@ const InputPage = () => {
             <Field label="단가표 기준 (₩)">
               <Input type="number" value={form.unit_price ?? ""} onChange={(e) => set("unit_price", Number(e.target.value))} className="h-11 bg-input/60 tabular-nums" />
             </Field>
-            <Field label="VAS 수수료 (₩)">
+            <Field label="부가서비스 수수료 (₩)">
               <Input type="number" value={form.vas_fee ?? ""} onChange={(e) => set("vas_fee", Number(e.target.value))} className="h-11 bg-input/60 tabular-nums" />
             </Field>
             <Field label="상품권">
