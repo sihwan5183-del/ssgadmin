@@ -9,6 +9,7 @@ import { RecentActivities } from "@/components/dashboard/RecentActivities";
 import { RankingPanel } from "@/components/dashboard/RankingPanel";
 import { PerformanceLedger } from "@/components/dashboard/PerformanceLedger";
 import { ChannelModelAnalysis } from "@/components/dashboard/ChannelModelAnalysis";
+import { AdScheduleWidget } from "@/components/dashboard/AdScheduleWidget";
 import { summaryStats, formatShortKRW } from "@/data/mockData";
 import { TrendingUp, Wallet, Megaphone, Target } from "lucide-react";
 
@@ -83,10 +84,11 @@ const Index = () => {
           [3] 하단 — 활동 및 랭킹
           ============================================ */}
       <section className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 space-y-4">
           <RecentActivities />
         </div>
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-4">
+          <AdScheduleWidget />
           <RankingPanel />
         </div>
       </section>
