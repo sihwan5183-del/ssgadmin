@@ -9,10 +9,12 @@ import {
   Users,
   Sparkles,
   Settings2,
+  ShieldCheck,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
 
 const navItems = [
@@ -24,6 +26,10 @@ const navItems = [
   { to: "/ranking", label: "랭킹", icon: Trophy },
   { to: "/field-options", label: "입력 항목 관리", icon: Settings2 },
   { to: "/team", label: "권한 / 뷰", icon: Users },
+];
+
+const adminItems = [
+  { to: "/admin", label: "시스템 설정", icon: ShieldCheck },
 ];
 
 export const Sidebar = () => {
