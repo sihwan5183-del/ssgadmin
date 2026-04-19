@@ -2,6 +2,7 @@ import { Header } from "@/components/layout/Header";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { HeroPerformance } from "@/components/dashboard/HeroPerformance";
 import { ActivationBreakdown } from "@/components/dashboard/ActivationBreakdown";
+import { ChannelActivationBreakdown } from "@/components/dashboard/ChannelActivationBreakdown";
 import { PerformanceChart } from "@/components/dashboard/PerformanceChart";
 import { ChannelDonut } from "@/components/dashboard/ChannelDonut";
 import { RecentActivities } from "@/components/dashboard/RecentActivities";
@@ -24,6 +25,7 @@ const Index = () => {
           ============================================ */}
       <HeroPerformance />
       <ActivationBreakdown />
+      <ChannelActivationBreakdown />
 
       {/* ============================================
           [2] 중간 — 수익 및 효율
