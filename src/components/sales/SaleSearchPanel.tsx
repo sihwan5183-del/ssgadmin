@@ -323,11 +323,14 @@ export const SaleSearchPanel = () => {
               const ap = (r.approval_status ?? "승인대기") as ApprovalStatus;
               const meta = APPROVAL_META[ap];
               const Icon = meta.icon;
+              const hasUnhandled = (r.pending_items?.length ?? 0) > 0 && r.pending_resolved === false;
               return (
                 <button
                   key={r.id}
                   onClick={() => openDetail(r)}
-                  className="w-full text-left px-3 py-2.5 hover:bg-muted/30 transition-colors flex items-center gap-3"
+                  className={`w-full text-left px-3 py-2.5 hover:bg-muted/30 transition-colors flex items-center gap-3 ${
+                    hasUnhandled ? "bg-amber-500/[0.07] hover:bg-amber-500/[0.12]" : ""
+                  }`}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium flex items-center gap-2 flex-wrap">
@@ -336,6 +339,11 @@ export const SaleSearchPanel = () => {
                       <Badge variant="outline" className={`text-[10px] gap-1 ${meta.className}`}>
                         <Icon className="size-3" /> {ap}
                       </Badge>
+                      {hasUnhandled && (
+                        <Badge variant="outline" className="text-[10px] gap-1 border-amber-500/40 text-amber-300 bg-amber-500/10">
+                          <AlertTriangle className="size-3" /> 미처리 {r.pending_items?.length}
+                        </Badge>
+                      )}
                       {r.locked && (
                         <Badge variant="outline" className="text-[10px] gap-1 border-border/60">
                           <Lock className="size-3" /> 잠금
