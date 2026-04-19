@@ -13,6 +13,7 @@ import { Check, Upload, Zap, Trash2, Pencil, X, FileSpreadsheet } from "lucide-r
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
+import { useProductRatePlans } from "@/hooks/useProductRatePlans";
 import { cn } from "@/lib/utils";
 
 type SaleRow = {
@@ -72,6 +73,7 @@ const InputPage = () => {
   const { options: OPEN_METHODS } = useFieldOptions("open_method");
   const { options: STATUSES } = useFieldOptions("status");
   const { options: RATE_PLANS } = useFieldOptions("rate_plan");
+  const { getPlansForProduct } = useProductRatePlans();
   const { options: DELIVERY_TYPES } = useFieldOptions("delivery_type");
   const { options: BANKS } = useFieldOptions("bank");
   const [form, setForm] = useState<Partial<SaleRow>>(emptyForm);
