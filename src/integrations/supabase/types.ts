@@ -198,10 +198,13 @@ export type Database = {
       }
       device_inventory: {
         Row: {
+          activated_at: string | null
+          activated_sale_id: string | null
           capacity: string | null
           color: string | null
           created_at: string
           created_by: string
+          current_store_id: string | null
           custom_fields: Json
           id: string
           model: string
@@ -214,10 +217,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          activated_at?: string | null
+          activated_sale_id?: string | null
           capacity?: string | null
           color?: string | null
           created_at?: string
           created_by: string
+          current_store_id?: string | null
           custom_fields?: Json
           id?: string
           model: string
@@ -230,10 +236,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          activated_at?: string | null
+          activated_sale_id?: string | null
           capacity?: string | null
           color?: string | null
           created_at?: string
           created_by?: string
+          current_store_id?: string | null
           custom_fields?: Json
           id?: string
           model?: string
@@ -246,6 +255,76 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      device_transfers: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          device_id: string
+          from_store_id: string | null
+          id: string
+          note: string | null
+          reason: string | null
+          requested_at: string
+          requested_by: string
+          status: string
+          to_store_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          device_id: string
+          from_store_id?: string | null
+          id?: string
+          note?: string | null
+          reason?: string | null
+          requested_at?: string
+          requested_by: string
+          status?: string
+          to_store_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          device_id?: string
+          from_store_id?: string | null
+          id?: string
+          note?: string | null
+          reason?: string | null
+          requested_at?: string
+          requested_by?: string
+          status?: string
+          to_store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_transfers_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "device_inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "device_transfers_from_store_id_fkey"
+            columns: ["from_store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "device_transfers_to_store_id_fkey"
+            columns: ["to_store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       excel_mappings: {
         Row: {
@@ -643,6 +722,42 @@ export type Database = {
           vas2?: string | null
           voucher?: string | null
           voucher_returned?: string | null
+        }
+        Relationships: []
+      }
+      stores: {
+        Row: {
+          active: boolean
+          code: string | null
+          created_at: string
+          id: string
+          manager: string | null
+          name: string
+          phone: string | null
+          region: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code?: string | null
+          created_at?: string
+          id?: string
+          manager?: string | null
+          name: string
+          phone?: string | null
+          region?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string | null
+          created_at?: string
+          id?: string
+          manager?: string | null
+          name?: string
+          phone?: string | null
+          region?: string | null
+          updated_at?: string
         }
         Relationships: []
       }

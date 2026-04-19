@@ -10,6 +10,7 @@ import { RankingPanel } from "@/components/dashboard/RankingPanel";
 import { PerformanceLedger } from "@/components/dashboard/PerformanceLedger";
 import { ChannelModelAnalysis } from "@/components/dashboard/ChannelModelAnalysis";
 import { AdScheduleWidget } from "@/components/dashboard/AdScheduleWidget";
+import { InventoryWidget } from "@/components/dashboard/InventoryWidget";
 import { summaryStats, formatShortKRW } from "@/data/mockData";
 import { TrendingUp, Wallet, Megaphone, Target } from "lucide-react";
 import { useMarketingSpend } from "@/hooks/useMarketingSpend";
@@ -94,6 +95,7 @@ const Index = () => {
           <RecentActivities />
         </div>
         <div className="lg:col-span-2 space-y-4">
+          <InventoryWidget />
           <AdScheduleWidget />
           <RankingPanel />
         </div>

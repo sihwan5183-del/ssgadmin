@@ -129,5 +129,7 @@ export const DEVICE_INVENTORY_COLUMNS: Array<[string, string]> = [
   ["color", "색상"],
   ["capacity", "용량"],
   ["status", "상태"],
+  ["stock_in_date", "입고일"],
+  ["purchase_price", "매입가"],
   ["note", "메모"],
 ];
