@@ -111,6 +111,36 @@ export const SALES_COLUMNS: Array<[string, string]> = [
   ["note", "비고"],
 ];
 
+/** 컬럼 매핑 — 오퍼(지원금) 관리 전용 */
+export const OFFER_COLUMNS: Array<[string, string]> = [
+  ["seq", "순번"],
+  ["open_date", "개통일"],
+  ["channel", "인입경로"],
+  ["manager", "담당자"],
+  ["customer_name", "고객명"],
+  ["phone", "연락처"],
+  ["product", "가입상품"],
+  ["sale_type", "판매유형"],
+  ["device_model", "단말기"],
+  ["rate_plan", "개통요금제"],
+  ["unit_price", "단가표 기준(₩)"],
+  ["vas_fee", "부가서비스 수수료(₩)"],
+  ["distributor_amount", "유통망 지원금(₩)"],
+  ["extra_subsidy", "추가지원금(₩)"],
+  ["cash_support_amount", "현금 지원금(₩)"],
+  ["receivable_amount", "미수금(₩)"],
+  ["receivable_paid", "미수금 입금"],
+  ["cash_open", "현금개통"],
+  ["cash_bank", "은행"],
+  ["cash_account", "입금계좌"],
+  ["cash_holder", "예금주"],
+  ["voucher", "상품권"],
+  ["voucher_returned", "상품권 회수"],
+  ["net_fee", "회수 마진/수수료(₩)"],
+  ["approval_status", "검수상태"],
+  ["note", "비고"],
+];
+
 export const AD_SPEND_COLUMNS: Array<[string, string]> = [
   ["spend_date", "집행일"],
   ["spend_month", "집행월"],
