@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, PlusCircle, Megaphone, Receipt, Download } from "lucide-react";
+import { Trash2, PlusCircle, Megaphone, Receipt, Download, Building2, Banknote, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
@@ -57,6 +57,25 @@ export default function ExpenseInputPage() {
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
   const { startDate, endDate, label: periodLabel } = usePeriod();
+
+  // sales 자동 집계 — 총 유통망지원금 / 현금개통 / 입금금액
+  const [salesAgg, setSalesAgg] = useState({ distributor: 0, cash: 0, receivable: 0 });
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("sales")
+        .select("distributor_amount, cash_support_amount, cash_open, receivable_amount, receivable_paid")
+        .gte("open_date", startDate)
+        .lte("open_date", endDate);
+      const agg = { distributor: 0, cash: 0, receivable: 0 };
+      (data ?? []).forEach((r: any) => {
+        agg.distributor += Number(r.distributor_amount ?? 0);
+        if (r.cash_open) agg.cash += Number(r.cash_support_amount ?? 0);
+        if (r.receivable_paid) agg.receivable += Number(r.receivable_amount ?? 0);
+      });
+      setSalesAgg(agg);
+    })();
+  }, [startDate, endDate]);
 
   const [adForm, setAdForm] = useState({
     spend_date: todayISO(),
@@ -204,11 +223,11 @@ export default function ExpenseInputPage() {
         showPeriodFilter
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         <Card className="p-5 glass">
           <div className="text-xs text-muted-foreground">전체 지출 누적</div>
           <div className="mt-2 text-2xl font-bold text-gradient">{formatKRW(totals.total)}</div>
-          <div className="text-[11px] text-muted-foreground mt-1">최근 150건 기준</div>
+          <div className="text-[11px] text-muted-foreground mt-1">기간 내 지출 합</div>
         </Card>
         <Card className="p-5 glass">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -223,6 +242,27 @@ export default function ExpenseInputPage() {
           </div>
           <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(totals.etcTotal)}</div>
           <div className="text-[11px] text-muted-foreground mt-1">임대료 · 통신비 · 운영비 등</div>
+        </Card>
+        <Card className="p-5 glass border-primary/20">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Building2 className="size-3.5" /> 총 유통망지원금
+          </div>
+          <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(salesAgg.distributor)}</div>
+          <div className="text-[11px] text-muted-foreground mt-1">실적 자동 집계 (distributor_amount)</div>
+        </Card>
+        <Card className="p-5 glass border-primary/20">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Banknote className="size-3.5" /> 현금개통
+          </div>
+          <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(salesAgg.cash)}</div>
+          <div className="text-[11px] text-muted-foreground mt-1">cash_open 건의 현금지원금</div>
+        </Card>
+        <Card className="p-5 glass border-primary/20">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Wallet className="size-3.5" /> 입금금액
+          </div>
+          <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(salesAgg.receivable)}</div>
+          <div className="text-[11px] text-muted-foreground mt-1">receivable_paid 일자 입력된 건</div>
         </Card>
       </div>
 
@@ -399,6 +439,47 @@ export default function ExpenseInputPage() {
               </tr>
             </thead>
             <tbody>
+              {/* 실적(sales) 자동 집계 — 분류 요약 행 */}
+              <tr className="border-b border-border/40 bg-primary/[0.05]">
+                <td className="py-2 pr-3 text-xs text-muted-foreground">기간 합계</td>
+                <td className="py-2 pr-3">
+                  <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">자동집계</Badge>
+                </td>
+                <td className="py-2 pr-3 font-medium flex items-center gap-1.5">
+                  <Building2 className="size-3.5 text-muted-foreground" /> 총 유통망지원금
+                </td>
+                <td className="py-2 pr-3 text-muted-foreground">-</td>
+                <td className="py-2 pr-3 text-muted-foreground text-xs">sales.distributor_amount 합계</td>
+                <td className="py-2 pr-3 text-right font-mono font-semibold">{formatKRW(salesAgg.distributor)}</td>
+                <td />
+              </tr>
+              <tr className="border-b border-border/40 bg-primary/[0.05]">
+                <td className="py-2 pr-3 text-xs text-muted-foreground">기간 합계</td>
+                <td className="py-2 pr-3">
+                  <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">자동집계</Badge>
+                </td>
+                <td className="py-2 pr-3 font-medium flex items-center gap-1.5">
+                  <Banknote className="size-3.5 text-muted-foreground" /> 현금개통
+                </td>
+                <td className="py-2 pr-3 text-muted-foreground">-</td>
+                <td className="py-2 pr-3 text-muted-foreground text-xs">cash_open=true 건의 cash_support_amount 합계</td>
+                <td className="py-2 pr-3 text-right font-mono font-semibold">{formatKRW(salesAgg.cash)}</td>
+                <td />
+              </tr>
+              <tr className="border-b border-border/40 bg-primary/[0.05]">
+                <td className="py-2 pr-3 text-xs text-muted-foreground">기간 합계</td>
+                <td className="py-2 pr-3">
+                  <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">자동집계</Badge>
+                </td>
+                <td className="py-2 pr-3 font-medium flex items-center gap-1.5">
+                  <Wallet className="size-3.5 text-muted-foreground" /> 입금금액
+                </td>
+                <td className="py-2 pr-3 text-muted-foreground">-</td>
+                <td className="py-2 pr-3 text-muted-foreground text-xs">receivable_paid 입력된 건의 receivable_amount 합계</td>
+                <td className="py-2 pr-3 text-right font-mono font-semibold">{formatKRW(salesAgg.receivable)}</td>
+                <td />
+              </tr>
+
               {loading ? (
                 <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">불러오는 중...</td></tr>
               ) : rows.length === 0 ? (
