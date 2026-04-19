@@ -176,6 +176,54 @@ export type Database = {
         }
         Relationships: []
       }
+      regulars: {
+        Row: {
+          birth_date: string | null
+          channel: string
+          converted: boolean
+          coupon_sent: boolean
+          created_at: string
+          created_by: string
+          customer_name: string
+          id: string
+          manager: string | null
+          note: string | null
+          phone: string | null
+          registered_date: string
+          updated_at: string
+        }
+        Insert: {
+          birth_date?: string | null
+          channel: string
+          converted?: boolean
+          coupon_sent?: boolean
+          created_at?: string
+          created_by: string
+          customer_name: string
+          id?: string
+          manager?: string | null
+          note?: string | null
+          phone?: string | null
+          registered_date?: string
+          updated_at?: string
+        }
+        Update: {
+          birth_date?: string | null
+          channel?: string
+          converted?: boolean
+          coupon_sent?: boolean
+          created_at?: string
+          created_by?: string
+          customer_name?: string
+          id?: string
+          manager?: string | null
+          note?: string | null
+          phone?: string | null
+          registered_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sales: {
         Row: {
           birth_date: string | null
