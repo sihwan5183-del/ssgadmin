@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { SaleDocuments } from "./SaleDocuments";
 import { SaleAuditLog } from "./SaleAuditLog";
 import { PendingItemsEditor } from "./PendingItemsEditor";
+import { MoneyInput } from "@/components/ui/money-input";
 import { useSearchParams } from "react-router-dom";
 
 type ApprovalStatus = "승인대기" | "확정" | "환수" | "취소";
@@ -55,6 +56,11 @@ interface SaleHit {
   pending_note: string | null;
   pending_resolved: boolean | null;
   approval_override_reason: string | null;
+  distributor_amount: number | null;
+  cash_support_amount: number | null;
+  cash_open: boolean | null;
+  receivable_amount: number | null;
+  receivable_paid: string | null;
 }
 
 const EDITABLE_FIELDS: Array<{ key: keyof SaleHit; label: string; type?: string }> = [
@@ -81,7 +87,7 @@ const APPROVAL_META: Record<ApprovalStatus, { className: string; icon: typeof Ch
 };
 
 const SELECT_COLS =
-  "id, created_by, customer_name, phone, device_serial, device_model, channel, product, rate_plan, status, open_date, manager, unit_price, net_fee, note, approval_status, locked, approved_at, pending_items, pending_note, pending_resolved, approval_override_reason";
+  "id, created_by, customer_name, phone, device_serial, device_model, channel, product, rate_plan, status, open_date, manager, unit_price, net_fee, note, approval_status, locked, approved_at, pending_items, pending_note, pending_resolved, approval_override_reason, distributor_amount, cash_support_amount, cash_open, receivable_amount, receivable_paid";
 
 export const SaleSearchPanel = () => {
   const { user } = useAuth();
@@ -194,6 +200,19 @@ export const SaleSearchPanel = () => {
     const payload: Record<string, unknown> = {};
     EDITABLE_FIELDS.forEach(({ key }) => {
       if (editForm[key] !== selected[key]) payload[key as string] = editForm[key];
+    });
+    // 오퍼(지원금) 필드 변경 감지
+    const offerKeys: (keyof SaleHit)[] = [
+      "distributor_amount",
+      "cash_support_amount",
+      "cash_open",
+      "receivable_amount",
+      "receivable_paid",
+    ];
+    offerKeys.forEach((k) => {
+      if ((editForm[k] ?? null) !== (selected[k] ?? null)) {
+        payload[k as string] = editForm[k] ?? null;
+      }
     });
     // 미처리 항목 변경 감지
     const pendingChanged =
@@ -451,6 +470,57 @@ export const SaleSearchPanel = () => {
                     </div>
                   ))}
                 </div>
+
+                {/* 오퍼(지원금) 관리 — 지출 대시보드 자동 집계 */}
+                <div className="mt-5 rounded-xl border border-primary/20 bg-primary/[0.04] p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <ShieldCheck className="size-3.5 text-primary-glow" />
+                    <h4 className="text-sm font-semibold">오퍼(지원금) 관리</h4>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mb-3">
+                    아래 3개 항목은 <span className="text-foreground font-medium">지출 대시보드</span>에 자동 집계됩니다. 천 단위 콤마가 자동 표시됩니다.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">① 유통망 지원금 (₩)</Label>
+                      <MoneyInput
+                        value={editForm.distributor_amount ?? 0}
+                        onChange={(v) => setEditForm({ ...editForm, distributor_amount: v })}
+                        disabled={!canEdit}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">② 현금개통 금액 (₩)</Label>
+                      <MoneyInput
+                        value={editForm.cash_support_amount ?? 0}
+                        onChange={(v) =>
+                          setEditForm({
+                            ...editForm,
+                            cash_support_amount: v,
+                            cash_open: v > 0,
+                          })
+                        }
+                        disabled={!canEdit}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">③ 고객입금 금액 (₩)</Label>
+                      <MoneyInput
+                        value={editForm.receivable_amount ?? 0}
+                        onChange={(v) => setEditForm({ ...editForm, receivable_amount: v })}
+                        disabled={!canEdit}
+                      />
+                      <Input
+                        value={editForm.receivable_paid ?? ""}
+                        onChange={(e) => setEditForm({ ...editForm, receivable_paid: e.target.value })}
+                        placeholder="입금 유/완료/일자 (예: 2026-04-19)"
+                        disabled={!canEdit}
+                        className="h-9 bg-input/60 text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <DialogFooter className="mt-4">
                   <Button variant="outline" onClick={() => setSelected(null)}>닫기</Button>
                   <Button onClick={saveEdit} disabled={!canEdit || saving}>
