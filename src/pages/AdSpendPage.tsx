@@ -16,20 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, PlusCircle, Megaphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { CHANNELS } from "@/data/salesOptions";
+import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { toast } from "sonner";
-
-const MEDIA_OPTIONS = [
-  "네이버",
-  "메타(페이스북/인스타)",
-  "유튜브",
-  "인스타",
-  "당근",
-  "토스",
-  "카카오",
-  "구글",
-  "기타",
-] as const;
 
 interface AdSpendRow {
   id: string;
