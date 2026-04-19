@@ -114,24 +114,26 @@ export const SaleSearchPanel = () => {
     return selected.created_by === user.id;
   }, [selected, user, isAdmin, isLocked]);
 
-  // 미승인 건수 카운트
-  const refreshPendingCount = async () => {
-    const { count } = await supabase
-      .from("sales")
-      .select("id", { count: "exact", head: true })
-      .eq("approval_status", "승인대기");
-    setPendingCount(count ?? 0);
+  // 미승인 / 미처리 카운트
+  const refreshCounts = async () => {
+    const [{ count: c1 }, { count: c2 }] = await Promise.all([
+      supabase.from("sales").select("id", { count: "exact", head: true }).eq("approval_status", "승인대기"),
+      supabase.from("sales").select("id", { count: "exact", head: true }).eq("pending_resolved", false),
+    ]);
+    setPendingCount(c1 ?? 0);
+    setUnhandledCount(c2 ?? 0);
   };
 
   useEffect(() => {
-    refreshPendingCount();
+    refreshCounts();
   }, []);
 
-  const search = async (override?: string, pendingOverride?: boolean) => {
+  const search = async (override?: string, pendingOverride?: boolean, unhandledOverride?: boolean) => {
     const term = (override ?? q).trim();
     const onlyPending = pendingOverride ?? pendingOnly;
+    const onlyUnhandled = unhandledOverride ?? unhandledOnly;
 
-    if (!term && !onlyPending) {
+    if (!term && !onlyPending && !onlyUnhandled) {
       setResults([]);
       return;
     }
@@ -145,6 +147,7 @@ export const SaleSearchPanel = () => {
       );
     }
     if (onlyPending) query = query.eq("approval_status", "승인대기");
+    if (onlyUnhandled) query = query.eq("pending_resolved", false);
 
     const { data, error } = await query.order("created_at", { ascending: false }).limit(100);
     setSearching(false);
@@ -152,23 +155,38 @@ export const SaleSearchPanel = () => {
     setResults((data ?? []) as SaleHit[]);
   };
 
-  // URL ?sale=ID로 들어왔을 때 자동 오픈 (알림에서 진입)
+  // URL ?sale=ID 자동 오픈 + ?pending=1 자동 미처리 필터
   useEffect(() => {
     const id = params.get("sale");
-    if (!id) return;
-    (async () => {
-      const { data } = await supabase
-        .from("sales")
-        .select(SELECT_COLS)
-        .eq("id", id)
-        .maybeSingle();
-      if (data) openDetail(data as SaleHit);
-      params.delete("sale");
+    const wantPending = params.get("pending") === "1";
+    if (wantPending) {
+      setUnhandledOnly(true);
+      search(undefined, undefined, true);
+      params.delete("pending");
       setParams(params, { replace: true });
-    })();
+    }
+    if (id) {
+      (async () => {
+        const { data } = await supabase
+          .from("sales")
+          .select(SELECT_COLS)
+          .eq("id", id)
+          .maybeSingle();
+        if (data) openDetail(data as SaleHit);
+        params.delete("sale");
+        setParams(params, { replace: true });
+      })();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const openDetail = (sale: SaleHit) => {
+    setSelected(sale);
+    setEditForm(sale);
+    setPendingItems(sale.pending_items ?? []);
+    setPendingNote(sale.pending_note ?? "");
+    setPendingResolved(sale.pending_resolved ?? true);
+  };
   const openDetail = (sale: SaleHit) => {
     setSelected(sale);
     setEditForm(sale);
