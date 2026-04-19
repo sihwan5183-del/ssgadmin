@@ -515,6 +515,60 @@ export type Database = {
         }
         Relationships: []
       }
+      incentive_rates: {
+        Row: {
+          active: boolean
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          label: string
+          match_model: string | null
+          match_product: string | null
+          match_sale_type: string | null
+          note: string | null
+          priority: number
+          scope: string
+          updated_at: string
+          valid_from: string | null
+          valid_to: string | null
+        }
+        Insert: {
+          active?: boolean
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label: string
+          match_model?: string | null
+          match_product?: string | null
+          match_sale_type?: string | null
+          note?: string | null
+          priority?: number
+          scope?: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Update: {
+          active?: boolean
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string
+          match_model?: string | null
+          match_product?: string | null
+          match_sale_type?: string | null
+          note?: string | null
+          priority?: number
+          scope?: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Relationships: []
+      }
       master_audit_log: {
         Row: {
           action: string
