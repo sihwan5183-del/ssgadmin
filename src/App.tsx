@@ -17,6 +17,7 @@ import FieldOptionsPage from "./pages/FieldOptionsPage.tsx";
 import RankingPage from "./pages/RankingPage.tsx";
 import TeamPage from "./pages/TeamPage.tsx";
 import AdminPage from "./pages/AdminPage.tsx";
+import ProductRatePlansPage from "./pages/ProductRatePlansPage.tsx";
 import AuthPage from "./pages/AuthPage.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -49,6 +50,7 @@ const App = () => (
                         <Route path="/ranking" element={<RankingPage />} />
                         <Route path="/team" element={<TeamPage />} />
                         <Route path="/admin" element={<AdminPage />} />
+                        <Route path="/product-rate-plans" element={<ProductRatePlansPage />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </AppShell>
