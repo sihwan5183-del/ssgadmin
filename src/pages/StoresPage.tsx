@@ -77,8 +77,8 @@ export default function StoresPage() {
       <Header title="매장 관리" subtitle="재고 위치/이동 워크플로우의 기준이 되는 매장 마스터" />
 
       {!isAdmin && (
-        <Card className="p-4 mb-4 glass border-amber-500/30 flex items-center gap-2 text-sm">
-          <ShieldAlert className="size-4 text-amber-400" />
+        <Card className="p-4 mb-4 glass border-warning/30 flex items-center gap-2 text-sm">
+          <ShieldAlert className="size-4 text-warning" />
           매장 마스터 추가/수정은 관리자만 가능합니다. 조회는 모든 사용자에게 허용됩니다.
         </Card>
       )}

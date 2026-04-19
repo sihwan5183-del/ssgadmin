@@ -100,11 +100,7 @@ export const InventoryWidget = () => {
             {aged.length > 0 && <AlertTriangle className="size-3 text-destructive" />}
             장기재고 ({agingDays}일+)
           </div>
-          <div
-            className={`text-lg font-bold tabular-nums mt-0.5 ${
-              aged.length > 0 ? "text-destructive" : ""
-            }`}
-          >
+          <div className={`text-lg font-bold tabular-nums mt-0.5 ${aged.length > 0 ? "text-destructive" : ""}`}>
             {loading ? "…" : `${aged.length}대`}
           </div>
           <div className="text-[10px] text-muted-foreground mt-0.5">우선 판매 권장</div>
