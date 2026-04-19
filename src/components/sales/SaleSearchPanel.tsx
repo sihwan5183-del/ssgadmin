@@ -31,6 +31,8 @@ import { PendingItemsEditor } from "./PendingItemsEditor";
 import { ReviewerPanel } from "./ReviewerPanel";
 import { MoneyInput } from "@/components/ui/money-input";
 import { useSearchParams } from "react-router-dom";
+import { usePeriod } from "@/contexts/PeriodContext";
+import { CalendarDays } from "lucide-react";
 
 type ApprovalStatus = "승인대기" | "확정" | "반려" | "수정요청" | "환수" | "취소";
 
