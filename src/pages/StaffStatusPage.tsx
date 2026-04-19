@@ -233,6 +233,118 @@ export default function StaffStatusPage() {
         </Card>
       ) : (
         <>
+          {/* === Incentive cards (gold/emerald accent) === */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="p-5 glass relative overflow-hidden border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-transparent to-transparent">
+              <div className="absolute -right-6 -top-6 size-24 rounded-full bg-amber-500/10 blur-2xl pointer-events-none" />
+              <div className="flex items-center justify-between text-sm text-muted-foreground relative">
+                <span className="font-medium">당월 확정 인센티브</span>
+                <Coins className="size-4 text-amber-400" />
+              </div>
+              <div className="mt-2 text-3xl font-bold tracking-tight text-amber-400 relative">
+                {formatKRWShort(incentive.total)}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1 relative">
+                현재까지 매칭된 단가 합산 · {incentiveRates.length}개 규칙 적용 중
+              </p>
+            </Card>
+
+            <Card className="p-5 glass relative overflow-hidden border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-transparent to-transparent">
+              <div className="absolute -right-6 -top-6 size-24 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
+              <div className="flex items-center justify-between text-sm text-muted-foreground relative">
+                <span className="font-medium">마감 예상 인센티브</span>
+                <TrendingUpIcon className="size-4 text-emerald-400" />
+              </div>
+              <div className="mt-2 text-3xl font-bold tracking-tight text-emerald-400 relative">
+                {formatKRWShort(incentive.fc.projected)}
+              </div>
+              <div className="mt-3 relative">
+                <Progress
+                  value={Math.min(100, incentive.fc.projected > 0 ? (incentive.total / incentive.fc.projected) * 100 : 0)}
+                  className="h-1.5"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  {incentive.fc.elapsedDays}/{incentive.fc.totalDays}일 경과 · 일평균 {formatKRWShort(Math.round(incentive.fc.dailyAvg))}
+                </p>
+              </div>
+            </Card>
+
+            <Card className="p-5 glass relative overflow-hidden border-amber-500/30">
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span className="font-medium">목표까지</span>
+                <Target className="size-4 text-amber-400" />
+              </div>
+              <div className="mt-2 text-2xl font-bold tracking-tight">
+                <span className="text-amber-400">{formatKRWShort(incentive.gapToGoal)}</span>
+                <span className="text-sm text-muted-foreground ml-1">남음</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2 leading-relaxed flex items-start gap-1.5">
+                <Sparkles className="size-3.5 text-amber-400 shrink-0 mt-0.5" />
+                <span>
+                  {incentive.salesNeeded > 0
+                    ? <>약 <span className="text-amber-400 font-bold">{incentive.salesNeeded}건</span> 더 판매하면 <span className="text-emerald-400 font-bold">{formatKRWShort(incentive.gapToGoal)}</span> 인센티브가 추가돼요!</>
+                    : "인센티브 단가를 등록하면 동기부여 메시지가 표시됩니다."}
+                </span>
+              </p>
+            </Card>
+          </div>
+
+          {/* Incentive detail (collapsible, transparency) */}
+          <Collapsible open={showIncentiveDetail} onOpenChange={setShowIncentiveDetail}>
+            <Card className="glass">
+              <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors rounded-t-lg">
+                <div className="flex items-center gap-2">
+                  <Coins className="size-4 text-amber-400" />
+                  <span className="text-sm font-semibold">인센티브 상세 내역</span>
+                  <Badge variant="outline" className="border-amber-500/40 text-amber-400 ml-2">
+                    {incentive.detail.length}건
+                  </Badge>
+                </div>
+                <ChevronDown className={`size-4 text-muted-foreground transition-transform ${showIncentiveDetail ? "rotate-180" : ""}`} />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="overflow-x-auto border-t border-border/40">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>개통일</TableHead>
+                        <TableHead>고객</TableHead>
+                        <TableHead>모델</TableHead>
+                        <TableHead>유형</TableHead>
+                        <TableHead>적용 규칙</TableHead>
+                        <TableHead className="text-right">인센티브</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {incentive.detail.length === 0 ? (
+                        <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">매칭된 인센티브가 없습니다. 어드민에서 단가를 먼저 등록해주세요.</TableCell></TableRow>
+                      ) : incentive.detail.map((d) => (
+                        <TableRow key={d.saleId}>
+                          <TableCell className="text-xs">{d.sale?.open_date ?? "-"}</TableCell>
+                          <TableCell className="text-xs">{d.sale?.customer_name ?? "-"}</TableCell>
+                          <TableCell className="text-xs">{d.sale?.device_model ?? "-"}</TableCell>
+                          <TableCell className="text-xs">{d.sale?.sale_type ?? "-"}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {d.matched.map((m) => (
+                                <Badge key={m.rateId} variant="outline" className="border-amber-500/30 text-amber-400 text-[10px]">
+                                  {m.label} +{formatKRWShort(m.amount)}
+                                </Badge>
+                              ))}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-bold text-amber-400 tabular-nums">
+                            {formatKRWShort(d.amount)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
           {/* KPI cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="p-5 glass">
