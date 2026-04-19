@@ -55,6 +55,8 @@ export default function StaffStatusPage() {
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [docCounts, setDocCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
+  const { rates: incentiveRates } = useIncentiveRates();
+  const [showIncentiveDetail, setShowIncentiveDetail] = useState(false);
 
   const canViewAll = isAdmin || isManager;
 
@@ -146,6 +148,25 @@ export default function StaffStatusPage() {
 
     return { total, distributorSum, netFeeSum, pendingCount, missingDocs, topModels, typeMix };
   }, [sales, docCounts]);
+
+  // === Incentive computation ===
+  const incentive = useMemo(() => {
+    const { total, breakdowns } = calcTotalIncentive(sales as any, incentiveRates);
+    const fc = forecastIncentive(total, startDate, endDate);
+    const detail = breakdowns
+      .map((b) => {
+        const sale = sales.find((s) => s.id === b.saleId);
+        return { ...b, sale };
+      })
+      .filter((d) => d.amount > 0)
+      .sort((a, b) => b.amount - a.amount);
+    // Goal heuristic: round projected up to next 100k as motivational target
+    const goal = Math.max(fc.projected + 100000, Math.ceil((fc.projected || 100000) / 100000) * 100000 + 100000);
+    const gapToGoal = Math.max(0, goal - total);
+    const avgPerSale = sales.length > 0 ? Math.round(total / Math.max(1, sales.filter((_, i) => breakdowns[i]?.amount > 0).length || 1)) : 0;
+    const salesNeeded = avgPerSale > 0 ? Math.ceil(gapToGoal / avgPerSale) : 0;
+    return { total, fc, detail, goal, gapToGoal, salesNeeded };
+  }, [sales, incentiveRates, startDate, endDate]);
 
   return (
     <div className="space-y-6">
