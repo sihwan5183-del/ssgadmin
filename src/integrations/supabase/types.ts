@@ -825,8 +825,13 @@ export type Database = {
           phone: string | null
           product: string | null
           rate_plan: string | null
+          re_review_requested_at: string | null
           receivable_amount: number | null
           receivable_paid: string | null
+          revision_fields: string[] | null
+          revision_reason: string | null
+          revision_requested_at: string | null
+          revision_requested_by: string | null
           sale_type: string | null
           seq: number | null
           status: string | null
@@ -878,8 +883,13 @@ export type Database = {
           phone?: string | null
           product?: string | null
           rate_plan?: string | null
+          re_review_requested_at?: string | null
           receivable_amount?: number | null
           receivable_paid?: string | null
+          revision_fields?: string[] | null
+          revision_reason?: string | null
+          revision_requested_at?: string | null
+          revision_requested_by?: string | null
           sale_type?: string | null
           seq?: number | null
           status?: string | null
@@ -931,8 +941,13 @@ export type Database = {
           phone?: string | null
           product?: string | null
           rate_plan?: string | null
+          re_review_requested_at?: string | null
           receivable_amount?: number | null
           receivable_paid?: string | null
+          revision_fields?: string[] | null
+          revision_reason?: string | null
+          revision_requested_at?: string | null
+          revision_requested_by?: string | null
           sale_type?: string | null
           seq?: number | null
           status?: string | null
