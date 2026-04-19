@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_spend: {
+        Row: {
+          amount: number
+          campaign: string | null
+          channel: string | null
+          created_at: string
+          created_by: string
+          id: string
+          media: string
+          note: string | null
+          spend_date: string
+          spend_month: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          campaign?: string | null
+          channel?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          media: string
+          note?: string | null
+          spend_date: string
+          spend_month?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          campaign?: string | null
+          channel?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          media?: string
+          note?: string | null
+          spend_date?: string
+          spend_month?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

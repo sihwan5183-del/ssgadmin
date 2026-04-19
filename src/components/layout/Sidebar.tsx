@@ -4,6 +4,7 @@ import {
   PlusCircle,
   Activity,
   Wallet,
+  Megaphone,
   Trophy,
   Users,
   Sparkles,
@@ -18,6 +19,7 @@ const navItems = [
   { to: "/input", label: "실적 입력", icon: PlusCircle },
   { to: "/activities", label: "활동 관리", icon: Activity },
   { to: "/expenses", label: "지출 / ROI", icon: Wallet },
+  { to: "/ad-spend", label: "광고비 입력", icon: Megaphone },
   { to: "/ranking", label: "랭킹", icon: Trophy },
   { to: "/team", label: "권한 / 뷰", icon: Users },
 ];
