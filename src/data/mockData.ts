@@ -4,11 +4,33 @@ export const summaryStats = {
   netProfitDelta: 12.4,
   totalRebate: 312_800_000,
   totalRebateDelta: 8.1,
+  marketingCost: 37_540_000,
+  marketingCostDelta: -4.8,
   roi: 342,
   roiDelta: -3.2,
   newRegulars: 87,
   newRegularsDelta: 24.5,
+  // 영업 성과 KPI
+  monthlyTarget: 500,
+  monthlyActivations: 387,
+  todayActivations: 24,
+  todayDelta: 18.2,
 };
+
+// 모바일 유형별 건수 (당월 누적)
+export const mobileBreakdownStats = [
+  { label: "MNP (번호이동)", count: 168, share: 43.4 },
+  { label: "기변", count: 142, share: 36.7 },
+  { label: "신규", count: 77, share: 19.9 },
+];
+
+// 전략 상품별 건수 (당월 누적)
+export const strategyProductStats = [
+  { label: "인터넷", count: 92 },
+  { label: "TV프리", count: 64 },
+  { label: "IOT", count: 38 },
+  { label: "대명", count: 21 },
+];
 
 export const dailyPerformance = [
   { day: "11/01", 실적: 38, 순이익: 4.2 },
