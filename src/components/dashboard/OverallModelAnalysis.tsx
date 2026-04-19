@@ -1,7 +1,7 @@
 import {
-  Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell,
+  Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell, Legend,
 } from "recharts";
-import { Layers, Sparkles, TrendingUp, Trophy } from "lucide-react";
+import { Sparkles, TrendingUp, Trophy } from "lucide-react";
 import { getOverallModelStats } from "@/data/channelModelData";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
