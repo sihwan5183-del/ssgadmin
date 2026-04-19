@@ -11,11 +11,20 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Search, Edit3, FileText, History, Save, Phone, User, Smartphone, Lock } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  Search, Edit3, FileText, History, Save, Phone, User, Smartphone, Lock,
+  ShieldCheck, AlertCircle, CheckCircle2, XCircle, RotateCcw,
+} from "lucide-react";
 import { toast } from "sonner";
 import { SaleDocuments } from "./SaleDocuments";
 import { SaleAuditLog } from "./SaleAuditLog";
 import { useSearchParams } from "react-router-dom";
+
+type ApprovalStatus = "승인대기" | "확정" | "환수" | "취소";
 
 interface SaleHit {
   id: string;
@@ -33,6 +42,9 @@ interface SaleHit {
   unit_price: number | null;
   net_fee: number | null;
   note: string | null;
+  approval_status: ApprovalStatus | null;
+  locked: boolean | null;
+  approved_at: string | null;
 }
 
 const EDITABLE_FIELDS: Array<{ key: keyof SaleHit; label: string; type?: string }> = [
@@ -51,38 +63,70 @@ const EDITABLE_FIELDS: Array<{ key: keyof SaleHit; label: string; type?: string 
   { key: "note", label: "메모" },
 ];
 
+const APPROVAL_META: Record<ApprovalStatus, { className: string; icon: typeof CheckCircle2 }> = {
+  승인대기: { className: "border-amber-500/40 text-amber-300 bg-amber-500/10", icon: AlertCircle },
+  확정: { className: "border-emerald-500/40 text-emerald-300 bg-emerald-500/10", icon: CheckCircle2 },
+  환수: { className: "border-orange-500/40 text-orange-300 bg-orange-500/10", icon: RotateCcw },
+  취소: { className: "border-destructive/40 text-destructive bg-destructive/10", icon: XCircle },
+};
+
+const SELECT_COLS =
+  "id, created_by, customer_name, phone, device_serial, device_model, channel, product, rate_plan, status, open_date, manager, unit_price, net_fee, note, approval_status, locked, approved_at";
+
 export const SaleSearchPanel = () => {
   const { user } = useAuth();
   const { isAdmin } = useRole();
   const [params, setParams] = useSearchParams();
   const [q, setQ] = useState("");
+  const [pendingOnly, setPendingOnly] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   const [results, setResults] = useState<SaleHit[]>([]);
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<SaleHit | null>(null);
   const [editForm, setEditForm] = useState<Partial<SaleHit>>({});
   const [saving, setSaving] = useState(false);
 
+  const isLocked = !!selected?.locked;
   const canEdit = useMemo(() => {
     if (!selected || !user) return false;
-    return isAdmin || selected.created_by === user.id;
-  }, [selected, user, isAdmin]);
+    if (isAdmin) return true;
+    if (isLocked) return false;
+    return selected.created_by === user.id;
+  }, [selected, user, isAdmin, isLocked]);
 
-  const search = async (override?: string) => {
+  // 미승인 건수 카운트
+  const refreshPendingCount = async () => {
+    const { count } = await supabase
+      .from("sales")
+      .select("id", { count: "exact", head: true })
+      .eq("approval_status", "승인대기");
+    setPendingCount(count ?? 0);
+  };
+
+  useEffect(() => {
+    refreshPendingCount();
+  }, []);
+
+  const search = async (override?: string, pendingOverride?: boolean) => {
     const term = (override ?? q).trim();
-    if (!term) {
+    const onlyPending = pendingOverride ?? pendingOnly;
+
+    if (!term && !onlyPending) {
       setResults([]);
       return;
     }
     setSearching(true);
-    const like = `%${term}%`;
-    const { data, error } = await supabase
-      .from("sales")
-      .select(
-        "id, created_by, customer_name, phone, device_serial, device_model, channel, product, rate_plan, status, open_date, manager, unit_price, net_fee, note",
-      )
-      .or(`customer_name.ilike.${like},phone.ilike.${like},device_serial.ilike.${like}`)
-      .order("created_at", { ascending: false })
-      .limit(50);
+    let query = supabase.from("sales").select(SELECT_COLS);
+
+    if (term) {
+      const like = `%${term}%`;
+      query = query.or(
+        `customer_name.ilike.${like},phone.ilike.${like},device_serial.ilike.${like}`,
+      );
+    }
+    if (onlyPending) query = query.eq("approval_status", "승인대기");
+
+    const { data, error } = await query.order("created_at", { ascending: false }).limit(100);
     setSearching(false);
     if (error) return toast.error(error.message);
     setResults((data ?? []) as SaleHit[]);
@@ -95,13 +139,10 @@ export const SaleSearchPanel = () => {
     (async () => {
       const { data } = await supabase
         .from("sales")
-        .select(
-          "id, created_by, customer_name, phone, device_serial, device_model, channel, product, rate_plan, status, open_date, manager, unit_price, net_fee, note",
-        )
+        .select(SELECT_COLS)
         .eq("id", id)
         .maybeSingle();
       if (data) openDetail(data as SaleHit);
-      // URL 정리
       params.delete("sale");
       setParams(params, { replace: true });
     })();
@@ -115,7 +156,7 @@ export const SaleSearchPanel = () => {
 
   const saveEdit = async () => {
     if (!selected) return;
-    if (!canEdit) return toast.error("수정 권한이 없습니다");
+    if (!canEdit) return toast.error(isLocked ? "확정된 실적은 수정할 수 없습니다" : "수정 권한이 없습니다");
     const payload: Record<string, unknown> = {};
     EDITABLE_FIELDS.forEach(({ key }) => {
       if (editForm[key] !== selected[key]) payload[key as string] = editForm[key];
@@ -125,28 +166,63 @@ export const SaleSearchPanel = () => {
       return;
     }
     setSaving(true);
+    const { error } = await supabase.from("sales").update(payload as never).eq("id", selected.id);
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success("저장되었습니다");
+    setSelected({ ...selected, ...editForm } as SaleHit);
+    search();
+  };
+
+  const updateApproval = async (next: ApprovalStatus) => {
+    if (!selected || !isAdmin) return;
     const { error } = await supabase
       .from("sales")
-      .update(payload as never)
+      .update({ approval_status: next } as never)
       .eq("id", selected.id);
-    setSaving(false);
-    setSelected({ ...selected, ...editForm } as SaleHit);
+    if (error) return toast.error(error.message);
+    toast.success(`상태를 '${next}'(으)로 변경했습니다`);
+    // 다시 조회
+    const { data } = await supabase.from("sales").select(SELECT_COLS).eq("id", selected.id).maybeSingle();
+    if (data) {
+      setSelected(data as SaleHit);
+      setEditForm(data as SaleHit);
+    }
+    refreshPendingCount();
     search();
   };
 
   return (
     <Card className="p-5 glass border-border/40 mb-6">
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
         <Search className="size-4 text-primary-glow" />
-        <h3 className="font-semibold">실적 검색 / 수정</h3>
+        <h3 className="font-semibold">실적 검색 / 수정 / 검수</h3>
         <span className="text-xs text-muted-foreground ml-2">
           고객명 · 전화번호 · 단말기 일련번호(IMEI)
         </span>
+        <div className="ml-auto flex items-center gap-2">
+          <Badge variant="outline" className="border-amber-500/40 text-amber-300 bg-amber-500/10 gap-1">
+            <AlertCircle className="size-3" /> 미승인 {pendingCount}건
+          </Badge>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/40 border border-border/40">
+            <Switch
+              id="pending-only"
+              checked={pendingOnly}
+              onCheckedChange={(v) => {
+                setPendingOnly(v);
+                search(undefined, v);
+              }}
+            />
+            <Label htmlFor="pending-only" className="text-xs cursor-pointer">
+              미승인 건만 보기
+            </Label>
+          </div>
+        </div>
       </div>
 
       <div className="flex gap-2">
         <Input
-          placeholder="검색어 입력 후 Enter…"
+          placeholder={pendingOnly ? "(미승인 전체 표시 중) 검색어 입력 시 추가 필터…" : "검색어 입력 후 Enter…"}
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && search()}
@@ -162,33 +238,44 @@ export const SaleSearchPanel = () => {
         <div className="mt-4 rounded-xl border border-border/40 overflow-hidden">
           <div className="px-3 py-2 bg-muted/40 text-xs text-muted-foreground flex items-center justify-between">
             <span>검색 결과 {results.length}건 (최근순)</span>
-            <span>클릭하면 상세 / 수정</span>
+            <span>클릭하면 상세 / 수정 / 검수</span>
           </div>
-          <div className="max-h-80 overflow-y-auto divide-y divide-border/30">
-            {results.map((r) => (
-              <button
-                key={r.id}
-                onClick={() => openDetail(r)}
-                className="w-full text-left px-3 py-2.5 hover:bg-muted/30 transition-colors flex items-center gap-3"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium flex items-center gap-2">
-                    <User className="size-3 text-muted-foreground" />
-                    {r.customer_name ?? "(이름없음)"}
-                    {r.status && (
-                      <Badge variant="outline" className="text-[10px]">{r.status}</Badge>
-                    )}
+          <div className="max-h-96 overflow-y-auto divide-y divide-border/30">
+            {results.map((r) => {
+              const ap = (r.approval_status ?? "승인대기") as ApprovalStatus;
+              const meta = APPROVAL_META[ap];
+              const Icon = meta.icon;
+              return (
+                <button
+                  key={r.id}
+                  onClick={() => openDetail(r)}
+                  className="w-full text-left px-3 py-2.5 hover:bg-muted/30 transition-colors flex items-center gap-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium flex items-center gap-2 flex-wrap">
+                      <User className="size-3 text-muted-foreground" />
+                      {r.customer_name ?? "(이름없음)"}
+                      <Badge variant="outline" className={`text-[10px] gap-1 ${meta.className}`}>
+                        <Icon className="size-3" /> {ap}
+                      </Badge>
+                      {r.locked && (
+                        <Badge variant="outline" className="text-[10px] gap-1 border-border/60">
+                          <Lock className="size-3" /> 잠금
+                        </Badge>
+                      )}
+                      {r.status && <Badge variant="outline" className="text-[10px]">{r.status}</Badge>}
+                    </div>
+                    <div className="text-xs text-muted-foreground flex items-center gap-3 mt-1 flex-wrap">
+                      <span className="flex items-center gap-1"><Phone className="size-3" />{r.phone ?? "-"}</span>
+                      <span className="flex items-center gap-1"><Smartphone className="size-3" />{r.device_serial ?? "-"}</span>
+                      <span>{r.open_date ?? "-"}</span>
+                      <span>{r.channel ?? "-"} / {r.product ?? "-"}</span>
+                    </div>
                   </div>
-                  <div className="text-xs text-muted-foreground flex items-center gap-3 mt-1">
-                    <span className="flex items-center gap-1"><Phone className="size-3" />{r.phone ?? "-"}</span>
-                    <span className="flex items-center gap-1"><Smartphone className="size-3" />{r.device_serial ?? "-"}</span>
-                    <span>{r.open_date ?? "-"}</span>
-                    <span>{r.channel ?? "-"} / {r.product ?? "-"}</span>
-                  </div>
-                </div>
-                <Edit3 className="size-3.5 text-muted-foreground" />
-              </button>
-            ))}
+                  <Edit3 className="size-3.5 text-muted-foreground" />
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -197,9 +284,24 @@ export const SaleSearchPanel = () => {
       <Dialog open={!!selected} onOpenChange={(v) => !v && setSelected(null)}>
         <DialogContent className="max-w-3xl max-h-[88vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 flex-wrap">
               실적 상세
-              {!canEdit && (
+              {selected && (() => {
+                const ap = (selected.approval_status ?? "승인대기") as ApprovalStatus;
+                const meta = APPROVAL_META[ap];
+                const Icon = meta.icon;
+                return (
+                  <Badge variant="outline" className={`text-[10px] gap-1 ${meta.className}`}>
+                    <Icon className="size-3" /> {ap}
+                  </Badge>
+                );
+              })()}
+              {isLocked && (
+                <Badge variant="outline" className="text-[10px] flex items-center gap-1">
+                  <Lock className="size-3" /> 잠금됨
+                </Badge>
+              )}
+              {!canEdit && !isLocked && (
                 <Badge variant="outline" className="text-[10px] flex items-center gap-1">
                   <Lock className="size-3" /> 읽기 전용
                 </Badge>
@@ -213,6 +315,9 @@ export const SaleSearchPanel = () => {
                 <TabsTrigger value="edit">
                   <Edit3 className="size-3.5 mr-1" /> 정보
                 </TabsTrigger>
+                <TabsTrigger value="approval">
+                  <ShieldCheck className="size-3.5 mr-1" /> 검수
+                </TabsTrigger>
                 <TabsTrigger value="docs">
                   <FileText className="size-3.5 mr-1" /> 가입 서류
                 </TabsTrigger>
@@ -222,6 +327,13 @@ export const SaleSearchPanel = () => {
               </TabsList>
 
               <TabsContent value="edit" className="mt-4">
+                {isLocked && (
+                  <div className="mb-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-200 flex items-center gap-2">
+                    <Lock className="size-3.5" />
+                    이 실적은 '확정' 상태로 잠겨 있어 수정/삭제할 수 없습니다.
+                    {isAdmin && " (관리자는 검수 탭에서 상태를 되돌릴 수 있습니다)"}
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   {EDITABLE_FIELDS.map(({ key, label, type }) => (
                     <div key={key} className="space-y-1.5">
@@ -252,6 +364,62 @@ export const SaleSearchPanel = () => {
                     {saving ? "저장 중…" : "저장"}
                   </Button>
                 </DialogFooter>
+              </TabsContent>
+
+              <TabsContent value="approval" className="mt-4 space-y-4">
+                <div className="rounded-lg border border-border/40 bg-card/40 p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs text-muted-foreground">현재 승인 상태</Label>
+                    {(() => {
+                      const ap = (selected.approval_status ?? "승인대기") as ApprovalStatus;
+                      const meta = APPROVAL_META[ap];
+                      const Icon = meta.icon;
+                      return (
+                        <Badge variant="outline" className={`gap-1 ${meta.className}`}>
+                          <Icon className="size-3.5" /> {ap}
+                        </Badge>
+                      );
+                    })()}
+                  </div>
+                  {selected.approved_at && (
+                    <div className="text-xs text-muted-foreground">
+                      확정일시: {new Date(selected.approved_at).toLocaleString("ko-KR")}
+                    </div>
+                  )}
+                </div>
+
+                {!isAdmin ? (
+                  <div className="text-xs text-muted-foreground rounded-lg border border-border/40 px-3 py-2">
+                    승인 / 환수 / 취소는 관리자(기획팀)만 변경할 수 있습니다.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">상태 변경</Label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {(["승인대기", "확정", "환수", "취소"] as ApprovalStatus[]).map((s) => {
+                        const meta = APPROVAL_META[s];
+                        const Icon = meta.icon;
+                        const active = (selected.approval_status ?? "승인대기") === s;
+                        return (
+                          <Button
+                            key={s}
+                            variant={active ? "default" : "outline"}
+                            onClick={() => updateApproval(s)}
+                            disabled={active}
+                            className="justify-start"
+                          >
+                            <Icon className="size-4 mr-1.5" />
+                            {s}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-2">
+                      '확정' 선택 시 자동으로 잠금 처리되어 일반 직원은 수정/삭제할 수 없습니다.
+                      다른 상태로 변경하면 잠금이 해제됩니다.
+                    </p>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="docs" className="mt-4">

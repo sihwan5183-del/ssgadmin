@@ -669,6 +669,9 @@ export type Database = {
       }
       sales: {
         Row: {
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
           birth_date: string | null
           bundle: string | null
           cash_account: string | null
@@ -687,6 +690,7 @@ export type Database = {
           distributor_amount: number | null
           extra_subsidy: number | null
           id: string
+          locked: boolean
           manager: string | null
           moyo_excluded: boolean | null
           net_fee: number | null
@@ -714,6 +718,9 @@ export type Database = {
           voucher_returned: string | null
         }
         Insert: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           birth_date?: string | null
           bundle?: string | null
           cash_account?: string | null
@@ -732,6 +739,7 @@ export type Database = {
           distributor_amount?: number | null
           extra_subsidy?: number | null
           id?: string
+          locked?: boolean
           manager?: string | null
           moyo_excluded?: boolean | null
           net_fee?: number | null
@@ -759,6 +767,9 @@ export type Database = {
           voucher_returned?: string | null
         }
         Update: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           birth_date?: string | null
           bundle?: string | null
           cash_account?: string | null
@@ -777,6 +788,7 @@ export type Database = {
           distributor_amount?: number | null
           extra_subsidy?: number | null
           id?: string
+          locked?: boolean
           manager?: string | null
           moyo_excluded?: boolean | null
           net_fee?: number | null
