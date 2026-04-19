@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, PlusCircle, Megaphone, Receipt, Download, Building2, Banknote, Wallet } from "lucide-react";
+import { Trash2, PlusCircle, Megaphone, Receipt, Download, Building2, Banknote, Wallet, TrendingUp, Coins, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
@@ -58,20 +58,38 @@ export default function ExpenseInputPage() {
   const [total, setTotal] = useState(0);
   const { startDate, endDate, label: periodLabel } = usePeriod();
 
-  // sales 자동 집계 — 총 유통망지원금 / 현금개통 / 입금금액
-  const [salesAgg, setSalesAgg] = useState({ distributor: 0, cash: 0, receivable: 0 });
+  // sales 자동 집계 — 기간 합계 + 오늘 현금시재
+  const [salesAgg, setSalesAgg] = useState({
+    distributor: 0,
+    cash: 0,
+    receivable: 0,
+    todayCash: 0,
+    todayReceivable: 0,
+  });
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
+      const today = todayISO();
+      // 기간 합계
+      const { data: periodData } = await supabase
         .from("sales")
         .select("distributor_amount, cash_support_amount, cash_open, receivable_amount, receivable_paid")
         .gte("open_date", startDate)
         .lte("open_date", endDate);
-      const agg = { distributor: 0, cash: 0, receivable: 0 };
-      (data ?? []).forEach((r: any) => {
+      // 오늘 현금시재 (open_date=오늘 & cash_open) + (receivable_paid=오늘)
+      const { data: todayData } = await supabase
+        .from("sales")
+        .select("cash_support_amount, cash_open, receivable_amount, receivable_paid, open_date")
+        .or(`open_date.eq.${today},receivable_paid.eq.${today}`);
+
+      const agg = { distributor: 0, cash: 0, receivable: 0, todayCash: 0, todayReceivable: 0 };
+      (periodData ?? []).forEach((r: any) => {
         agg.distributor += Number(r.distributor_amount ?? 0);
         if (r.cash_open) agg.cash += Number(r.cash_support_amount ?? 0);
         if (r.receivable_paid) agg.receivable += Number(r.receivable_amount ?? 0);
+      });
+      (todayData ?? []).forEach((r: any) => {
+        if (r.cash_open && r.open_date === today) agg.todayCash += Number(r.cash_support_amount ?? 0);
+        if (r.receivable_paid === today) agg.todayReceivable += Number(r.receivable_amount ?? 0);
       });
       setSalesAgg(agg);
     })();
@@ -223,11 +241,51 @@ export default function ExpenseInputPage() {
         showPeriodFilter
       />
 
+      {/* 핵심 KPI: 총지출 / 실질마진 / 오늘 현금시재 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <Card className="p-5 glass border-expense/30 bg-[hsl(var(--expense-soft))]/30">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <TrendingUp className="size-3.5 text-expense" /> 총 지출 (실시간)
+          </div>
+          <div className="mt-2 text-3xl font-bold text-expense tabular-nums">
+            {formatKRW(totals.total + salesAgg.distributor)}
+          </div>
+          <div className="text-[11px] text-muted-foreground mt-1">
+            광고비 + 기타지출 + <span className="text-foreground">유통망 지원금(자동)</span>
+          </div>
+        </Card>
+
+        <Card className="p-5 glass border-primary/30">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Sparkles className="size-3.5 text-primary-glow" /> 실질 마진 (현금흐름 기준)
+          </div>
+          <div className="mt-2 text-3xl font-bold text-gradient tabular-nums">
+            {formatKRW(salesAgg.receivable - salesAgg.distributor - totals.adTotal)}
+          </div>
+          <div className="text-[11px] text-muted-foreground mt-1">
+            고객입금 − 유통망지원금 − 마케팅비
+          </div>
+        </Card>
+
+        <Card className="p-5 glass border-revenue/30 bg-[hsl(var(--revenue-soft))]/30">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Coins className="size-3.5 text-revenue" /> 오늘 현금 시재 (보유해야 할 금액)
+          </div>
+          <div className="mt-2 text-3xl font-bold text-revenue tabular-nums">
+            {formatKRW(salesAgg.todayCash + salesAgg.todayReceivable)}
+          </div>
+          <div className="text-[11px] text-muted-foreground mt-1">
+            오늘 현금개통 {formatKRW(salesAgg.todayCash)} + 오늘 입금 {formatKRW(salesAgg.todayReceivable)}
+          </div>
+        </Card>
+      </div>
+
+      {/* 세부 분류 카드 */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         <Card className="p-5 glass">
           <div className="text-xs text-muted-foreground">전체 지출 누적</div>
           <div className="mt-2 text-2xl font-bold text-gradient">{formatKRW(totals.total)}</div>
-          <div className="text-[11px] text-muted-foreground mt-1">기간 내 지출 합</div>
+          <div className="text-[11px] text-muted-foreground mt-1">광고+기타 (수동 입력만)</div>
         </Card>
         <Card className="p-5 glass">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -245,24 +303,24 @@ export default function ExpenseInputPage() {
         </Card>
         <Card className="p-5 glass border-primary/20">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Building2 className="size-3.5" /> 총 유통망지원금
+            <Building2 className="size-3.5" /> 유통망 지원금
           </div>
           <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(salesAgg.distributor)}</div>
-          <div className="text-[11px] text-muted-foreground mt-1">실적 자동 집계 (distributor_amount)</div>
+          <div className="text-[11px] text-muted-foreground mt-1">실적 자동 집계 · 지출 합산</div>
         </Card>
         <Card className="p-5 glass border-primary/20">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Banknote className="size-3.5" /> 현금개통
+            <Banknote className="size-3.5" /> 현금개통 금액
           </div>
           <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(salesAgg.cash)}</div>
-          <div className="text-[11px] text-muted-foreground mt-1">cash_open 건의 현금지원금</div>
+          <div className="text-[11px] text-muted-foreground mt-1">고객 현금 완납 · 시재 입력</div>
         </Card>
         <Card className="p-5 glass border-primary/20">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Wallet className="size-3.5" /> 입금금액
+            <Wallet className="size-3.5" /> 고객입금 금액
           </div>
           <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(salesAgg.receivable)}</div>
-          <div className="text-[11px] text-muted-foreground mt-1">receivable_paid 일자 입력된 건</div>
+          <div className="text-[11px] text-muted-foreground mt-1">수납·기타 입금된 금액</div>
         </Card>
       </div>
 

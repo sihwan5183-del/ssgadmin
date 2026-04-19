@@ -24,7 +24,8 @@ import { DynamicFieldRenderer } from "@/components/admin/DynamicFieldRenderer";
 import { ExcelMappingDialog, type MappingTarget } from "@/components/admin/ExcelMappingDialog";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
-import { Sparkles, AlertTriangle } from "lucide-react";
+import { MoneyInput } from "@/components/ui/money-input";
+import { Sparkles, AlertTriangle, Wallet, Banknote, Building2 } from "lucide-react";
 
 const PAGE_SIZE = 25;
 
@@ -575,13 +576,13 @@ const InputPage = () => {
           </Grid>
         </FormSection>
 
-        <FormSection title="수익성 / 미수금">
+        <FormSection title="수익성 / 단가">
           <Grid cols={4}>
             <Field label="단가표 기준 (₩)">
-              <Input type="number" value={form.unit_price ?? ""} onChange={(e) => set("unit_price", Number(e.target.value))} className="h-11 bg-input/60 tabular-nums" />
+              <MoneyInput value={form.unit_price} onChange={(v) => set("unit_price", v)} />
             </Field>
             <Field label="부가서비스 수수료 (₩)">
-              <Input type="number" value={form.vas_fee ?? ""} onChange={(e) => set("vas_fee", Number(e.target.value))} className="h-11 bg-input/60 tabular-nums" />
+              <MoneyInput value={form.vas_fee} onChange={(v) => set("vas_fee", v)} />
             </Field>
             <Field label="상품권">
               <Input value={form.voucher ?? ""} onChange={(e) => set("voucher", e.target.value)} className="h-11 bg-input/60" />
@@ -590,35 +591,56 @@ const InputPage = () => {
               <Input value={form.voucher_returned ?? ""} onChange={(e) => set("voucher_returned", e.target.value)} placeholder="유 / 무" className="h-11 bg-input/60" />
             </Field>
           </Grid>
-          <Grid cols={2}>
-            <Field label="미수금액 (₩)">
-              <Input type="number" value={form.receivable_amount ?? ""} onChange={(e) => set("receivable_amount", Number(e.target.value))} className="h-11 bg-input/60 tabular-nums" />
-            </Field>
-            <Field label="입금 유/무">
-              <Input value={form.receivable_paid ?? ""} onChange={(e) => set("receivable_paid", e.target.value)} placeholder="유 / 무 / 완료" className="h-11 bg-input/60" />
-            </Field>
-          </Grid>
         </FormSection>
 
-        <FormSection title="지원금">
+        <FormSection title="오퍼(지원금) 관리" icon={<Wallet className="size-3" />}>
+          <p className="text-[11px] text-muted-foreground -mt-2 mb-3">
+            아래 3개 항목은 <span className="text-foreground font-medium">지출 대시보드</span>에 자동 집계됩니다.
+            숫자만 입력 가능하며 천 단위 콤마가 자동 표시됩니다.
+          </p>
           <Grid cols={3}>
-            <Field label="유통망 지원금 (₩)">
-              <Input type="number" value={form.distributor_amount ?? ""} onChange={(e) => set("distributor_amount", Number(e.target.value))} className="h-11 bg-input/60 tabular-nums" />
+            <Field label="① 유통망 지원금 (₩)">
+              <MoneyInput
+                value={form.distributor_amount}
+                onChange={(v) => set("distributor_amount", v)}
+              />
+              <div className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
+                <Building2 className="size-3" /> 회사가 유통망 차원에서 지급한 지원금 (지출 합산)
+              </div>
             </Field>
-            <Field label="추가지원금 (₩)">
-              <Input type="number" value={form.extra_subsidy ?? ""} onChange={(e) => set("extra_subsidy", Number(e.target.value))} className="h-11 bg-input/60 tabular-nums" />
-            </Field>
-            <Field label="현금개통 지원금 (₩)">
-              <Input
-                type="number"
-                value={form.cash_support_amount ?? ""}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
+            <Field label="② 현금개통 금액 (₩)">
+              <MoneyInput
+                value={form.cash_support_amount}
+                onChange={(v) => {
                   set("cash_support_amount", v);
                   set("cash_open", v > 0);
                 }}
-                className="h-11 bg-input/60 tabular-nums"
               />
+              <div className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
+                <Banknote className="size-3" /> 고객이 기기값을 현금 완납하여 개통한 금액 (현금시재)
+              </div>
+            </Field>
+            <Field label="③ 고객입금 금액 (₩)">
+              <MoneyInput
+                value={form.receivable_amount}
+                onChange={(v) => set("receivable_amount", v)}
+              />
+              <div className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
+                <Wallet className="size-3" /> 수납·기타 사유로 고객에게 직접 입금받은 금액
+              </div>
+            </Field>
+          </Grid>
+          <Grid cols={2}>
+            <Field label="입금 유/무 (입금일 또는 표시값)">
+              <Input
+                value={form.receivable_paid ?? ""}
+                onChange={(e) => set("receivable_paid", e.target.value)}
+                placeholder="유 / 완료 / 2026-04-19"
+                className="h-11 bg-input/60"
+              />
+            </Field>
+            <Field label="추가지원금 (₩)">
+              <MoneyInput value={form.extra_subsidy} onChange={(v) => set("extra_subsidy", v)} />
             </Field>
           </Grid>
           <Grid cols={3}>
