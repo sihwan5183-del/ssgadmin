@@ -40,7 +40,7 @@ const ExpensesPage = () => {
       const distributor = (salesRows ?? []).reduce((s, r: any) => s + Number(r.distributor_amount ?? 0), 0);
       const cashOpen = (salesRows ?? []).reduce((s, r: any) => s + Number(r.cash_support_amount ?? 0), 0);
       const customerDeposit = (salesRows ?? []).reduce(
-        (s, r: any) => (r.receivable_paid ? s + Number(r.receivable_amount ?? 0) : s),
+        (s, r: any) => s + Number(r.receivable_amount ?? 0),
         0,
       );
       const adSpend = (spendRows ?? []).reduce((s, r: any) => s + Number(r.amount ?? 0), 0);
@@ -48,9 +48,12 @@ const ExpensesPage = () => {
     })();
   }, [startDate, endDate]);
 
-  // 실측 KPI: 총지출 = 광고비 + 유통망지원금 / 실질마진 = 리베이트 + 고객입금 - 유통망 - 광고비
-  const totalExpense = agg.adSpend + agg.distributor;
-  const realNetMargin = totals.totalRebate + agg.customerDeposit - agg.distributor - agg.adSpend;
+  // 실측 KPI
+  // 총지출 = 광고비 + 유통망지원금 + 고객입금(우리가 고객에게 지급)
+  // 실질마진 = 리베이트 − 유통망 − 고객입금 − 광고비
+  // 현금개통은 매장 시재 유입(별도 지표)
+  const totalExpense = agg.adSpend + agg.distributor + agg.customerDeposit;
+  const realNetMargin = totals.totalRebate - agg.distributor - agg.customerDeposit - agg.adSpend;
   const roi = totalExpense > 0 ? Math.round((realNetMargin / totalExpense) * 100) : 0;
   const cpaAvg = Math.round(totals.totalSpend / totals.totalSuccess);
 
@@ -64,16 +67,16 @@ const ExpensesPage = () => {
       {/* 상단 KPI */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <KpiTile label="총 수익(리베이트)" value={formatKRWShort(totals.totalRebate)} tone="revenue" Icon={TrendingUp} hint="당월 누적" />
-        <KpiTile label="총 지출 (광고+유통망)" value={formatKRWShort(totalExpense)} tone="expense" Icon={TrendingDown} hint={`광고 ${formatKRWShort(agg.adSpend)} + 유통망 ${formatKRWShort(agg.distributor)}`} />
-        <KpiTile label="실질 마진" value={formatKRWShort(realNetMargin)} tone="primary" Icon={Sparkles} hint="리베이트 + 고객입금 − 유통망 − 광고" />
+        <KpiTile label="총 지출 (광고+유통망+고객입금)" value={formatKRWShort(totalExpense)} tone="expense" Icon={TrendingDown} hint={`광고 ${formatKRWShort(agg.adSpend)} + 유통망 ${formatKRWShort(agg.distributor)} + 고객입금 ${formatKRWShort(agg.customerDeposit)}`} />
+        <KpiTile label="실질 마진" value={formatKRWShort(realNetMargin)} tone="primary" Icon={Sparkles} hint="리베이트 − 유통망 − 고객입금 − 광고" />
         <KpiTile label="평균 CPA" value={formatKRWShort(cpaAvg)} tone="expense" Icon={Target} hint={`ROI ${roi}%`} />
       </section>
 
       {/* 오퍼/현금 ROI 항목 — 지출 분류 카드 */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <KpiTile label="유통망 지원금 (지출)" value={formatKRWShort(agg.distributor)} tone="expense" Icon={HandCoins} hint="실적 자동 집계 · 총지출 반영" />
-        <KpiTile label="현금개통 금액 (시재)" value={formatKRWShort(agg.cashOpen)} tone="primary" Icon={Banknote} hint="고객 현금 완납 · 시재 유입" />
-        <KpiTile label="고객입금 금액 (수익)" value={formatKRWShort(agg.customerDeposit)} tone="revenue" Icon={Wallet} hint="입금완료 건만 · 실질마진 가산" />
+        <KpiTile label="고객입금 금액 (지출)" value={formatKRWShort(agg.customerDeposit)} tone="expense" Icon={Wallet} hint="우리가 고객에게 지급 · 총지출 반영" />
+        <KpiTile label="현금개통 금액 (시재 유입)" value={formatKRWShort(agg.cashOpen)} tone="primary" Icon={Banknote} hint="고객 현금 완납 · 매장 시재" />
       </section>
 
       {/* 1. 지출 상세 */}

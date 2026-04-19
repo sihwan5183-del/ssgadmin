@@ -248,10 +248,10 @@ export default function ExpenseInputPage() {
             <TrendingUp className="size-3.5 text-expense" /> 총 지출 (실시간)
           </div>
           <div className="mt-2 text-3xl font-bold text-expense tabular-nums">
-            {formatKRW(totals.total + salesAgg.distributor)}
+            {formatKRW(totals.total + salesAgg.distributor + salesAgg.receivable)}
           </div>
           <div className="text-[11px] text-muted-foreground mt-1">
-            광고비 + 기타지출 + <span className="text-foreground">유통망 지원금(자동)</span>
+            광고비 + 기타지출 + <span className="text-foreground">유통망 지원금</span> + <span className="text-foreground">고객입금(고객 지급)</span>
           </div>
         </Card>
 
@@ -260,10 +260,10 @@ export default function ExpenseInputPage() {
             <Sparkles className="size-3.5 text-primary-glow" /> 실질 마진 (현금흐름 기준)
           </div>
           <div className="mt-2 text-3xl font-bold text-gradient tabular-nums">
-            {formatKRW(salesAgg.receivable - salesAgg.distributor - totals.adTotal)}
+            {formatKRW(-(salesAgg.distributor + salesAgg.receivable + totals.adTotal))}
           </div>
           <div className="text-[11px] text-muted-foreground mt-1">
-            고객입금 − 유통망지원금 − 마케팅비
+            − (유통망지원금 + 고객입금 + 마케팅비) · 리베이트는 정산 후 합산
           </div>
         </Card>
 
@@ -272,10 +272,10 @@ export default function ExpenseInputPage() {
             <Coins className="size-3.5 text-revenue" /> 오늘 현금 시재 (보유해야 할 금액)
           </div>
           <div className="mt-2 text-3xl font-bold text-revenue tabular-nums">
-            {formatKRW(salesAgg.todayCash + salesAgg.todayReceivable)}
+            {formatKRW(salesAgg.todayCash)}
           </div>
           <div className="text-[11px] text-muted-foreground mt-1">
-            오늘 현금개통 {formatKRW(salesAgg.todayCash)} + 오늘 입금 {formatKRW(salesAgg.todayReceivable)}
+            오늘 현금개통 {formatKRW(salesAgg.todayCash)} · 고객이 매장에 납부한 현금
           </div>
         </Card>
       </div>
@@ -301,26 +301,26 @@ export default function ExpenseInputPage() {
           <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(totals.etcTotal)}</div>
           <div className="text-[11px] text-muted-foreground mt-1">임대료 · 통신비 · 운영비 등</div>
         </Card>
-        <Card className="p-5 glass border-primary/20">
+        <Card className="p-5 glass border-expense/20">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Building2 className="size-3.5" /> 유통망 지원금
+            <Building2 className="size-3.5" /> 유통망 지원금 (지출)
           </div>
           <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(salesAgg.distributor)}</div>
           <div className="text-[11px] text-muted-foreground mt-1">실적 자동 집계 · 지출 합산</div>
         </Card>
-        <Card className="p-5 glass border-primary/20">
+        <Card className="p-5 glass border-expense/20">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Banknote className="size-3.5" /> 현금개통 금액
+            <Wallet className="size-3.5" /> 고객입금 금액 (지출)
           </div>
-          <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(salesAgg.cash)}</div>
-          <div className="text-[11px] text-muted-foreground mt-1">고객 현금 완납 · 시재 입력</div>
+          <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(salesAgg.receivable)}</div>
+          <div className="text-[11px] text-muted-foreground mt-1">우리가 고객에게 지급 · 지출 합산</div>
         </Card>
         <Card className="p-5 glass border-primary/20">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Wallet className="size-3.5" /> 고객입금 금액
+            <Banknote className="size-3.5" /> 현금개통 금액 (시재)
           </div>
-          <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(salesAgg.receivable)}</div>
-          <div className="text-[11px] text-muted-foreground mt-1">수납·기타 입금된 금액</div>
+          <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(salesAgg.cash)}</div>
+          <div className="text-[11px] text-muted-foreground mt-1">고객이 현금 완납 · 매장 시재 유입</div>
         </Card>
       </div>
 
