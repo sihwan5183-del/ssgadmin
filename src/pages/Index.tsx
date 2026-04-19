@@ -12,8 +12,14 @@ import { ChannelModelAnalysis } from "@/components/dashboard/ChannelModelAnalysi
 import { AdScheduleWidget } from "@/components/dashboard/AdScheduleWidget";
 import { summaryStats, formatShortKRW } from "@/data/mockData";
 import { TrendingUp, Wallet, Megaphone, Target } from "lucide-react";
+import { useMarketingSpend } from "@/hooks/useMarketingSpend";
 
 const Index = () => {
+  const marketing = useMarketingSpend();
+  const liveRoi =
+    marketing.current > 0
+      ? Math.round((summaryStats.netProfit / marketing.current) * 100)
+      : summaryStats.roi;
   return (
     <>
       <Header
@@ -49,19 +55,19 @@ const Index = () => {
         />
         <StatCard
           label="마케팅 비용"
-          value={formatShortKRW(summaryStats.marketingCost)}
-          delta={summaryStats.marketingCostDelta}
+          value={marketing.loading ? "…" : formatShortKRW(marketing.current)}
+          delta={marketing.loading ? undefined : Number(marketing.delta.toFixed(1))}
           icon={Megaphone}
           accent="warning"
-          hint="당월 광고비 집행"
+          hint="광고 캘린더 + 지출입력 합산 (실시간)"
         />
         <StatCard
           label="마케팅 ROI"
-          value={`${summaryStats.roi}%`}
+          value={`${liveRoi}%`}
           delta={summaryStats.roiDelta}
           icon={Target}
           accent="secondary"
-          hint="순이익 ÷ 광고비"
+          hint="순이익 ÷ 마케팅 비용"
         />
       </section>
 
