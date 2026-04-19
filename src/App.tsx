@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ViewScopeProvider } from "@/contexts/ViewScopeContext";
+import { PeriodProvider } from "@/contexts/PeriodContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppShell } from "@/components/layout/AppShell";
@@ -30,6 +31,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <ViewScopeProvider>
+            <PeriodProvider>
             <Toaster />
             <Sonner />
             <Routes>
@@ -60,6 +62,7 @@ const App = () => (
                 }
               />
             </Routes>
+            </PeriodProvider>
           </ViewScopeProvider>
         </AuthProvider>
       </BrowserRouter>

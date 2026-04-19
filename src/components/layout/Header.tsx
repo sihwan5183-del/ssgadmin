@@ -2,14 +2,23 @@ import { Bell, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScopeToggle } from "./ScopeToggle";
+import { PeriodFilter } from "./PeriodFilter";
 
 interface HeaderProps {
   title: string;
   subtitle?: string;
   showScopeToggle?: boolean;
+  showPeriodFilter?: boolean;
+  rightSlot?: React.ReactNode;
 }
 
-export const Header = ({ title, subtitle, showScopeToggle = true }: HeaderProps) => {
+export const Header = ({
+  title,
+  subtitle,
+  showScopeToggle = true,
+  showPeriodFilter = true,
+  rightSlot,
+}: HeaderProps) => {
   return (
     <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
       <div>
@@ -24,14 +33,9 @@ export const Header = ({ title, subtitle, showScopeToggle = true }: HeaderProps)
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
+        {showPeriodFilter && <PeriodFilter />}
         {showScopeToggle && <ScopeToggle />}
-        <div className="relative hidden md:block w-60 lg:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            placeholder="고객명 · 직원 · 모델 검색"
-            className="pl-9 h-10 bg-card/60 border-border/60 focus-visible:ring-primary"
-          />
-        </div>
+        {rightSlot}
         <Button variant="ghost" size="icon" className="rounded-full glass">
           <Bell className="size-4" />
         </Button>
