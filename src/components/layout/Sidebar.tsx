@@ -17,6 +17,7 @@ import {
   CalendarRange,
   Store as StoreIcon,
   FileWarning,
+  UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,6 +34,7 @@ const navItems = [
   { to: "/expense-input", label: "지출 비용 입력", icon: Megaphone },
   { to: "/ad-calendar", label: "광고 캘린더", icon: CalendarRange },
   { to: "/ranking", label: "랭킹", icon: Trophy },
+  { to: "/staff-status", label: "직원별 현황", icon: UserCog },
   { to: "/device-inventory", label: "단말기 재고", icon: Smartphone },
   { to: "/field-options", label: "입력 항목 관리", icon: Settings2 },
   { to: "/team", label: "권한 / 뷰", icon: Users },
