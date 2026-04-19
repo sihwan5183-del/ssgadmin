@@ -125,10 +125,11 @@ export const SaleSearchPanel = () => {
       return;
     }
     setSaving(true);
-    const { error } = await supabase.from("sales").update(payload).eq("id", selected.id);
+    const { error } = await supabase
+      .from("sales")
+      .update(payload as never)
+      .eq("id", selected.id);
     setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success("저장되었습니다 (이력에 자동 기록)");
     setSelected({ ...selected, ...editForm } as SaleHit);
     search();
   };
