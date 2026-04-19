@@ -90,7 +90,7 @@ export const FormulaEditor = () => {
             className="font-mono mt-1.5"
           />
           {validation.ok ? (
-            <div className="flex items-center gap-1.5 text-xs text-emerald-400 mt-1.5">
+            <div className="flex items-center gap-1.5 text-xs text-primary mt-1.5">
               <CheckCircle2 className="size-3.5" /> 수식이 유효합니다
             </div>
           ) : (
