@@ -439,6 +439,47 @@ export default function ExpenseInputPage() {
               </tr>
             </thead>
             <tbody>
+              {/* 실적(sales) 자동 집계 — 분류 요약 행 */}
+              <tr className="border-b border-border/40 bg-primary/[0.05]">
+                <td className="py-2 pr-3 text-xs text-muted-foreground">기간 합계</td>
+                <td className="py-2 pr-3">
+                  <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">자동집계</Badge>
+                </td>
+                <td className="py-2 pr-3 font-medium flex items-center gap-1.5">
+                  <Building2 className="size-3.5 text-muted-foreground" /> 총 유통망지원금
+                </td>
+                <td className="py-2 pr-3 text-muted-foreground">-</td>
+                <td className="py-2 pr-3 text-muted-foreground text-xs">sales.distributor_amount 합계</td>
+                <td className="py-2 pr-3 text-right font-mono font-semibold">{formatKRW(salesAgg.distributor)}</td>
+                <td />
+              </tr>
+              <tr className="border-b border-border/40 bg-primary/[0.05]">
+                <td className="py-2 pr-3 text-xs text-muted-foreground">기간 합계</td>
+                <td className="py-2 pr-3">
+                  <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">자동집계</Badge>
+                </td>
+                <td className="py-2 pr-3 font-medium flex items-center gap-1.5">
+                  <Banknote className="size-3.5 text-muted-foreground" /> 현금개통
+                </td>
+                <td className="py-2 pr-3 text-muted-foreground">-</td>
+                <td className="py-2 pr-3 text-muted-foreground text-xs">cash_open=true 건의 cash_support_amount 합계</td>
+                <td className="py-2 pr-3 text-right font-mono font-semibold">{formatKRW(salesAgg.cash)}</td>
+                <td />
+              </tr>
+              <tr className="border-b border-border/40 bg-primary/[0.05]">
+                <td className="py-2 pr-3 text-xs text-muted-foreground">기간 합계</td>
+                <td className="py-2 pr-3">
+                  <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">자동집계</Badge>
+                </td>
+                <td className="py-2 pr-3 font-medium flex items-center gap-1.5">
+                  <Wallet className="size-3.5 text-muted-foreground" /> 입금금액
+                </td>
+                <td className="py-2 pr-3 text-muted-foreground">-</td>
+                <td className="py-2 pr-3 text-muted-foreground text-xs">receivable_paid 입력된 건의 receivable_amount 합계</td>
+                <td className="py-2 pr-3 text-right font-mono font-semibold">{formatKRW(salesAgg.receivable)}</td>
+                <td />
+              </tr>
+
               {loading ? (
                 <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">불러오는 중...</td></tr>
               ) : rows.length === 0 ? (
