@@ -408,144 +408,101 @@ export default function DeviceInventoryPage() {
 
       <Card className="glass border-border/40 overflow-hidden">
         <div className="overflow-x-auto">
-
-      <Tabs defaultValue="list">
-        <TabsList>
-          <TabsTrigger value="list">리스트</TabsTrigger>
-          <TabsTrigger value="transfers">매장 이동 이력</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="list" className="mt-4">
-          <Card className="glass border-border/40 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/40 text-muted-foreground">
-                  <tr>
-                    <th className="text-left px-3 py-2.5">모델</th>
-                    <th className="text-left px-3 py-2.5">일련번호</th>
-                    <th className="text-left px-3 py-2.5">색/용량</th>
-                    <th className="text-left px-3 py-2.5">매장</th>
-                    <th className="text-left px-3 py-2.5">입고일</th>
-                    <th className="text-left px-3 py-2.5">매입가</th>
-                    <th className="text-left px-3 py-2.5">상태</th>
-                    <th className="text-right px-3 py-2.5">관리</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={8} className="text-center py-10 text-muted-foreground">불러오는 중…</td>
-                    </tr>
-                  ) : filtered.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="text-center py-10 text-muted-foreground">표시할 데이터가 없습니다</td>
-                    </tr>
-                  ) : (
-                    filtered.map((r) => {
-                      const mine = r.created_by === user?.id;
-                      const days = daysSince(r.stock_in_date);
-                      const isOpen = r.status !== "개통완료";
-                      // 30/60/90일 단계별 색상
-                      let agingClass = "";
-                      let agingBadge: { label: string; cls: string } | null = null;
-                      if (isOpen && days >= 90) {
-                        agingClass = "bg-destructive/10 border-l-2 border-destructive";
-                        agingBadge = { label: `장기 ${days}일`, cls: "bg-destructive text-destructive-foreground" };
-                      } else if (isOpen && days >= 60) {
-                        agingClass = "bg-warning/10 border-l-2 border-warning";
-                        agingBadge = { label: `${days}일`, cls: "bg-warning text-warning-foreground" };
-                      } else if (isOpen && days >= 30) {
-                        agingClass = "bg-amber-500/5 border-l-2 border-amber-500/60";
-                        agingBadge = { label: `${days}일`, cls: "bg-amber-500/20 text-amber-300 border border-amber-500/40" };
-                      }
-                      const storeName = byId(r.current_store_id)?.name ?? "-";
-                      return (
-                        <tr
-                          key={r.id}
-                          className={`border-t border-border/30 hover:bg-muted/20 ${agingClass}`}
-                        >
-                          <td className="px-3 py-2.5 font-medium">
-                            <div className="flex items-center gap-2">
-                              {r.model}
-                              {agingBadge && (
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded ${agingBadge.cls}`}>
-                                  {agingBadge.label}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{r.serial_no ?? "-"}</td>
-                          <td className="px-3 py-2.5 text-muted-foreground">
-                            {[r.color, r.capacity].filter(Boolean).join(" / ") || "-"}
-                          </td>
-                          <td className="px-3 py-2.5">
-                            <span className="inline-flex items-center gap-1">
-                              <StoreIcon className="size-3 text-muted-foreground" />
-                              {storeName}
+          <table className="w-full text-sm">
+            <thead className="bg-muted/40 text-muted-foreground">
+              <tr>
+                <th className="text-left px-3 py-2.5">모델</th>
+                <th className="text-left px-3 py-2.5">일련번호</th>
+                <th className="text-left px-3 py-2.5">색/용량</th>
+                <th className="text-left px-3 py-2.5">입고일</th>
+                <th className="text-left px-3 py-2.5">매입가</th>
+                <th className="text-left px-3 py-2.5">상태</th>
+                <th className="text-right px-3 py-2.5">관리</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-10 text-muted-foreground">불러오는 중…</td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-10 text-muted-foreground">표시할 데이터가 없습니다</td>
+                </tr>
+              ) : (
+                filtered.map((r) => {
+                  const mine = r.created_by === user?.id;
+                  const days = daysSince(r.stock_in_date);
+                  const isOpen = r.status !== "개통완료";
+                  let agingClass = "";
+                  let agingBadge: { label: string; cls: string } | null = null;
+                  if (isOpen && days >= 90) {
+                    agingClass = "bg-destructive/10 border-l-2 border-destructive";
+                    agingBadge = { label: `장기 ${days}일`, cls: "bg-destructive text-destructive-foreground" };
+                  } else if (isOpen && days >= 60) {
+                    agingClass = "bg-warning/10 border-l-2 border-warning";
+                    agingBadge = { label: `${days}일`, cls: "bg-warning text-warning-foreground" };
+                  } else if (isOpen && days >= 30) {
+                    agingClass = "bg-amber-500/5 border-l-2 border-amber-500/60";
+                    agingBadge = { label: `${days}일`, cls: "bg-amber-500/20 text-amber-300 border border-amber-500/40" };
+                  }
+                  return (
+                    <tr key={r.id} className={`border-t border-border/30 hover:bg-muted/20 ${agingClass}`}>
+                      <td className="px-3 py-2.5 font-medium">
+                        <div className="flex items-center gap-2">
+                          {r.model}
+                          {agingBadge && (
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded ${agingBadge.cls}`}>
+                              {agingBadge.label}
                             </span>
-                          </td>
-                          <td className="px-3 py-2.5 tabular-nums text-xs">
-                            {r.stock_in_date ?? "-"}
-                            <div className="text-[10px] text-muted-foreground">
-                              {days > 0 ? `${days}일 경과` : "오늘"}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2.5 tabular-nums">
-                            {Number(r.purchase_price ?? 0).toLocaleString("ko-KR")}
-                          </td>
-                          <td className="px-3 py-2.5">
-                            <Select
-                              value={r.status}
-                              onValueChange={(v) => updateStatus(r.id, v)}
-                              disabled={!mine}
-                            >
-                              <SelectTrigger className={`h-7 w-28 text-xs border ${STATUS_COLOR[r.status] ?? ""}`}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {STATUSES.map((s) => (
-                                  <SelectItem key={s} value={s}>{s}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </td>
-                          <td className="px-3 py-2.5 text-right">
-                            <div className="flex justify-end gap-1">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                title="매장 이동 요청"
-                                onClick={() => setTransferDevice(r)}
-                                disabled={stores.length === 0}
-                              >
-                                <ArrowRightLeft className="size-3.5" />
-                              </Button>
-                              {mine && (
-                                <>
-                                  <Button size="sm" variant="ghost" onClick={() => openEdit(r)}>
-                                    <Pencil className="size-3.5" />
-                                  </Button>
-                                  <Button size="sm" variant="ghost" onClick={() => remove(r.id)}>
-                                    <Trash2 className="size-3.5 text-destructive" />
-                                  </Button>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="transfers" className="mt-4">
-          <TransferList />
-        </TabsContent>
-      </Tabs>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{r.serial_no ?? "-"}</td>
+                      <td className="px-3 py-2.5 text-muted-foreground">
+                        {[r.color, r.capacity].filter(Boolean).join(" / ") || "-"}
+                      </td>
+                      <td className="px-3 py-2.5 tabular-nums text-xs">
+                        {r.stock_in_date ?? "-"}
+                        <div className="text-[10px] text-muted-foreground">
+                          {days > 0 ? `${days}일 경과` : "오늘"}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2.5 tabular-nums">
+                        {Number(r.purchase_price ?? 0).toLocaleString("ko-KR")}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <Select value={r.status} onValueChange={(v) => updateStatus(r.id, v)} disabled={!mine}>
+                          <SelectTrigger className={`h-7 w-28 text-xs border ${STATUS_COLOR[r.status] ?? ""}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {STATUSES.map((s) => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
+                        {mine && (
+                          <div className="flex justify-end gap-1">
+                            <Button size="sm" variant="ghost" onClick={() => openEdit(r)}>
+                              <Pencil className="size-3.5" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => remove(r.id)}>
+                              <Trash2 className="size-3.5 text-destructive" />
+                            </Button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
       {/* 추가/수정 다이얼로그 */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
