@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   LogOut,
   HeartHandshake,
+  Link2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,6 +32,7 @@ const navItems = [
 ];
 
 const adminItems = [
+  { to: "/product-rate-plans", label: "상품-요금제 매핑", icon: Link2 },
   { to: "/admin", label: "시스템 설정", icon: ShieldCheck },
 ];
 

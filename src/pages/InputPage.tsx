@@ -13,6 +13,7 @@ import { Check, Upload, Zap, Trash2, Pencil, X, FileSpreadsheet } from "lucide-r
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
+import { useProductRatePlans } from "@/hooks/useProductRatePlans";
 import { cn } from "@/lib/utils";
 
 type SaleRow = {
@@ -72,6 +73,7 @@ const InputPage = () => {
   const { options: OPEN_METHODS } = useFieldOptions("open_method");
   const { options: STATUSES } = useFieldOptions("status");
   const { options: RATE_PLANS } = useFieldOptions("rate_plan");
+  const { getPlansForProduct } = useProductRatePlans();
   const { options: DELIVERY_TYPES } = useFieldOptions("delivery_type");
   const { options: BANKS } = useFieldOptions("bank");
   const [form, setForm] = useState<Partial<SaleRow>>(emptyForm);
@@ -338,7 +340,18 @@ const InputPage = () => {
         <FormSection title="가입 정보">
           <Grid cols={3}>
             <Field label="가입상품 *">
-              <Select value={form.product ?? ""} onValueChange={(v) => set("product", v)}>
+              <Select
+                value={form.product ?? ""}
+                onValueChange={(v) => {
+                  // 상품 변경 시, 기존 요금제가 새 상품 매핑에 없으면 초기화
+                  setForm((f) => {
+                    const allowed = getPlansForProduct(v);
+                    const keepRate =
+                      !f.rate_plan || allowed.length === 0 || allowed.includes(f.rate_plan);
+                    return { ...f, product: v, rate_plan: keepRate ? f.rate_plan : null };
+                  });
+                }}
+              >
                 <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
                 <SelectContent>{PRODUCTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
               </Select>
@@ -395,10 +408,27 @@ const InputPage = () => {
           </Grid>
           <Grid cols={3}>
             <Field label="개통요금제">
-              <Select value={form.rate_plan ?? ""} onValueChange={(v) => set("rate_plan", v)}>
-                <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
-                <SelectContent>{RATE_PLANS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
-              </Select>
+              {(() => {
+                const mapped = getPlansForProduct(form.product);
+                const plans = mapped.length > 0 ? mapped : RATE_PLANS;
+                const placeholder = !form.product
+                  ? "가입상품을 먼저 선택하세요"
+                  : mapped.length === 0
+                    ? "전체 요금제 (매핑 미설정)"
+                    : "선택";
+                return (
+                  <Select value={form.rate_plan ?? ""} onValueChange={(v) => set("rate_plan", v)}>
+                    <SelectTrigger className="h-11 bg-input/60">
+                      <SelectValue placeholder={placeholder} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {plans.map((p) => (
+                        <SelectItem key={p} value={p}>{p}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                );
+              })()}
             </Field>
             <Field label="부가서비스 1">
               <Input value={form.vas1 ?? ""} onChange={(e) => set("vas1", e.target.value)} className="h-11 bg-input/60" />
