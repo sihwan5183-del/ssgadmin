@@ -424,9 +424,8 @@ export default function AdCalendarPage() {
             return (
               <div
                 key={idx}
-                onClick={() => cell.inMonth && openCreate(key)}
                 className={cn(
-                  "min-h-[120px] border-b border-r border-border/30 p-2 group cursor-pointer transition-colors",
+                  "min-h-[120px] border-b border-r border-border/30 p-2 group transition-colors",
                   !cell.inMonth && "bg-background/40 opacity-40",
                   cell.inMonth && "hover:bg-white/[0.02]",
                   isToday && "bg-primary/5 ring-1 ring-primary/30 ring-inset",
@@ -434,22 +433,31 @@ export default function AdCalendarPage() {
                 )}
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span
+                  <button
+                    type="button"
+                    disabled={!cell.inMonth}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!cell.inMonth) return;
+                      window.location.href = `/activities?date=${key}`;
+                    }}
+                    title="이 날짜의 실적 보기"
                     className={cn(
-                      "text-xs font-semibold tabular-nums",
+                      "text-xs font-semibold tabular-nums hover:underline disabled:no-underline",
                       dow === 0 && "text-destructive/80",
                       dow === 6 && "text-primary-glow/80",
                       isToday && "px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground",
                     )}
                   >
                     {cell.date.getDate()}
-                  </span>
+                  </button>
                   {isAdmin && cell.inMonth && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         openCreate(key);
                       }}
+                      title="이 날짜에 광고 등록"
                       className="opacity-0 group-hover:opacity-100 transition size-5 rounded-md grid place-items-center text-muted-foreground hover:text-primary-glow hover:bg-primary/10"
                     >
                       <Plus className="size-3" />
