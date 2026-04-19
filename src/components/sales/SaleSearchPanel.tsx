@@ -56,6 +56,11 @@ interface SaleHit {
   pending_note: string | null;
   pending_resolved: boolean | null;
   approval_override_reason: string | null;
+  distributor_amount: number | null;
+  cash_support_amount: number | null;
+  cash_open: boolean | null;
+  receivable_amount: number | null;
+  receivable_paid: string | null;
 }
 
 const EDITABLE_FIELDS: Array<{ key: keyof SaleHit; label: string; type?: string }> = [
