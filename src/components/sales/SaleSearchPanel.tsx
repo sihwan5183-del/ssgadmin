@@ -90,11 +90,21 @@ export const SaleSearchPanel = () => {
   const [q, setQ] = useState("");
   const [pendingOnly, setPendingOnly] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [unhandledOnly, setUnhandledOnly] = useState(false);
+  const [unhandledCount, setUnhandledCount] = useState(0);
   const [results, setResults] = useState<SaleHit[]>([]);
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<SaleHit | null>(null);
   const [editForm, setEditForm] = useState<Partial<SaleHit>>({});
   const [saving, setSaving] = useState(false);
+  // 미처리 편집 상태
+  const [pendingItems, setPendingItems] = useState<string[]>([]);
+  const [pendingNote, setPendingNote] = useState<string>("");
+  const [pendingResolved, setPendingResolved] = useState<boolean>(true);
+  // 미처리 있는데 확정 시도 시 사유 입력
+  const [overrideOpen, setOverrideOpen] = useState(false);
+  const [overrideReason, setOverrideReason] = useState("");
+  const [pendingApprovalTarget, setPendingApprovalTarget] = useState<ApprovalStatus | null>(null);
 
   const isLocked = !!selected?.locked;
   const canEdit = useMemo(() => {
