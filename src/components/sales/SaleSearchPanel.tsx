@@ -201,6 +201,19 @@ export const SaleSearchPanel = () => {
     EDITABLE_FIELDS.forEach(({ key }) => {
       if (editForm[key] !== selected[key]) payload[key as string] = editForm[key];
     });
+    // 오퍼(지원금) 필드 변경 감지
+    const offerKeys: (keyof SaleHit)[] = [
+      "distributor_amount",
+      "cash_support_amount",
+      "cash_open",
+      "receivable_amount",
+      "receivable_paid",
+    ];
+    offerKeys.forEach((k) => {
+      if ((editForm[k] ?? null) !== (selected[k] ?? null)) {
+        payload[k as string] = editForm[k] ?? null;
+      }
+    });
     // 미처리 항목 변경 감지
     const pendingChanged =
       JSON.stringify(selected.pending_items ?? []) !== JSON.stringify(pendingItems) ||
