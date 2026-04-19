@@ -32,6 +32,16 @@ const FIELD_LABELS: Record<string, string> = {
   open_date: "개통일",
   manager: "담당자",
   note: "메모",
+  approval_status: "검수 상태",
+  revision_reason: "수정 요청 사유",
+  revision_fields: "수정 요청 항목",
+  re_review_requested_at: "재검수 요청",
+  approval_override_reason: "강제 승인 사유",
+  distributor_amount: "유통망 지원금",
+  cash_support_amount: "현금개통 금액",
+  receivable_amount: "고객입금 금액",
+  pending_items: "미처리 항목",
+  pending_resolved: "미처리 해결",
 };
 
 const fmt = (v: unknown) => {
