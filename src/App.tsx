@@ -26,6 +26,7 @@ import StoresPage from "./pages/StoresPage.tsx";
 import AuthPage from "./pages/AuthPage.tsx";
 import MissingDocsPage from "./pages/MissingDocsPage.tsx";
 import StaffStatusPage from "./pages/StaffStatusPage.tsx";
+import RecentActivitiesPage from "./pages/RecentActivitiesPage.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -50,6 +51,7 @@ const App = () => (
                         <Route path="/" element={<Index />} />
                         <Route path="/input" element={<InputPage />} />
                         <Route path="/activities" element={<ActivitiesPage />} />
+                        <Route path="/recent-activities" element={<RecentActivitiesPage />} />
                         <Route path="/missing-docs" element={<MissingDocsPage />} />
                         <Route path="/regular-input" element={<RegularInputPage />} />
                         <Route path="/regulars" element={<RegularsPage />} />
