@@ -24,6 +24,16 @@ export const mobileBreakdownStats = [
   { label: "신규", count: 77, share: 19.9 },
 ];
 
+// 채널별 개통 현황 (당월 누적 / 오늘)
+export const channelActivationStats = [
+  { channel: "당근", monthly: 124, today: 9, color: "hsl(35 95% 60%)" },
+  { channel: "모요", monthly: 93, today: 6, color: "hsl(270 90% 65%)" },
+  { channel: "도그마루", monthly: 70, today: 4, color: "hsl(320 90% 65%)" },
+  { channel: "오프라인", monthly: 62, today: 3, color: "hsl(195 90% 60%)" },
+  { channel: "캠페인", monthly: 24, today: 1, color: "hsl(150 70% 55%)" },
+  { channel: "기타", monthly: 14, today: 1, color: "hsl(220 15% 55%)" },
+];
+
 // 전략 상품별 건수 (당월 누적)
 export const strategyProductStats = [
   { label: "인터넷", count: 92 },
