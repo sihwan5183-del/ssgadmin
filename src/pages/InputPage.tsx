@@ -12,10 +12,7 @@ import { toast } from "sonner";
 import { Check, Upload, Zap, Trash2, Pencil, X, FileSpreadsheet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import {
-  CHANNELS, PRODUCTS, SALE_TYPES, OPEN_METHODS, STATUSES,
-  RATE_PLANS, DELIVERY_TYPES, BANKS,
-} from "@/data/salesOptions";
+import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { cn } from "@/lib/utils";
 
 type SaleRow = {
@@ -69,6 +66,14 @@ const emptyForm: Partial<SaleRow> = {
 
 const InputPage = () => {
   const { user } = useAuth();
+  const { options: CHANNELS } = useFieldOptions("channel");
+  const { options: PRODUCTS } = useFieldOptions("product");
+  const { options: SALE_TYPES } = useFieldOptions("sale_type");
+  const { options: OPEN_METHODS } = useFieldOptions("open_method");
+  const { options: STATUSES } = useFieldOptions("status");
+  const { options: RATE_PLANS } = useFieldOptions("rate_plan");
+  const { options: DELIVERY_TYPES } = useFieldOptions("delivery_type");
+  const { options: BANKS } = useFieldOptions("bank");
   const [form, setForm] = useState<Partial<SaleRow>>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rows, setRows] = useState<SaleRow[]>([]);
