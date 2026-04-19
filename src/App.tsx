@@ -12,6 +12,7 @@ import InputPage from "./pages/InputPage.tsx";
 import ActivitiesPage from "./pages/ActivitiesPage.tsx";
 import ExpensesPage from "./pages/ExpensesPage.tsx";
 import AdSpendPage from "./pages/AdSpendPage.tsx";
+import FieldOptionsPage from "./pages/FieldOptionsPage.tsx";
 import RankingPage from "./pages/RankingPage.tsx";
 import TeamPage from "./pages/TeamPage.tsx";
 import AuthPage from "./pages/AuthPage.tsx";
@@ -40,6 +41,7 @@ const App = () => (
                         <Route path="/activities" element={<ActivitiesPage />} />
                         <Route path="/expenses" element={<ExpensesPage />} />
                         <Route path="/ad-spend" element={<AdSpendPage />} />
+                        <Route path="/field-options" element={<FieldOptionsPage />} />
                         <Route path="/ranking" element={<RankingPage />} />
                         <Route path="/team" element={<TeamPage />} />
                         <Route path="*" element={<NotFound />} />

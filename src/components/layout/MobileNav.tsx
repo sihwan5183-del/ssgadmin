@@ -1,13 +1,13 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, PlusCircle, Activity, Wallet, Trophy } from "lucide-react";
+import { LayoutDashboard, PlusCircle, Megaphone, Wallet, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
   { to: "/", label: "홈", icon: LayoutDashboard },
-  { to: "/input", label: "입력", icon: PlusCircle },
-  { to: "/activities", label: "활동", icon: Activity },
+  { to: "/input", label: "실적", icon: PlusCircle },
+  { to: "/ad-spend", label: "광고비", icon: Megaphone },
   { to: "/expenses", label: "지출", icon: Wallet },
-  { to: "/ranking", label: "랭킹", icon: Trophy },
+  { to: "/field-options", label: "항목", icon: Settings2 },
 ];
 
 export const MobileNav = () => {
