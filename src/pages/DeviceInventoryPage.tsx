@@ -854,75 +854,98 @@ export default function DeviceInventoryPage() {
           <DialogHeader>
             <DialogTitle>{editing ? "단말기 수정" : "단말기 추가"}</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="모델 *">
-              <Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} />
-            </Field>
-            <Field label="재고 유형 *">
-              <Select value={form.device_kind} onValueChange={(v) => setForm({ ...form, device_kind: v as Kind })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {KINDS.map((k) => <SelectItem key={k} value={k}>{k}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="일련번호 / IMEI / SN" full>
-              <Input
-                ref={serialInputRef}
-                value={form.serial_no}
-                onChange={(e) => setForm({ ...form, serial_no: cleanSerial(e.target.value) })}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    // 다음 필드(색상)로 자동 이동
-                    const next = (e.currentTarget.closest(".grid")?.querySelectorAll("input") ?? []) as NodeListOf<HTMLInputElement>;
-                    const idx = Array.from(next).indexOf(e.currentTarget);
-                    next[idx + 1]?.focus();
-                  }
-                }}
-                maxLength={120}
-                autoComplete="off"
-                spellCheck={false}
-                className="font-mono"
-                placeholder="바코드 스캔 또는 직접 입력 (Enter로 다음 칸)"
-              />
-            </Field>
-            <Field label="색상">
-              <Input value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} />
-            </Field>
-            <Field label="용량">
-              <Input value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} />
-            </Field>
-            <Field label="입고일">
-              <Input
-                type="date"
-                value={form.stock_in_date}
-                onChange={(e) => setForm({ ...form, stock_in_date: e.target.value })}
-              />
-            </Field>
-            <Field label="매입가 (원)">
-              <Input
-                type="number"
-                value={form.purchase_price}
-                onChange={(e) => setForm({ ...form, purchase_price: Number(e.target.value) || 0 })}
-              />
-            </Field>
-            <Field label="상태">
-              <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as Status })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUSES.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="메모" full>
-              <Input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
-            </Field>
-          </div>
+          {(() => {
+            const isIot = form.device_kind === "IoT(도그마루)";
+            return (
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="재고 유형 *">
+                  <Select
+                    value={form.device_kind}
+                    onValueChange={(v) =>
+                      setForm({
+                        ...form,
+                        device_kind: v as Kind,
+                        model: v === "IoT(도그마루)" ? IOT_FIXED_MODEL : (form.model === IOT_FIXED_MODEL ? "" : form.model),
+                      })
+                    }
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {KINDS.map((k) => <SelectItem key={k} value={k}>{k}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                {isIot ? (
+                  <Field label="모델 (고정)">
+                    <Input value={IOT_FIXED_MODEL} disabled className="bg-muted/40" />
+                  </Field>
+                ) : (
+                  <Field label="모델 *">
+                    <Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} />
+                  </Field>
+                )}
+                <Field label="일련번호 / IMEI / SN" full>
+                  <Input
+                    ref={serialInputRef}
+                    value={form.serial_no}
+                    onChange={(e) => setForm({ ...form, serial_no: cleanSerial(e.target.value) })}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const next = (e.currentTarget.closest(".grid")?.querySelectorAll("input") ?? []) as NodeListOf<HTMLInputElement>;
+                        const idx = Array.from(next).indexOf(e.currentTarget);
+                        next[idx + 1]?.focus();
+                      }
+                    }}
+                    maxLength={120}
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="font-mono"
+                    placeholder="바코드 스캔 또는 직접 입력 (Enter로 다음 칸)"
+                  />
+                </Field>
+                {!isIot && (
+                  <>
+                    <Field label="색상">
+                      <Input value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} />
+                    </Field>
+                    <Field label="용량">
+                      <Input value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} />
+                    </Field>
+                    <Field label="매입가 (원)">
+                      <Input
+                        type="number"
+                        value={form.purchase_price}
+                        onChange={(e) => setForm({ ...form, purchase_price: Number(e.target.value) || 0 })}
+                      />
+                    </Field>
+                  </>
+                )}
+                <Field label="입고일">
+                  <Input
+                    type="date"
+                    value={form.stock_in_date}
+                    onChange={(e) => setForm({ ...form, stock_in_date: e.target.value })}
+                  />
+                </Field>
+                <Field label="상태">
+                  <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as Status })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUSES.map((s) => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label="메모 / 이력" full>
+                  <Input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder={isIot ? "보내준 이력, 특이사항 등" : ""} />
+                </Field>
+              </div>
+            );
+          })()}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>취소</Button>
             <Button onClick={save}>{editing ? "수정" : "등록"}</Button>
