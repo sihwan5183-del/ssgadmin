@@ -242,6 +242,7 @@ export type Database = {
           created_by: string
           current_store_id: string | null
           custom_fields: Json
+          device_kind: string
           id: string
           model: string
           note: string | null
@@ -261,6 +262,7 @@ export type Database = {
           created_by: string
           current_store_id?: string | null
           custom_fields?: Json
+          device_kind?: string
           id?: string
           model: string
           note?: string | null
@@ -280,6 +282,7 @@ export type Database = {
           created_by?: string
           current_store_id?: string | null
           custom_fields?: Json
+          device_kind?: string
           id?: string
           model?: string
           note?: string | null
@@ -1427,6 +1430,7 @@ export type Database = {
       is_planner: { Args: { _user_id: string }; Returns: boolean }
       is_user_active: { Args: { _user_id: string }; Returns: boolean }
       normalize_device_model: { Args: { _raw: string }; Returns: string }
+      normalize_serial_no: { Args: { _raw: string }; Returns: string }
     }
     Enums: {
       app_role:
