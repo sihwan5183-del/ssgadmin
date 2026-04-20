@@ -104,6 +104,24 @@ export const InquiryForm = ({ onSaved }: Props) => {
           <Input value={form.customer_name} onChange={(e) => set("customer_name", e.target.value)} />
         </div>
         <div className="space-y-1.5">
+          <Label className="text-xs">통신사</Label>
+          <Select value={form.carrier} onValueChange={(v) => set("carrier", v)}>
+            <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+            <SelectContent>
+              {CARRIERS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">문의상품</Label>
+          <Select value={form.product} onValueChange={(v) => set("product", v)}>
+            <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+            <SelectContent>
+              {products.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
           <Label className="text-xs">연락처</Label>
           <Input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="010-..." />
         </div>
