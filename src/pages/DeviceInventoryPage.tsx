@@ -467,6 +467,9 @@ export default function DeviceInventoryPage() {
           <table className="w-full text-sm">
             <thead className="bg-muted/40 text-muted-foreground">
               <tr>
+                <th className="w-10 px-3 py-2.5">
+                  <Checkbox checked={bulk.allOnPageSelected} onCheckedChange={(v) => bulk.togglePage(!!v)} />
+                </th>
                 <th className="text-left px-3 py-2.5">모델</th>
                 <th className="text-left px-3 py-2.5">일련번호</th>
                 <th className="text-left px-3 py-2.5">색/용량</th>
@@ -479,11 +482,11 @@ export default function DeviceInventoryPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-10 text-muted-foreground">불러오는 중…</td>
+                  <td colSpan={8} className="text-center py-10 text-muted-foreground">불러오는 중…</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-10 text-muted-foreground">표시할 데이터가 없습니다</td>
+                  <td colSpan={8} className="text-center py-10 text-muted-foreground">표시할 데이터가 없습니다</td>
                 </tr>
               ) : (
                 filtered.map((r) => {
