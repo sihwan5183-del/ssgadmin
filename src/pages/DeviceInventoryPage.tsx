@@ -262,7 +262,9 @@ export default function DeviceInventoryPage() {
 
   const save = async () => {
     if (!user) return;
-    if (!form.model.trim()) {
+    const isIot = form.device_kind === "IoT(도그마루)";
+    const finalModel = isIot ? IOT_FIXED_MODEL : form.model.trim();
+    if (!finalModel) {
       toast.error("모델명을 입력하세요");
       return;
     }
@@ -281,15 +283,15 @@ export default function DeviceInventoryPage() {
       }
     }
     const payload: any = {
-      model: form.model,
+      model: finalModel,
       device_kind: form.device_kind,
       serial_no: cleanedSerial,
-      color: form.color || null,
-      capacity: form.capacity || null,
+      color: isIot ? null : (form.color || null),
+      capacity: isIot ? null : (form.capacity || null),
       status: form.status,
       note: form.note || null,
       stock_in_date: form.stock_in_date || todayISO(),
-      purchase_price: Number(form.purchase_price) || 0,
+      purchase_price: isIot ? 0 : (Number(form.purchase_price) || 0),
       created_by: user.id,
     };
     if (editing) {
