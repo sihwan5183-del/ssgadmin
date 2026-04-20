@@ -74,57 +74,54 @@ export const LiveActivityFeed = () => {
   }, []);
 
   return (
-    <div className="glass rounded-2xl p-6 shadow-card-elevated h-full flex flex-col">
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h3 className="text-lg font-semibold tracking-tight flex items-center gap-2">
-            <Activity className="size-5 text-primary" />
-            실시간 활동 피드
-          </h3>
-          <p className="text-xs text-muted-foreground mt-1">개통 · 검수요청 · 승인</p>
-        </div>
-        <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-success/10 text-success border border-success/30 font-bold">
-          <Radio className="size-3 animate-pulse" />
+    <div className="glass rounded-xl p-3 shadow-card-elevated h-full flex flex-col">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-semibold tracking-tight flex items-center gap-1.5">
+          <Activity className="size-4 text-primary" />
+          실시간 활동 피드
+        </h3>
+        <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-success/10 text-success border border-success/30 font-bold">
+          <Radio className="size-2.5 animate-pulse" />
           LIVE
         </span>
       </div>
 
       <div className="flex-1 relative overflow-hidden">
-        <div className="absolute left-[15px] top-1 bottom-1 w-px bg-gradient-to-b from-primary/40 via-border to-transparent" />
-        <ul className="space-y-3 max-h-[520px] overflow-y-auto pr-2">
+        <div className="absolute left-[11px] top-1 bottom-1 w-px bg-gradient-to-b from-primary/40 via-border to-transparent" />
+        <ul className="space-y-1.5 max-h-[480px] overflow-y-auto pr-1.5">
           {loading ? (
-            <li className="text-sm text-muted-foreground py-8 text-center">불러오는 중…</li>
+            <li className="text-xs text-muted-foreground py-4 text-center">불러오는 중…</li>
           ) : items.length === 0 ? (
-            <li className="text-sm text-muted-foreground py-8 text-center">최근 활동이 없습니다</li>
+            <li className="text-xs text-muted-foreground py-4 text-center">최근 활동이 없습니다</li>
           ) : (
             items.map((it) => {
               const cfg = ICONS[it.type];
               const Icon = cfg.Icon;
               return (
-                <li key={it.id} className="relative pl-10 animate-fade-in">
+                <li key={it.id} className="relative pl-7 py-1 animate-fade-in">
                   <div
-                    className="absolute left-0 top-1 size-8 rounded-full grid place-items-center ring-2 ring-background"
-                    style={{ background: cfg.glow, boxShadow: `0 0 12px ${cfg.glow}` }}
+                    className="absolute left-0 top-1 size-6 rounded-full grid place-items-center ring-2 ring-background"
+                    style={{ background: cfg.glow, boxShadow: `0 0 8px ${cfg.glow}` }}
                   >
-                    <Icon className="size-4" style={{ color: cfg.color }} />
+                    <Icon className="size-3" style={{ color: cfg.color }} />
                   </div>
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span
-                          className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+                          className="text-[8px] font-bold uppercase tracking-wider px-1 py-px rounded"
                           style={{ background: cfg.glow, color: cfg.color }}
                         >
                           {cfg.label}
                         </span>
-                        <span className="font-semibold text-sm truncate">{it.title}</span>
+                        <span className="font-semibold text-xs truncate">{it.title}</span>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5 truncate">
+                      <div className="text-[10px] text-muted-foreground truncate">
                         {it.subtitle}
                         {it.manager ? ` · ${it.manager}` : ""}
                       </div>
                     </div>
-                    <span className="text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">{fmtTime(it.at)}</span>
+                    <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{fmtTime(it.at)}</span>
                   </div>
                 </li>
               );

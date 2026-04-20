@@ -40,10 +40,8 @@ const Index = () => {
       {/* === 본인 검수 피드백 (반려/수정요청) === */}
       <MyReviewAlerts />
 
-      {/* ============================================
-          [1] 최상단 — 영업 성과 (반원 게이지 + 오늘/누적)
-          ============================================ */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+      {/* [1] 최상단 — 영업 성과 */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-2 mb-3">
         <RadialGoalGauge />
         <div className="lg:col-span-2">
           <HeroPerformance />
@@ -53,10 +51,8 @@ const Index = () => {
       <ChannelActivationBreakdown />
       <ActivationBreakdown />
 
-      {/* ============================================
-          [2] 중간 — 수익 및 효율
-          ============================================ */}
-      <section className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+      {/* [2] 중간 — 수익 및 효율 */}
+      <section className="grid grid-cols-2 lg:grid-cols-6 gap-2 mb-3">
         <StatCard
           label="당월 순이익"
           value={formatShortKRW(summaryStats.netProfit)}
@@ -92,39 +88,36 @@ const Index = () => {
         <PendingItemsCard />
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-2 mb-3">
         <div className="lg:col-span-2">
           <PerformanceChart />
         </div>
         <ChannelDonut />
       </section>
 
-      {/* === 매장 비교 시각화 (드릴다운) === */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-2 mb-3">
         <StoreRevenueRanking />
         <StoreEfficiencyBubble />
       </section>
 
-      <section className="mb-6">
+      <section className="mb-3">
         <PerformanceLedger />
       </section>
 
-      <section className="mb-6">
+      <section className="mb-3">
         <OverallModelAnalysis />
       </section>
 
-      <section className="mb-6">
+      <section className="mb-3">
         <ChannelModelAnalysis />
       </section>
 
-      {/* ============================================
-          [3] 하단 — 라이브 활동 피드 + 사이드 위젯
-          ============================================ */}
-      <section className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        <div className="lg:col-span-3 space-y-4">
+      {/* [3] 하단 — 라이브 활동 피드 + 사이드 위젯 */}
+      <section className="grid grid-cols-1 lg:grid-cols-5 gap-2">
+        <div className="lg:col-span-3 space-y-2">
           <LiveActivityFeed />
         </div>
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-2">
           <PlannerFeed />
           <InventoryWidget />
           <StrategyModelGauges />
