@@ -52,6 +52,7 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 
 export default function ExpenseInputPage() {
   const { user } = useAuth();
+  const { isAdmin } = useRole();
   const { options: MEDIA_OPTIONS } = useFieldOptions("media");
   const { options: CHANNELS } = useFieldOptions("channel");
   const { options: EXPENSE_TYPES } = useFieldOptions("expense_type");
@@ -63,6 +64,23 @@ export default function ExpenseInputPage() {
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
   const { startDate, endDate, label: periodLabel } = usePeriod();
+
+  // bulk
+  const bulk = useBulkSelection<string>(rows.map((r) => r.id));
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [purgeOpen, setPurgeOpen] = useState(false);
+
+  const bulkDelete = async () => {
+    setBulkBusy(true);
+    const { error } = await supabase.from("ad_spend").delete().in("id", bulk.selectedIds);
+    setBulkBusy(false);
+    if (error) { toast.error("삭제 실패: " + error.message); return; }
+    toast.success(`${bulk.selectedIds.length}건 삭제됨`);
+    setBulkDeleteOpen(false);
+    bulk.clear();
+    fetchRows();
+  };
 
   // sales 자동 집계 — 기간 합계 + 오늘 현금시재
   const [salesAgg, setSalesAgg] = useState({
@@ -486,6 +504,17 @@ export default function ExpenseInputPage() {
             <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
               <Download className="size-4" /> 엑셀로 내보내기
             </Button>
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-destructive/40 text-destructive hover:bg-destructive/10 gap-1.5"
+                onClick={() => setPurgeOpen(true)}
+                disabled={total === 0}
+              >
+                <Trash2 className="size-4" /> 기간 전체삭제
+              </Button>
+            )}
             <span className="text-xs text-muted-foreground">총 {total.toLocaleString()}건</span>
           </div>
         </div>
@@ -493,6 +522,9 @@ export default function ExpenseInputPage() {
           <table className="w-full text-sm">
             <thead className="text-xs text-muted-foreground border-b border-border/50">
               <tr>
+                <th className="w-8 py-2 pr-2">
+                  <Checkbox checked={bulk.allOnPageSelected} onCheckedChange={(v) => bulk.togglePage(!!v)} />
+                </th>
                 <th className="text-left py-2 pr-3">집행일</th>
                 <th className="text-left py-2 pr-3">분류</th>
                 <th className="text-left py-2 pr-3">매체/항목</th>
@@ -505,6 +537,7 @@ export default function ExpenseInputPage() {
             <tbody>
               {/* 실적(sales) 자동 집계 — 분류 요약 행 */}
               <tr className="border-b border-border/40 bg-primary/[0.05]">
+                <td />
                 <td className="py-2 pr-3 text-xs text-muted-foreground">기간 합계</td>
                 <td className="py-2 pr-3">
                   <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">자동집계</Badge>
@@ -518,6 +551,7 @@ export default function ExpenseInputPage() {
                 <td />
               </tr>
               <tr className="border-b border-border/40 bg-primary/[0.05]">
+                <td />
                 <td className="py-2 pr-3 text-xs text-muted-foreground">기간 합계</td>
                 <td className="py-2 pr-3">
                   <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">자동집계</Badge>
@@ -531,6 +565,7 @@ export default function ExpenseInputPage() {
                 <td />
               </tr>
               <tr className="border-b border-border/40 bg-primary/[0.05]">
+                <td />
                 <td className="py-2 pr-3 text-xs text-muted-foreground">기간 합계</td>
                 <td className="py-2 pr-3">
                   <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">자동집계</Badge>
@@ -545,40 +580,76 @@ export default function ExpenseInputPage() {
               </tr>
 
               {loading ? (
-                <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">불러오는 중...</td></tr>
+                <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">불러오는 중...</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">등록된 지출이 없습니다</td></tr>
+                <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">등록된 지출이 없습니다</td></tr>
               ) : (
-                rows.map((r) => (
-                  <tr key={r.id} className="border-b border-border/30 hover:bg-muted/30">
-                    <td className="py-2 pr-3">{r.spend_date}</td>
-                    <td className="py-2 pr-3">
-                      <Badge variant="outline"
-                        className={`text-[10px] ${r.category === "광고비" ? "border-primary/40 text-primary" : "border-muted-foreground/40"}`}>
-                        {r.category}
-                      </Badge>
-                    </td>
-                    <td className="py-2 pr-3 font-medium">{r.expense_type ?? r.media}</td>
-                    <td className="py-2 pr-3 text-muted-foreground">{r.channel ?? "-"}</td>
-                    <td className="py-2 pr-3 text-muted-foreground truncate max-w-[240px]">{r.campaign ?? "-"}</td>
-                    <td className="py-2 pr-3 text-right font-mono font-semibold text-expense">
-                      {formatKRW(Number(r.amount))}
-                    </td>
-                    <td className="py-2 pr-3 text-right">
-                      {user?.id === r.created_by && (
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)} className="size-8">
-                          <Trash2 className="size-4 text-destructive" />
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))
+                rows.map((r) => {
+                  const sel = bulk.isSelected(r.id);
+                  return (
+                    <tr key={r.id} className={`border-b border-border/30 hover:bg-muted/30 ${sel ? "bg-primary/5" : ""}`} data-state={sel ? "selected" : undefined}>
+                      <td className="py-2 pr-2"><Checkbox checked={sel} onCheckedChange={() => bulk.toggle(r.id)} /></td>
+                      <td className="py-2 pr-3">{r.spend_date}</td>
+                      <td className="py-2 pr-3">
+                        <Badge variant="outline"
+                          className={`text-[10px] ${r.category === "광고비" ? "border-primary/40 text-primary" : "border-muted-foreground/40"}`}>
+                          {r.category}
+                        </Badge>
+                      </td>
+                      <td className="py-2 pr-3 font-medium">{r.expense_type ?? r.media}</td>
+                      <td className="py-2 pr-3 text-muted-foreground">{r.channel ?? "-"}</td>
+                      <td className="py-2 pr-3 text-muted-foreground truncate max-w-[240px]">{r.campaign ?? "-"}</td>
+                      <td className="py-2 pr-3 text-right font-mono font-semibold text-expense">
+                        {formatKRW(Number(r.amount))}
+                      </td>
+                      <td className="py-2 pr-3 text-right">
+                        {user?.id === r.created_by && (
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)} className="size-8">
+                            <Trash2 className="size-4 text-destructive" />
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
         <PaginationBar page={page} pageSize={PAGE_SIZE} total={total} onChange={setPage} />
       </Card>
+
+      <BulkActionBar count={bulk.selectedCount} onClear={bulk.clear}>
+        <Button size="sm" variant="destructive" onClick={() => setBulkDeleteOpen(true)} disabled={bulkBusy}>
+          <Trash2 className="size-3.5 mr-1" /> 선택 삭제
+        </Button>
+      </BulkActionBar>
+
+      <BulkDeleteDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        count={bulk.selectedCount}
+        itemLabel="건의 지출 내역을 삭제하시겠습니까?"
+        onConfirm={bulkDelete}
+        loading={bulkBusy}
+        confirmLabel="삭제"
+      />
+
+      <PurgeByFilterDialog
+        open={purgeOpen}
+        onOpenChange={setPurgeOpen}
+        filter={{
+          table: "ad_spend",
+          filters: [
+            { column: "spend_date", op: "gte", value: startDate },
+            { column: "spend_date", op: "lte", value: endDate },
+            ...(tab === "광고비" ? [{ column: "category", op: "eq" as const, value: "광고비" }] : []),
+            ...(tab === "기타지출" ? [{ column: "category", op: "eq" as const, value: "기타지출" }] : []),
+          ],
+          summary: `집행일 ${startDate} ~ ${endDate} · 분류=${tab}`,
+        }}
+        onDone={fetchRows}
+      />
     </div>
   );
 }
