@@ -53,8 +53,13 @@ const Index = () => {
       <ChannelActivationBreakdown />
       <ActivationBreakdown />
 
+      {/* === 카테고리별(모바일/홈/업셀) 누적 실적 === */}
+      <section className="grid grid-cols-2 gap-2 mb-3">
+        <CategoryPerformanceCards />
+      </section>
+
       {/* [2] 중간 — 수익 및 효율 */}
-      <section className="grid grid-cols-2 lg:grid-cols-8 gap-2 mb-3">
+      <section className="grid grid-cols-2 lg:grid-cols-9 gap-2 mb-3">
         <CompanySummaryCards />
         <StatCard
           label="당월 순이익"
