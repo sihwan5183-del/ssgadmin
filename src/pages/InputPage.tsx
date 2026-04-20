@@ -622,6 +622,18 @@ const InputPage = () => {
             <Download className="size-4 mr-2" />
             양식 샘플 다운로드
           </Button>
+          {isAdmin && (
+            <Button
+              type="button"
+              onClick={() => setTemplateEditorOpen(true)}
+              disabled={busy}
+              variant="outline"
+              className="rounded-xl"
+            >
+              <Pencil className="size-4 mr-2" />
+              양식 편집
+            </Button>
+          )}
           <Button
             type="button"
             onClick={() => fileRef.current?.click()}
