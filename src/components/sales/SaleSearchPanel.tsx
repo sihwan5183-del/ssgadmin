@@ -503,8 +503,9 @@ export const SaleSearchPanel = () => {
                                 )}
                               </div>
                             </div>
-                            <Edit3 className="size-3.5 text-muted-foreground" />
-                          </button>
+                            <Edit3 className="size-3.5 text-muted-foreground self-center mr-3" />
+                            </button>
+                          </div>
                         );
                       })}
                     </div>
