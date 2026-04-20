@@ -1079,7 +1079,7 @@ const SummaryCard = ({
   };
   return (
     <div className={cn("rounded-2xl border bg-gradient-to-br p-4", tone[accent])}>
-      <div className="flex items-center gap-2 text-[11px] font-medium opacity-90">
+      <div className="flex items-center gap-2 text-[11px] font-medium opacity-90 text-primary">
         <Icon className="size-3.5" /> {label}
       </div>
       <div className="mt-1.5 text-lg md:text-xl font-bold tabular-nums tracking-tight text-foreground">
