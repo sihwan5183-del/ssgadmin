@@ -389,6 +389,35 @@ export function UserManagementPanel() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 임시 승인 링크 */}
+      <Dialog open={!!override} onOpenChange={(o) => !o && setOverride(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>임시 승인 링크 발급</DialogTitle>
+          </DialogHeader>
+          {override && (
+            <div className="space-y-3 py-2">
+              <p className="text-sm text-muted-foreground">
+                <span className="text-foreground font-medium">{override.user.display_name}</span>님이
+                간편인증을 받지 못할 때 이 링크를 직접 전달하세요. 5분간 1회 유효합니다.
+              </p>
+              <div className="rounded-lg border border-border/50 bg-background/40 p-3 text-[11px] font-mono break-all">
+                {override.link}
+              </div>
+              <Button size="sm" variant="outline" className="w-full" onClick={() => {
+                navigator.clipboard.writeText(override.link);
+                toast.success("링크 복사됨");
+              }}>
+                <Copy className="size-3.5 mr-1" /> 복사
+              </Button>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOverride(null)}>닫기</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
