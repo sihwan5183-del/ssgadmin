@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Plus, Trash2, ArrowUp, ArrowDown, Save, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -182,9 +182,9 @@ export const ExcelTemplateEditor = ({
           </div>
         </div>
 
-        <ScrollArea className="min-h-0 flex-1 rounded-lg border border-border/40">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-muted-foreground sticky top-0">
+        <div className="min-h-0 flex-1 rounded-lg border border-border/40 overflow-auto">
+          <table className="w-full text-sm border-separate border-spacing-0">
+            <thead className="bg-muted text-muted-foreground sticky top-0 z-10 shadow-sm">
               <tr>
                 <th className="text-left px-2 py-2 w-12">#</th>
                 <th className="text-left px-2 py-2">헤더명 (엑셀 컬럼)</th>
@@ -241,14 +241,14 @@ export const ExcelTemplateEditor = ({
               )}
             </tbody>
           </table>
-        </ScrollArea>
+        </div>
 
-        <div className="text-[11px] text-muted-foreground mt-2">
+        <div className="text-[11px] text-muted-foreground mt-2 flex-shrink-0">
           ⚠️ 업로드 파서는 기존 헤더명을 인식합니다. 기본 헤더명을 변경하면 업로드가 안 될 수 있어요.
           새 컬럼은 다운로드 양식에만 추가되며, 업로드 시 sales.custom_fields로 저장하려면 별도 매핑 업로드를 사용하세요.
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0 mt-2 pt-3 border-t border-border/40">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             취소
           </Button>
