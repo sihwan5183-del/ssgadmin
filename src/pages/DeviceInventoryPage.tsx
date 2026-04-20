@@ -813,6 +813,8 @@ export default function DeviceInventoryPage() {
         </div>
       </Card>
       )}
+        </TabsContent>
+      </Tabs>
 
       <BulkActionBar count={bulk.selectedCount} onClear={bulk.clear}>
         {STATUSES.map((s) => (
