@@ -32,7 +32,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { BulkActionBar } from "@/components/common/BulkActionBar";
 import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
+import { PurgeByFilterDialog } from "@/components/common/PurgeByFilterDialog";
 import { useRole } from "@/hooks/useRole";
+import { ShieldAlert } from "lucide-react";
 
 const STATUSES = ["재고", "판매중", "이동중", "개통완료", "반품"] as const;
 type Status = typeof STATUSES[number];
@@ -137,6 +139,7 @@ export default function DeviceInventoryPage() {
   const bulk = useBulkSelection<string>(filtered.map((r) => r.id));
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [purgeOpen, setPurgeOpen] = useState(false);
   const bulkDelete = async () => {
     setBulkBusy(true);
     const { error } = await supabase.from("device_inventory").delete().in("id", bulk.selectedIds);
@@ -460,7 +463,32 @@ export default function DeviceInventoryPage() {
             ))}
           </SelectContent>
         </Select>
+        {isAdmin && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-11 border-destructive/40 text-destructive hover:bg-destructive/10"
+            onClick={() => setPurgeOpen(true)}
+            disabled={filtered.length === 0}
+          >
+            <ShieldAlert className="size-4 mr-1.5" /> 조건 전체삭제
+          </Button>
+        )}
       </div>
+
+      <PurgeByFilterDialog
+        open={purgeOpen}
+        onOpenChange={setPurgeOpen}
+        filter={{
+          table: "device_inventory",
+          filters: [
+            ...(statusFilter !== "all" ? [{ column: "status", op: "eq" as const, value: statusFilter }] : []),
+            ...(storeFilter !== "all" ? [{ column: "current_store_id", op: "eq" as const, value: storeFilter }] : []),
+          ],
+          summary: `상태=${statusFilter === "all" ? "전체" : statusFilter}${storeFilter !== "all" ? ` · 매장 ID=${storeFilter}` : ""}`,
+        }}
+        onDone={load}
+      />
 
       <Card className="glass border-border/40 overflow-hidden">
         <div className="overflow-x-auto">
