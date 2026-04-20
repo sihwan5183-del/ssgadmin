@@ -966,6 +966,13 @@ const InputPage = () => {
         onConfirm={handleMappingConfirm}
       />
 
+      <ExcelTemplateEditor
+        open={templateEditorOpen}
+        onOpenChange={setTemplateEditorOpen}
+        settingKey={TEMPLATE_KEY}
+        title="실적 엑셀 양식 편집"
+      />
+
       {/* 최근 판매 원장 */}
       <section className="glass-strong rounded-2xl p-5 md:p-6 shadow-card-elevated">
         <div className="flex items-baseline justify-between mb-4 flex-wrap gap-3">
