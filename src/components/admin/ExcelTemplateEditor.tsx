@@ -25,17 +25,41 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   settingKey: string;
   title?: string;
+  /** 기본 헤더 목록 (저장된 값이 없거나 '기본값 복원' 시 사용) */
+  defaultHeaders?: string[];
+  defaultSheetName?: string;
+  defaultGuide?: string;
   onSaved?: (tpl: ExcelTemplate) => void;
 }
 
-const DEFAULT_TPL: ExcelTemplate = {
-  headers: [{ key: "고객명", example: "" }],
-  guide: "이 행은 안내용입니다 (삭제하지 마세요). 데이터는 3행부터 입력하세요.",
-  sheet_name: "Sheet1",
-};
+const FALLBACK_DEFAULT_HEADERS = ["고객명"];
 
-export const ExcelTemplateEditor = ({ open, onOpenChange, settingKey, title, onSaved }: Props) => {
-  const [tpl, setTpl] = useState<ExcelTemplate>(DEFAULT_TPL);
+const buildDefault = (
+  headers: string[],
+  sheet_name: string,
+  guide: string,
+): ExcelTemplate => ({
+  headers: headers.map((k) => ({ key: k, example: "" })),
+  guide,
+  sheet_name,
+});
+
+export const ExcelTemplateEditor = ({
+  open,
+  onOpenChange,
+  settingKey,
+  title,
+  defaultHeaders,
+  defaultSheetName = "Sheet1",
+  defaultGuide = "이 행은 안내용입니다 (삭제하지 마세요). 데이터는 3행부터 입력하세요.",
+  onSaved,
+}: Props) => {
+  const initialDefault = buildDefault(
+    defaultHeaders && defaultHeaders.length > 0 ? defaultHeaders : FALLBACK_DEFAULT_HEADERS,
+    defaultSheetName,
+    defaultGuide,
+  );
+  const [tpl, setTpl] = useState<ExcelTemplate>(initialDefault);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -48,10 +72,27 @@ export const ExcelTemplateEditor = ({ open, onOpenChange, settingKey, title, onS
       .eq("key", settingKey)
       .maybeSingle()
       .then(({ data }) => {
-        if (data?.value) setTpl(data.value as unknown as ExcelTemplate);
+        const v: any = data?.value;
+        if (v && Array.isArray(v.headers) && v.headers.length > 0) {
+          // 저장된 헤더가 기본 헤더보다 적으면, 누락된 기본 헤더를 자동으로 뒤에 합쳐 노출
+          const savedKeys = new Set(v.headers.map((h: any) => h.key));
+          const missing = (defaultHeaders ?? []).filter((k) => !savedKeys.has(k));
+          const merged = missing.length > 0
+            ? { ...v, headers: [...v.headers, ...missing.map((k) => ({ key: k, example: "" }))] }
+            : v;
+          setTpl(merged as ExcelTemplate);
+        } else {
+          setTpl(initialDefault);
+        }
         setLoading(false);
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, settingKey]);
+
+  const resetToDefault = () => {
+    setTpl(initialDefault);
+    toast.info("기본 헤더로 초기화했습니다 (저장 전까지는 반영되지 않음)");
+  };
 
   const update = (i: number, patch: Partial<TemplateHeader>) =>
     setTpl((t) => ({ ...t, headers: t.headers.map((h, idx) => (idx === i ? { ...h, ...patch } : h)) }));
