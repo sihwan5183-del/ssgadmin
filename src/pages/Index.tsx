@@ -2,9 +2,8 @@ import { Header } from "@/components/layout/Header";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { HeroPerformance } from "@/components/dashboard/HeroPerformance";
 import { RadialGoalGauge } from "@/components/dashboard/RadialGoalGauge";
-import { PersonalRevenueRanking } from "@/components/dashboard/PersonalRevenueRanking";
-import { ChannelEfficiencyAnalysis } from "@/components/dashboard/ChannelEfficiencyAnalysis";
-import { CompanySummaryCards } from "@/components/dashboard/CompanySummaryCards";
+import { StoreRevenueRanking } from "@/components/dashboard/StoreRevenueRanking";
+import { StoreEfficiencyBubble } from "@/components/dashboard/StoreEfficiencyBubble";
 import { LiveActivityFeed } from "@/components/dashboard/LiveActivityFeed";
 import { PlannerFeed } from "@/components/dashboard/PlannerFeed";
 import { ActivationBreakdown } from "@/components/dashboard/ActivationBreakdown";
@@ -21,7 +20,6 @@ import { StrategyModelGauges } from "@/components/dashboard/StrategyModelGauges"
 import { PendingItemsCard } from "@/components/dashboard/PendingItemsCard";
 import { CashTodayCard } from "@/components/dashboard/CashTodayCard";
 import { MyReviewAlerts } from "@/components/dashboard/MyReviewAlerts";
-import { CategoryPerformanceCards } from "@/components/dashboard/CategoryPerformanceCards";
 import { summaryStats, formatShortKRW } from "@/data/mockData";
 import { TrendingUp, Wallet, Megaphone, Target } from "lucide-react";
 import { useMarketingSpend } from "@/hooks/useMarketingSpend";
@@ -50,16 +48,11 @@ const Index = () => {
         </div>
       </section>
 
-      {/* === 채널별 개통 현황 + 카테고리별(모바일/홈/업셀) 실적 === */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-2 mb-3">
-        <ChannelActivationBreakdown />
-        <CategoryPerformanceCards />
-      </section>
+      <ChannelActivationBreakdown />
       <ActivationBreakdown />
 
       {/* [2] 중간 — 수익 및 효율 */}
-      <section className="grid grid-cols-2 lg:grid-cols-9 gap-2 mb-3">
-        <CompanySummaryCards />
+      <section className="grid grid-cols-2 lg:grid-cols-6 gap-2 mb-3">
         <StatCard
           label="당월 순이익"
           value={formatShortKRW(summaryStats.netProfit)}
@@ -103,8 +96,8 @@ const Index = () => {
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-2 mb-3">
-        <PersonalRevenueRanking />
-        <ChannelEfficiencyAnalysis />
+        <StoreRevenueRanking />
+        <StoreEfficiencyBubble />
       </section>
 
       <section className="mb-3">

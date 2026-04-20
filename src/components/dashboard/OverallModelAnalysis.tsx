@@ -2,9 +2,9 @@ import {
   Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell, Legend,
 } from "recharts";
 import { Sparkles, TrendingUp, Trophy } from "lucide-react";
+import { getOverallModelStats } from "@/data/channelModelData";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { useDashboardModelAnalytics } from "@/hooks/useDashboardModelAnalytics";
 
 const formatKRW = (n: number) => "₩" + n.toLocaleString("ko-KR");
 const formatShortKRW = (n: number) => {
@@ -14,7 +14,7 @@ const formatShortKRW = (n: number) => {
 };
 
 export const OverallModelAnalysis = () => {
-  const { models: stats, loading } = useDashboardModelAnalytics();
+  const stats = getOverallModelStats();
   const totalCount = stats.reduce((s, m) => s + m.count, 0);
   const totalRevenue = stats.reduce((s, m) => s + m.revenue, 0);
   const strategyCount = stats.filter((m) => m.isStrategy).reduce((s, m) => s + m.count, 0);
@@ -60,58 +60,62 @@ export const OverallModelAnalysis = () => {
             <span className="text-[11px] text-muted-foreground">단위: 건</span>
           </div>
           <div className="h-80">
-            {loading ? (
-              <div className="h-full grid place-items-center text-sm text-muted-foreground">불러오는 중…</div>
-            ) : stats.length === 0 ? (
-              <div className="h-full grid place-items-center text-sm text-muted-foreground">선택한 기간의 모델 데이터가 없습니다</div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis
-                    dataKey="name"
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={11}
-                    tickLine={false}
-                    axisLine={false}
-                    interval={0}
-                    tick={({ x, y, payload }) => {
-                      const label = String(payload.value);
-                      const short = label.length > 8 ? label.slice(0, 7) + "…" : label;
-                      return (
-                        <text x={x} y={(y as number) + 14} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize={11}>
-                          {short}
-                        </text>
-                      );
-                    }}
-                  />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    cursor={{ fill: "hsl(var(--primary) / 0.08)" }}
-                    contentStyle={{
-                      background: "hsl(240 18% 8% / 0.95)",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: 12,
-                      fontSize: 12,
-                    }}
-                    formatter={(v: number, _n, p: any) => [`${v}건 · 점유율 ${p.payload.share.toFixed(1)}%`, p.payload.name]}
-                  />
-                  {(() => {
-                    const LegendAny = Legend as any;
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  stroke="hsl(var(--muted-foreground))"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                  interval={0}
+                  tick={({ x, y, payload }) => {
+                    const label = String(payload.value);
+                    const short = label.length > 8 ? label.slice(0, 7) + "…" : label;
                     return (
-                      <LegendAny
-                        wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
-                        iconType="circle"
-                        payload={stats.map((m) => ({ value: m.name, type: "circle", id: m.name, color: m.color }))}
-                      />
+                      <text x={x} y={(y as number) + 14} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize={11}>
+                        {short}
+                      </text>
                     );
-                  })()}
-                  <Bar dataKey="count" radius={[8, 8, 0, 0]}>
-                    {stats.map((m) => <Cell key={m.name} fill={m.color} />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
+                  }}
+                />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+                <Tooltip
+                  cursor={{ fill: "hsl(var(--primary) / 0.08)" }}
+                  contentStyle={{
+                    background: "hsl(240 18% 8% / 0.95)",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: 12,
+                    fontSize: 12,
+                  }}
+                  formatter={(v: number, _n, p: any) => [
+                    `${v}건 · 점유율 ${p.payload.share.toFixed(1)}%`,
+                    p.payload.name,
+                  ]}
+                />
+                {(() => {
+                  const LegendAny = Legend as any;
+                  return (
+                    <LegendAny
+                      wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+                      iconType="circle"
+                      payload={stats.map((m) => ({
+                        value: m.name,
+                        type: "circle",
+                        id: m.name,
+                        color: m.color,
+                      }))}
+                    />
+                  );
+                })()}
+                <Bar dataKey="count" radius={[8, 8, 0, 0]}>
+                  {stats.map((m) => (
+                    <Cell key={m.name} fill={m.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
 

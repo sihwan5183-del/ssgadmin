@@ -1,30 +1,29 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import {
   Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend,
 } from "recharts";
 import { Sparkles, Trophy, TrendingUp } from "lucide-react";
+import {
+  models,
+  stackedChannelData,
+  getChannelTop5,
+  getChannelPolicyShare,
+  channelModelData,
+} from "@/data/channelModelData";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { useDashboardModelAnalytics } from "@/hooks/useDashboardModelAnalytics";
 
 const formatKRW = (n: number) => "₩" + n.toLocaleString("ko-KR");
 
 export const ChannelModelAnalysis = () => {
-  const { loading, stackedChannelData, policyShare, channelRows, modelKeys } = useDashboardModelAnalytics();
-  const [selectedChannel, setSelectedChannel] = useState<string>("");
-  const selectedRow = useMemo(
-    () => channelRows.find((r) => r.channel === selectedChannel) ?? channelRows[0],
-    [channelRows, selectedChannel],
-  );
-  const top5 = selectedRow?.models.slice(0, 5) ?? [];
+  const [selectedChannel, setSelectedChannel] = useState<string>(channelModelData[0]?.channel ?? "");
+  const top5 = getChannelTop5(selectedChannel);
+  const policyShare = getChannelPolicyShare();
+  const selectedRow = channelModelData.find((r) => r.channel === selectedChannel);
   const channelTotal = selectedRow?.models.reduce((s, m) => s + m.count, 0) ?? 0;
   const channelAvgRebate = selectedRow && channelTotal > 0
     ? Math.round(selectedRow.models.reduce((s, m) => s + m.avgRebate * m.count, 0) / channelTotal)
     : 0;
-
-  useEffect(() => {
-    if (!selectedRow?.channel && channelRows[0]?.channel) setSelectedChannel(channelRows[0].channel);
-  }, [channelRows, selectedRow?.channel]);
 
   return (
     <section className="glass-strong rounded-2xl p-5 md:p-6 shadow-card-elevated">
@@ -55,46 +54,43 @@ export const ChannelModelAnalysis = () => {
             <span className="text-[11px] text-muted-foreground">단위: 건</span>
           </div>
           <div className="h-80">
-            {loading ? (
-              <div className="h-full grid place-items-center text-sm text-muted-foreground">불러오는 중…</div>
-            ) : stackedChannelData.length === 0 ? (
-              <div className="h-full grid place-items-center text-sm text-muted-foreground">선택한 기간의 채널 데이터가 없습니다</div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={stackedChannelData}
-                  margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
-                  onClick={(e: any) => {
-                    if (e?.activeLabel) setSelectedChannel(e.activeLabel as string);
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={stackedChannelData}
+                margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+                onClick={(e: any) => {
+                  if (e?.activeLabel) setSelectedChannel(e.activeLabel as string);
+                }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <XAxis dataKey="channel" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+                <Tooltip
+                  cursor={{ fill: "hsl(var(--primary) / 0.08)" }}
+                  contentStyle={{
+                    background: "hsl(240 18% 8% / 0.95)",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: 12,
+                    fontSize: 12,
                   }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis dataKey="channel" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    cursor={{ fill: "hsl(var(--primary) / 0.08)" }}
-                    contentStyle={{
-                      background: "hsl(240 18% 8% / 0.95)",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: 12,
-                      fontSize: 12,
-                    }}
-                    formatter={(v: number, name: string) => [`${v}건`, name]}
+                  formatter={(v: number, name: string) => [`${v}건`, name]}
+                />
+                <Legend
+                  wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+                  iconType="circle"
+                />
+                {models.map((m, i) => (
+                  <Bar
+                    key={m.name}
+                    dataKey={m.name}
+                    stackId="a"
+                    fill={m.color}
+                    radius={i === models.length - 1 ? [8, 8, 0, 0] : 0}
+                    cursor="pointer"
                   />
-                  <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} iconType="circle" />
-                  {modelKeys.map((m, i) => (
-                    <Bar
-                      key={m.name}
-                      dataKey={m.name}
-                      stackId="a"
-                      fill={m.color}
-                      radius={i === modelKeys.length - 1 ? [8, 8, 0, 0] : 0}
-                      cursor="pointer"
-                    />
-                  ))}
-                </BarChart>
-              </ResponsiveContainer>
-            )}
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
