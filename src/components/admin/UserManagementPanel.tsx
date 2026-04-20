@@ -32,7 +32,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { KeyRound, UserX, UserCheck, Pencil, Search, Smartphone, Copy } from "lucide-react";
+import { KeyRound, UserX, UserCheck, Pencil, Search, Smartphone, Copy, UserMinus, UserCog } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { BulkActionBar } from "@/components/common/BulkActionBar";
+import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
 
 interface UserRow {
   user_id: string;
