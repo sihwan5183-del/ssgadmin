@@ -16,7 +16,11 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onDone: () => void;
+  /** IoT(도그마루) 모드: 모델 고정 + 부가 필드 숨김 */
+  iotMode?: boolean;
 }
+
+const IOT_FIXED_MODEL = "우리집지킴이Easy2";
 
 /** 바코드/공백/특수문자 제거 + 대문자화 (서버 정규화와 동일 규칙) */
 const normalizeSerial = (raw: string) =>
@@ -24,11 +28,11 @@ const normalizeSerial = (raw: string) =>
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
-export const QuickScanDialog = ({ open, onOpenChange, onDone }: Props) => {
+export const QuickScanDialog = ({ open, onOpenChange, onDone, iotMode = false }: Props) => {
   const { user } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [model, setModel] = useState("");
-  const [kind, setKind] = useState("휴대폰");
+  const [model, setModel] = useState(iotMode ? IOT_FIXED_MODEL : "");
+  const [kind, setKind] = useState<string>(iotMode ? "IoT(도그마루)" : "휴대폰");
   const [color, setColor] = useState("");
   const [capacity, setCapacity] = useState("");
   const [stockInDate, setStockInDate] = useState(todayISO());
@@ -45,6 +49,11 @@ export const QuickScanDialog = ({ open, onOpenChange, onDone }: Props) => {
     setList([]);
     setSerialBuf("");
     setBulkText("");
+    setModel(iotMode ? IOT_FIXED_MODEL : "");
+    setKind(iotMode ? "IoT(도그마루)" : "휴대폰");
+    setColor("");
+    setCapacity("");
+    setPurchasePrice(0);
     (async () => {
       const { data } = await supabase
         .from("device_inventory")
@@ -54,7 +63,7 @@ export const QuickScanDialog = ({ open, onOpenChange, onDone }: Props) => {
       setExistingSerials(new Set((data ?? []).map((d: any) => d.serial_no).filter(Boolean)));
     })();
     setTimeout(() => inputRef.current?.focus(), 200);
-  }, [open]);
+  }, [open, iotMode]);
 
   const addSerial = (raw: string) => {
     const norm = normalizeSerial(raw);
@@ -109,15 +118,16 @@ export const QuickScanDialog = ({ open, onOpenChange, onDone }: Props) => {
     if (!model.trim()) return toast.error("모델명을 먼저 입력하세요");
     if (list.length === 0) return toast.error("등록할 일련번호를 스캔하세요");
     setBusy(true);
+    const isIot = iotMode || kind === "IoT(도그마루)";
     const records = list.map((s) => ({
-      model: model.trim(),
+      model: isIot ? IOT_FIXED_MODEL : model.trim(),
       device_kind: kind,
       serial_no: s,
-      color: color || null,
-      capacity: capacity || null,
+      color: isIot ? null : (color || null),
+      capacity: isIot ? null : (capacity || null),
       status: "입고",
       stock_in_date: stockInDate || todayISO(),
-      purchase_price: Number(purchasePrice) || 0,
+      purchase_price: isIot ? 0 : (Number(purchasePrice) || 0),
       created_by: user.id,
     }));
     const { error } = await supabase.from("device_inventory").insert(records);
@@ -134,50 +144,63 @@ export const QuickScanDialog = ({ open, onOpenChange, onDone }: Props) => {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ScanLine className="size-5 text-primary-glow" />
-            연속 스캔 등록 (바코드)
+            연속 스캔 등록 (바코드){iotMode && " · 도그마루 IoT"}
           </DialogTitle>
           <DialogDescription>
-            상단에서 모델·유형을 1회 선택하고, 일련번호 칸에 바코드를 스캔하면 즉시 추가됩니다.
-            (스캐너의 자동 Enter 전송 기능 사용)
+            {iotMode
+              ? `모델은 「${IOT_FIXED_MODEL}」로 자동 고정됩니다. 일련번호만 스캔하세요.`
+              : "상단에서 모델·유형을 1회 선택하고, 일련번호 칸에 바코드를 스캔하면 즉시 추가됩니다."}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           <div>
-            <Label className="text-xs">모델 *</Label>
-            <Input value={model} onChange={(e) => setModel(e.target.value)} placeholder="예: iPhone 16 Pro" />
+            <Label className="text-xs">모델 {iotMode ? "(고정)" : "*"}</Label>
+            <Input
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              placeholder="예: iPhone 16 Pro"
+              disabled={iotMode}
+              className={iotMode ? "bg-muted/40" : ""}
+            />
           </div>
-          <div>
-            <Label className="text-xs">재고 유형</Label>
-            <Select value={kind} onValueChange={setKind}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="휴대폰">휴대폰</SelectItem>
-                <SelectItem value="IoT(도그마루)">IoT(도그마루)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {!iotMode && (
+            <div>
+              <Label className="text-xs">재고 유형</Label>
+              <Select value={kind} onValueChange={setKind}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="휴대폰">휴대폰</SelectItem>
+                  <SelectItem value="IoT(도그마루)">IoT(도그마루)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div>
             <Label className="text-xs">입고일</Label>
             <Input type="date" value={stockInDate} onChange={(e) => setStockInDate(e.target.value)} />
           </div>
-          <div>
-            <Label className="text-xs">색상</Label>
-            <Input value={color} onChange={(e) => setColor(e.target.value)} />
-          </div>
-          <div>
-            <Label className="text-xs">용량</Label>
-            <Input value={capacity} onChange={(e) => setCapacity(e.target.value)} />
-          </div>
-          <div>
-            <Label className="text-xs">매입가</Label>
-            <Input
-              type="number"
-              inputMode="numeric"
-              value={purchasePrice}
-              onChange={(e) => setPurchasePrice(Number(e.target.value) || 0)}
-            />
-          </div>
+          {!iotMode && (
+            <>
+              <div>
+                <Label className="text-xs">색상</Label>
+                <Input value={color} onChange={(e) => setColor(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-xs">용량</Label>
+                <Input value={capacity} onChange={(e) => setCapacity(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-xs">매입가</Label>
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  value={purchasePrice}
+                  onChange={(e) => setPurchasePrice(Number(e.target.value) || 0)}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         <div className="mt-2 p-3 rounded-lg border border-primary/30 bg-primary/5">
