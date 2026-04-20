@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { Sparkles } from "lucide-react";
 import { formatShortKRW } from "@/data/mockData";
+import { classifySale, pureProfit, DEFAULT_CATEGORY_META } from "@/lib/salesCategory";
 
 interface ChannelBubble {
   channel: string;
@@ -21,6 +22,7 @@ interface ChannelBubble {
   activations: number;
   conversion: number; // %
   margin: number; // 총 마진(원)
+  byCat: { mobile: number; home: number; upsell: number };
 }
 
 const NEON = [
@@ -52,10 +54,10 @@ export const ChannelEfficiencyAnalysis = () => {
       const [{ data: salesRows }, { data: inquiryRows }] = await Promise.all([
         supabase
           .from("sales")
-          .select("channel, net_fee, distributor_amount, cash_support_amount, extra_subsidy")
+          .select("channel, product, vas1, vas2, vas_fee, net_fee, distributor_amount, cash_support_amount, extra_subsidy")
           .gte("open_date", startDate)
           .lte("open_date", endDate)
-          .limit(10000),
+          .limit(20000),
         supabase
           .from("inquiries")
           .select("channel")
@@ -68,7 +70,14 @@ export const ChannelEfficiencyAnalysis = () => {
       const map = new Map<string, ChannelBubble>();
       const ensure = (k: string) =>
         map.get(k) ??
-        (map.set(k, { channel: k, inquiries: 0, activations: 0, conversion: 0, margin: 0 }), map.get(k)!);
+        (map.set(k, {
+          channel: k,
+          inquiries: 0,
+          activations: 0,
+          conversion: 0,
+          margin: 0,
+          byCat: { mobile: 0, home: 0, upsell: 0 },
+        }), map.get(k)!);
 
       (inquiryRows ?? []).forEach((r: any) => {
         const k = r.channel || "기타";
@@ -77,12 +86,11 @@ export const ChannelEfficiencyAnalysis = () => {
       (salesRows ?? []).forEach((r: any) => {
         const k = r.channel || "기타";
         const cur = ensure(k);
-        cur.activations += 1;
-        cur.margin +=
-          (Number(r.net_fee) || 0) -
-          (Number(r.distributor_amount) || 0) -
-          (Number(r.cash_support_amount) || 0) -
-          (Number(r.extra_subsidy) || 0);
+        const cat = classifySale(r);
+        const p = pureProfit(r);
+        cur.byCat[cat] += p;
+        cur.margin += p;
+        if (cat !== "upsell") cur.activations += 1;
       });
 
       const arr = Array.from(map.values()).map((b) => ({
@@ -190,28 +198,41 @@ export const ChannelEfficiencyAnalysis = () => {
 
           {/* 채널별 요약 표 */}
           <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-            {sorted.map((b, i) => (
-              <div
-                key={b.channel}
-                className="rounded-xl p-3 bg-muted/40 border border-border/40"
-                style={{ borderLeftColor: NEON[i % NEON.length], borderLeftWidth: 3 }}
-              >
-                <div className="text-xs font-semibold truncate">{b.channel}</div>
-                <div className="text-[10px] text-muted-foreground mt-0.5">
-                  인입 {b.inquiries} · 개통 {b.activations}
+            {sorted.map((b, i) => {
+              const total = Math.max(1, b.byCat.mobile + b.byCat.home + b.byCat.upsell);
+              const pcts = {
+                mobile: (b.byCat.mobile / total) * 100,
+                home: (b.byCat.home / total) * 100,
+                upsell: (b.byCat.upsell / total) * 100,
+              };
+              return (
+                <div
+                  key={b.channel}
+                  className="rounded-xl p-3 bg-muted/40 border border-border/40"
+                  style={{ borderLeftColor: NEON[i % NEON.length], borderLeftWidth: 3 }}
+                >
+                  <div className="text-xs font-semibold truncate">{b.channel}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">
+                    인입 {b.inquiries} · 개통 {b.activations}
+                  </div>
+                  <div className="flex items-baseline justify-between mt-1.5">
+                    <span className="text-[10px] text-muted-foreground">전환</span>
+                    <span className="text-sm font-bold tabular-nums">{b.conversion}%</span>
+                  </div>
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-[10px] text-muted-foreground">마진</span>
+                    <span className="text-xs font-semibold tabular-nums text-gradient">
+                      {formatShortKRW(b.margin)}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex h-1.5 rounded-full overflow-hidden bg-muted/40" title={`모${formatShortKRW(b.byCat.mobile)} / 홈${formatShortKRW(b.byCat.home)} / 업${formatShortKRW(b.byCat.upsell)}`}>
+                    <div style={{ width: `${pcts.mobile}%`, background: DEFAULT_CATEGORY_META.mobile.color }} />
+                    <div style={{ width: `${pcts.home}%`, background: DEFAULT_CATEGORY_META.home.color }} />
+                    <div style={{ width: `${pcts.upsell}%`, background: DEFAULT_CATEGORY_META.upsell.color }} />
+                  </div>
                 </div>
-                <div className="flex items-baseline justify-between mt-1.5">
-                  <span className="text-[10px] text-muted-foreground">전환</span>
-                  <span className="text-sm font-bold tabular-nums">{b.conversion}%</span>
-                </div>
-                <div className="flex items-baseline justify-between">
-                  <span className="text-[10px] text-muted-foreground">마진</span>
-                  <span className="text-xs font-semibold tabular-nums text-gradient">
-                    {formatShortKRW(b.margin)}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}
