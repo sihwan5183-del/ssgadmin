@@ -462,14 +462,19 @@ export const SaleSearchPanel = () => {
                         const meta = APPROVAL_META[ap];
                         const Icon = meta.icon;
                         const hasUnhandled = (r.pending_items?.length ?? 0) > 0 && r.pending_resolved === false;
+                        const sel = bulk.isSelected(r.id);
                         return (
-                          <button
+                          <div
                             key={r.id}
-                            onClick={() => openDetail(r)}
-                            className={`w-full text-left px-3 py-2.5 hover:bg-muted/30 transition-colors flex items-center gap-3 ${
-                              hasUnhandled ? "bg-amber-500/[0.07] hover:bg-amber-500/[0.12]" : ""
-                            }`}
+                            className={`flex items-stretch ${sel ? "bg-primary/5" : ""} ${hasUnhandled ? "bg-amber-500/[0.07]" : ""}`}
                           >
+                            <div className="pl-3 pr-1 flex items-center" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox checked={sel} onCheckedChange={() => bulk.toggle(r.id)} />
+                            </div>
+                            <button
+                              onClick={() => openDetail(r)}
+                              className="flex-1 text-left px-2 py-2.5 hover:bg-muted/30 transition-colors flex items-center gap-3"
+                            >
                             <div className="flex-1 min-w-0">
                               <div className="text-sm font-medium flex items-center gap-2 flex-wrap">
                                 <User className="size-3 text-muted-foreground" />
