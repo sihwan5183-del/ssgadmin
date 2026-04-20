@@ -566,6 +566,27 @@ export default function DeviceInventoryPage() {
         </div>
       </Card>
 
+      <BulkActionBar count={bulk.selectedCount} onClear={bulk.clear}>
+        {STATUSES.map((s) => (
+          <Button key={s} size="sm" variant="outline" onClick={() => bulkSetStatus(s)}>
+            → {s}
+          </Button>
+        ))}
+        <Button size="sm" variant="destructive" onClick={() => setBulkDeleteOpen(true)}>
+          <Trash2 className="size-3.5 mr-1" /> 선택 삭제
+        </Button>
+      </BulkActionBar>
+
+      <BulkDeleteDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        count={bulk.selectedCount}
+        itemLabel="대의 단말기를 삭제하시겠습니까?"
+        onConfirm={bulkDelete}
+        loading={bulkBusy}
+        confirmLabel="삭제"
+      />
+
       {/* 추가/수정 다이얼로그 */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl">
