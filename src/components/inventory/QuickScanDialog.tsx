@@ -144,46 +144,57 @@ export const QuickScanDialog = ({ open, onOpenChange, onDone, iotMode = false }:
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ScanLine className="size-5 text-primary-glow" />
-            연속 스캔 등록 (바코드)
+            연속 스캔 등록 (바코드){iotMode && " · 도그마루 IoT"}
           </DialogTitle>
           <DialogDescription>
-            상단에서 모델·유형을 1회 선택하고, 일련번호 칸에 바코드를 스캔하면 즉시 추가됩니다.
-            (스캐너의 자동 Enter 전송 기능 사용)
+            {iotMode
+              ? `모델은 「${IOT_FIXED_MODEL}」로 자동 고정됩니다. 일련번호만 스캔하세요.`
+              : "상단에서 모델·유형을 1회 선택하고, 일련번호 칸에 바코드를 스캔하면 즉시 추가됩니다."}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           <div>
-            <Label className="text-xs">모델 *</Label>
-            <Input value={model} onChange={(e) => setModel(e.target.value)} placeholder="예: iPhone 16 Pro" />
+            <Label className="text-xs">모델 {iotMode ? "(고정)" : "*"}</Label>
+            <Input
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              placeholder="예: iPhone 16 Pro"
+              disabled={iotMode}
+              className={iotMode ? "bg-muted/40" : ""}
+            />
           </div>
-          <div>
-            <Label className="text-xs">재고 유형</Label>
-            <Select value={kind} onValueChange={setKind}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="휴대폰">휴대폰</SelectItem>
-                <SelectItem value="IoT(도그마루)">IoT(도그마루)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {!iotMode && (
+            <div>
+              <Label className="text-xs">재고 유형</Label>
+              <Select value={kind} onValueChange={setKind}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="휴대폰">휴대폰</SelectItem>
+                  <SelectItem value="IoT(도그마루)">IoT(도그마루)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div>
             <Label className="text-xs">입고일</Label>
             <Input type="date" value={stockInDate} onChange={(e) => setStockInDate(e.target.value)} />
           </div>
-          <div>
-            <Label className="text-xs">색상</Label>
-            <Input value={color} onChange={(e) => setColor(e.target.value)} />
-          </div>
-          <div>
-            <Label className="text-xs">용량</Label>
-            <Input value={capacity} onChange={(e) => setCapacity(e.target.value)} />
-          </div>
-          <div>
-            <Label className="text-xs">매입가</Label>
-            <Input
-              type="number"
-              inputMode="numeric"
+          {!iotMode && (
+            <>
+              <div>
+                <Label className="text-xs">색상</Label>
+                <Input value={color} onChange={(e) => setColor(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-xs">용량</Label>
+                <Input value={capacity} onChange={(e) => setCapacity(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-xs">매입가</Label>
+                <Input
+                  type="number"
+                  inputMode="numeric"
               value={purchasePrice}
               onChange={(e) => setPurchasePrice(Number(e.target.value) || 0)}
             />
