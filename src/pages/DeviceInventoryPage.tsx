@@ -307,17 +307,23 @@ export default function DeviceInventoryPage() {
         return null;
       };
       const records = data
-        .map((r) => ({
-          model: String(pick(r, "모델", "모델명", "Model") ?? "").trim(),
-          serial_no: pick(r, "일련번호", "IMEI", "시리얼", "Serial") ? String(pick(r, "일련번호", "IMEI", "시리얼", "Serial")) : null,
-          color: pick(r, "색상", "Color") ? String(pick(r, "색상", "Color")) : null,
-          capacity: pick(r, "용량", "Capacity") ? String(pick(r, "용량", "Capacity")) : null,
-          status: String(pick(r, "상태", "Status") ?? "재고"),
-          note: pick(r, "메모", "Note") ? String(pick(r, "메모", "Note")) : null,
-          stock_in_date: pick(r, "입고일", "StockInDate") ? String(pick(r, "입고일", "StockInDate")) : todayISO(),
-          purchase_price: Number(pick(r, "매입가", "PurchasePrice")) || 0,
-          created_by: user.id,
-        }))
+        .map((r) => {
+          const kindRaw = String(pick(r, "재고유형", "유형", "Kind") ?? "휴대폰").trim();
+          const kind = kindRaw.toLowerCase().includes("iot") || kindRaw.includes("도그마루") ? "IoT(도그마루)" : "휴대폰";
+          const rawSerial = pick(r, "일련번호", "IMEI", "시리얼", "Serial");
+          return {
+            model: String(pick(r, "모델", "모델명", "Model") ?? "").trim(),
+            device_kind: kind,
+            serial_no: rawSerial ? cleanSerial(String(rawSerial)) : null,
+            color: pick(r, "색상", "Color") ? String(pick(r, "색상", "Color")) : null,
+            capacity: pick(r, "용량", "Capacity") ? String(pick(r, "용량", "Capacity")) : null,
+            status: String(pick(r, "상태", "Status") ?? "입고"),
+            note: pick(r, "메모", "Note") ? String(pick(r, "메모", "Note")) : null,
+            stock_in_date: pick(r, "입고일", "StockInDate") ? String(pick(r, "입고일", "StockInDate")) : todayISO(),
+            purchase_price: Number(pick(r, "매입가", "PurchasePrice")) || 0,
+            created_by: user.id,
+          };
+        })
         .filter((r) => r.model);
       if (records.length === 0) return toast.error("등록할 데이터가 없습니다");
       const { error } = await supabase.from("device_inventory").insert(records);
