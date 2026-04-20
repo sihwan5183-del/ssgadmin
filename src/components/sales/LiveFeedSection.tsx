@@ -174,7 +174,29 @@ export function LiveFeedSection() {
     load();
   };
 
-  return (
+  // bulk
+  const ids = useMemo(() => rows.map((r) => r.id), [rows]);
+  const bulk = useBulkSelection<string>(ids);
+
+  const bulkApprove = async (status: "확정" | "반려") => {
+    setBulkBusy(true);
+    const { error } = await supabase.from("sales").update({ approval_status: status }).in("id", bulk.selectedIds);
+    setBulkBusy(false);
+    if (error) { toast.error("일괄 처리 실패: " + error.message); return; }
+    toast.success(`${bulk.selectedIds.length}건 → ${status}`);
+    bulk.clear();
+    load();
+  };
+  const bulkDelete = async () => {
+    setBulkBusy(true);
+    const { error } = await supabase.from("sales").delete().in("id", bulk.selectedIds);
+    setBulkBusy(false);
+    if (error) { toast.error("일괄 삭제 실패: " + error.message); return; }
+    toast.success(`${bulk.selectedIds.length}건 삭제됨`);
+    setBulkDeleteOpen(false);
+    bulk.clear();
+    load();
+  };
     <section className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
