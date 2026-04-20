@@ -28,6 +28,11 @@ import {
 import { exportToExcel, DEVICE_INVENTORY_COLUMNS } from "@/lib/excelExport";
 import { useInventoryAging } from "@/hooks/useInventoryAging";
 import { useLowStock } from "@/hooks/useLowStock";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { BulkActionBar } from "@/components/common/BulkActionBar";
+import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
+import { useRole } from "@/hooks/useRole";
 
 const STATUSES = ["재고", "판매중", "이동중", "개통완료", "반품"] as const;
 type Status = typeof STATUSES[number];
@@ -69,6 +74,7 @@ const emptyForm = {
 
 export default function DeviceInventoryPage() {
   const { user } = useAuth();
+  const { isAdmin } = useRole();
   const { agingDays, fallbackPrice, isAged, daysSince } = useInventoryAging();
   const { threshold: lowThreshold, low: lowModels } = useLowStock();
   const [rows, setRows] = useState<Device[]>([]);
@@ -127,6 +133,33 @@ export default function DeviceInventoryPage() {
     });
   }, [rows, search, statusFilter, storeFilter, agedOnly, isAged]);
 
+  // 일괄 선택
+  const bulk = useBulkSelection<string>(filtered.map((r) => r.id));
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const bulkDelete = async () => {
+    setBulkBusy(true);
+    const { error } = await supabase.from("device_inventory").delete().in("id", bulk.selectedIds);
+    setBulkBusy(false);
+    if (error) {
+      toast.error("삭제 실패: " + error.message);
+      return;
+    }
+    toast.success(`${bulk.selectedIds.length}건 삭제됨`);
+    setBulkDeleteOpen(false);
+    bulk.clear();
+    load();
+  };
+  const bulkSetStatus = async (status: string) => {
+    const { error } = await supabase.from("device_inventory").update({ status }).in("id", bulk.selectedIds);
+    if (error) {
+      toast.error("일괄 변경 실패: " + error.message);
+      return;
+    }
+    toast.success(`${bulk.selectedIds.length}건 → ${status}`);
+    bulk.clear();
+    load();
+  };
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
     STATUSES.forEach((s) => (c[s] = 0));
