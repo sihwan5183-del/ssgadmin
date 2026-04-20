@@ -506,7 +506,10 @@ export default function DeviceInventoryPage() {
                     agingBadge = { label: `${days}일`, cls: "bg-amber-500/20 text-amber-300 border border-amber-500/40" };
                   }
                   return (
-                    <tr key={r.id} className={`border-t border-border/30 hover:bg-muted/20 ${agingClass}`}>
+                    <tr key={r.id} className={`border-t border-border/30 hover:bg-muted/20 ${agingClass} ${bulk.isSelected(r.id) ? "bg-primary/5" : ""}`}>
+                      <td className="px-3 py-2.5">
+                        <Checkbox checked={bulk.isSelected(r.id)} onCheckedChange={() => bulk.toggle(r.id)} />
+                      </td>
                       <td className="px-3 py-2.5 font-medium">
                         <div className="flex items-center gap-2">
                           {r.model}
