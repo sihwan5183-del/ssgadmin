@@ -308,8 +308,16 @@ const InputPage = () => {
         if (error) throw error;
         toast.success("수정 완료");
       } else {
-        const { error } = await supabase.from("sales").insert(payload);
+        const { data: inserted, error } = await supabase.from("sales").insert(payload).select("id").single();
         if (error) throw error;
+        // 인입 → 실적 자동 연결
+        if (linkedInquiryId && inserted?.id) {
+          await supabase
+            .from("inquiries")
+            .update({ status: "개통완료", converted_sale_id: inserted.id })
+            .eq("id", linkedInquiryId);
+          setLinkedInquiryId(null);
+        }
         toast.success("판매 실적 저장 완료", { description: "대시보드에 즉시 반영됩니다." });
       }
       reset();
