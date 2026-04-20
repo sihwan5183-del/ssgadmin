@@ -65,8 +65,8 @@ function timeAgo(iso: string) {
 export function LiveFeedSection() {
   const { scope } = useViewScope();
   const { user } = useAuth();
-  const { isPlanner, isAdmin } = useRole();
-  const canApprove = isPlanner || isAdmin;
+  const { isAdmin, isManager } = useRole();
+  const canApprove = isAdmin || isManager;
   const [rows, setRows] = useState<FeedSale[]>([]);
   const [loading, setLoading] = useState(true);
   const [pulse, setPulse] = useState(false);
