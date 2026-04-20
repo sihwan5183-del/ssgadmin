@@ -268,6 +268,12 @@ export function UserManagementPanel() {
         <table className="w-full text-sm">
           <thead className="text-xs text-muted-foreground border-b border-border/50">
             <tr>
+              <th className="w-8 py-2 px-2">
+                <Checkbox
+                  checked={bulk.allOnPageSelected}
+                  onCheckedChange={(v) => bulk.togglePage(!!v)}
+                />
+              </th>
               <th className="text-left py-2 px-2">이름</th>
               <th className="text-left py-2 px-2">연락처</th>
               <th className="text-left py-2 px-2">매장 / 팀</th>
@@ -279,13 +285,16 @@ export function UserManagementPanel() {
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={7} className="py-6 text-center text-muted-foreground">불러오는 중…</td></tr>
+              <tr><td colSpan={8} className="py-6 text-center text-muted-foreground">불러오는 중…</td></tr>
             )}
             {!loading && filtered.length === 0 && (
-              <tr><td colSpan={7} className="py-6 text-center text-muted-foreground">결과 없음</td></tr>
+              <tr><td colSpan={8} className="py-6 text-center text-muted-foreground">결과 없음</td></tr>
             )}
             {filtered.map((u) => (
-              <tr key={u.user_id} className="border-b border-border/30 hover:bg-background/30">
+              <tr key={u.user_id} className="border-b border-border/30 hover:bg-background/30" data-state={bulk.isSelected(u.user_id) ? "selected" : undefined}>
+                <td className="py-3 px-2">
+                  <Checkbox checked={bulk.isSelected(u.user_id)} onCheckedChange={() => bulk.toggle(u.user_id)} disabled={u.user_id === me?.id} />
+                </td>
                 <td className="py-3 px-2 font-medium">
                   {u.display_name}
                   {u.user_id === me?.id && (
