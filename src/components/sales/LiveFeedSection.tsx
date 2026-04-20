@@ -224,6 +224,11 @@ export function LiveFeedSection() {
         {/* === Live feed (2 cols) === */}
         <Card className="glass border-border/40 lg:col-span-2 overflow-hidden">
           <div className="px-4 py-3 border-b border-border/40 flex items-center gap-2">
+            <Checkbox
+              checked={bulk.allOnPageSelected}
+              onCheckedChange={(v) => bulk.togglePage(!!v)}
+              aria-label="모두 선택"
+            />
             <Activity className="size-4 text-primary-glow" />
             <span className="text-sm font-medium">방금 올라온 실적</span>
           </div>
@@ -236,11 +241,17 @@ export function LiveFeedSection() {
               rows.map((r) => {
                 const noDoc = (r.doc_count ?? 0) === 0;
                 const hasPending = !r.pending_resolved && r.pending_items.length > 0;
+                const selected = bulk.isSelected(r.id);
                 return (
                   <div
                     key={r.id}
-                    className="px-4 py-3 hover:bg-muted/20 transition-colors flex items-start gap-3"
+                    className={`px-4 py-3 hover:bg-muted/20 transition-colors flex items-start gap-3 ${selected ? "bg-primary/5" : ""}`}
                   >
+                    <Checkbox
+                      checked={selected}
+                      onCheckedChange={() => bulk.toggle(r.id)}
+                      className="mt-1.5"
+                    />
                     <div className="size-9 rounded-xl bg-primary/10 grid place-items-center shrink-0">
                       <Smartphone className="size-4 text-primary-glow" />
                     </div>
