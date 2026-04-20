@@ -494,7 +494,7 @@ export default function DeviceInventoryPage() {
         </div>
       </div>
 
-      <QuickScanDialog open={quickScanOpen} onOpenChange={setQuickScanOpen} onDone={load} />
+      <QuickScanDialog open={quickScanOpen} onOpenChange={setQuickScanOpen} onDone={load} iotMode={tab === "iot"} />
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="space-y-5">
         <TabsList>
