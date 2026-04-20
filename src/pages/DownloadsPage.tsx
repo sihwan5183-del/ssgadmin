@@ -221,7 +221,7 @@ const DownloadsPage = () => {
                 <div key={row.id} className="flex items-center gap-3 p-3 rounded-lg border border-border/40 hover:border-border transition-colors">
                   <div className="shrink-0">
                     {row.status === "done" ? (
-                      <CheckCircle2 className="size-5 text-emerald-500" />
+                      <CheckCircle2 className="size-5 text-primary" />
                     ) : row.status === "error" ? (
                       <XCircle className="size-5 text-destructive" />
                     ) : (
