@@ -52,6 +52,7 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 
 export default function ExpenseInputPage() {
   const { user } = useAuth();
+  const { isAdmin } = useRole();
   const { options: MEDIA_OPTIONS } = useFieldOptions("media");
   const { options: CHANNELS } = useFieldOptions("channel");
   const { options: EXPENSE_TYPES } = useFieldOptions("expense_type");
@@ -63,6 +64,23 @@ export default function ExpenseInputPage() {
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
   const { startDate, endDate, label: periodLabel } = usePeriod();
+
+  // bulk
+  const bulk = useBulkSelection<string>(rows.map((r) => r.id));
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [purgeOpen, setPurgeOpen] = useState(false);
+
+  const bulkDelete = async () => {
+    setBulkBusy(true);
+    const { error } = await supabase.from("ad_spend").delete().in("id", bulk.selectedIds);
+    setBulkBusy(false);
+    if (error) { toast.error("삭제 실패: " + error.message); return; }
+    toast.success(`${bulk.selectedIds.length}건 삭제됨`);
+    setBulkDeleteOpen(false);
+    bulk.clear();
+    fetchRows();
+  };
 
   // sales 자동 집계 — 기간 합계 + 오늘 현금시재
   const [salesAgg, setSalesAgg] = useState({
