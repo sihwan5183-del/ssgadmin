@@ -128,6 +128,43 @@ export function UserManagementPanel() {
     );
   });
 
+  const ids = filtered.map((r) => r.user_id);
+  const bulk = useBulkSelection<string>(ids);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkStatusOpen, setBulkStatusOpen] = useState<string | null>(null);
+
+  const bulkSetStatus = async (status: "active" | "leave" | "resigned") => {
+    setBulkBusy(true);
+    const { error } = await supabase.from("profiles").update({ status }).in("user_id", bulk.selectedIds);
+    if (!error && status !== "active") {
+      // 휴직/퇴사는 로그인 차단도 함께
+      await Promise.all(
+        bulk.selectedIds.map((uid) =>
+          supabase.functions.invoke("admin-user-management", {
+            body: { action: "set_active", user_id: uid, active: false },
+          }),
+        ),
+      );
+    } else if (!error && status === "active") {
+      await Promise.all(
+        bulk.selectedIds.map((uid) =>
+          supabase.functions.invoke("admin-user-management", {
+            body: { action: "set_active", user_id: uid, active: true },
+          }),
+        ),
+      );
+    }
+    setBulkBusy(false);
+    setBulkStatusOpen(null);
+    if (error) {
+      toast.error("일괄 변경 실패: " + error.message);
+      return;
+    }
+    toast.success(`${bulk.selectedIds.length}명 → ${STATUS_LABELS[status]}`);
+    bulk.clear();
+    fetchAll();
+  };
+
   const saveProfile = async () => {
     if (!editing) return;
     const { error: pErr } = await supabase
