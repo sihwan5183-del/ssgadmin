@@ -38,7 +38,8 @@ import { ShieldAlert } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileListCard } from "@/components/common/MobileListCard";
 import { QuickScanDialog } from "@/components/inventory/QuickScanDialog";
-import { ScanLine } from "lucide-react";
+import { InventorySuperView } from "@/components/inventory/InventorySuperView";
+import { ScanLine, Building2, Cpu } from "lucide-react";
 
 const STATUSES = ["입고", "재고", "판매중", "이동중", "개통완료", "반품", "반납", "불량"] as const;
 type Status = typeof STATUSES[number];
