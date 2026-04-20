@@ -468,6 +468,29 @@ export function UserManagementPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BulkActionBar count={bulk.selectedCount} onClear={bulk.clear}>
+        <Select onValueChange={(v) => setBulkStatusOpen(v)}>
+          <SelectTrigger className="h-8 w-44 text-xs">
+            <SelectValue placeholder="재직 상태 일괄 변경" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">재직 처리</SelectItem>
+            <SelectItem value="leave">휴직 (로그인 차단)</SelectItem>
+            <SelectItem value="resigned">퇴사 (로그인 차단)</SelectItem>
+          </SelectContent>
+        </Select>
+      </BulkActionBar>
+
+      <BulkDeleteDialog
+        open={!!bulkStatusOpen}
+        onOpenChange={(v) => !v && setBulkStatusOpen(null)}
+        count={bulk.selectedCount}
+        itemLabel={`명의 직원을 ${bulkStatusOpen ? STATUS_LABELS[bulkStatusOpen] : ""}(으)로 변경하시겠습니까?`}
+        confirmLabel={bulkStatusOpen === "active" ? "재직 처리" : "변경 및 로그인 차단"}
+        loading={bulkBusy}
+        onConfirm={() => bulkSetStatus(bulkStatusOpen as any)}
+      />
     </Card>
   );
 }
