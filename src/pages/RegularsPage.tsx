@@ -504,6 +504,25 @@ const RegularsPage = () => {
           </div>
         )}
       </section>
+
+      <BulkActionBar count={bulk.selectedCount} onClear={bulk.clear}>
+        <Button size="sm" variant="outline" onClick={bulkSendCoupon}>
+          <Send className="size-3.5 mr-1" /> 쿠폰 발송 처리
+        </Button>
+        <Button size="sm" variant="destructive" onClick={() => setBulkDeleteOpen(true)}>
+          <Trash2 className="size-3.5 mr-1" /> 선택 삭제
+        </Button>
+      </BulkActionBar>
+
+      <BulkDeleteDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        count={bulk.selectedCount}
+        itemLabel="명의 단골을 삭제하시겠습니까?"
+        onConfirm={bulkDelete}
+        loading={bulkBusy}
+        confirmLabel="삭제"
+      />
     </>
   );
 };
