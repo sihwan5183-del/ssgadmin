@@ -3,11 +3,11 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useFieldOptions } from "@/hooks/useFieldOptions";
+import { useFieldDefinitions } from "@/hooks/useFieldDefinitions";
+import { DynamicFieldRenderer } from "@/components/admin/DynamicFieldRenderer";
 import { INQUIRY_STATUSES } from "@/hooks/useInquiries";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
@@ -18,48 +18,62 @@ interface Props {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+// 인입 테이블의 실제 컬럼 (이외는 custom_fields에 저장)
+const NATIVE_KEYS = new Set([
+  "channel",
+  "customer_name",
+  "phone",
+  "content",
+  "manager",
+  "note",
+]);
+
 export const InquiryForm = ({ onSaved }: Props) => {
   const { user } = useAuth();
-  const { options: channels } = useFieldOptions("inquiry_channel" as any);
-  const { options: products } = useFieldOptions("product" as any);
-  const { options: carriers } = useFieldOptions("carrier" as any);
+  const { fields, loading } = useFieldDefinitions("inquiries");
   const [busy, setBusy] = useState(false);
-  const [form, setForm] = useState({
-    inquiry_date: today(),
-    channel: "",
-    carrier: "",
-    product: "",
-    customer_name: "",
-    phone: "",
-    content: "",
-    manager: "",
-    status: "문의중" as string,
-    note: "",
-  });
-
-  const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const [inquiryDate, setInquiryDate] = useState(today());
+  const [status, setStatus] = useState<string>("문의중");
+  const [values, setValues] = useState<Record<string, any>>({});
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    if (!form.channel) {
+
+    // 필수 필드 검증
+    for (const f of fields) {
+      if (f.required && f.visible_in_form && !values[f.field_key]) {
+        toast.error(`'${f.label}' 항목은 필수입니다`);
+        return;
+      }
+    }
+
+    // native vs custom 분리
+    const native: Record<string, any> = {};
+    const custom: Record<string, any> = {};
+    for (const f of fields) {
+      const v = values[f.field_key];
+      if (v === undefined || v === "") continue;
+      if (NATIVE_KEYS.has(f.field_key)) native[f.field_key] = v;
+      else custom[f.field_key] = v;
+    }
+
+    if (!native.channel) {
       toast.error("채널을 선택해주세요");
       return;
     }
+
     setBusy(true);
     const { error } = await supabase.from("inquiries").insert({
-      inquiry_date: form.inquiry_date,
-      channel: form.channel,
-      customer_name: form.customer_name || null,
-      phone: form.phone || null,
-      content: form.content || null,
-      manager: form.manager || null,
-      status: form.status,
-      note: form.note || null,
-      custom_fields: {
-        carrier: form.carrier || null,
-        product: form.product || null,
-      },
+      inquiry_date: inquiryDate,
+      channel: native.channel,
+      customer_name: native.customer_name || null,
+      phone: native.phone || null,
+      content: native.content || null,
+      manager: native.manager || null,
+      note: native.note || null,
+      status,
+      custom_fields: custom,
       created_by: user.id,
     });
     setBusy(false);
@@ -68,80 +82,35 @@ export const InquiryForm = ({ onSaved }: Props) => {
       return;
     }
     toast.success("인입 등록 완료");
-    setForm({
-      inquiry_date: today(),
-      channel: "",
-      carrier: "",
-      product: "",
-      customer_name: "",
-      phone: "",
-      content: "",
-      manager: "",
-      status: "문의중",
-      note: "",
-    });
+    setValues({});
+    setStatus("문의중");
+    setInquiryDate(today());
     onSaved();
   };
 
   return (
     <Card className="p-4">
       <form onSubmit={submit} className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {/* 시스템 필드: 날짜/상태는 고정 */}
         <div className="space-y-1.5">
-          <Label className="text-xs">날짜</Label>
-          <Input type="date" value={form.inquiry_date} onChange={(e) => set("inquiry_date", e.target.value)} />
+          <Label className="text-xs text-muted-foreground">날짜</Label>
+          <Input type="date" value={inquiryDate} onChange={(e) => setInquiryDate(e.target.value)} />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">채널 *</Label>
-          <Select value={form.channel} onValueChange={(v) => set("channel", v)}>
-            <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
-            <SelectContent>
-              {channels.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">고객명/가상번호</Label>
-          <Input value={form.customer_name} onChange={(e) => set("customer_name", e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">통신사</Label>
-          <Select value={form.carrier} onValueChange={(v) => set("carrier", v)}>
-            <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
-            <SelectContent>
-              {carriers.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">문의상품</Label>
-          <Select value={form.product} onValueChange={(v) => set("product", v)}>
-            <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
-            <SelectContent>
-              {products.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">연락처</Label>
-          <Input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="010-..." />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">담당자</Label>
-          <Input value={form.manager} onChange={(e) => set("manager", e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">상태</Label>
-          <Select value={form.status} onValueChange={(v) => set("status", v)}>
+          <Label className="text-xs text-muted-foreground">상태</Label>
+          <Select value={status} onValueChange={setStatus}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               {INQUIRY_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
-        <div className="col-span-2 md:col-span-4 space-y-1.5">
-          <Label className="text-xs">문의내용</Label>
-          <Textarea rows={2} value={form.content} onChange={(e) => set("content", e.target.value)} />
-        </div>
+
+        {/* 관리자가 정의한 동적 필드 */}
+        {!loading && (
+          <DynamicFieldRenderer fields={fields} values={values} onChange={setValues} />
+        )}
+
         <div className="col-span-2 md:col-span-4 flex justify-end">
           <Button type="submit" disabled={busy} className="gap-2">
             <Plus className="size-4" /> {busy ? "저장 중…" : "인입 등록"}
