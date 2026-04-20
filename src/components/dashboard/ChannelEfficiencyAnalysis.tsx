@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { Sparkles } from "lucide-react";
 import { formatShortKRW } from "@/data/mockData";
+import { classifySale, pureProfit, DEFAULT_CATEGORY_META } from "@/lib/salesCategory";
 
 interface ChannelBubble {
   channel: string;
@@ -21,6 +22,7 @@ interface ChannelBubble {
   activations: number;
   conversion: number; // %
   margin: number; // 총 마진(원)
+  byCat: { mobile: number; home: number; upsell: number };
 }
 
 const NEON = [
