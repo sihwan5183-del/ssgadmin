@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { exportToExcel, DEVICE_INVENTORY_COLUMNS } from "@/lib/excelExport";
 import { useInventoryAging } from "@/hooks/useInventoryAging";
+import { useLowStock } from "@/hooks/useLowStock";
 
 const STATUSES = ["재고", "판매중", "이동중", "개통완료", "반품"] as const;
 type Status = typeof STATUSES[number];
@@ -69,6 +70,7 @@ const emptyForm = {
 export default function DeviceInventoryPage() {
   const { user } = useAuth();
   const { agingDays, fallbackPrice, isAged, daysSince } = useInventoryAging();
+  const { threshold: lowThreshold, low: lowModels } = useLowStock();
   const [rows, setRows] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
