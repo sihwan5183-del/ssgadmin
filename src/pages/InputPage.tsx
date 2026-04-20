@@ -704,23 +704,13 @@ const InputPage = () => {
           )}
           <Button
             type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={busy}
-            variant="outline"
-            className="rounded-xl"
-          >
-            <Upload className="size-4 mr-2" />
-            기본 양식 업로드
-          </Button>
-          <Button
-            type="button"
             onClick={() => mappingFileRef.current?.click()}
             disabled={busy}
             variant="outline"
-            className="rounded-xl"
+            className="rounded-xl border-primary/40 text-primary-glow hover:bg-primary/10"
           >
             <Sparkles className="size-4 mr-2" />
-            매핑 업로드
+            엑셀 업로드 (스마트 매핑 + 검증)
           </Button>
           <Button
             type="button"
