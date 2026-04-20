@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { KeyRound, UserX, UserCheck, Pencil, Search } from "lucide-react";
+import { KeyRound, UserX, UserCheck, Pencil, Search, Smartphone, Copy } from "lucide-react";
 
 interface UserRow {
   user_id: string;
@@ -237,7 +237,13 @@ export function UserManagementPanel() {
                     <span className="ml-2 text-[10px] text-primary">(나)</span>
                   )}
                 </td>
-                <td className="py-3 px-2 text-muted-foreground">{u.phone || "-"}</td>
+                <td className="py-3 px-2">
+                  {u.phone ? (
+                    <span className="text-foreground font-mono text-xs">{u.phone}</span>
+                  ) : (
+                    <span className="text-destructive text-xs">미등록</span>
+                  )}
+                </td>
                 <td className="py-3 px-2 text-muted-foreground">
                   {[u.store, u.team].filter(Boolean).join(" · ") || "-"}
                 </td>
@@ -263,6 +269,9 @@ export function UserManagementPanel() {
                     </Button>
                     <Button size="sm" variant="ghost" className="h-8" onClick={() => { setResetting(u); setTempPwd(genTempPwd()); }}>
                       <KeyRound className="size-3.5 mr-1" /> 비번
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-8 text-primary" onClick={() => issueOverride(u)} title="간편인증 임시 승인 링크 발급">
+                      <Smartphone className="size-3.5 mr-1" /> 임시승인
                     </Button>
                   </div>
                 </td>
