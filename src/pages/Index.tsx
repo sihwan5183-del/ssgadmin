@@ -21,6 +21,7 @@ import { StrategyModelGauges } from "@/components/dashboard/StrategyModelGauges"
 import { PendingItemsCard } from "@/components/dashboard/PendingItemsCard";
 import { CashTodayCard } from "@/components/dashboard/CashTodayCard";
 import { MyReviewAlerts } from "@/components/dashboard/MyReviewAlerts";
+import { CategoryPerformanceCards } from "@/components/dashboard/CategoryPerformanceCards";
 import { summaryStats, formatShortKRW } from "@/data/mockData";
 import { TrendingUp, Wallet, Megaphone, Target } from "lucide-react";
 import { useMarketingSpend } from "@/hooks/useMarketingSpend";
