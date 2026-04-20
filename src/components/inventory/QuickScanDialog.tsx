@@ -16,7 +16,11 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onDone: () => void;
+  /** IoT(도그마루) 모드: 모델 고정 + 부가 필드 숨김 */
+  iotMode?: boolean;
 }
+
+const IOT_FIXED_MODEL = "우리집지킴이Easy2";
 
 /** 바코드/공백/특수문자 제거 + 대문자화 (서버 정규화와 동일 규칙) */
 const normalizeSerial = (raw: string) =>
@@ -24,11 +28,11 @@ const normalizeSerial = (raw: string) =>
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
-export const QuickScanDialog = ({ open, onOpenChange, onDone }: Props) => {
+export const QuickScanDialog = ({ open, onOpenChange, onDone, iotMode = false }: Props) => {
   const { user } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [model, setModel] = useState("");
-  const [kind, setKind] = useState("휴대폰");
+  const [model, setModel] = useState(iotMode ? IOT_FIXED_MODEL : "");
+  const [kind, setKind] = useState<string>(iotMode ? "IoT(도그마루)" : "휴대폰");
   const [color, setColor] = useState("");
   const [capacity, setCapacity] = useState("");
   const [stockInDate, setStockInDate] = useState(todayISO());
