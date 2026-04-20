@@ -385,7 +385,8 @@ export default function DeviceInventoryPage() {
       .filter((r) => r.model.trim())
       .map((r) => ({
         model: r.model,
-        serial_no: r.serial_no || null,
+        device_kind: r.device_kind || "휴대폰",
+        serial_no: r.serial_no ? cleanSerial(r.serial_no) : null,
         color: r.color || null,
         capacity: r.capacity || null,
         status: r.status,
