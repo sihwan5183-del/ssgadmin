@@ -35,6 +35,8 @@ import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
 import { PurgeByFilterDialog } from "@/components/common/PurgeByFilterDialog";
 import { useRole } from "@/hooks/useRole";
 import { ShieldAlert } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileListCard } from "@/components/common/MobileListCard";
 
 const STATUSES = ["재고", "판매중", "이동중", "개통완료", "반품"] as const;
 type Status = typeof STATUSES[number];
@@ -77,6 +79,7 @@ const emptyForm = {
 export default function DeviceInventoryPage() {
   const { user } = useAuth();
   const { isAdmin } = useRole();
+  const isMobile = useIsMobile();
   const { agingDays, fallbackPrice, isAged, daysSince } = useInventoryAging();
   const { threshold: lowThreshold, low: lowModels } = useLowStock();
   const [rows, setRows] = useState<Device[]>([]);
@@ -490,6 +493,90 @@ export default function DeviceInventoryPage() {
         onDone={load}
       />
 
+      {isMobile ? (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
+            <Checkbox
+              checked={bulk.allOnPageSelected}
+              onCheckedChange={(v) => bulk.togglePage(!!v)}
+              className="size-5"
+            />
+            <span>전체선택 · 총 {filtered.length}대</span>
+          </div>
+          {loading ? (
+            <Card className="p-6 text-center text-sm text-muted-foreground">불러오는 중…</Card>
+          ) : filtered.length === 0 ? (
+            <Card className="p-6 text-center text-sm text-muted-foreground">표시할 데이터가 없습니다</Card>
+          ) : (
+            filtered.map((r) => {
+              const mine = r.created_by === user?.id;
+              const days = daysSince(r.stock_in_date);
+              const isOpen = r.status !== "개통완료";
+              const tone: "default" | "warning" | "danger" =
+                isOpen && days >= 90 ? "danger" : isOpen && days >= 60 ? "warning" : "default";
+              return (
+                <MobileListCard
+                  key={r.id}
+                  selected={bulk.isSelected(r.id)}
+                  onToggleSelect={() => bulk.toggle(r.id)}
+                  tone={tone}
+                  title={
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span>{r.model}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-md border ${STATUS_COLOR[r.status] ?? ""}`}>
+                        {r.status}
+                      </span>
+                      {tone !== "default" && (
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${tone === "danger" ? "bg-destructive text-destructive-foreground" : "bg-warning text-warning-foreground"}`}>
+                          장기 {days}일
+                        </span>
+                      )}
+                    </div>
+                  }
+                  meta={
+                    <>
+                      {[r.color, r.capacity].filter(Boolean).join(" / ") && (
+                        <span>{[r.color, r.capacity].filter(Boolean).join(" / ")}</span>
+                      )}
+                      {r.serial_no && <span className="tabular-nums">SN {r.serial_no}</span>}
+                    </>
+                  }
+                  body={
+                    <div className="flex items-center justify-between gap-2">
+                      <span>입고 {r.stock_in_date ?? "-"} · {days > 0 ? `${days}일 경과` : "오늘"}</span>
+                      <span className="tabular-nums font-medium text-foreground">
+                        {Number(r.purchase_price ?? 0).toLocaleString("ko-KR")}원
+                      </span>
+                    </div>
+                  }
+                  actions={
+                    mine && (
+                      <>
+                        <Select value={r.status} onValueChange={(v) => updateStatus(r.id, v)}>
+                          <SelectTrigger className="h-10 flex-1 min-w-[120px] text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {STATUSES.map((s) => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" variant="outline" onClick={() => openEdit(r)} className="h-10">
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => remove(r.id)} className="h-10">
+                          <Trash2 className="size-4 text-destructive" />
+                        </Button>
+                      </>
+                    )
+                  }
+                />
+              );
+            })
+          )}
+        </div>
+      ) : (
       <Card className="glass border-border/40 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -593,6 +680,7 @@ export default function DeviceInventoryPage() {
           </table>
         </div>
       </Card>
+      )}
 
       <BulkActionBar count={bulk.selectedCount} onClear={bulk.clear}>
         {STATUSES.map((s) => (
