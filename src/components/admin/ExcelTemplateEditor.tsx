@@ -241,14 +241,14 @@ export const ExcelTemplateEditor = ({
               )}
             </tbody>
           </table>
-        </ScrollArea>
+        </div>
 
-        <div className="text-[11px] text-muted-foreground mt-2">
+        <div className="text-[11px] text-muted-foreground mt-2 flex-shrink-0">
           ⚠️ 업로드 파서는 기존 헤더명을 인식합니다. 기본 헤더명을 변경하면 업로드가 안 될 수 있어요.
           새 컬럼은 다운로드 양식에만 추가되며, 업로드 시 sales.custom_fields로 저장하려면 별도 매핑 업로드를 사용하세요.
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0 mt-2 pt-3 border-t border-border/40">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             취소
           </Button>
