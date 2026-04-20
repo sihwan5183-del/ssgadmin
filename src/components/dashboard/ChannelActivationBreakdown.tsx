@@ -1,12 +1,63 @@
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Radio, Flame } from "lucide-react";
-import { channelActivationStats } from "@/data/mockData";
+import { supabase } from "@/integrations/supabase/client";
+import { usePeriod } from "@/contexts/PeriodContext";
+
+const CHANNEL_COLORS: Record<string, string> = {
+  "당근": "hsl(35 95% 60%)",
+  "유닥": "hsl(35 95% 60%)",
+  "모요": "hsl(270 90% 65%)",
+  "도그마루": "hsl(320 90% 65%)",
+  "오프라인": "hsl(195 90% 60%)",
+  "캠페인": "hsl(160 80% 50%)",
+  "기타": "hsl(0 0% 60%)",
+};
+
+const colorFor = (name: string, idx: number) => {
+  if (CHANNEL_COLORS[name]) return CHANNEL_COLORS[name];
+  const palette = Object.values(CHANNEL_COLORS);
+  return palette[idx % palette.length];
+};
 
 export const ChannelActivationBreakdown = () => {
-  const totalMonthly = channelActivationStats.reduce((s, r) => s + r.monthly, 0);
-  const totalToday = channelActivationStats.reduce((s, r) => s + r.today, 0);
-  const maxMonthly = Math.max(1, ...channelActivationStats.map((r) => r.monthly));
-  const topToday = [...channelActivationStats].sort((a, b) => b.today - a.today)[0];
+  const { startDate, endDate } = usePeriod();
+  const [rows, setRows] = useState<{ channel: string; monthly: number; today: number }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      setLoading(true);
+      const todayISO = new Date().toISOString().slice(0, 10);
+      const { data } = await supabase
+        .from("sales")
+        .select("channel, open_date")
+        .gte("open_date", startDate)
+        .lte("open_date", endDate)
+        .limit(10000);
+      if (!alive) return;
+      const map = new Map<string, { monthly: number; today: number }>();
+      (data ?? []).forEach((r: any) => {
+        const ch = r.channel || "기타";
+        const cur = map.get(ch) ?? { monthly: 0, today: 0 };
+        cur.monthly += 1;
+        if (r.open_date === todayISO) cur.today += 1;
+        map.set(ch, cur);
+      });
+      const list = Array.from(map.entries())
+        .map(([channel, v]) => ({ channel, ...v }))
+        .sort((a, b) => b.monthly - a.monthly);
+      setRows(list);
+      setLoading(false);
+    })();
+    return () => { alive = false; };
+  }, [startDate, endDate]);
+
+  const totalMonthly = useMemo(() => rows.reduce((s, r) => s + r.monthly, 0), [rows]);
+  const totalToday = useMemo(() => rows.reduce((s, r) => s + r.today, 0), [rows]);
+  const maxMonthly = Math.max(1, ...rows.map((r) => r.monthly));
+  const topToday = [...rows].sort((a, b) => b.today - a.today)[0];
 
   return (
     <section className="mb-6">
@@ -48,46 +99,40 @@ export const ChannelActivationBreakdown = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {channelActivationStats.map((row) => {
-            const ratio = (row.monthly / maxMonthly) * 100;
-            return (
-              <div
-                key={row.channel}
-                className="p-4 rounded-xl border border-border/50 bg-background/40 hover:bg-accent/30 transition-colors"
-              >
-                <div className="flex items-center gap-1.5 mb-2">
-                  <span
-                    className="size-2 rounded-full"
-                    style={{ background: row.color }}
-                  />
-                  <span className="text-xs font-medium">{row.channel}</span>
+        {loading ? (
+          <div className="text-center py-10 text-muted-foreground text-sm">불러오는 중…</div>
+        ) : rows.length === 0 ? (
+          <div className="text-center py-10 text-muted-foreground text-sm">선택한 기간 내 데이터가 없습니다</div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            {rows.map((row, idx) => {
+              const ratio = (row.monthly / maxMonthly) * 100;
+              const color = colorFor(row.channel, idx);
+              return (
+                <div
+                  key={row.channel}
+                  className="p-4 rounded-xl border border-border/50 bg-background/40 hover:bg-accent/30 transition-colors"
+                >
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="size-2 rounded-full" style={{ background: color }} />
+                    <span className="text-xs font-medium">{row.channel}</span>
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-bold tabular-nums">{row.monthly}</span>
+                    <span className="text-[11px] text-muted-foreground">건 누적</span>
+                  </div>
+                  <div className="mt-1 flex items-baseline gap-1">
+                    <span className="text-sm font-semibold tabular-nums text-primary">+{row.today}</span>
+                    <span className="text-[11px] text-muted-foreground">오늘</span>
+                  </div>
+                  <div className="mt-3 h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full rounded-full transition-all" style={{ width: `${ratio}%`, background: color }} />
+                  </div>
                 </div>
-
-                <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-bold tabular-nums">
-                    {row.monthly}
-                  </span>
-                  <span className="text-[11px] text-muted-foreground">건 누적</span>
-                </div>
-
-                <div className="mt-1 flex items-baseline gap-1">
-                  <span className="text-sm font-semibold tabular-nums text-primary">
-                    +{row.today}
-                  </span>
-                  <span className="text-[11px] text-muted-foreground">오늘</span>
-                </div>
-
-                <div className="mt-3 h-1.5 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{ width: `${ratio}%`, background: row.color }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </Card>
     </section>
   );
