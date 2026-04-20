@@ -1,11 +1,14 @@
 import { Header } from "@/components/layout/Header";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { HeroPerformance } from "@/components/dashboard/HeroPerformance";
+import { RadialGoalGauge } from "@/components/dashboard/RadialGoalGauge";
+import { StoreRevenueRanking } from "@/components/dashboard/StoreRevenueRanking";
+import { StoreEfficiencyBubble } from "@/components/dashboard/StoreEfficiencyBubble";
+import { LiveActivityFeed } from "@/components/dashboard/LiveActivityFeed";
 import { ActivationBreakdown } from "@/components/dashboard/ActivationBreakdown";
 import { ChannelActivationBreakdown } from "@/components/dashboard/ChannelActivationBreakdown";
 import { PerformanceChart } from "@/components/dashboard/PerformanceChart";
 import { ChannelDonut } from "@/components/dashboard/ChannelDonut";
-import { RecentActivities } from "@/components/dashboard/RecentActivities";
 import { RankingPanel } from "@/components/dashboard/RankingPanel";
 import { PerformanceLedger } from "@/components/dashboard/PerformanceLedger";
 import { ChannelModelAnalysis } from "@/components/dashboard/ChannelModelAnalysis";
