@@ -504,6 +504,17 @@ export default function ExpenseInputPage() {
             <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
               <Download className="size-4" /> 엑셀로 내보내기
             </Button>
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-destructive/40 text-destructive hover:bg-destructive/10 gap-1.5"
+                onClick={() => setPurgeOpen(true)}
+                disabled={total === 0}
+              >
+                <Trash2 className="size-4" /> 기간 전체삭제
+              </Button>
+            )}
             <span className="text-xs text-muted-foreground">총 {total.toLocaleString()}건</span>
           </div>
         </div>
@@ -511,6 +522,9 @@ export default function ExpenseInputPage() {
           <table className="w-full text-sm">
             <thead className="text-xs text-muted-foreground border-b border-border/50">
               <tr>
+                <th className="w-8 py-2 pr-2">
+                  <Checkbox checked={bulk.allOnPageSelected} onCheckedChange={(v) => bulk.togglePage(!!v)} />
+                </th>
                 <th className="text-left py-2 pr-3">집행일</th>
                 <th className="text-left py-2 pr-3">분류</th>
                 <th className="text-left py-2 pr-3">매체/항목</th>
