@@ -503,10 +503,16 @@ const InputPage = () => {
         guide: "실적장표 — 이 행은 안내용입니다 (삭제하지 마세요). 데이터는 3행부터 입력하세요.",
         headers: FALLBACK_HEADERS.map((k) => ({ key: k, example: "" })),
       };
+      const savedHeaders: { key: string; example: any }[] = Array.isArray(tpl.headers)
+        ? tpl.headers
+        : [];
+      const savedKeys = new Set(savedHeaders.map((h) => h.key));
+      const mergedHeaders = [
+        ...savedHeaders,
+        ...FALLBACK_HEADERS.filter((key) => !savedKeys.has(key)).map((key) => ({ key, example: "" })),
+      ];
       const headers: { key: string; example: any }[] =
-        Array.isArray(tpl.headers) && tpl.headers.length > 0
-          ? tpl.headers
-          : FALLBACK_HEADERS.map((k) => ({ key: k, example: "" }));
+        mergedHeaders.length > 0 ? mergedHeaders : FALLBACK_HEADERS.map((k) => ({ key: k, example: "" }));
       const wb = XLSX.utils.book_new();
       const aoa: any[][] = [
         [tpl.guide ?? ""],
