@@ -28,6 +28,11 @@ import {
 import { exportToExcel, DEVICE_INVENTORY_COLUMNS } from "@/lib/excelExport";
 import { useInventoryAging } from "@/hooks/useInventoryAging";
 import { useLowStock } from "@/hooks/useLowStock";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { BulkActionBar } from "@/components/common/BulkActionBar";
+import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
+import { useRole } from "@/hooks/useRole";
 
 const STATUSES = ["재고", "판매중", "이동중", "개통완료", "반품"] as const;
 type Status = typeof STATUSES[number];
@@ -69,6 +74,7 @@ const emptyForm = {
 
 export default function DeviceInventoryPage() {
   const { user } = useAuth();
+  const { isAdmin } = useRole();
   const { agingDays, fallbackPrice, isAged, daysSince } = useInventoryAging();
   const { threshold: lowThreshold, low: lowModels } = useLowStock();
   const [rows, setRows] = useState<Device[]>([]);
@@ -127,6 +133,33 @@ export default function DeviceInventoryPage() {
     });
   }, [rows, search, statusFilter, storeFilter, agedOnly, isAged]);
 
+  // 일괄 선택
+  const bulk = useBulkSelection<string>(filtered.map((r) => r.id));
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const bulkDelete = async () => {
+    setBulkBusy(true);
+    const { error } = await supabase.from("device_inventory").delete().in("id", bulk.selectedIds);
+    setBulkBusy(false);
+    if (error) {
+      toast.error("삭제 실패: " + error.message);
+      return;
+    }
+    toast.success(`${bulk.selectedIds.length}건 삭제됨`);
+    setBulkDeleteOpen(false);
+    bulk.clear();
+    load();
+  };
+  const bulkSetStatus = async (status: string) => {
+    const { error } = await supabase.from("device_inventory").update({ status }).in("id", bulk.selectedIds);
+    if (error) {
+      toast.error("일괄 변경 실패: " + error.message);
+      return;
+    }
+    toast.success(`${bulk.selectedIds.length}건 → ${status}`);
+    bulk.clear();
+    load();
+  };
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
     STATUSES.forEach((s) => (c[s] = 0));
@@ -434,6 +467,9 @@ export default function DeviceInventoryPage() {
           <table className="w-full text-sm">
             <thead className="bg-muted/40 text-muted-foreground">
               <tr>
+                <th className="w-10 px-3 py-2.5">
+                  <Checkbox checked={bulk.allOnPageSelected} onCheckedChange={(v) => bulk.togglePage(!!v)} />
+                </th>
                 <th className="text-left px-3 py-2.5">모델</th>
                 <th className="text-left px-3 py-2.5">일련번호</th>
                 <th className="text-left px-3 py-2.5">색/용량</th>
@@ -446,11 +482,11 @@ export default function DeviceInventoryPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-10 text-muted-foreground">불러오는 중…</td>
+                  <td colSpan={8} className="text-center py-10 text-muted-foreground">불러오는 중…</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-10 text-muted-foreground">표시할 데이터가 없습니다</td>
+                  <td colSpan={8} className="text-center py-10 text-muted-foreground">표시할 데이터가 없습니다</td>
                 </tr>
               ) : (
                 filtered.map((r) => {
@@ -470,7 +506,10 @@ export default function DeviceInventoryPage() {
                     agingBadge = { label: `${days}일`, cls: "bg-amber-500/20 text-amber-300 border border-amber-500/40" };
                   }
                   return (
-                    <tr key={r.id} className={`border-t border-border/30 hover:bg-muted/20 ${agingClass}`}>
+                    <tr key={r.id} className={`border-t border-border/30 hover:bg-muted/20 ${agingClass} ${bulk.isSelected(r.id) ? "bg-primary/5" : ""}`}>
+                      <td className="px-3 py-2.5">
+                        <Checkbox checked={bulk.isSelected(r.id)} onCheckedChange={() => bulk.toggle(r.id)} />
+                      </td>
                       <td className="px-3 py-2.5 font-medium">
                         <div className="flex items-center gap-2">
                           {r.model}
@@ -526,6 +565,27 @@ export default function DeviceInventoryPage() {
           </table>
         </div>
       </Card>
+
+      <BulkActionBar count={bulk.selectedCount} onClear={bulk.clear}>
+        {STATUSES.map((s) => (
+          <Button key={s} size="sm" variant="outline" onClick={() => bulkSetStatus(s)}>
+            → {s}
+          </Button>
+        ))}
+        <Button size="sm" variant="destructive" onClick={() => setBulkDeleteOpen(true)}>
+          <Trash2 className="size-3.5 mr-1" /> 선택 삭제
+        </Button>
+      </BulkActionBar>
+
+      <BulkDeleteDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        count={bulk.selectedCount}
+        itemLabel="대의 단말기를 삭제하시겠습니까?"
+        onConfirm={bulkDelete}
+        loading={bulkBusy}
+        confirmLabel="삭제"
+      />
 
       {/* 추가/수정 다이얼로그 */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

@@ -18,6 +18,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { BulkActionBar } from "@/components/common/BulkActionBar";
+import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
 
 interface Regular {
   id: string;
@@ -178,6 +182,33 @@ const RegularsPage = () => {
     });
   }, [list, q, filterChannel, filterConverted]);
 
+  // 다중 선택
+  const bulk = useBulkSelection<string>(filtered.map((r) => r.id));
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const bulkDelete = async () => {
+    setBulkBusy(true);
+    const { error } = await supabase.from("regulars").delete().in("id", bulk.selectedIds);
+    setBulkBusy(false);
+    if (error) {
+      toast.error("삭제 실패: " + error.message);
+      return;
+    }
+    toast.success(`${bulk.selectedIds.length}건 삭제됨`);
+    setBulkDeleteOpen(false);
+    bulk.clear();
+    load();
+  };
+  const bulkSendCoupon = async () => {
+    const { error } = await supabase.from("regulars").update({ coupon_sent: true }).in("id", bulk.selectedIds);
+    if (error) {
+      toast.error("처리 실패: " + error.message);
+      return;
+    }
+    toast.success(`${bulk.selectedIds.length}건 쿠폰 발송 처리`);
+    bulk.clear();
+    load();
+  };
   return (
     <>
       <Header
@@ -426,6 +457,13 @@ const RegularsPage = () => {
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-muted-foreground text-xs">
                 <tr>
+                  <th className="w-10 px-3 py-2">
+                    <Checkbox
+                      checked={bulk.allOnPageSelected}
+                      onCheckedChange={(v) => bulk.togglePage(!!v)}
+                      aria-label="전체 선택"
+                    />
+                  </th>
                   <th className="text-left px-3 py-2">등록일</th>
                   <th className="text-left px-3 py-2">채널</th>
                   <th className="text-left px-3 py-2">고객명</th>
@@ -438,7 +476,10 @@ const RegularsPage = () => {
               </thead>
               <tbody>
                 {filtered.map((r) => (
-                  <tr key={r.id} className="border-t border-border/30 hover:bg-muted/20">
+                  <tr key={r.id} className={`border-t border-border/30 hover:bg-muted/20 ${bulk.isSelected(r.id) ? "bg-primary/5" : ""}`}>
+                    <td className="px-3 py-2">
+                      <Checkbox checked={bulk.isSelected(r.id)} onCheckedChange={() => bulk.toggle(r.id)} />
+                    </td>
                     <td className="px-3 py-2 tabular-nums text-muted-foreground">{r.registered_date}</td>
                     <td className="px-3 py-2">
                       <span
@@ -469,6 +510,25 @@ const RegularsPage = () => {
           </div>
         )}
       </section>
+
+      <BulkActionBar count={bulk.selectedCount} onClear={bulk.clear}>
+        <Button size="sm" variant="outline" onClick={bulkSendCoupon}>
+          <Send className="size-3.5 mr-1" /> 쿠폰 발송 처리
+        </Button>
+        <Button size="sm" variant="destructive" onClick={() => setBulkDeleteOpen(true)}>
+          <Trash2 className="size-3.5 mr-1" /> 선택 삭제
+        </Button>
+      </BulkActionBar>
+
+      <BulkDeleteDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        count={bulk.selectedCount}
+        itemLabel="명의 단골을 삭제하시겠습니까?"
+        onConfirm={bulkDelete}
+        loading={bulkBusy}
+        confirmLabel="삭제"
+      />
     </>
   );
 };
