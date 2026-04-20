@@ -322,6 +322,28 @@ export default function DeviceInventoryPage() {
 
   return (
     <div className="space-y-6">
+      {lowModels.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-xl border border-warning/40 bg-warning/10">
+          <AlertTriangle className="size-5 text-warning shrink-0" />
+          <div className="flex-1 min-w-[200px]">
+            <div className="text-sm font-semibold text-warning">
+              부족재고 {lowModels.length}종 — 발주 검토 권장 (보유 ≤ {lowThreshold}대)
+            </div>
+            <div className="flex flex-wrap gap-1.5 mt-1.5">
+              {lowModels.slice(0, 12).map(([m, c]) => (
+                <Badge key={m} className="text-[10px] bg-warning/20 text-warning border-warning/40">
+                  {m} · {c}대
+                </Badge>
+              ))}
+              {lowModels.length > 12 && (
+                <span className="text-[10px] text-muted-foreground self-center">
+                  +{lowModels.length - 12}종
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-3 justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
