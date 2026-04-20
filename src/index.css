@@ -169,4 +169,28 @@
             mask-composite: exclude;
     pointer-events: none;
   }
+
+  /* === 모바일 사이드바 시트 내부에서는 Sidebar 강제 표시 === */
+  .mobile-sidebar-wrapper > aside {
+    display: flex !important;
+    position: static !important;
+    width: 100% !important;
+    height: 100% !important;
+    border-right: none !important;
+  }
+
+  /* === 터치 타깃: 모바일에서 체크박스/스위치/아이콘버튼 키우기 === */
+  @media (max-width: 1023px) {
+    [role="checkbox"], button[role="checkbox"] {
+      min-width: 1.25rem;
+      min-height: 1.25rem;
+    }
+  }
+}
+
+/* iOS Safari: input fontSize 16px 미만이면 포커스 시 자동 zoom 발생 → 방지 */
+@media (max-width: 767px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
 }
