@@ -190,7 +190,10 @@ const RegularsPage = () => {
     setBulkBusy(true);
     const { error } = await supabase.from("regulars").delete().in("id", bulk.selectedIds);
     setBulkBusy(false);
-    if (error) return toast.error("삭제 실패: " + error.message);
+    if (error) {
+      toast.error("삭제 실패: " + error.message);
+      return;
+    }
     toast.success(`${bulk.selectedIds.length}건 삭제됨`);
     setBulkDeleteOpen(false);
     bulk.clear();
@@ -198,7 +201,10 @@ const RegularsPage = () => {
   };
   const bulkSendCoupon = async () => {
     const { error } = await supabase.from("regulars").update({ coupon_sent: true }).in("id", bulk.selectedIds);
-    if (error) return toast.error("처리 실패: " + error.message);
+    if (error) {
+      toast.error("처리 실패: " + error.message);
+      return;
+    }
     toast.success(`${bulk.selectedIds.length}건 쿠폰 발송 처리`);
     bulk.clear();
     load();
