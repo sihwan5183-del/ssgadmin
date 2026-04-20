@@ -5,6 +5,7 @@ import { RadialGoalGauge } from "@/components/dashboard/RadialGoalGauge";
 import { StoreRevenueRanking } from "@/components/dashboard/StoreRevenueRanking";
 import { StoreEfficiencyBubble } from "@/components/dashboard/StoreEfficiencyBubble";
 import { LiveActivityFeed } from "@/components/dashboard/LiveActivityFeed";
+import { PlannerFeed } from "@/components/dashboard/PlannerFeed";
 import { ActivationBreakdown } from "@/components/dashboard/ActivationBreakdown";
 import { ChannelActivationBreakdown } from "@/components/dashboard/ChannelActivationBreakdown";
 import { PerformanceChart } from "@/components/dashboard/PerformanceChart";
@@ -124,6 +125,7 @@ const Index = () => {
           <LiveActivityFeed />
         </div>
         <div className="lg:col-span-2 space-y-4">
+          <PlannerFeed />
           <InventoryWidget />
           <StrategyModelGauges />
           <AdScheduleWidget />

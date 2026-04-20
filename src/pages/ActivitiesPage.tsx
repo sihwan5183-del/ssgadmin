@@ -13,11 +13,13 @@ import {
 } from "@/components/ui/dialog";
 import {
   FileWarning, Search, Upload, Phone, User, Smartphone, AlertTriangle, ListChecks,
-  ClipboardList, CheckCircle2, Pencil,
+  ClipboardList, CheckCircle2, Pencil, Building2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
+import { PlannerSuperView } from "@/components/sales/PlannerSuperView";
+import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
 
 interface SaleLite {
@@ -437,16 +439,28 @@ function PendingItemsSection() {
 
 const ActivitiesPage = () => {
   const { scope } = useViewScope();
+  const { isAdmin } = useRole();
 
   return (
     <>
       <Header
         title="활동 관리"
-        subtitle={scope === "personal" ? "내가 등록한 실적·서류·미처리 현황" : "팀 전체 실적·서류·미처리 현황"}
+        subtitle={
+          isAdmin
+            ? "본사 영업기획팀 슈퍼 뷰 — 30개 매장 통합 관제"
+            : scope === "personal"
+              ? "내가 등록한 실적·서류·미처리 현황"
+              : "팀 전체 실적·서류·미처리 현황"
+        }
       />
 
-      <Tabs defaultValue="search" className="space-y-5">
+      <Tabs defaultValue={isAdmin ? "super" : "search"} className="space-y-5">
         <TabsList>
+          {isAdmin && (
+            <TabsTrigger value="super" className="gap-2">
+              <Building2 className="size-4" /> 슈퍼 뷰
+            </TabsTrigger>
+          )}
           <TabsTrigger value="search" className="gap-2">
             <ListChecks className="size-4" /> 실적 검색·관리
           </TabsTrigger>
@@ -457,6 +471,12 @@ const ActivitiesPage = () => {
             <ClipboardList className="size-4" /> 미처리 항목
           </TabsTrigger>
         </TabsList>
+
+        {isAdmin && (
+          <TabsContent value="super">
+            <PlannerSuperView />
+          </TabsContent>
+        )}
 
         <TabsContent value="search" className="space-y-6">
           <SaleSearchPanel />
