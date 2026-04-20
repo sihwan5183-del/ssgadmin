@@ -25,6 +25,7 @@ import AdCalendarPage from "./pages/AdCalendarPage.tsx";
 import DeviceModelsPage from "./pages/DeviceModelsPage.tsx";
 import IncentiveRatesPage from "./pages/IncentiveRatesPage.tsx";
 import AuthPage from "./pages/AuthPage.tsx";
+import MagicLinkPage from "./pages/MagicLinkPage.tsx";
 import MissingDocsPage from "./pages/MissingDocsPage.tsx";
 import StaffStatusPage from "./pages/StaffStatusPage.tsx";
 import RecentActivitiesPage from "./pages/RecentActivitiesPage.tsx";
@@ -44,6 +45,7 @@ const App = () => (
             <Sonner />
             <Routes>
               <Route path="/auth" element={<AuthPage />} />
+              <Route path="/magic-link" element={<MagicLinkPage />} />
               <Route
                 path="*"
                 element={

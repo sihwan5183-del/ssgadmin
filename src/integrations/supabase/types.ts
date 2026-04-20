@@ -196,6 +196,42 @@ export type Database = {
         }
         Relationships: []
       }
+      auth_attempts: {
+        Row: {
+          created_at: string
+          detail: string | null
+          email: string | null
+          id: string
+          ip: string | null
+          kind: string
+          success: boolean
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          detail?: string | null
+          email?: string | null
+          id?: string
+          ip?: string | null
+          kind: string
+          success?: boolean
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          detail?: string | null
+          email?: string | null
+          id?: string
+          ip?: string | null
+          kind?: string
+          success?: boolean
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       device_inventory: {
         Row: {
           activated_at: string | null
@@ -572,6 +608,45 @@ export type Database = {
           updated_at?: string
           valid_from?: string | null
           valid_to?: string | null
+        }
+        Relationships: []
+      }
+      magic_link_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          ip: string | null
+          issued_by: string | null
+          purpose: string
+          token_hash: string
+          used_at: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          ip?: string | null
+          issued_by?: string | null
+          purpose?: string
+          token_hash: string
+          used_at?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          ip?: string | null
+          issued_by?: string | null
+          purpose?: string
+          token_hash?: string
+          used_at?: string | null
+          user_agent?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -1133,6 +1208,42 @@ export type Database = {
           phone?: string | null
           region?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      trusted_devices: {
+        Row: {
+          created_at: string
+          device_label: string | null
+          expires_at: string
+          id: string
+          ip: string | null
+          last_used_at: string
+          token_hash: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_label?: string | null
+          expires_at: string
+          id?: string
+          ip?: string | null
+          last_used_at?: string
+          token_hash: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_label?: string | null
+          expires_at?: string
+          id?: string
+          ip?: string | null
+          last_used_at?: string
+          token_hash?: string
+          user_agent?: string | null
+          user_id?: string
         }
         Relationships: []
       }

@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { KeyRound, UserX, UserCheck, Pencil, Search } from "lucide-react";
+import { KeyRound, UserX, UserCheck, Pencil, Search, Smartphone, Copy } from "lucide-react";
 
 interface UserRow {
   user_id: string;
@@ -76,6 +76,20 @@ export function UserManagementPanel() {
   const [editing, setEditing] = useState<UserRow | null>(null);
   const [resetting, setResetting] = useState<UserRow | null>(null);
   const [tempPwd, setTempPwd] = useState("");
+  const [override, setOverride] = useState<{ user: UserRow; link: string; expires: string } | null>(null);
+
+  const issueOverride = async (u: UserRow) => {
+    const { data, error } = await supabase.functions.invoke("admin-user-management", {
+      body: { action: "admin_issue_magic_link", user_id: u.user_id },
+    });
+    if (error || (data as any)?.error) {
+      toast.error("임시 승인 링크 발급 실패: " + (error?.message || (data as any)?.error));
+      return;
+    }
+    const t = (data as any).token;
+    const link = `${window.location.origin}/magic-link?token=${t}`;
+    setOverride({ user: u, link, expires: (data as any).expires_at });
+  };
 
   const fetchAll = async () => {
     setLoading(true);
@@ -237,7 +251,13 @@ export function UserManagementPanel() {
                     <span className="ml-2 text-[10px] text-primary">(나)</span>
                   )}
                 </td>
-                <td className="py-3 px-2 text-muted-foreground">{u.phone || "-"}</td>
+                <td className="py-3 px-2">
+                  {u.phone ? (
+                    <span className="text-foreground font-mono text-xs">{u.phone}</span>
+                  ) : (
+                    <span className="text-destructive text-xs">미등록</span>
+                  )}
+                </td>
                 <td className="py-3 px-2 text-muted-foreground">
                   {[u.store, u.team].filter(Boolean).join(" · ") || "-"}
                 </td>
@@ -263,6 +283,9 @@ export function UserManagementPanel() {
                     </Button>
                     <Button size="sm" variant="ghost" className="h-8" onClick={() => { setResetting(u); setTempPwd(genTempPwd()); }}>
                       <KeyRound className="size-3.5 mr-1" /> 비번
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-8 text-primary" onClick={() => issueOverride(u)} title="간편인증 임시 승인 링크 발급">
+                      <Smartphone className="size-3.5 mr-1" /> 임시승인
                     </Button>
                   </div>
                 </td>
@@ -366,6 +389,35 @@ export function UserManagementPanel() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 임시 승인 링크 */}
+      <Dialog open={!!override} onOpenChange={(o) => !o && setOverride(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>임시 승인 링크 발급</DialogTitle>
+          </DialogHeader>
+          {override && (
+            <div className="space-y-3 py-2">
+              <p className="text-sm text-muted-foreground">
+                <span className="text-foreground font-medium">{override.user.display_name}</span>님이
+                간편인증을 받지 못할 때 이 링크를 직접 전달하세요. 5분간 1회 유효합니다.
+              </p>
+              <div className="rounded-lg border border-border/50 bg-background/40 p-3 text-[11px] font-mono break-all">
+                {override.link}
+              </div>
+              <Button size="sm" variant="outline" className="w-full" onClick={() => {
+                navigator.clipboard.writeText(override.link);
+                toast.success("링크 복사됨");
+              }}>
+                <Copy className="size-3.5 mr-1" /> 복사
+              </Button>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOverride(null)}>닫기</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
