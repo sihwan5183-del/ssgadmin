@@ -165,9 +165,17 @@ export const ChannelActivationBreakdown = () => {
                   key={row.channel}
                   className="p-4 rounded-xl border border-border/50 bg-background/40 hover:bg-accent/30 transition-colors"
                 >
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <span className="size-2 rounded-full" style={{ background: color }} />
-                    <span className="text-xs font-medium">{row.channel}</span>
+                  <div className="flex items-center justify-between mb-2 gap-1.5">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="size-2 rounded-full shrink-0" style={{ background: color }} />
+                      <span className="text-xs font-medium truncate">{row.channel}</span>
+                    </div>
+                    {productFilter !== "전체" && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[9px] font-medium shrink-0">
+                        <Filter className="size-2.5" />
+                        {productFilter}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-baseline gap-1">
                     <span className="text-2xl font-bold tabular-nums">{row.monthly}</span>
