@@ -95,7 +95,7 @@ export const PlannerFeed = () => {
       </div>
 
       <div>
-        <ul className="space-y-1 max-h-[260px] overflow-y-auto pr-1">
+        <ul className="space-y-1 max-h-[420px] overflow-y-auto pr-1">
           {loading ? (
             <li className="text-sm text-muted-foreground py-8 text-center">불러오는 중…</li>
           ) : items.length === 0 ? (

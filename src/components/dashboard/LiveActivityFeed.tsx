@@ -88,7 +88,7 @@ export const LiveActivityFeed = () => {
 
       <div className="relative">
         <div className="absolute left-[11px] top-1 bottom-1 w-px bg-gradient-to-b from-primary/40 via-border to-transparent" />
-        <ul className="space-y-1.5 max-h-[320px] overflow-y-auto pr-1.5">
+        <ul className="space-y-1.5 max-h-[420px] overflow-y-auto pr-1.5">
           {loading ? (
             <li className="text-xs text-muted-foreground py-4 text-center">불러오는 중…</li>
           ) : items.length === 0 ? (
