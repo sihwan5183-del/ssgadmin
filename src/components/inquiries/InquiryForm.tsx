@@ -108,7 +108,7 @@ export const InquiryForm = ({ onSaved }: Props) => {
           <Select value={form.carrier} onValueChange={(v) => set("carrier", v)}>
             <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
             <SelectContent>
-              {CARRIERS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              {carriers.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
