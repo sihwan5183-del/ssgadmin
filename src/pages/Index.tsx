@@ -2,8 +2,9 @@ import { Header } from "@/components/layout/Header";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { HeroPerformance } from "@/components/dashboard/HeroPerformance";
 import { RadialGoalGauge } from "@/components/dashboard/RadialGoalGauge";
-import { StoreRevenueRanking } from "@/components/dashboard/StoreRevenueRanking";
-import { StoreEfficiencyBubble } from "@/components/dashboard/StoreEfficiencyBubble";
+import { PersonalRevenueRanking } from "@/components/dashboard/PersonalRevenueRanking";
+import { ChannelEfficiencyAnalysis } from "@/components/dashboard/ChannelEfficiencyAnalysis";
+import { CompanySummaryCards } from "@/components/dashboard/CompanySummaryCards";
 import { LiveActivityFeed } from "@/components/dashboard/LiveActivityFeed";
 import { PlannerFeed } from "@/components/dashboard/PlannerFeed";
 import { ActivationBreakdown } from "@/components/dashboard/ActivationBreakdown";
@@ -52,7 +53,8 @@ const Index = () => {
       <ActivationBreakdown />
 
       {/* [2] 중간 — 수익 및 효율 */}
-      <section className="grid grid-cols-2 lg:grid-cols-6 gap-2 mb-3">
+      <section className="grid grid-cols-2 lg:grid-cols-8 gap-2 mb-3">
+        <CompanySummaryCards />
         <StatCard
           label="당월 순이익"
           value={formatShortKRW(summaryStats.netProfit)}
@@ -96,8 +98,8 @@ const Index = () => {
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-2 mb-3">
-        <StoreRevenueRanking />
-        <StoreEfficiencyBubble />
+        <PersonalRevenueRanking />
+        <ChannelEfficiencyAnalysis />
       </section>
 
       <section className="mb-3">
