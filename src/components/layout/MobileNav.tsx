@@ -23,12 +23,12 @@ export const MobileNav = () => {
               key={it.to}
               to={it.to}
               className={cn(
-                "flex flex-col items-center gap-1 py-3 text-[11px] transition-colors",
+                "flex flex-col items-center justify-center gap-0.5 min-h-[56px] py-2 text-[11px] transition-colors active:bg-primary/5",
                 active ? "text-primary-glow" : "text-muted-foreground"
               )}
             >
-              <Icon className={cn("size-5", active && "drop-shadow-[0_0_8px_hsl(280_100%_70%/0.8)]")} />
-              <span className="font-medium">{it.label}</span>
+              <Icon className={cn("size-6", active && "drop-shadow-[0_0_8px_hsl(330_100%_55%/0.7)]")} />
+              <span className="font-medium leading-none">{it.label}</span>
             </NavLink>
           );
         })}
