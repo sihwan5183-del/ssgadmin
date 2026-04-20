@@ -448,6 +448,9 @@ export default function DeviceInventoryPage() {
           <Button variant="outline" onClick={() => xlsxInputRef.current?.click()}>
             <FileSpreadsheet className="size-4 mr-2" /> 엑셀 업로드
           </Button>
+          <Button variant="outline" onClick={() => setQuickScanOpen(true)}>
+            <ScanLine className="size-4 mr-2" /> 연속 스캔
+          </Button>
           <Button
             variant="outline"
             onClick={() => {
@@ -462,6 +465,8 @@ export default function DeviceInventoryPage() {
           </Button>
         </div>
       </div>
+
+      <QuickScanDialog open={quickScanOpen} onOpenChange={setQuickScanOpen} onDone={load} />
 
       {/* 상단 KPI */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
