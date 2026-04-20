@@ -517,6 +517,17 @@ export default function DeviceInventoryPage() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={kindFilter} onValueChange={setKindFilter}>
+          <SelectTrigger className="w-40 h-11 bg-input/60">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">전체 유형</SelectItem>
+            {KINDS.map((k) => (
+              <SelectItem key={k} value={k}>{k}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         {isAdmin && (
           <Button
             variant="outline"
