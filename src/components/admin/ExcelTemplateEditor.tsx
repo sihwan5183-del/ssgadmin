@@ -172,9 +172,14 @@ export const ExcelTemplateEditor = ({
           <div className="text-xs text-muted-foreground">
             헤더 {tpl.headers.length}개 · 순서/이름/예시값 자유 편집
           </div>
-          <Button size="sm" variant="outline" onClick={addRow}>
-            <Plus className="size-3.5 mr-1" /> 컬럼 추가
-          </Button>
+          <div className="flex gap-1.5">
+            <Button size="sm" variant="ghost" onClick={resetToDefault} title="기본 헤더 전체로 초기화">
+              <RotateCcw className="size-3.5 mr-1" /> 기본값 복원
+            </Button>
+            <Button size="sm" variant="outline" onClick={addRow}>
+              <Plus className="size-3.5 mr-1" /> 컬럼 추가
+            </Button>
+          </div>
         </div>
 
         <ScrollArea className="flex-1 rounded-lg border border-border/40">
