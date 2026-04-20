@@ -83,12 +83,20 @@ interface Props {
 type Step = "mapping" | "validate" | "confirm";
 
 const autoMap = (headers: string[], targets: MappingTarget[]) => {
-  const norm = (s: string) => s.replace(/[\s()₩\n]/g, "").toLowerCase();
+  const norm = (s: string) => s.replace(/[\s()₩\n\.\-_/\\\[\]]+/g, "").toLowerCase();
+  const targetByKey = new Map(targets.map((t) => [t.field_key, t]));
   const m: Record<string, string> = {};
   for (const h of headers) {
-    const t = targets.find(
-      (t) => t.label === h || t.field_key === h || norm(t.label) === norm(h) || norm(t.field_key) === norm(h),
+    const nh = norm(h);
+    // 1) 정확/정규화 일치 (label or field_key)
+    let t = targets.find(
+      (t) => t.label === h || t.field_key === h || norm(t.label) === nh || norm(t.field_key) === nh,
     );
+    // 2) 별칭 사전 (한글 헤더 변형 → field_key)
+    if (!t) {
+      const aliasKey = HEADER_ALIASES[nh] ?? HEADER_ALIASES[h];
+      if (aliasKey && targetByKey.has(aliasKey)) t = targetByKey.get(aliasKey)!;
+    }
     m[h] = t ? t.field_key : SKIP;
   }
   return m;
