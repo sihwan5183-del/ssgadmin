@@ -1,24 +1,30 @@
-import { totals, netMargin, formatKRWShort } from "@/data/financeData";
 import { ArrowRight, Minus, Equal } from "lucide-react";
+import { useFinanceData } from "@/hooks/useFinanceData";
+
+const formatKRW = (n: number) => "₩" + Math.round(n).toLocaleString("ko-KR");
 
 export const NetMarginCard = () => {
+  const { totalRevenue, totalOffer, totalAdSpend, totalDistributor, totalCustomerDeposit, netMargin, marginRate } =
+    useFinanceData();
+
   const items = [
-    { label: "총 리베이트", value: totals.totalRebate, tone: "revenue" as const, op: null },
-    { label: "고객 지원금(오퍼)", value: totals.totalOffer, tone: "expense" as const, op: "minus" as const },
-    { label: "마케팅비", value: totals.totalSpend, tone: "expense" as const, op: "minus" as const },
+    { label: "총 수익(리베이트)", value: totalRevenue, tone: "revenue" as const },
+    { label: "고객 지원금(오퍼)", value: totalOffer, tone: "expense" as const },
+    { label: "유통망 지원금", value: totalDistributor, tone: "expense" as const },
+    { label: "마케팅비", value: totalAdSpend, tone: "expense" as const },
+    { label: "고객입금", value: totalCustomerDeposit, tone: "expense" as const },
   ];
-  const marginRate = Math.round((netMargin / totals.totalRebate) * 100);
 
   return (
     <div className="glass rounded-2xl p-5">
       <div className="flex items-baseline justify-between mb-3">
         <div>
           <h4 className="text-base font-semibold tracking-tight">순수익 (Net Margin) 계산</h4>
-          <p className="text-xs text-muted-foreground mt-0.5">총 리베이트 − (지원금 + 마케팅비)</p>
+          <p className="text-xs text-muted-foreground mt-0.5">총 수익 − (오퍼 + 유통망 + 마케팅비 + 고객입금)</p>
         </div>
         <div className="text-right">
-          <div className="text-3xl font-bold text-gradient tabular-nums">{formatKRWShort(netMargin)}</div>
-          <div className="text-[11px] text-muted-foreground tabular-nums">마진율 {marginRate}%</div>
+          <div className="text-3xl font-bold text-gradient tabular-nums">{formatKRW(netMargin)}</div>
+          <div className="text-[11px] text-muted-foreground tabular-nums">마진율 {Math.round(marginRate)}%</div>
         </div>
       </div>
 
@@ -43,7 +49,7 @@ export const NetMarginCard = () => {
                   it.tone === "revenue" ? "text-revenue" : "text-expense"
                 }`}
               >
-                {formatKRWShort(it.value)}
+                {formatKRW(it.value)}
               </div>
             </div>
           </div>
@@ -55,7 +61,7 @@ export const NetMarginCard = () => {
           <div className="text-[11px] opacity-80 flex items-center gap-1">
             순수익 <ArrowRight className="size-3" />
           </div>
-          <div className="mt-1 text-base font-bold tabular-nums">{formatKRWShort(netMargin)}</div>
+          <div className="mt-1 text-base font-bold tabular-nums">{formatKRW(netMargin)}</div>
         </div>
       </div>
     </div>
