@@ -222,6 +222,7 @@ export default function DeviceInventoryPage() {
     setEditing(d);
     setForm({
       model: d.model ?? "",
+      device_kind: ((d.device_kind as Kind) ?? "휴대폰") as Kind,
       serial_no: d.serial_no ?? "",
       color: d.color ?? "",
       capacity: d.capacity ?? "",
@@ -239,9 +240,24 @@ export default function DeviceInventoryPage() {
       toast.error("모델명을 입력하세요");
       return;
     }
+    const cleanedSerial = form.serial_no ? cleanSerial(form.serial_no) : null;
+    // 클라이언트 사전 중복 체크 (활성 재고 한정)
+    if (cleanedSerial) {
+      const dup = rows.find(
+        (r) =>
+          r.serial_no === cleanedSerial &&
+          r.id !== editing?.id &&
+          !["개통완료", "판매완료", "반품", "반납", "불량"].includes(r.status),
+      );
+      if (dup) {
+        toast.error(`이미 등록된 재고입니다 (${dup.model} · ${dup.status})`);
+        return;
+      }
+    }
     const payload: any = {
       model: form.model,
-      serial_no: form.serial_no || null,
+      device_kind: form.device_kind,
+      serial_no: cleanedSerial,
       color: form.color || null,
       capacity: form.capacity || null,
       status: form.status,
