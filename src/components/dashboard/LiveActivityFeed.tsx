@@ -74,7 +74,7 @@ export const LiveActivityFeed = () => {
   }, []);
 
   return (
-    <div className="glass rounded-xl p-3 shadow-card-elevated h-full flex flex-col">
+    <div className="glass rounded-xl p-3 shadow-card-elevated flex flex-col">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-semibold tracking-tight flex items-center gap-1.5">
           <Activity className="size-4 text-primary" />
@@ -86,9 +86,9 @@ export const LiveActivityFeed = () => {
         </span>
       </div>
 
-      <div className="flex-1 relative overflow-hidden">
+      <div className="relative">
         <div className="absolute left-[11px] top-1 bottom-1 w-px bg-gradient-to-b from-primary/40 via-border to-transparent" />
-        <ul className="space-y-1.5 max-h-[480px] overflow-y-auto pr-1.5">
+        <ul className="space-y-1.5 max-h-[320px] overflow-y-auto pr-1.5">
           {loading ? (
             <li className="text-xs text-muted-foreground py-4 text-center">불러오는 중…</li>
           ) : items.length === 0 ? (

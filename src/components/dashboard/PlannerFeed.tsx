@@ -82,23 +82,20 @@ export const PlannerFeed = () => {
   if (!isAdmin) return null;
 
   return (
-    <div className="glass rounded-2xl p-6 shadow-card-elevated h-full flex flex-col">
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h3 className="text-lg font-semibold tracking-tight flex items-center gap-2">
-            <Briefcase className="size-5 text-primary" />
-            기획팀 업무 알림
-          </h3>
-          <p className="text-xs text-muted-foreground mt-1">실적 입력 · 수정 · 재검수 요청</p>
-        </div>
-        <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-primary/10 text-primary border border-primary/30 font-bold">
-          <Bell className="size-3 animate-pulse" />
+    <div className="glass rounded-xl p-3 shadow-card-elevated flex flex-col">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-semibold tracking-tight flex items-center gap-1.5">
+          <Briefcase className="size-4 text-primary" />
+          기획팀 업무 알림
+        </h3>
+        <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/30 font-bold">
+          <Bell className="size-2.5 animate-pulse" />
           PLANNER
         </span>
       </div>
 
-      <div className="flex-1 overflow-hidden">
-        <ul className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+      <div>
+        <ul className="space-y-1 max-h-[260px] overflow-y-auto pr-1">
           {loading ? (
             <li className="text-sm text-muted-foreground py-8 text-center">불러오는 중…</li>
           ) : items.length === 0 ? (
