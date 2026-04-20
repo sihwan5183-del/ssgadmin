@@ -2,19 +2,24 @@ import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Activity, Radio, FileWarning, ClipboardList, User, Phone,
-  Smartphone, Upload, Pencil, CheckCircle2, ArrowUpRight, Clock,
+  Smartphone, Upload, Pencil, CheckCircle2, ArrowUpRight, Clock, Trash2, ShieldCheck, XCircle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useViewScope } from "@/contexts/ViewScopeContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/hooks/useRole";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
 import { toast } from "sonner";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { BulkActionBar } from "@/components/common/BulkActionBar";
+import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
 
 interface FeedSale {
   id: string;
