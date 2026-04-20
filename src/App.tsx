@@ -30,6 +30,7 @@ import MissingDocsPage from "./pages/MissingDocsPage.tsx";
 import StaffStatusPage from "./pages/StaffStatusPage.tsx";
 import RecentActivitiesPage from "./pages/RecentActivitiesPage.tsx";
 import MenuManagerPage from "./pages/MenuManagerPage.tsx";
+import DownloadsPage from "./pages/DownloadsPage.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -73,6 +74,7 @@ const App = () => (
                         <Route path="/ad-calendar" element={<AdCalendarPage />} />
                         <Route path="/device-models" element={<DeviceModelsPage />} />
                         <Route path="/incentive-rates" element={<IncentiveRatesPage />} />
+                        <Route path="/downloads" element={<DownloadsPage />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </AppShell>

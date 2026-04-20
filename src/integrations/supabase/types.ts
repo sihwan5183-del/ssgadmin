@@ -404,6 +404,54 @@ export type Database = {
           },
         ]
       }
+      download_history: {
+        Row: {
+          category: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          file_name: string
+          file_size: number | null
+          filters: Json
+          id: string
+          label: string
+          row_count: number
+          status: string
+          storage_path: string | null
+          user_id: string
+        }
+        Insert: {
+          category: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          file_name: string
+          file_size?: number | null
+          filters?: Json
+          id?: string
+          label: string
+          row_count?: number
+          status?: string
+          storage_path?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          file_name?: string
+          file_size?: number | null
+          filters?: Json
+          id?: string
+          label?: string
+          row_count?: number
+          status?: string
+          storage_path?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       excel_mappings: {
         Row: {
           created_at: string
@@ -1324,6 +1372,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_old_download_history: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

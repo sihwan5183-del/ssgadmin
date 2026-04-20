@@ -31,6 +31,7 @@ import { useNetFeeFormula } from "@/hooks/useNetFeeFormula";
 import { DynamicFieldRenderer } from "@/components/admin/DynamicFieldRenderer";
 import { ExcelMappingDialog, type MappingTarget } from "@/components/admin/ExcelMappingDialog";
 import { ExcelTemplateEditor } from "@/components/admin/ExcelTemplateEditor";
+import { useQuickExport, useLastUpdated } from "@/hooks/useQuickExport";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -117,6 +118,8 @@ const InputPage = () => {
   const [mappingOpen, setMappingOpen] = useState(false);
   const [mappingFile, setMappingFile] = useState<File | null>(null);
   const { startDate, endDate, label: periodLabel } = usePeriod();
+  const quickExport = useQuickExport();
+  const lastUpdated = useLastUpdated("sales");
   const { fields: dynamicFields } = useFieldDefinitions("sales");
   const { calc: calcNetFee, formula: netFeeFormula } = useNetFeeFormula();
   const { isAdmin } = useRole();
@@ -591,7 +594,10 @@ const InputPage = () => {
             <FileSpreadsheet className="size-5 text-primary-foreground" />
           </div>
           <div>
-            <div className="text-sm font-semibold">엑셀 일괄 업로드</div>
+            <div className="text-sm font-semibold flex items-center gap-2">
+              엑셀 일괄 업로드
+              <span className="text-[10px] font-normal text-muted-foreground">{lastUpdated.text}</span>
+            </div>
             <div className="text-xs text-muted-foreground mt-0.5">
               '실적장표' 시트(.xlsx)를 그대로 업로드하면 모든 행이 자동 저장됩니다.
             </div>
@@ -612,6 +618,17 @@ const InputPage = () => {
             className="hidden"
             onChange={onMappingFile}
           />
+          <Button
+            type="button"
+            onClick={() => quickExport.exportNow("sales", { start_date: startDate, end_date: endDate })}
+            disabled={busy || quickExport.busy === "sales"}
+            variant="outline"
+            className="rounded-xl"
+            title="현재 적용된 기간 필터로 즉시 엑셀 추출"
+          >
+            <Download className="size-4 mr-2" />
+            {quickExport.busy === "sales" ? "생성 중…" : "현재 필터로 다운로드"}
+          </Button>
           <Button
             type="button"
             onClick={downloadTemplate}
