@@ -28,7 +28,7 @@ type UnmappedRow = {
 };
 
 export const UnmappedModelsResolver = () => {
-  const { models, refresh: refreshModels } = useDeviceModels(false);
+  const { models, reload: refreshModels } = useDeviceModels(false);
   const [rows, setRows] = useState<UnmappedRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyCode, setBusyCode] = useState<string | null>(null);
