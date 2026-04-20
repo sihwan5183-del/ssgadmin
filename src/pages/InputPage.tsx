@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import { Header } from "@/components/layout/Header";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Check, Upload, Zap, Trash2, Pencil, X, FileSpreadsheet, Download } from "lucide-react";
+import { Check, Upload, Zap, Trash2, Pencil, X, FileSpreadsheet, Download, Search, ShieldAlert, Hash, Wallet as WalletIcon, Gift, TrendingUp } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useRole } from "@/hooks/useRole";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
@@ -110,6 +117,51 @@ const InputPage = () => {
   const { startDate, endDate, label: periodLabel } = usePeriod();
   const { fields: dynamicFields } = useFieldDefinitions("sales");
   const { calc: calcNetFee, formula: netFeeFormula } = useNetFeeFormula();
+  const { isAdmin } = useRole();
+  const [searchQ, setSearchQ] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // 리베이트(unit_price) - 오퍼(지원금 합) = 최종 수익
+  const offerOf = (r: SaleRow) =>
+    (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0);
+  const profitOf = (r: SaleRow) => (r.unit_price ?? 0) - offerOf(r);
+
+  const filteredRows = useMemo(() => {
+    const q = searchQ.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) => {
+      const name = (r.customer_name ?? "").toLowerCase();
+      const phone = (r.phone ?? "").replace(/[^0-9]/g, "");
+      return name.includes(q) || phone.includes(q.replace(/[^0-9]/g, ""));
+    });
+  }, [rows, searchQ]);
+
+  const summary = useMemo(() => {
+    const totalRebate = filteredRows.reduce((s, r) => s + (r.unit_price ?? 0), 0);
+    const totalOffer = filteredRows.reduce((s, r) => s + offerOf(r), 0);
+    const totalProfit = totalRebate - totalOffer;
+    return { count: filteredRows.length, totalRebate, totalOffer, totalProfit };
+  }, [filteredRows]);
+
+  const allSelected = filteredRows.length > 0 && filteredRows.every((r) => selected.has(r.id));
+  const toggleAll = () => {
+    setSelected((prev) => {
+      if (allSelected) {
+        const n = new Set(prev);
+        filteredRows.forEach((r) => n.delete(r.id));
+        return n;
+      }
+      const n = new Set(prev);
+      filteredRows.forEach((r) => n.add(r.id));
+      return n;
+    });
+  };
+  const toggleOne = (id: string) =>
+    setSelected((prev) => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
 
   const set = <K extends keyof SaleRow>(k: K, v: SaleRow[K] | undefined) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -310,6 +362,28 @@ const InputPage = () => {
     const { error } = await supabase.from("sales").delete().eq("id", id);
     if (error) return toast.error("삭제 실패", { description: error.message });
     toast.success("삭제 완료");
+    load();
+  };
+
+  const deleteSelected = async () => {
+    if (selected.size === 0) return;
+    const ids = Array.from(selected);
+    const { error } = await supabase.from("sales").delete().in("id", ids);
+    if (error) return toast.error("선택 삭제 실패", { description: error.message });
+    toast.success(`${ids.length}건 삭제 완료`);
+    setSelected(new Set());
+    load();
+  };
+
+  const deleteAllInPeriod = async () => {
+    const { error, count } = await supabase
+      .from("sales")
+      .delete({ count: "exact" })
+      .gte("open_date", startDate)
+      .lte("open_date", endDate);
+    if (error) return toast.error("전체 삭제 실패", { description: error.message });
+    toast.success(`${count ?? 0}건 삭제 완료`);
+    setSelected(new Set());
     load();
   };
 
@@ -795,46 +869,148 @@ const InputPage = () => {
         <div className="flex items-baseline justify-between mb-4 flex-wrap gap-3">
           <div>
             <h3 className="text-base font-semibold">판매 원장 — {periodLabel}</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">개통일 기준으로 필터링되며, 본인이 입력한 건만 수정·삭제할 수 있습니다.</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              개통일 기준 · 본인 입력 건만 수정·삭제 가능 · <span className="text-foreground/80">최종 수익 = 리베이트 단가 − 오퍼(지원금)</span>
+            </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={handleExport} className="rounded-xl gap-2">
               <Download className="size-4" /> 엑셀로 내보내기
             </Button>
             <Badge className="bg-primary/15 text-primary-glow border-primary/30">총 {total.toLocaleString()}건</Badge>
           </div>
         </div>
+
+        {/* 통합 검색 + 관리자 삭제 */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          <div className="relative flex-1 min-w-[260px] max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              value={searchQ}
+              onChange={(e) => setSearchQ(e.target.value)}
+              placeholder="고객 성함 또는 연락처 뒷자리 검색…"
+              className="h-10 pl-9 bg-input/60"
+            />
+          </div>
+          {isAdmin && (
+            <>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm" disabled={selected.size === 0}
+                    className="rounded-xl gap-2 border-destructive/40 text-destructive hover:bg-destructive/10">
+                    <Trash2 className="size-4" /> 선택 삭제 ({selected.size})
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <ShieldAlert className="size-5 text-destructive" /> 선택한 {selected.size}건을 삭제합니다
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      이 작업은 되돌릴 수 없으며 관련 검수·서류 정보도 함께 영향을 받을 수 있습니다.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>취소</AlertDialogCancel>
+                    <AlertDialogAction onClick={deleteSelected}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      삭제 진행
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm"
+                    className="rounded-xl gap-2 border-destructive/60 text-destructive hover:bg-destructive/15">
+                    <ShieldAlert className="size-4" /> 전체 데이터 삭제
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <ShieldAlert className="size-5 text-destructive" /> 정말로 모든 데이터를 삭제하시겠습니까?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      현재 기간({periodLabel})의 <strong className="text-destructive">{total.toLocaleString()}건</strong> 모든 판매 데이터가 영구 삭제됩니다.
+                      이 작업은 되돌릴 수 없습니다.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>취소</AlertDialogCancel>
+                    <AlertDialogAction onClick={deleteAllInPeriod}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      모두 삭제
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
+          )}
+        </div>
+
+        {/* 요약 카드 */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+          <SummaryCard icon={Hash} label="총 판매 건수" value={`${summary.count.toLocaleString()}건`} accent="primary" />
+          <SummaryCard icon={WalletIcon} label="총 리베이트" value={`${summary.totalRebate.toLocaleString("ko-KR")}원`} accent="secondary" />
+          <SummaryCard icon={Gift} label="총 오퍼(지원금)" value={`${summary.totalOffer.toLocaleString("ko-KR")}원`} accent="warning" />
+          <SummaryCard
+            icon={TrendingUp}
+            label="총 최종 수익"
+            value={`${summary.totalProfit.toLocaleString("ko-KR")}원`}
+            accent={summary.totalProfit >= 0 ? "success" : "destructive"}
+          />
+        </div>
+
         <div className="overflow-x-auto -mx-2">
-          <table className="w-full text-xs min-w-[900px]">
+          <table className="w-full text-xs min-w-[1100px]">
             <thead>
               <tr className="text-[11px] text-muted-foreground border-b border-border/40">
+                {isAdmin && (
+                  <th className="px-3 py-2 w-8">
+                    <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="전체 선택" />
+                  </th>
+                )}
                 <th className="text-left px-3 py-2 font-medium">개통일</th>
                 <th className="text-left px-3 py-2 font-medium">경로</th>
                 <th className="text-left px-3 py-2 font-medium">담당</th>
                 <th className="text-left px-3 py-2 font-medium">상품</th>
-                <th className="text-left px-3 py-2 font-medium">판매유형</th>
                 <th className="text-left px-3 py-2 font-medium">고객</th>
+                <th className="text-left px-3 py-2 font-medium">연락처</th>
                 <th className="text-left px-3 py-2 font-medium">단말</th>
-                <th className="text-right px-3 py-2 font-medium">단가표</th>
-                <th className="text-right px-3 py-2 font-medium">최종</th>
+                <th className="text-right px-3 py-2 font-medium">리베이트 단가</th>
+                <th className="text-right px-3 py-2 font-medium">오퍼(지원금)</th>
+                <th className="text-right px-3 py-2 font-medium">최종 수익</th>
                 <th className="text-right px-3 py-2 font-medium">관리</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => {
+              {filteredRows.map((r) => {
                 const mine = r.created_by === user?.id;
                 const hasPending = (r.pending_items?.length ?? 0) > 0 && r.pending_resolved === false;
+                const offer = offerOf(r);
+                const profit = profitOf(r);
+                const negative = profit < 0;
                 return (
                   <tr key={r.id} className={cn(
                     "border-b border-border/20 hover:bg-white/[0.03]",
                     mine && "bg-primary/[0.04]",
                     hasPending && "bg-amber-500/[0.07] hover:bg-amber-500/[0.12]"
                   )}>
+                    {isAdmin && (
+                      <td className="px-3 py-2.5">
+                        <Checkbox
+                          checked={selected.has(r.id)}
+                          onCheckedChange={() => toggleOne(r.id)}
+                          aria-label={`${r.customer_name ?? ""} 선택`}
+                        />
+                      </td>
+                    )}
                     <td className="px-3 py-2.5">{r.open_date ?? "-"}</td>
                     <td className="px-3 py-2.5">{r.channel ?? "-"}</td>
                     <td className="px-3 py-2.5">{r.manager ?? "-"}</td>
                     <td className="px-3 py-2.5">{r.product ?? "-"}</td>
-                    <td className="px-3 py-2.5">{r.sale_type ?? "-"}</td>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span>{r.customer_name ?? "-"}</span>
@@ -845,9 +1021,16 @@ const InputPage = () => {
                         )}
                       </div>
                     </td>
+                    <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{r.phone ?? "-"}</td>
                     <td className="px-3 py-2.5 text-muted-foreground">{r.device_model ?? "-"}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums">{(r.unit_price ?? 0).toLocaleString("ko-KR")}</td>
-                    <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-revenue">{(r.net_fee ?? 0).toLocaleString("ko-KR")}</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums text-warning">{offer.toLocaleString("ko-KR")}</td>
+                    <td className={cn(
+                      "px-3 py-2.5 text-right tabular-nums font-semibold",
+                      negative ? "text-destructive" : "text-revenue"
+                    )}>
+                      {profit.toLocaleString("ko-KR")}
+                    </td>
                     <td className="px-3 py-2.5 text-right">
                       {mine ? (
                         <div className="inline-flex gap-1">
@@ -865,8 +1048,10 @@ const InputPage = () => {
                   </tr>
                 );
               })}
-              {rows.length === 0 && (
-                <tr><td colSpan={10} className="text-center py-10 text-muted-foreground">선택한 기간에 데이터가 없습니다.</td></tr>
+              {filteredRows.length === 0 && (
+                <tr><td colSpan={isAdmin ? 12 : 11} className="text-center py-10 text-muted-foreground">
+                  {searchQ ? "검색 결과가 없습니다." : "선택한 기간에 데이터가 없습니다."}
+                </td></tr>
               )}
             </tbody>
           </table>
@@ -874,6 +1059,33 @@ const InputPage = () => {
         <PaginationBar page={page} pageSize={PAGE_SIZE} total={total} onChange={setPage} />
       </section>
     </>
+  );
+};
+
+const SummaryCard = ({
+  icon: Icon, label, value, accent,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  accent: "primary" | "secondary" | "success" | "warning" | "destructive";
+}) => {
+  const tone: Record<string, string> = {
+    primary: "from-primary/20 to-primary-glow/5 text-primary-glow border-primary/20",
+    secondary: "from-secondary/20 to-primary/5 text-secondary border-secondary/20",
+    success: "from-success/20 to-success/5 text-success border-success/20",
+    warning: "from-warning/20 to-warning/5 text-warning border-warning/20",
+    destructive: "from-destructive/25 to-destructive/5 text-destructive border-destructive/30",
+  };
+  return (
+    <div className={cn("rounded-2xl border bg-gradient-to-br p-4", tone[accent])}>
+      <div className="flex items-center gap-2 text-[11px] font-medium opacity-90">
+        <Icon className="size-3.5" /> {label}
+      </div>
+      <div className="mt-1.5 text-lg md:text-xl font-bold tabular-nums tracking-tight text-foreground">
+        {value}
+      </div>
+    </div>
   );
 };
 
