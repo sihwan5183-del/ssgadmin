@@ -65,6 +65,8 @@ function timeAgo(iso: string) {
 export function LiveFeedSection() {
   const { scope } = useViewScope();
   const { user } = useAuth();
+  const { isPlanner, isAdmin } = useRole();
+  const canApprove = isPlanner || isAdmin;
   const [rows, setRows] = useState<FeedSale[]>([]);
   const [loading, setLoading] = useState(true);
   const [pulse, setPulse] = useState(false);
@@ -76,6 +78,10 @@ export function LiveFeedSection() {
   const [editNote, setEditNote] = useState("");
   const [editResolved, setEditResolved] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // bulk
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const load = async () => {
     setLoading(true);
