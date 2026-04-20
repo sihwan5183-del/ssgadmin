@@ -1,8 +1,31 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Radio, Flame } from "lucide-react";
+import { Radio, Flame, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
+import { cn } from "@/lib/utils";
+
+type ProductFilter = "전체" | "모바일" | "홈" | "업셀" | "IoT";
+
+const PRODUCT_FILTERS: ProductFilter[] = ["전체", "모바일", "홈", "업셀", "IoT"];
+
+// 상품 카테고리 매칭 규칙 (sales.product 값 기준)
+const matchesProduct = (product: string | null | undefined, filter: ProductFilter): boolean => {
+  if (filter === "전체") return true;
+  const p = (product ?? "").trim();
+  switch (filter) {
+    case "모바일":
+      return p === "모바일" || p === "USIM MNP" || p === "세컨";
+    case "홈":
+      return p === "인터넷" || p === "TV프리" || p === "홈";
+    case "업셀":
+      return p === "대명";
+    case "IoT":
+      return p === "IOT" || p.toLowerCase() === "iot";
+    default:
+      return false;
+  }
+};
 
 const CHANNEL_COLORS: Record<string, string> = {
   "당근": "hsl(35 95% 60%)",
@@ -22,42 +45,48 @@ const colorFor = (name: string, idx: number) => {
 
 export const ChannelActivationBreakdown = () => {
   const { startDate, endDate } = usePeriod();
-  const [rows, setRows] = useState<{ channel: string; monthly: number; today: number }[]>([]);
+  const [raw, setRaw] = useState<{ channel: string; product: string | null; open_date: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [productFilter, setProductFilter] = useState<ProductFilter>("전체");
 
   useEffect(() => {
     let alive = true;
     (async () => {
       setLoading(true);
-      const todayISO = new Date().toISOString().slice(0, 10);
       const { data } = await supabase
         .from("sales")
-        .select("channel, open_date")
+        .select("channel, product, open_date")
         .gte("open_date", startDate)
         .lte("open_date", endDate)
         .limit(10000);
       if (!alive) return;
-      const map = new Map<string, { monthly: number; today: number }>();
-      (data ?? []).forEach((r: any) => {
-        const ch = r.channel || "기타";
-        const cur = map.get(ch) ?? { monthly: 0, today: 0 };
-        cur.monthly += 1;
-        if (r.open_date === todayISO) cur.today += 1;
-        map.set(ch, cur);
-      });
-      const list = Array.from(map.entries())
-        .map(([channel, v]) => ({ channel, ...v }))
-        .sort((a, b) => b.monthly - a.monthly);
-      setRows(list);
+      setRaw((data ?? []) as any);
       setLoading(false);
     })();
     return () => { alive = false; };
   }, [startDate, endDate]);
 
+  const rows = useMemo(() => {
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const map = new Map<string, { monthly: number; today: number }>();
+    raw.forEach((r) => {
+      if (!matchesProduct(r.product, productFilter)) return;
+      const ch = r.channel || "기타";
+      const cur = map.get(ch) ?? { monthly: 0, today: 0 };
+      cur.monthly += 1;
+      if (r.open_date === todayISO) cur.today += 1;
+      map.set(ch, cur);
+    });
+    return Array.from(map.entries())
+      .map(([channel, v]) => ({ channel, ...v }))
+      .sort((a, b) => b.monthly - a.monthly);
+  }, [raw, productFilter]);
+
   const totalMonthly = useMemo(() => rows.reduce((s, r) => s + r.monthly, 0), [rows]);
   const totalToday = useMemo(() => rows.reduce((s, r) => s + r.today, 0), [rows]);
   const maxMonthly = Math.max(1, ...rows.map((r) => r.monthly));
   const topToday = [...rows].sort((a, b) => b.today - a.today)[0];
+  const filterLabel = productFilter === "전체" ? "전체" : productFilter;
 
   return (
     <section className="mb-6">
@@ -75,16 +104,39 @@ export const ChannelActivationBreakdown = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* 상품 세그먼트 필터 */}
+            <div className="inline-flex items-center gap-0.5 p-1 rounded-full bg-muted/60 border border-border/50">
+              {PRODUCT_FILTERS.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setProductFilter(p)}
+                  className={cn(
+                    "px-3 py-1 text-xs font-medium rounded-full transition-all tabular-nums",
+                    productFilter === p
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
             <div className="text-right">
-              <div className="text-[11px] text-muted-foreground">당월 합계</div>
+              <div className="text-[11px] text-muted-foreground">
+                {filterLabel === "전체" ? "당월 합계" : `${filterLabel} 당월 합계`}
+              </div>
               <div className="font-bold tabular-nums text-lg">
                 {totalMonthly.toLocaleString()}
                 <span className="text-xs text-muted-foreground ml-1">건</span>
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[11px] text-muted-foreground">오늘 합계</div>
+              <div className="text-[11px] text-muted-foreground">
+                {filterLabel === "전체" ? "오늘 합계" : `${filterLabel} 오늘`}
+              </div>
               <div className="font-bold tabular-nums text-lg text-primary">
                 {totalToday.toLocaleString()}
                 <span className="text-xs text-muted-foreground ml-1">건</span>
@@ -113,9 +165,17 @@ export const ChannelActivationBreakdown = () => {
                   key={row.channel}
                   className="p-4 rounded-xl border border-border/50 bg-background/40 hover:bg-accent/30 transition-colors"
                 >
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <span className="size-2 rounded-full" style={{ background: color }} />
-                    <span className="text-xs font-medium">{row.channel}</span>
+                  <div className="flex items-center justify-between mb-2 gap-1.5">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="size-2 rounded-full shrink-0" style={{ background: color }} />
+                      <span className="text-xs font-medium truncate">{row.channel}</span>
+                    </div>
+                    {productFilter !== "전체" && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[9px] font-medium shrink-0">
+                        <Filter className="size-2.5" />
+                        {productFilter}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-baseline gap-1">
                     <span className="text-2xl font-bold tabular-nums">{row.monthly}</span>
