@@ -1346,6 +1346,48 @@ export type Database = {
         }
         Relationships: []
       }
+      upload_batches: {
+        Row: {
+          created_at: string
+          error_report: Json
+          error_rows: number
+          file_name: string
+          id: string
+          mapping_preset: string | null
+          success_rows: number
+          table_name: string
+          template_version: string | null
+          total_rows: number
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          error_report?: Json
+          error_rows?: number
+          file_name: string
+          id?: string
+          mapping_preset?: string | null
+          success_rows?: number
+          table_name: string
+          template_version?: string | null
+          total_rows?: number
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          error_report?: Json
+          error_rows?: number
+          file_name?: string
+          id?: string
+          mapping_preset?: string | null
+          success_rows?: number
+          table_name?: string
+          template_version?: string | null
+          total_rows?: number
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

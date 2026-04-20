@@ -31,6 +31,8 @@ import { useNetFeeFormula } from "@/hooks/useNetFeeFormula";
 import { DynamicFieldRenderer } from "@/components/admin/DynamicFieldRenderer";
 import { ExcelMappingDialog, type MappingTarget } from "@/components/admin/ExcelMappingDialog";
 import { ExcelTemplateEditor } from "@/components/admin/ExcelTemplateEditor";
+import { ExcelUploadWizard } from "@/components/admin/ExcelUploadWizard";
+import type { FieldRule } from "@/lib/excelValidation";
 import { useQuickExport, useLastUpdated } from "@/hooks/useQuickExport";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
@@ -349,12 +351,61 @@ const InputPage = () => {
     ...dynamicFields.map((f) => ({ field_key: `custom_fields.${f.field_key}`, label: f.label })),
   ];
 
+  // 검증 규칙 — 필수/형식 정의
+  const SALES_RULES: FieldRule[] = useMemo(() => [
+    { field_key: "channel", label: "인입경로", required: true },
+    { field_key: "manager", label: "담당자", required: true },
+    { field_key: "customer_name", label: "고객명", required: true },
+    { field_key: "open_date", label: "개통일", type: "date" },
+    { field_key: "birth_date", label: "생년월일" },
+    { field_key: "unit_price", label: "단가표 기준", type: "number" },
+    { field_key: "vas_fee", label: "부가서비스 수수료", type: "number" },
+    { field_key: "receivable_amount", label: "금액", type: "number" },
+    { field_key: "distributor_amount", label: "유통망", type: "number" },
+    { field_key: "extra_subsidy", label: "추가지원금", type: "number" },
+    { field_key: "cash_support_amount", label: "입금금액", type: "number" },
+    { field_key: "net_fee", label: "수수료", type: "number" },
+    { field_key: "moyo_excluded", label: "모요 미적용", type: "boolean" },
+    { field_key: "cash_open", label: "현금개통", type: "boolean" },
+  ], []);
+
+  // 위저드 열기 (단일 진입점) — '기본 양식 업로드' 버튼이 호출
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardFile, setWizardFile] = useState<File | null>(null);
+
   const onMappingFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    setMappingFile(f);
-    setMappingOpen(true);
+    setWizardFile(f);
+    setWizardOpen(true);
     if (mappingFileRef.current) mappingFileRef.current.value = "";
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  // 위저드 commit — 검증 통과한 행을 sales에 insert
+  const handleWizardCommit = async (rows: Record<string, any>[]): Promise<void> => {
+    if (!user || rows.length === 0) return;
+    const records = rows.map((r) => {
+      const custom: Record<string, any> = r.custom_fields ?? {};
+      const base: Record<string, any> = { created_by: user.id };
+      for (const [k, v] of Object.entries(r)) {
+        if (k === "custom_fields") continue;
+        if (k.startsWith("custom_fields.")) {
+          custom[k.slice("custom_fields.".length)] = v;
+        } else {
+          base[k] = v;
+        }
+      }
+      if (base.net_fee == null || base.net_fee === 0) base.net_fee = calcNetFee(base);
+      base.custom_fields = custom;
+      return base;
+    });
+    const chunk = 200;
+    for (let i = 0; i < records.length; i += chunk) {
+      const { error } = await supabase.from("sales").insert(records.slice(i, i + chunk) as any);
+      if (error) throw error;
+    }
+    load();
   };
 
   const handleMappingConfirm = async (mapped: Record<string, any>[]): Promise<void> => {
@@ -653,23 +704,13 @@ const InputPage = () => {
           )}
           <Button
             type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={busy}
-            variant="outline"
-            className="rounded-xl"
-          >
-            <Upload className="size-4 mr-2" />
-            기본 양식 업로드
-          </Button>
-          <Button
-            type="button"
             onClick={() => mappingFileRef.current?.click()}
             disabled={busy}
             variant="outline"
-            className="rounded-xl"
+            className="rounded-xl border-primary/40 text-primary-glow hover:bg-primary/10"
           >
             <Sparkles className="size-4 mr-2" />
-            매핑 업로드
+            엑셀 업로드 (스마트 매핑 + 검증)
           </Button>
           <Button
             type="button"
@@ -974,13 +1015,15 @@ const InputPage = () => {
         </div>
       </form>
 
-      <ExcelMappingDialog
-        open={mappingOpen}
-        onOpenChange={setMappingOpen}
+      <ExcelUploadWizard
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
         tableName="sales"
-        file={mappingFile}
+        templateKey={TEMPLATE_KEY}
+        file={wizardFile}
         targets={targets}
-        onConfirm={handleMappingConfirm}
+        rules={SALES_RULES}
+        onCommit={handleWizardCommit}
       />
 
       <ExcelTemplateEditor

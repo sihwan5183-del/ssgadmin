@@ -83,10 +83,12 @@ export const ExcelTemplateEditor = ({ open, onOpenChange, settingKey, title, onS
       return;
     }
     setSaving(true);
+    // 저장 시마다 버전(=ISO timestamp) 자동 갱신 → 업로드 추적용
+    const versioned = { ...tpl, version: new Date().toISOString() } as any;
     const { error } = await supabase
       .from("app_settings")
       .upsert(
-        { key: settingKey, value: tpl as any, description: "엑셀 양식 샘플 템플릿" },
+        { key: settingKey, value: versioned, description: "엑셀 양식 샘플 템플릿" },
         { onConflict: "key" },
       );
     setSaving(false);
