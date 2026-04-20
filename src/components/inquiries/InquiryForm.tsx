@@ -21,10 +21,14 @@ const today = () => new Date().toISOString().slice(0, 10);
 export const InquiryForm = ({ onSaved }: Props) => {
   const { user } = useAuth();
   const { options: channels } = useFieldOptions("inquiry_channel" as any);
+  const { options: products } = useFieldOptions("product" as any);
+  const CARRIERS = ["SKT", "KT", "LGU+", "알뜰폰", "기타"];
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({
     inquiry_date: today(),
     channel: "",
+    carrier: "",
+    product: "",
     customer_name: "",
     phone: "",
     content: "",
@@ -52,6 +56,10 @@ export const InquiryForm = ({ onSaved }: Props) => {
       manager: form.manager || null,
       status: form.status,
       note: form.note || null,
+      custom_fields: {
+        carrier: form.carrier || null,
+        product: form.product || null,
+      },
       created_by: user.id,
     });
     setBusy(false);
@@ -63,6 +71,8 @@ export const InquiryForm = ({ onSaved }: Props) => {
     setForm({
       inquiry_date: today(),
       channel: "",
+      carrier: "",
+      product: "",
       customer_name: "",
       phone: "",
       content: "",
@@ -92,6 +102,24 @@ export const InquiryForm = ({ onSaved }: Props) => {
         <div className="space-y-1.5">
           <Label className="text-xs">고객명/가상번호</Label>
           <Input value={form.customer_name} onChange={(e) => set("customer_name", e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">통신사</Label>
+          <Select value={form.carrier} onValueChange={(v) => set("carrier", v)}>
+            <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+            <SelectContent>
+              {CARRIERS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">문의상품</Label>
+          <Select value={form.product} onValueChange={(v) => set("product", v)}>
+            <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+            <SelectContent>
+              {products.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">연락처</Label>
