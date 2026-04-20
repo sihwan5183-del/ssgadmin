@@ -5,7 +5,7 @@ import { channelActivationStats } from "@/data/mockData";
 export const ChannelActivationBreakdown = () => {
   const totalMonthly = channelActivationStats.reduce((s, r) => s + r.monthly, 0);
   const totalToday = channelActivationStats.reduce((s, r) => s + r.today, 0);
-  const maxMonthly = Math.max(...channelActivationStats.map((r) => r.monthly));
+  const maxMonthly = Math.max(1, ...channelActivationStats.map((r) => r.monthly));
   const topToday = [...channelActivationStats].sort((a, b) => b.today - a.today)[0];
 
   return (

@@ -5,9 +5,9 @@ import { mobileBreakdownStats, strategyProductStats, usimChannelStats } from "@/
 export const ActivationBreakdown = () => {
   const totalMobile = mobileBreakdownStats.reduce((s, r) => s + r.count, 0);
   const totalStrategy = strategyProductStats.reduce((s, r) => s + r.count, 0);
-  const maxStrategy = Math.max(...strategyProductStats.map((s) => s.count));
+  const maxStrategy = Math.max(1, ...strategyProductStats.map((s) => s.count));
   const totalUsim = usimChannelStats.reduce((s, r) => s + r.count, 0);
-  const maxUsim = Math.max(...usimChannelStats.map((r) => r.count));
+  const maxUsim = Math.max(1, ...usimChannelStats.map((r) => r.count));
 
   return (
     <>
