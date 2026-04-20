@@ -107,6 +107,13 @@ export default function DeviceInventoryPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [kindFilter, setKindFilter] = useState<string>("all");
+  const [tab, setTab] = useState<"super" | "phone" | "iot">(isAdmin ? "super" : "phone");
+
+  // 탭이 휴대폰/IoT 일 때 kindFilter 강제
+  useEffect(() => {
+    if (tab === "phone") setKindFilter("휴대폰");
+    else if (tab === "iot") setKindFilter("IoT(도그마루)");
+  }, [tab]);
   const [storeFilter, setStoreFilter] = useState<string>("all");
   const [agedOnly, setAgedOnly] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
