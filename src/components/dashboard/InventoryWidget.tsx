@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Smartphone, AlertTriangle, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useInventoryAging } from "@/hooks/useInventoryAging";
+import { useLowStock } from "@/hooks/useLowStock";
 import { Link } from "react-router-dom";
 import { formatShortKRW } from "@/data/mockData";
 
@@ -19,6 +20,7 @@ export const InventoryWidget = () => {
   const [rows, setRows] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const { agingDays, fallbackPrice, isAged, daysSince } = useInventoryAging();
+  const { threshold: lowThreshold, low: lowModels } = useLowStock();
 
   useEffect(() => {
     const load = async () => {
