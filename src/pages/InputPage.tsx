@@ -491,17 +491,22 @@ const InputPage = () => {
 
   const downloadTemplate = async () => {
     try {
-      const { data } = await supabase
+      // 항상 최신본을 가져오기 위해 캐시 우회 (updated_at 함께 조회)
+      const { data, error } = await supabase
         .from("app_settings")
-        .select("value")
+        .select("value, updated_at")
         .eq("key", TEMPLATE_KEY)
         .maybeSingle();
+      if (error) throw error;
       const tpl: any = data?.value ?? {
         sheet_name: "실적장표",
         guide: "실적장표 — 이 행은 안내용입니다 (삭제하지 마세요). 데이터는 3행부터 입력하세요.",
         headers: FALLBACK_HEADERS.map((k) => ({ key: k, example: "" })),
       };
-      const headers: { key: string; example: any }[] = tpl.headers ?? [];
+      const headers: { key: string; example: any }[] =
+        Array.isArray(tpl.headers) && tpl.headers.length > 0
+          ? tpl.headers
+          : FALLBACK_HEADERS.map((k) => ({ key: k, example: "" }));
       const wb = XLSX.utils.book_new();
       const aoa: any[][] = [
         [tpl.guide ?? ""],
@@ -512,8 +517,11 @@ const InputPage = () => {
       ws["!cols"] = headers.map(() => ({ wch: 14 }));
       XLSX.utils.book_append_sheet(wb, ws, tpl.sheet_name ?? "실적장표");
       XLSX.writeFile(wb, `실적장표_양식샘플_${new Date().toISOString().slice(0, 10)}.xlsx`);
-      toast.success("양식 샘플을 다운로드했습니다", {
-        description: "3행부터 데이터를 입력하고 '기본 양식 업로드'로 올려주세요.",
+      const verLabel = data?.updated_at
+        ? new Date(data.updated_at).toLocaleString("ko-KR")
+        : "기본값";
+      toast.success(`양식 샘플 다운로드 완료 (${headers.length}개 컬럼)`, {
+        description: `최신 저장본: ${verLabel} · 3행부터 입력 후 '기본 양식 업로드'로 올려주세요.`,
       });
     } catch (e) {
       toast.error("양식 다운로드 실패", { description: e instanceof Error ? e.message : String(e) });
