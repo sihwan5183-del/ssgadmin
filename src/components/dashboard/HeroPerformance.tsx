@@ -89,74 +89,43 @@ export const HeroPerformance = () => {
   const prevLabel = month === 0 ? "전년 대비" : "전월 대비";
 
   return (
-    <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-      {/* 1. 목표 달성률 */}
-      <Card className="lg:col-span-1 p-7 glass relative overflow-hidden">
-        <div className="absolute -right-10 -top-10 size-40 rounded-full bg-gradient-primary opacity-10 blur-2xl" />
-        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-          <Target className="size-4 text-primary" />
-          {label} 목표 달성률
-        </div>
-        <div className="mt-3 flex items-baseline gap-2">
-          <span className="text-6xl font-bold text-gradient tabular-nums leading-none">
-            {achievement}
-          </span>
-          <span className="text-2xl font-semibold text-foreground">%</span>
-        </div>
-        <Progress value={achievement} className="mt-5 h-3" />
-        <div className="mt-3 flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">
-            <span className="font-semibold text-foreground tabular-nums">
-              {current.toLocaleString()}
-            </span>{" "}
-            / {monthlyTarget.toLocaleString()} 건
-          </span>
-          <span className="text-xs text-muted-foreground">
-            잔여{" "}
-            <span className="font-semibold text-foreground">
-              {Math.max(0, monthlyTarget - current).toLocaleString()}
-            </span>
-            건
-          </span>
-        </div>
-      </Card>
-
-      {/* 2. 오늘의 개통 */}
-      <Card className="p-7 glass relative overflow-hidden">
+    <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 h-full">
+      {/* 오늘의 개통 */}
+      <Card className="p-5 glass relative overflow-hidden">
         <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
           <Sun className="size-4 text-warning" />
           오늘의 개통
         </div>
         <div className="mt-3 flex items-baseline gap-3">
-          <span className="text-6xl font-bold text-foreground tabular-nums leading-none">
+          <span className="text-5xl font-bold text-foreground tabular-nums leading-none">
             {today}
           </span>
           <span className="text-xl text-muted-foreground">건</span>
         </div>
-        <div className="mt-5">
+        <div className="mt-4">
           <Delta value={todayDelta} label="전일 대비" />
         </div>
-        <div className="mt-3 text-xs text-muted-foreground">
+        <div className="mt-2 text-xs text-muted-foreground">
           {loading ? "불러오는 중…" : "실시간 동기화 중"}
         </div>
       </Card>
 
-      {/* 3. 누적 개통 */}
-      <Card className="p-7 glass relative overflow-hidden">
+      {/* 누적 개통 */}
+      <Card className="p-5 glass relative overflow-hidden">
         <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
           <TrendingUp className="size-4 text-success" />
           누적 개통 ({label})
         </div>
         <div className="mt-3 flex items-baseline gap-3">
-          <span className="text-6xl font-bold text-foreground tabular-nums leading-none">
+          <span className="text-5xl font-bold text-foreground tabular-nums leading-none">
             {current}
           </span>
           <span className="text-xl text-muted-foreground">건</span>
         </div>
-        <div className="mt-5">
+        <div className="mt-4">
           <Delta value={periodDelta} label={prevLabel} />
         </div>
-        <div className="mt-3 text-xs text-muted-foreground">
+        <div className="mt-2 text-xs text-muted-foreground">
           이전 동기간 {previous.toLocaleString()}건
         </div>
       </Card>
