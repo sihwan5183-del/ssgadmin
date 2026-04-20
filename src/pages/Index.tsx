@@ -50,13 +50,12 @@ const Index = () => {
         </div>
       </section>
 
-      <ChannelActivationBreakdown />
-      <ActivationBreakdown />
-
-      {/* === 카테고리별(모바일/홈/업셀) 누적 실적 === */}
-      <section className="grid grid-cols-2 gap-2 mb-3">
+      {/* === 채널별 개통 현황 + 카테고리별(모바일/홈/업셀) 실적 === */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-2 mb-3">
+        <ChannelActivationBreakdown />
         <CategoryPerformanceCards />
       </section>
+      <ActivationBreakdown />
 
       {/* [2] 중간 — 수익 및 효율 */}
       <section className="grid grid-cols-2 lg:grid-cols-9 gap-2 mb-3">
