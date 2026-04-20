@@ -56,6 +56,10 @@ export const InquiryForm = ({ onSaved }: Props) => {
       manager: form.manager || null,
       status: form.status,
       note: form.note || null,
+      custom_fields: {
+        carrier: form.carrier || null,
+        product: form.product || null,
+      },
       created_by: user.id,
     });
     setBusy(false);
@@ -67,6 +71,8 @@ export const InquiryForm = ({ onSaved }: Props) => {
     setForm({
       inquiry_date: today(),
       channel: "",
+      carrier: "",
+      product: "",
       customer_name: "",
       phone: "",
       content: "",
