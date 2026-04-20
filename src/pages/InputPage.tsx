@@ -1015,13 +1015,15 @@ const InputPage = () => {
         </div>
       </form>
 
-      <ExcelMappingDialog
-        open={mappingOpen}
-        onOpenChange={setMappingOpen}
+      <ExcelUploadWizard
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
         tableName="sales"
-        file={mappingFile}
+        templateKey={TEMPLATE_KEY}
+        file={wizardFile}
         targets={targets}
-        onConfirm={handleMappingConfirm}
+        rules={SALES_RULES}
+        onCommit={handleWizardCommit}
       />
 
       <ExcelTemplateEditor
