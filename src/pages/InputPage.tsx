@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { Header } from "@/components/layout/Header";
 import { Input } from "@/components/ui/input";
@@ -120,6 +121,31 @@ const InputPage = () => {
   const { isAdmin } = useRole();
   const [searchQ, setSearchQ] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [linkedInquiryId, setLinkedInquiryId] = useState<string | null>(null);
+
+  // 인입 → 실적 자동 채움 (URL 파라미터)
+  useEffect(() => {
+    const fromInquiry = searchParams.get("from_inquiry");
+    if (!fromInquiry) return;
+    const customer = searchParams.get("customer_name") ?? "";
+    const phone = searchParams.get("phone") ?? "";
+    const channel = searchParams.get("channel") ?? "";
+    const manager = searchParams.get("manager") ?? "";
+    setForm((f) => ({
+      ...f,
+      customer_name: customer || f.customer_name,
+      phone: phone || f.phone,
+      channel: channel || f.channel,
+      manager: manager || f.manager,
+      open_date: f.open_date ?? new Date().toISOString().slice(0, 10),
+    }));
+    setLinkedInquiryId(fromInquiry);
+    toast.info("인입 데이터가 자동 입력되었습니다", { description: "저장 시 인입 건과 자동 연결됩니다." });
+    // 한 번 채운 뒤 URL 정리
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 리베이트(unit_price) - 오퍼(지원금 합) = 최종 수익
   const offerOf = (r: SaleRow) =>
@@ -282,8 +308,16 @@ const InputPage = () => {
         if (error) throw error;
         toast.success("수정 완료");
       } else {
-        const { error } = await supabase.from("sales").insert(payload);
+        const { data: inserted, error } = await supabase.from("sales").insert(payload).select("id").single();
         if (error) throw error;
+        // 인입 → 실적 자동 연결
+        if (linkedInquiryId && inserted?.id) {
+          await supabase
+            .from("inquiries")
+            .update({ status: "개통완료", converted_sale_id: inserted.id })
+            .eq("id", linkedInquiryId);
+          setLinkedInquiryId(null);
+        }
         toast.success("판매 실적 저장 완료", { description: "대시보드에 즉시 반영됩니다." });
       }
       reset();

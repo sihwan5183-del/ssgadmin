@@ -13,8 +13,9 @@ import {
 } from "@/components/ui/dialog";
 import {
   FileWarning, Search, Upload, Phone, User, Smartphone, AlertTriangle, ListChecks,
-  ClipboardList, CheckCircle2, Pencil, Building2,
+  ClipboardList, CheckCircle2, Pencil, Building2, MessageSquare,
 } from "lucide-react";
+import { InquirySection } from "@/components/inquiries/InquirySection";
 import { supabase } from "@/integrations/supabase/client";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
@@ -470,6 +471,9 @@ const ActivitiesPage = () => {
           <TabsTrigger value="pending" className="gap-2">
             <ClipboardList className="size-4" /> 미처리 항목
           </TabsTrigger>
+          <TabsTrigger value="inquiries" className="gap-2">
+            <MessageSquare className="size-4" /> 채널 인입
+          </TabsTrigger>
         </TabsList>
 
         {isAdmin && (
@@ -490,6 +494,10 @@ const ActivitiesPage = () => {
 
         <TabsContent value="pending">
           <PendingItemsSection />
+        </TabsContent>
+
+        <TabsContent value="inquiries">
+          <InquirySection />
         </TabsContent>
       </Tabs>
     </>

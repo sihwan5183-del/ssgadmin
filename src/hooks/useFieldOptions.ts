@@ -11,7 +11,8 @@ export type FieldKey =
   | "delivery_type"
   | "bank"
   | "media"
-  | "expense_type";
+  | "expense_type"
+  | "inquiry_channel";
 
 export interface FieldOption {
   id: string;
