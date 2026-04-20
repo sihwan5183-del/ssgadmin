@@ -2,3 +2,6 @@ project_id = "txzkjunbkakuzyyhqlvw"
 
 [functions.admin-user-management]
 verify_jwt = false
+
+[functions.bulk-purge]
+verify_jwt = false
