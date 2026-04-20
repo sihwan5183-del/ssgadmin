@@ -196,6 +196,15 @@ export default function DeviceInventoryPage() {
     return c;
   }, [rows]);
 
+  const kindCounts = useMemo(() => {
+    let phone = 0, iot = 0;
+    rows.forEach((r) => {
+      if ((r.device_kind ?? "휴대폰") === "IoT(도그마루)") iot += 1;
+      else phone += 1;
+    });
+    return { phone, iot };
+  }, [rows]);
+
   const agedCount = useMemo(
     () => rows.filter((r) => r.status !== "개통완료" && isAged(r.stock_in_date)).length,
     [rows, isAged],
