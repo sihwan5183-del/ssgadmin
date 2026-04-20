@@ -1031,6 +1031,9 @@ const InputPage = () => {
         onOpenChange={setTemplateEditorOpen}
         settingKey={TEMPLATE_KEY}
         title="실적 엑셀 양식 편집"
+        defaultHeaders={FALLBACK_HEADERS}
+        defaultSheetName="실적장표"
+        defaultGuide="실적장표 — 이 행은 안내용입니다 (삭제하지 마세요). 데이터는 3행부터 입력하세요."
       />
 
       {/* 최근 판매 원장 */}
