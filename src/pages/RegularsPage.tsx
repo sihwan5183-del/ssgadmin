@@ -25,6 +25,8 @@ import { BulkActionBar } from "@/components/common/BulkActionBar";
 import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
 import { PurgeByFilterDialog, type PurgeFilter } from "@/components/common/PurgeByFilterDialog";
 import { ShieldAlert } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileListCard } from "@/components/common/MobileListCard";
 
 interface Regular {
   id: string;
@@ -59,6 +61,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 const RegularsPage = () => {
   const { user } = useAuth();
   const { isAdmin } = useRole();
+  const isMobile = useIsMobile();
   const [purgeOpen, setPurgeOpen] = useState(false);
   const { options: channelOptions } = useFieldOptions("channel");
   const [list, setList] = useState<Regular[]>([]);
@@ -483,6 +486,61 @@ const RegularsPage = () => {
           <div className="text-center py-8 text-sm text-muted-foreground">불러오는 중…</div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-12 text-sm text-muted-foreground">조건에 맞는 단골이 없습니다</div>
+        ) : isMobile ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
+              <Checkbox
+                checked={bulk.allOnPageSelected}
+                onCheckedChange={(v) => bulk.togglePage(!!v)}
+                className="size-5"
+              />
+              <span>전체선택 · 총 {filtered.length}건</span>
+            </div>
+            {filtered.map((r) => (
+              <MobileListCard
+                key={r.id}
+                selected={bulk.isSelected(r.id)}
+                onToggleSelect={() => bulk.toggle(r.id)}
+                title={
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span>{r.customer_name}</span>
+                    <span
+                      className="text-[11px] font-medium px-2 py-0.5 rounded-md"
+                      style={{ background: `${colorFor(r.channel)}22`, color: colorFor(r.channel) }}
+                    >
+                      {r.channel}
+                    </span>
+                  </div>
+                }
+                meta={
+                  <>
+                    <span className="tabular-nums">{r.registered_date}</span>
+                    {r.manager && <span>· {r.manager}</span>}
+                    {r.phone && (
+                      <a href={`tel:${r.phone}`} className="text-foreground/90" onClick={(e) => e.stopPropagation()}>
+                        {r.phone}
+                      </a>
+                    )}
+                  </>
+                }
+                actions={
+                  <>
+                    <label className="flex items-center gap-1.5 text-xs">
+                      <Switch checked={r.coupon_sent} onCheckedChange={(v) => toggleField(r.id, "coupon_sent", v)} />
+                      쿠폰
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs">
+                      <Switch checked={r.converted} onCheckedChange={(v) => toggleField(r.id, "converted", v)} />
+                      전환
+                    </label>
+                    <Button size="sm" variant="ghost" onClick={() => remove(r.id)} className="h-10 ml-auto">
+                      <Trash2 className="size-4 text-destructive" />
+                    </Button>
+                  </>
+                }
+              />
+            ))}
+          </div>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-border/40">
             <table className="w-full text-sm">
