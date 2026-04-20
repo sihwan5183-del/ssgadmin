@@ -485,6 +485,28 @@ export default function DeviceInventoryPage() {
 
       <QuickScanDialog open={quickScanOpen} onOpenChange={setQuickScanOpen} onDone={load} />
 
+      <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="space-y-5">
+        <TabsList>
+          {isAdmin && (
+            <TabsTrigger value="super" className="gap-2">
+              <Building2 className="size-4" /> 슈퍼 뷰
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="phone" className="gap-2">
+            <Smartphone className="size-4" /> 모바일 재고관리
+          </TabsTrigger>
+          <TabsTrigger value="iot" className="gap-2">
+            <Cpu className="size-4" /> 도그마루 재고관리
+          </TabsTrigger>
+        </TabsList>
+
+        {isAdmin && (
+          <TabsContent value="super" className="space-y-5">
+            <InventorySuperView />
+          </TabsContent>
+        )}
+
+        <TabsContent value={tab === "iot" ? "iot" : "phone"} forceMount className={tab === "super" ? "hidden" : "space-y-5"}>
       {/* 상단 KPI — 유형/자산 요약 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="p-4 glass border-primary/30">
