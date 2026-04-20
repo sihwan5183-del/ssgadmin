@@ -402,9 +402,21 @@ export const SaleSearchPanel = () => {
         <div className="mt-4 rounded-xl border border-border/40 overflow-hidden">
           <div className="px-3 py-2 bg-muted/40 text-xs text-muted-foreground flex items-center justify-between">
             <span className="flex items-center gap-2">
+              <Checkbox
+                checked={bulk.allOnPageSelected}
+                onCheckedChange={(v) => bulk.togglePage(!!v)}
+                aria-label="모두 선택"
+              />
               <CalendarDays className="size-3" /> {label} · 검색 결과 {results.length}건 (날짜 내림차순)
             </span>
-            <span>날짜별로 묶음 · 합계 표시</span>
+            <div className="flex items-center gap-2">
+              {isAdmin && (
+                <Button size="sm" variant="ghost" className="h-7 text-[11px] text-destructive" onClick={() => setPurgeOpen(true)}>
+                  <Trash2 className="size-3 mr-1" /> 기간 전체삭제
+                </Button>
+              )}
+              <span>날짜별로 묶음 · 합계 표시</span>
+            </div>
           </div>
           <div className="max-h-[32rem] overflow-y-auto">
             {(() => {
