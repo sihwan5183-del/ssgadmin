@@ -128,6 +128,44 @@ export const SaleSearchPanel = () => {
   const [overrideReason, setOverrideReason] = useState("");
   const [pendingApprovalTarget, setPendingApprovalTarget] = useState<ApprovalStatus | null>(null);
 
+  // bulk
+  const resultIds = useMemo(() => results.map((r) => r.id), [results]);
+  const bulk = useBulkSelection<string>(resultIds);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [purgeOpen, setPurgeOpen] = useState(false);
+
+  const purgeFilter: PurgeFilter = useMemo(() => ({
+    table: "sales",
+    filters: [
+      { column: "open_date", op: "gte", value: startDate },
+      { column: "open_date", op: "lte", value: endDate },
+    ],
+    summary: `개통일 ${startDate} ~ ${endDate}`,
+  }), [startDate, endDate]);
+
+  const bulkApprove = async (status: ApprovalStatus) => {
+    setBulkBusy(true);
+    const { error } = await supabase.from("sales").update({ approval_status: status }).in("id", bulk.selectedIds);
+    setBulkBusy(false);
+    if (error) { toast.error("일괄 처리 실패: " + error.message); return; }
+    toast.success(`${bulk.selectedIds.length}건 → ${status}`);
+    bulk.clear();
+    refreshCounts();
+    search();
+  };
+  const bulkDelete = async () => {
+    setBulkBusy(true);
+    const { error } = await supabase.from("sales").delete().in("id", bulk.selectedIds);
+    setBulkBusy(false);
+    if (error) { toast.error("일괄 삭제 실패: " + error.message); return; }
+    toast.success(`${bulk.selectedIds.length}건 삭제됨`);
+    setBulkDeleteOpen(false);
+    bulk.clear();
+    refreshCounts();
+    search();
+  };
+
   const isLocked = !!selected?.locked;
   const canEdit = useMemo(() => {
     if (!selected || !user) return false;
