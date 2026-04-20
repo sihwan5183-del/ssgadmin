@@ -34,7 +34,7 @@ import { useSearchParams } from "react-router-dom";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { CalendarDays } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, ShieldCheck } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { BulkActionBar } from "@/components/common/BulkActionBar";
 import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
