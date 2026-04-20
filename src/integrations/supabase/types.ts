@@ -611,6 +611,57 @@ export type Database = {
         }
         Relationships: []
       }
+      inquiries: {
+        Row: {
+          channel: string
+          content: string | null
+          converted_sale_id: string | null
+          created_at: string
+          created_by: string
+          custom_fields: Json
+          customer_name: string | null
+          id: string
+          inquiry_date: string
+          manager: string | null
+          note: string | null
+          phone: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          channel: string
+          content?: string | null
+          converted_sale_id?: string | null
+          created_at?: string
+          created_by: string
+          custom_fields?: Json
+          customer_name?: string | null
+          id?: string
+          inquiry_date?: string
+          manager?: string | null
+          note?: string | null
+          phone?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          content?: string | null
+          converted_sale_id?: string | null
+          created_at?: string
+          created_by?: string
+          custom_fields?: Json
+          customer_name?: string | null
+          id?: string
+          inquiry_date?: string
+          manager?: string | null
+          note?: string | null
+          phone?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       magic_link_tokens: {
         Row: {
           created_at: string
