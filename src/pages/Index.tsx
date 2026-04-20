@@ -40,9 +40,15 @@ const Index = () => {
       <MyReviewAlerts />
 
       {/* ============================================
-          [1] 최상단 — 영업 성과 (가장 중요)
+          [1] 최상단 — 영업 성과 (반원 게이지 + 오늘/누적)
           ============================================ */}
-      <HeroPerformance />
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <RadialGoalGauge />
+        <div className="lg:col-span-2">
+          <HeroPerformance />
+        </div>
+      </section>
+
       <ChannelActivationBreakdown />
       <ActivationBreakdown />
 
@@ -92,6 +98,12 @@ const Index = () => {
         <ChannelDonut />
       </section>
 
+      {/* === 매장 비교 시각화 (드릴다운) === */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <StoreRevenueRanking />
+        <StoreEfficiencyBubble />
+      </section>
+
       <section className="mb-6">
         <PerformanceLedger />
       </section>
@@ -105,11 +117,11 @@ const Index = () => {
       </section>
 
       {/* ============================================
-          [3] 하단 — 활동 및 랭킹
+          [3] 하단 — 라이브 활동 피드 + 사이드 위젯
           ============================================ */}
       <section className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <div className="lg:col-span-3 space-y-4">
-          <RecentActivities />
+          <LiveActivityFeed />
         </div>
         <div className="lg:col-span-2 space-y-4">
           <InventoryWidget />
