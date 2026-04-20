@@ -104,16 +104,39 @@ export const ChannelActivationBreakdown = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* 상품 세그먼트 필터 */}
+            <div className="inline-flex items-center gap-0.5 p-1 rounded-full bg-muted/60 border border-border/50">
+              {PRODUCT_FILTERS.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setProductFilter(p)}
+                  className={cn(
+                    "px-3 py-1 text-xs font-medium rounded-full transition-all tabular-nums",
+                    productFilter === p
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
             <div className="text-right">
-              <div className="text-[11px] text-muted-foreground">당월 합계</div>
+              <div className="text-[11px] text-muted-foreground">
+                {filterLabel === "전체" ? "당월 합계" : `${filterLabel} 당월 합계`}
+              </div>
               <div className="font-bold tabular-nums text-lg">
                 {totalMonthly.toLocaleString()}
                 <span className="text-xs text-muted-foreground ml-1">건</span>
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[11px] text-muted-foreground">오늘 합계</div>
+              <div className="text-[11px] text-muted-foreground">
+                {filterLabel === "전체" ? "오늘 합계" : `${filterLabel} 오늘`}
+              </div>
               <div className="font-bold tabular-nums text-lg text-primary">
                 {totalToday.toLocaleString()}
                 <span className="text-xs text-muted-foreground ml-1">건</span>
