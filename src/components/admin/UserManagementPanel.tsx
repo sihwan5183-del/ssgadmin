@@ -32,7 +32,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { KeyRound, UserX, UserCheck, Pencil, Search, Smartphone, Copy } from "lucide-react";
+import { KeyRound, UserX, UserCheck, Pencil, Search, Smartphone, Copy, UserMinus, UserCog } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { BulkActionBar } from "@/components/common/BulkActionBar";
+import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
 
 interface UserRow {
   user_id: string;
@@ -123,6 +127,43 @@ export function UserManagementPanel() {
       r.position?.toLowerCase().includes(q)
     );
   });
+
+  const ids = filtered.map((r) => r.user_id);
+  const bulk = useBulkSelection<string>(ids);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkStatusOpen, setBulkStatusOpen] = useState<string | null>(null);
+
+  const bulkSetStatus = async (status: "active" | "leave" | "resigned") => {
+    setBulkBusy(true);
+    const { error } = await supabase.from("profiles").update({ status }).in("user_id", bulk.selectedIds);
+    if (!error && status !== "active") {
+      // 휴직/퇴사는 로그인 차단도 함께
+      await Promise.all(
+        bulk.selectedIds.map((uid) =>
+          supabase.functions.invoke("admin-user-management", {
+            body: { action: "set_active", user_id: uid, active: false },
+          }),
+        ),
+      );
+    } else if (!error && status === "active") {
+      await Promise.all(
+        bulk.selectedIds.map((uid) =>
+          supabase.functions.invoke("admin-user-management", {
+            body: { action: "set_active", user_id: uid, active: true },
+          }),
+        ),
+      );
+    }
+    setBulkBusy(false);
+    setBulkStatusOpen(null);
+    if (error) {
+      toast.error("일괄 변경 실패: " + error.message);
+      return;
+    }
+    toast.success(`${bulk.selectedIds.length}명 → ${STATUS_LABELS[status]}`);
+    bulk.clear();
+    fetchAll();
+  };
 
   const saveProfile = async () => {
     if (!editing) return;
@@ -227,6 +268,12 @@ export function UserManagementPanel() {
         <table className="w-full text-sm">
           <thead className="text-xs text-muted-foreground border-b border-border/50">
             <tr>
+              <th className="w-8 py-2 px-2">
+                <Checkbox
+                  checked={bulk.allOnPageSelected}
+                  onCheckedChange={(v) => bulk.togglePage(!!v)}
+                />
+              </th>
               <th className="text-left py-2 px-2">이름</th>
               <th className="text-left py-2 px-2">연락처</th>
               <th className="text-left py-2 px-2">매장 / 팀</th>
@@ -238,13 +285,16 @@ export function UserManagementPanel() {
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={7} className="py-6 text-center text-muted-foreground">불러오는 중…</td></tr>
+              <tr><td colSpan={8} className="py-6 text-center text-muted-foreground">불러오는 중…</td></tr>
             )}
             {!loading && filtered.length === 0 && (
-              <tr><td colSpan={7} className="py-6 text-center text-muted-foreground">결과 없음</td></tr>
+              <tr><td colSpan={8} className="py-6 text-center text-muted-foreground">결과 없음</td></tr>
             )}
             {filtered.map((u) => (
-              <tr key={u.user_id} className="border-b border-border/30 hover:bg-background/30">
+              <tr key={u.user_id} className="border-b border-border/30 hover:bg-background/30" data-state={bulk.isSelected(u.user_id) ? "selected" : undefined}>
+                <td className="py-3 px-2">
+                  <Checkbox checked={bulk.isSelected(u.user_id)} onCheckedChange={() => bulk.toggle(u.user_id)} disabled={u.user_id === me?.id} />
+                </td>
                 <td className="py-3 px-2 font-medium">
                   {u.display_name}
                   {u.user_id === me?.id && (
@@ -418,6 +468,29 @@ export function UserManagementPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BulkActionBar count={bulk.selectedCount} onClear={bulk.clear}>
+        <Select onValueChange={(v) => setBulkStatusOpen(v)}>
+          <SelectTrigger className="h-8 w-44 text-xs">
+            <SelectValue placeholder="재직 상태 일괄 변경" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">재직 처리</SelectItem>
+            <SelectItem value="leave">휴직 (로그인 차단)</SelectItem>
+            <SelectItem value="resigned">퇴사 (로그인 차단)</SelectItem>
+          </SelectContent>
+        </Select>
+      </BulkActionBar>
+
+      <BulkDeleteDialog
+        open={!!bulkStatusOpen}
+        onOpenChange={(v) => !v && setBulkStatusOpen(null)}
+        count={bulk.selectedCount}
+        itemLabel={`명의 직원을 ${bulkStatusOpen ? STATUS_LABELS[bulkStatusOpen] : ""}(으)로 변경하시겠습니까?`}
+        confirmLabel={bulkStatusOpen === "active" ? "재직 처리" : "변경 및 로그인 차단"}
+        loading={bulkBusy}
+        onConfirm={() => bulkSetStatus(bulkStatusOpen as any)}
+      />
     </Card>
   );
 }

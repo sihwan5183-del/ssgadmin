@@ -22,6 +22,12 @@ import { usePeriod } from "@/contexts/PeriodContext";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { exportToExcel, AD_SPEND_COLUMNS } from "@/lib/excelExport";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { BulkActionBar } from "@/components/common/BulkActionBar";
+import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
+import { PurgeByFilterDialog, type PurgeFilter } from "@/components/common/PurgeByFilterDialog";
+import { useRole } from "@/hooks/useRole";
 
 const PAGE_SIZE = 25;
 

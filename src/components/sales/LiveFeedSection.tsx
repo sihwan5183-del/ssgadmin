@@ -2,19 +2,24 @@ import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Activity, Radio, FileWarning, ClipboardList, User, Phone,
-  Smartphone, Upload, Pencil, CheckCircle2, ArrowUpRight, Clock,
+  Smartphone, Upload, Pencil, CheckCircle2, ArrowUpRight, Clock, Trash2, ShieldCheck, XCircle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useViewScope } from "@/contexts/ViewScopeContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/hooks/useRole";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
 import { toast } from "sonner";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { BulkActionBar } from "@/components/common/BulkActionBar";
+import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
 
 interface FeedSale {
   id: string;
@@ -60,6 +65,8 @@ function timeAgo(iso: string) {
 export function LiveFeedSection() {
   const { scope } = useViewScope();
   const { user } = useAuth();
+  const { isAdmin, isManager } = useRole();
+  const canApprove = isAdmin || isManager;
   const [rows, setRows] = useState<FeedSale[]>([]);
   const [loading, setLoading] = useState(true);
   const [pulse, setPulse] = useState(false);
@@ -71,6 +78,10 @@ export function LiveFeedSection() {
   const [editNote, setEditNote] = useState("");
   const [editResolved, setEditResolved] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // bulk
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -163,6 +174,30 @@ export function LiveFeedSection() {
     load();
   };
 
+  // bulk
+  const ids = useMemo(() => rows.map((r) => r.id), [rows]);
+  const bulk = useBulkSelection<string>(ids);
+
+  const bulkApprove = async (status: "확정" | "반려") => {
+    setBulkBusy(true);
+    const { error } = await supabase.from("sales").update({ approval_status: status }).in("id", bulk.selectedIds);
+    setBulkBusy(false);
+    if (error) { toast.error("일괄 처리 실패: " + error.message); return; }
+    toast.success(`${bulk.selectedIds.length}건 → ${status}`);
+    bulk.clear();
+    load();
+  };
+  const bulkDelete = async () => {
+    setBulkBusy(true);
+    const { error } = await supabase.from("sales").delete().in("id", bulk.selectedIds);
+    setBulkBusy(false);
+    if (error) { toast.error("일괄 삭제 실패: " + error.message); return; }
+    toast.success(`${bulk.selectedIds.length}건 삭제됨`);
+    setBulkDeleteOpen(false);
+    bulk.clear();
+    load();
+  };
+
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
@@ -189,6 +224,11 @@ export function LiveFeedSection() {
         {/* === Live feed (2 cols) === */}
         <Card className="glass border-border/40 lg:col-span-2 overflow-hidden">
           <div className="px-4 py-3 border-b border-border/40 flex items-center gap-2">
+            <Checkbox
+              checked={bulk.allOnPageSelected}
+              onCheckedChange={(v) => bulk.togglePage(!!v)}
+              aria-label="모두 선택"
+            />
             <Activity className="size-4 text-primary-glow" />
             <span className="text-sm font-medium">방금 올라온 실적</span>
           </div>
@@ -201,11 +241,17 @@ export function LiveFeedSection() {
               rows.map((r) => {
                 const noDoc = (r.doc_count ?? 0) === 0;
                 const hasPending = !r.pending_resolved && r.pending_items.length > 0;
+                const selected = bulk.isSelected(r.id);
                 return (
                   <div
                     key={r.id}
-                    className="px-4 py-3 hover:bg-muted/20 transition-colors flex items-start gap-3"
+                    className={`px-4 py-3 hover:bg-muted/20 transition-colors flex items-start gap-3 ${selected ? "bg-primary/5" : ""}`}
                   >
+                    <Checkbox
+                      checked={selected}
+                      onCheckedChange={() => bulk.toggle(r.id)}
+                      className="mt-1.5"
+                    />
                     <div className="size-9 rounded-xl bg-primary/10 grid place-items-center shrink-0">
                       <Smartphone className="size-4 text-primary-glow" />
                     </div>
@@ -401,6 +447,32 @@ export function LiveFeedSection() {
           )}
         </DialogContent>
       </Dialog>
+
+      <BulkActionBar count={bulk.selectedCount} onClear={bulk.clear}>
+        {canApprove && (
+          <>
+            <Button size="sm" variant="default" onClick={() => bulkApprove("확정")} disabled={bulkBusy}>
+              <ShieldCheck className="size-3.5 mr-1" /> 일괄 확정
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => bulkApprove("반려")} disabled={bulkBusy}>
+              <XCircle className="size-3.5 mr-1" /> 일괄 반려
+            </Button>
+          </>
+        )}
+        <Button size="sm" variant="destructive" onClick={() => setBulkDeleteOpen(true)} disabled={bulkBusy}>
+          <Trash2 className="size-3.5 mr-1" /> 선택 삭제
+        </Button>
+      </BulkActionBar>
+
+      <BulkDeleteDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        count={bulk.selectedCount}
+        itemLabel="건의 실적을 삭제하시겠습니까?"
+        onConfirm={bulkDelete}
+        loading={bulkBusy}
+        confirmLabel="삭제"
+      />
     </section>
   );
 }

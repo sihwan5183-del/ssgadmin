@@ -33,6 +33,12 @@ import { MoneyInput } from "@/components/ui/money-input";
 import { useSearchParams } from "react-router-dom";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { CalendarDays } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Trash2 } from "lucide-react";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { BulkActionBar } from "@/components/common/BulkActionBar";
+import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
+import { PurgeByFilterDialog, type PurgeFilter } from "@/components/common/PurgeByFilterDialog";
 
 type ApprovalStatus = "승인대기" | "확정" | "반려" | "수정요청" | "환수" | "취소";
 
@@ -121,6 +127,44 @@ export const SaleSearchPanel = () => {
   const [overrideOpen, setOverrideOpen] = useState(false);
   const [overrideReason, setOverrideReason] = useState("");
   const [pendingApprovalTarget, setPendingApprovalTarget] = useState<ApprovalStatus | null>(null);
+
+  // bulk
+  const resultIds = useMemo(() => results.map((r) => r.id), [results]);
+  const bulk = useBulkSelection<string>(resultIds);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [purgeOpen, setPurgeOpen] = useState(false);
+
+  const purgeFilter: PurgeFilter = useMemo(() => ({
+    table: "sales",
+    filters: [
+      { column: "open_date", op: "gte", value: startDate },
+      { column: "open_date", op: "lte", value: endDate },
+    ],
+    summary: `개통일 ${startDate} ~ ${endDate}`,
+  }), [startDate, endDate]);
+
+  const bulkApprove = async (status: ApprovalStatus) => {
+    setBulkBusy(true);
+    const { error } = await supabase.from("sales").update({ approval_status: status }).in("id", bulk.selectedIds);
+    setBulkBusy(false);
+    if (error) { toast.error("일괄 처리 실패: " + error.message); return; }
+    toast.success(`${bulk.selectedIds.length}건 → ${status}`);
+    bulk.clear();
+    refreshCounts();
+    search();
+  };
+  const bulkDelete = async () => {
+    setBulkBusy(true);
+    const { error } = await supabase.from("sales").delete().in("id", bulk.selectedIds);
+    setBulkBusy(false);
+    if (error) { toast.error("일괄 삭제 실패: " + error.message); return; }
+    toast.success(`${bulk.selectedIds.length}건 삭제됨`);
+    setBulkDeleteOpen(false);
+    bulk.clear();
+    refreshCounts();
+    search();
+  };
 
   const isLocked = !!selected?.locked;
   const canEdit = useMemo(() => {
@@ -358,9 +402,21 @@ export const SaleSearchPanel = () => {
         <div className="mt-4 rounded-xl border border-border/40 overflow-hidden">
           <div className="px-3 py-2 bg-muted/40 text-xs text-muted-foreground flex items-center justify-between">
             <span className="flex items-center gap-2">
+              <Checkbox
+                checked={bulk.allOnPageSelected}
+                onCheckedChange={(v) => bulk.togglePage(!!v)}
+                aria-label="모두 선택"
+              />
               <CalendarDays className="size-3" /> {label} · 검색 결과 {results.length}건 (날짜 내림차순)
             </span>
-            <span>날짜별로 묶음 · 합계 표시</span>
+            <div className="flex items-center gap-2">
+              {isAdmin && (
+                <Button size="sm" variant="ghost" className="h-7 text-[11px] text-destructive" onClick={() => setPurgeOpen(true)}>
+                  <Trash2 className="size-3 mr-1" /> 기간 전체삭제
+                </Button>
+              )}
+              <span>날짜별로 묶음 · 합계 표시</span>
+            </div>
           </div>
           <div className="max-h-[32rem] overflow-y-auto">
             {(() => {
@@ -406,14 +462,19 @@ export const SaleSearchPanel = () => {
                         const meta = APPROVAL_META[ap];
                         const Icon = meta.icon;
                         const hasUnhandled = (r.pending_items?.length ?? 0) > 0 && r.pending_resolved === false;
+                        const sel = bulk.isSelected(r.id);
                         return (
-                          <button
+                          <div
                             key={r.id}
-                            onClick={() => openDetail(r)}
-                            className={`w-full text-left px-3 py-2.5 hover:bg-muted/30 transition-colors flex items-center gap-3 ${
-                              hasUnhandled ? "bg-amber-500/[0.07] hover:bg-amber-500/[0.12]" : ""
-                            }`}
+                            className={`flex items-stretch ${sel ? "bg-primary/5" : ""} ${hasUnhandled ? "bg-amber-500/[0.07]" : ""}`}
                           >
+                            <div className="pl-3 pr-1 flex items-center" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox checked={sel} onCheckedChange={() => bulk.toggle(r.id)} />
+                            </div>
+                            <button
+                              onClick={() => openDetail(r)}
+                              className="flex-1 text-left px-2 py-2.5 hover:bg-muted/30 transition-colors flex items-center gap-3"
+                            >
                             <div className="flex-1 min-w-0">
                               <div className="text-sm font-medium flex items-center gap-2 flex-wrap">
                                 <User className="size-3 text-muted-foreground" />
@@ -442,8 +503,9 @@ export const SaleSearchPanel = () => {
                                 )}
                               </div>
                             </div>
-                            <Edit3 className="size-3.5 text-muted-foreground" />
-                          </button>
+                            <Edit3 className="size-3.5 text-muted-foreground self-center mr-3" />
+                            </button>
+                          </div>
                         );
                       })}
                     </div>
@@ -707,6 +769,39 @@ export const SaleSearchPanel = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <BulkActionBar count={bulk.selectedCount} onClear={bulk.clear}>
+        {isAdmin && (
+          <>
+            <Button size="sm" variant="default" onClick={() => bulkApprove("확정")} disabled={bulkBusy}>
+              일괄 확정
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => bulkApprove("반려")} disabled={bulkBusy}>
+              일괄 반려
+            </Button>
+          </>
+        )}
+        <Button size="sm" variant="destructive" onClick={() => setBulkDeleteOpen(true)} disabled={bulkBusy}>
+          <Trash2 className="size-3.5 mr-1" /> 선택 삭제
+        </Button>
+      </BulkActionBar>
+
+      <BulkDeleteDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        count={bulk.selectedCount}
+        itemLabel="건의 실적을 삭제하시겠습니까?"
+        onConfirm={bulkDelete}
+        loading={bulkBusy}
+        confirmLabel="삭제"
+      />
+
+      <PurgeByFilterDialog
+        open={purgeOpen}
+        onOpenChange={setPurgeOpen}
+        filter={purgeFilter}
+        onDone={() => { refreshCounts(); search(); }}
+      />
     </Card>
   );
 };
