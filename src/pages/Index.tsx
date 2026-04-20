@@ -112,18 +112,20 @@ const Index = () => {
         <ChannelModelAnalysis />
       </section>
 
-      {/* [3] 하단 — 라이브 활동 피드 + 사이드 위젯 */}
-      <section className="grid grid-cols-1 lg:grid-cols-5 gap-2">
-        <div className="lg:col-span-3 space-y-2">
-          <LiveActivityFeed />
-        </div>
-        <div className="lg:col-span-2 space-y-2">
-          <PlannerFeed />
-          <InventoryWidget />
-          <StrategyModelGauges />
-          <AdScheduleWidget />
-          <RankingPanel />
-        </div>
+      {/* [3] 하단 — 라이브 활동 피드 + 사이드 위젯 (좌우 균형 배치) */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-2 mb-3">
+        <LiveActivityFeed />
+        <PlannerFeed />
+      </section>
+
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-2 mb-3">
+        <InventoryWidget />
+        <StrategyModelGauges />
+      </section>
+
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+        <AdScheduleWidget />
+        <RankingPanel />
       </section>
     </>
   );
