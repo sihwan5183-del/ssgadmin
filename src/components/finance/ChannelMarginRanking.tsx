@@ -1,15 +1,16 @@
-import { channelEconomics, formatKRWShort } from "@/data/financeData";
 import { Crown, Trophy, Medal } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useFinanceData } from "@/hooks/useFinanceData";
+import { EmptyHint } from "./EmptyHint";
+
+const formatKRW = (n: number) => "₩" + Math.round(n).toLocaleString("ko-KR");
 
 export const ChannelMarginRanking = () => {
-  const rows = channelEconomics
-    .map((c) => {
-      const cost = c.spend + c.offer;
-      const margin = c.rebate - cost;
-      const marginRate = Math.round((margin / c.rebate) * 100);
-      return { ...c, margin, marginRate, cost };
-    })
+  const { channels, loading, hasSales, hasSpend } = useFinanceData();
+
+  // 광고비 또는 수익 둘 중 하나라도 있는 채널만
+  const rows = channels
+    .filter((c) => c.rebate > 0 || c.spend > 0)
     .sort((a, b) => b.marginRate - a.marginRate);
 
   const podium = [
@@ -23,43 +24,61 @@ export const ChannelMarginRanking = () => {
       <div className="flex items-baseline justify-between mb-4">
         <div>
           <h4 className="text-base font-semibold tracking-tight">채널별 마진율 순위</h4>
-          <p className="text-xs text-muted-foreground mt-0.5">(리베이트 − 지원금 − 광고비) ÷ 리베이트</p>
+          <p className="text-xs text-muted-foreground mt-0.5">(수익 − 오퍼 − 광고비) ÷ 수익</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        {rows.slice(0, 3).map((r, i) => {
-          const P = podium[i];
-          return (
-            <div key={r.channel} className={cn("rounded-xl p-3 ring-1 backdrop-blur-md bg-gradient-to-br", P.wrap)}>
-              <div className="flex items-center justify-between">
-                <P.Icon className="size-4" />
-                <span className="text-[10px] font-bold">#{i + 1}</span>
-              </div>
-              <div className="mt-2 text-sm font-semibold">{r.channel}</div>
-              <div className="mt-1 text-2xl font-bold text-gradient tabular-nums">{r.marginRate}%</div>
-              <div className="text-[10px] text-muted-foreground tabular-nums mt-0.5">
-                마진 {formatKRWShort(r.margin)}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {!loading && rows.length === 0 && (
+        <EmptyHint
+          message={
+            !hasSales && !hasSpend
+              ? "해당 기간 데이터가 없습니다."
+              : !hasSpend
+                ? "광고비가 입력되지 않아 마진율을 계산할 수 없습니다."
+                : "수익 데이터가 없습니다."
+          }
+          actionLabel="지출 입력"
+          actionHref="/expense-input"
+        />
+      )}
 
-      <ul className="space-y-1.5">
-        {rows.slice(3).map((r, idx) => (
-          <li key={r.channel} className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-white/[0.03] transition-colors">
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-muted-foreground tabular-nums w-5">{idx + 4}</span>
-              <span className="text-sm font-medium">{r.channel}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-[11px] text-muted-foreground tabular-nums">{formatKRWShort(r.margin)}</span>
-              <span className="text-sm font-bold tabular-nums text-revenue">{r.marginRate}%</span>
-            </div>
-          </li>
-        ))}
-      </ul>
+      {rows.length > 0 && (
+        <>
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            {rows.slice(0, 3).map((r, i) => {
+              const P = podium[i];
+              return (
+                <div key={r.channel} className={cn("rounded-xl p-3 ring-1 backdrop-blur-md bg-gradient-to-br", P.wrap)}>
+                  <div className="flex items-center justify-between">
+                    <P.Icon className="size-4" />
+                    <span className="text-[10px] font-bold">#{i + 1}</span>
+                  </div>
+                  <div className="mt-2 text-sm font-semibold">{r.channel}</div>
+                  <div className="mt-1 text-2xl font-bold text-gradient tabular-nums">{Math.round(r.marginRate)}%</div>
+                  <div className="text-[10px] text-muted-foreground tabular-nums mt-0.5">
+                    마진 {formatKRW(r.margin)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <ul className="space-y-1.5">
+            {rows.slice(3).map((r, idx) => (
+              <li key={r.channel} className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-white/[0.03] transition-colors">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground tabular-nums w-5">{idx + 4}</span>
+                  <span className="text-sm font-medium">{r.channel}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] text-muted-foreground tabular-nums">{formatKRW(r.margin)}</span>
+                  <span className="text-sm font-bold tabular-nums text-revenue">{Math.round(r.marginRate)}%</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </div>
   );
 };
