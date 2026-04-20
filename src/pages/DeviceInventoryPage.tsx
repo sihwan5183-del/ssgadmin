@@ -775,8 +775,34 @@ export default function DeviceInventoryPage() {
             <Field label="모델 *">
               <Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} />
             </Field>
-            <Field label="일련번호 / IMEI">
-              <Input value={form.serial_no} onChange={(e) => setForm({ ...form, serial_no: e.target.value })} />
+            <Field label="재고 유형 *">
+              <Select value={form.device_kind} onValueChange={(v) => setForm({ ...form, device_kind: v as Kind })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {KINDS.map((k) => <SelectItem key={k} value={k}>{k}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="일련번호 / IMEI / SN" full>
+              <Input
+                ref={serialInputRef}
+                value={form.serial_no}
+                onChange={(e) => setForm({ ...form, serial_no: cleanSerial(e.target.value) })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    // 다음 필드(색상)로 자동 이동
+                    const next = (e.currentTarget.closest(".grid")?.querySelectorAll("input") ?? []) as NodeListOf<HTMLInputElement>;
+                    const idx = Array.from(next).indexOf(e.currentTarget);
+                    next[idx + 1]?.focus();
+                  }
+                }}
+                maxLength={120}
+                autoComplete="off"
+                spellCheck={false}
+                className="font-mono"
+                placeholder="바코드 스캔 또는 직접 입력 (Enter로 다음 칸)"
+              />
             </Field>
             <Field label="색상">
               <Input value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} />
