@@ -35,9 +35,11 @@ import { SystemAuditLog } from "@/components/admin/SystemAuditLog";
 import { IncentiveRatesManager } from "@/components/admin/IncentiveRatesManager";
 import { ReviewChecklistManager } from "@/components/admin/ReviewChecklistManager";
 import { StrategyConfigManager } from "@/components/admin/StrategyConfigManager";
+import { UserManagementPanel } from "@/components/admin/UserManagementPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole, type AppRole } from "@/hooks/useRole";
+import { Users } from "lucide-react";
 import { useAppSettings, type DashboardWidgets } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
@@ -166,8 +168,11 @@ export default function AdminPage() {
           <TabsTrigger value="models" className="gap-2">
             <Smartphone className="size-4" /> 모델 마스터
           </TabsTrigger>
+          <TabsTrigger value="staff" className="gap-2">
+            <Users className="size-4" /> 직원 관리
+          </TabsTrigger>
           <TabsTrigger value="users" className="gap-2">
-            <ShieldCheck className="size-4" /> 사용자 권한
+            <ShieldCheck className="size-4" /> 권한 빠른 변경
           </TabsTrigger>
           <TabsTrigger value="incentive" className="gap-2">
             <Coins className="size-4" /> 인센티브 단가
@@ -182,6 +187,10 @@ export default function AdminPage() {
             <History className="size-4" /> 시스템 로그
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="staff">
+          <UserManagementPanel />
+        </TabsContent>
 
         <TabsContent value="strategy">
           <StrategyConfigManager />
