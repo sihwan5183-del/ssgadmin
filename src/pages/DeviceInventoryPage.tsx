@@ -196,6 +196,15 @@ export default function DeviceInventoryPage() {
     return c;
   }, [rows]);
 
+  const kindCounts = useMemo(() => {
+    let phone = 0, iot = 0;
+    rows.forEach((r) => {
+      if ((r.device_kind ?? "휴대폰") === "IoT(도그마루)") iot += 1;
+      else phone += 1;
+    });
+    return { phone, iot };
+  }, [rows]);
+
   const agedCount = useMemo(
     () => rows.filter((r) => r.status !== "개통완료" && isAged(r.stock_in_date)).length,
     [rows, isAged],
@@ -468,14 +477,20 @@ export default function DeviceInventoryPage() {
 
       <QuickScanDialog open={quickScanOpen} onOpenChange={setQuickScanOpen} onDone={load} />
 
-      {/* 상단 KPI */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-        {STATUSES.map((s) => (
-          <Card key={s} className="p-4 glass border-border/40">
-            <div className="text-xs text-muted-foreground">{s}</div>
-            <div className="text-2xl font-bold tabular-nums mt-1">{counts[s] ?? 0}</div>
-          </Card>
-        ))}
+      {/* 상단 KPI — 유형/자산 요약 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="p-4 glass border-primary/30">
+          <div className="text-xs text-muted-foreground flex items-center gap-1">
+            <Smartphone className="size-3 text-primary" /> 휴대폰
+          </div>
+          <div className="text-2xl font-bold tabular-nums mt-1 text-primary">{kindCounts.phone}</div>
+        </Card>
+        <Card className="p-4 glass border-purple-500/30">
+          <div className="text-xs text-muted-foreground flex items-center gap-1">
+            <span className="inline-block size-2 rounded-full bg-purple-400" /> IoT(도그마루)
+          </div>
+          <div className="text-2xl font-bold tabular-nums mt-1 text-purple-300">{kindCounts.iot}</div>
+        </Card>
         <Card
           className={`p-4 glass cursor-pointer transition-colors ${
             agedOnly ? "border-destructive ring-1 ring-destructive/40" : "border-destructive/40"
@@ -487,12 +502,31 @@ export default function DeviceInventoryPage() {
           </div>
           <div className="text-2xl font-bold tabular-nums mt-1 text-destructive">{agedCount}</div>
         </Card>
-        <Card className="p-4 glass border-border/40 col-span-2 md:col-span-2 lg:col-span-1">
+        <Card className="p-4 glass border-border/40">
           <div className="text-xs text-muted-foreground">총 재고 자산</div>
           <div className="text-xl font-bold tabular-nums mt-1">
             {totalAsset.toLocaleString("ko-KR")}원
           </div>
         </Card>
+      </div>
+
+      {/* 상태별 KPI — 8개 컴팩트 그리드 */}
+      <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
+        {STATUSES.map((s) => {
+          const active = statusFilter === s;
+          return (
+            <Card
+              key={s}
+              onClick={() => setStatusFilter(active ? "all" : s)}
+              className={`p-2.5 glass cursor-pointer transition-all border ${
+                active ? "ring-1 ring-primary/40" : ""
+              } ${STATUS_COLOR[s] ?? "border-border/40"}`}
+            >
+              <div className="text-[10px] opacity-80 leading-tight">{s}</div>
+              <div className="text-lg font-bold tabular-nums mt-0.5 leading-none">{counts[s] ?? 0}</div>
+            </Card>
+          );
+        })}
       </div>
 
       {/* 검색 / 필터 */}
@@ -584,6 +618,9 @@ export default function DeviceInventoryPage() {
                   tone={tone}
                   title={
                     <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded border ${KIND_COLOR[r.device_kind ?? "휴대폰"] ?? ""}`}>
+                        {(r.device_kind ?? "휴대폰") === "IoT(도그마루)" ? "IoT" : "휴대폰"}
+                      </span>
                       <span>{r.model}</span>
                       <span className={`text-[10px] px-2 py-0.5 rounded-md border ${STATUS_COLOR[r.status] ?? ""}`}>
                         {r.status}
@@ -688,7 +725,10 @@ export default function DeviceInventoryPage() {
                         <Checkbox checked={bulk.isSelected(r.id)} onCheckedChange={() => bulk.toggle(r.id)} />
                       </td>
                       <td className="px-3 py-2.5 font-medium">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded border ${KIND_COLOR[r.device_kind ?? "휴대폰"] ?? ""}`}>
+                            {(r.device_kind ?? "휴대폰") === "IoT(도그마루)" ? "IoT" : "휴대폰"}
+                          </span>
                           {r.model}
                           {agingBadge && (
                             <span className={`text-[10px] px-1.5 py-0.5 rounded ${agingBadge.cls}`}>
