@@ -13,11 +13,13 @@ import {
 } from "@/components/ui/dialog";
 import {
   FileWarning, Search, Upload, Phone, User, Smartphone, AlertTriangle, ListChecks,
-  ClipboardList, CheckCircle2, Pencil,
+  ClipboardList, CheckCircle2, Pencil, Building2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
+import { PlannerSuperView } from "@/components/sales/PlannerSuperView";
+import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
 
 interface SaleLite {
