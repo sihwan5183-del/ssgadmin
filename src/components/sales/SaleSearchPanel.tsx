@@ -769,6 +769,39 @@ export const SaleSearchPanel = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <BulkActionBar count={bulk.selectedCount} onClear={bulk.clear}>
+        {isAdmin && (
+          <>
+            <Button size="sm" variant="default" onClick={() => bulkApprove("확정")} disabled={bulkBusy}>
+              일괄 확정
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => bulkApprove("반려")} disabled={bulkBusy}>
+              일괄 반려
+            </Button>
+          </>
+        )}
+        <Button size="sm" variant="destructive" onClick={() => setBulkDeleteOpen(true)} disabled={bulkBusy}>
+          <Trash2 className="size-3.5 mr-1" /> 선택 삭제
+        </Button>
+      </BulkActionBar>
+
+      <BulkDeleteDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        count={bulk.selectedCount}
+        itemLabel="건의 실적을 삭제하시겠습니까?"
+        onConfirm={bulkDelete}
+        loading={bulkBusy}
+        confirmLabel="삭제"
+      />
+
+      <PurgeByFilterDialog
+        open={purgeOpen}
+        onOpenChange={setPurgeOpen}
+        filter={purgeFilter}
+        onDone={() => { refreshCounts(); search(); }}
+      />
     </Card>
   );
 };
