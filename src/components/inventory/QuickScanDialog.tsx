@@ -49,6 +49,11 @@ export const QuickScanDialog = ({ open, onOpenChange, onDone, iotMode = false }:
     setList([]);
     setSerialBuf("");
     setBulkText("");
+    setModel(iotMode ? IOT_FIXED_MODEL : "");
+    setKind(iotMode ? "IoT(도그마루)" : "휴대폰");
+    setColor("");
+    setCapacity("");
+    setPurchasePrice(0);
     (async () => {
       const { data } = await supabase
         .from("device_inventory")
@@ -58,7 +63,7 @@ export const QuickScanDialog = ({ open, onOpenChange, onDone, iotMode = false }:
       setExistingSerials(new Set((data ?? []).map((d: any) => d.serial_no).filter(Boolean)));
     })();
     setTimeout(() => inputRef.current?.focus(), 200);
-  }, [open]);
+  }, [open, iotMode]);
 
   const addSerial = (raw: string) => {
     const norm = normalizeSerial(raw);
