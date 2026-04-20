@@ -125,6 +125,7 @@ const Index = () => {
           <LiveActivityFeed />
         </div>
         <div className="lg:col-span-2 space-y-4">
+          <PlannerFeed />
           <InventoryWidget />
           <StrategyModelGauges />
           <AdScheduleWidget />
