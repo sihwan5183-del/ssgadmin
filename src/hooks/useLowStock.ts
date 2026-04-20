@@ -30,7 +30,7 @@ export const useLowStock = () => {
     };
     load();
     const ch = supabase
-      .channel("low-stock")
+      .channel("low-stock-" + Math.random().toString(36).slice(2))
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "device_inventory" },
