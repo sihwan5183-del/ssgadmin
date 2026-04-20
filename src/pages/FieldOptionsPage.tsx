@@ -21,6 +21,7 @@ const FIELDS: { key: string; label: string; hint: string }[] = [
   { key: "media", label: "광고 매체", hint: "네이버, 메타, 유튜브 등" },
   { key: "expense_type", label: "지출 항목", hint: "임대료, 통신비, 운영비 등" },
   { key: "inquiry_channel", label: "인입 채널", hint: "당근, 네이버 플레이스, 인스타, 지인소개 등" },
+  { key: "carrier", label: "통신사", hint: "SKT, KT, LGU+, 알뜰폰 등" },
 ];
 
 interface Row {
