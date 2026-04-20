@@ -37,14 +37,20 @@ import { useRole } from "@/hooks/useRole";
 import { ShieldAlert } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileListCard } from "@/components/common/MobileListCard";
+import { QuickScanDialog } from "@/components/inventory/QuickScanDialog";
+import { ScanLine } from "lucide-react";
 
-const STATUSES = ["재고", "판매중", "이동중", "개통완료", "반품"] as const;
+const STATUSES = ["입고", "재고", "판매중", "이동중", "개통완료", "반품", "반납", "불량"] as const;
 type Status = typeof STATUSES[number];
+
+const KINDS = ["휴대폰", "IoT(도그마루)"] as const;
+type Kind = typeof KINDS[number];
 
 type Device = {
   id: string;
   created_by: string;
   model: string;
+  device_kind: string | null;
   serial_no: string | null;
   color: string | null;
   capacity: string | null;
@@ -56,21 +62,34 @@ type Device = {
 };
 
 const STATUS_COLOR: Record<string, string> = {
+  입고: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
   재고: "bg-primary/15 text-primary border-primary/30",
   판매중: "bg-warning/15 text-warning border-warning/30",
   이동중: "bg-secondary/15 text-secondary-foreground border-secondary/30",
   개통완료: "bg-muted/40 text-muted-foreground border-border",
   반품: "bg-destructive/15 text-destructive border-destructive/30",
+  반납: "bg-amber-500/15 text-amber-300 border-amber-500/40",
+  불량: "bg-destructive/20 text-destructive border-destructive/40",
 };
+
+const KIND_COLOR: Record<string, string> = {
+  "휴대폰": "bg-primary/10 text-primary border-primary/30",
+  "IoT(도그마루)": "bg-purple-500/15 text-purple-300 border-purple-500/40",
+};
+
+/** 바코드 입력 정제: 공백/하이픈/제어문자 제거 + 대문자 (서버 normalize_serial_no와 동일) */
+const cleanSerial = (raw: string) =>
+  (raw ?? "").replace(/[\s\-_\u0000-\u001F]+/g, "").toUpperCase();
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
 const emptyForm = {
   model: "",
+  device_kind: "휴대폰" as Kind,
   serial_no: "",
   color: "",
   capacity: "",
-  status: "재고" as Status,
+  status: "입고" as Status,
   note: "",
   stock_in_date: todayISO(),
   purchase_price: 0,
