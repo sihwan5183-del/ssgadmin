@@ -4,7 +4,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 export const MobileBreakdown = () => {
   const totalSub = subscriptionTypes.reduce((s, t) => s + t.count, 0);
   const totalModel = modelPolicyShare.reduce((s, m) => s + m.value, 0);
-  const policyPct = Math.round((modelPolicyShare[0].value / totalModel) * 100);
+  const policyPct = totalModel > 0 ? Math.round((modelPolicyShare[0].value / totalModel) * 100) : 0;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -22,7 +22,7 @@ export const MobileBreakdown = () => {
 
         <div className="space-y-3">
           {subscriptionTypes.map((t) => {
-            const pct = Math.round((t.count / totalSub) * 100);
+            const pct = totalSub > 0 ? Math.round((t.count / totalSub) * 100) : 0;
             return (
               <div key={t.type}>
                 <div className="flex items-center justify-between text-sm mb-1.5">

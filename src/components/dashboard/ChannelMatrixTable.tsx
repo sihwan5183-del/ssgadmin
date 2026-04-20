@@ -10,7 +10,7 @@ export const ChannelMatrixTable = () => {
     }),
     { inflow: 0, success: 0, mobile: 0, strategy: 0 }
   );
-  const totalRate = Math.round((totals.success / totals.inflow) * 100);
+  const totalRate = totals.inflow > 0 ? Math.round((totals.success / totals.inflow) * 100) : 0;
 
   return (
     <div className="glass rounded-2xl p-5 overflow-hidden">
@@ -38,7 +38,7 @@ export const ChannelMatrixTable = () => {
           </thead>
           <tbody>
             {channelMatrix.map((r) => {
-              const rate = Math.round((r.success / r.inflow) * 100);
+              const rate = r.inflow > 0 ? Math.round((r.success / r.inflow) * 100) : 0;
               const rateColor = rate >= 60 ? "text-success" : rate >= 45 ? "text-warning" : "text-destructive";
               return (
                 <tr key={r.channel} className="border-b border-border/20 hover:bg-white/[0.03] transition-colors">

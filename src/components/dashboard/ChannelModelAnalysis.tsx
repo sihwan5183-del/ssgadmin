@@ -16,16 +16,13 @@ import { cn } from "@/lib/utils";
 const formatKRW = (n: number) => "₩" + n.toLocaleString("ko-KR");
 
 export const ChannelModelAnalysis = () => {
-  const [selectedChannel, setSelectedChannel] = useState<string>("당근");
+  const [selectedChannel, setSelectedChannel] = useState<string>(channelModelData[0]?.channel ?? "");
   const top5 = getChannelTop5(selectedChannel);
   const policyShare = getChannelPolicyShare();
   const selectedRow = channelModelData.find((r) => r.channel === selectedChannel);
   const channelTotal = selectedRow?.models.reduce((s, m) => s + m.count, 0) ?? 0;
-  const channelAvgRebate = selectedRow
-    ? Math.round(
-        selectedRow.models.reduce((s, m) => s + m.avgRebate * m.count, 0) /
-          selectedRow.models.reduce((s, m) => s + m.count, 0)
-      )
+  const channelAvgRebate = selectedRow && channelTotal > 0
+    ? Math.round(selectedRow.models.reduce((s, m) => s + m.avgRebate * m.count, 0) / channelTotal)
     : 0;
 
   return (
@@ -45,7 +42,7 @@ export const ChannelModelAnalysis = () => {
         </div>
         <div className="text-xs text-muted-foreground">
           현재 선택 ·{" "}
-          <span className="text-gradient font-bold text-sm">{selectedChannel}</span>
+          <span className="text-gradient font-bold text-sm">{selectedChannel || "데이터 없음"}</span>
         </div>
       </div>
 
@@ -154,7 +151,7 @@ export const ChannelModelAnalysis = () => {
       <div className="mt-4 grid grid-cols-1 lg:grid-cols-5 gap-4">
         <div className="lg:col-span-2 glass rounded-2xl p-5">
           <div className="text-xs text-muted-foreground">선택된 채널</div>
-          <div className="mt-1 text-2xl font-bold text-gradient">{selectedChannel}</div>
+          <div className="mt-1 text-2xl font-bold text-gradient">{selectedChannel || "데이터 없음"}</div>
 
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="rounded-xl bg-card/40 border border-border/40 p-3">
@@ -192,7 +189,7 @@ export const ChannelModelAnalysis = () => {
 
           <ul className="space-y-2">
             {top5.map((m, i) => {
-              const pct = Math.round((m.count / channelTotal) * 100);
+              const pct = channelTotal > 0 ? Math.round((m.count / channelTotal) * 100) : 0;
               return (
                 <li
                   key={m.name}
