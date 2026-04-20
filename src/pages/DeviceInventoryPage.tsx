@@ -618,6 +618,9 @@ export default function DeviceInventoryPage() {
                   tone={tone}
                   title={
                     <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded border ${KIND_COLOR[r.device_kind ?? "휴대폰"] ?? ""}`}>
+                        {(r.device_kind ?? "휴대폰") === "IoT(도그마루)" ? "IoT" : "휴대폰"}
+                      </span>
                       <span>{r.model}</span>
                       <span className={`text-[10px] px-2 py-0.5 rounded-md border ${STATUS_COLOR[r.status] ?? ""}`}>
                         {r.status}
