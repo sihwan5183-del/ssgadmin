@@ -537,6 +537,7 @@ export default function ExpenseInputPage() {
             <tbody>
               {/* 실적(sales) 자동 집계 — 분류 요약 행 */}
               <tr className="border-b border-border/40 bg-primary/[0.05]">
+                <td />
                 <td className="py-2 pr-3 text-xs text-muted-foreground">기간 합계</td>
                 <td className="py-2 pr-3">
                   <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">자동집계</Badge>
@@ -550,6 +551,7 @@ export default function ExpenseInputPage() {
                 <td />
               </tr>
               <tr className="border-b border-border/40 bg-primary/[0.05]">
+                <td />
                 <td className="py-2 pr-3 text-xs text-muted-foreground">기간 합계</td>
                 <td className="py-2 pr-3">
                   <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">자동집계</Badge>
@@ -563,6 +565,7 @@ export default function ExpenseInputPage() {
                 <td />
               </tr>
               <tr className="border-b border-border/40 bg-primary/[0.05]">
+                <td />
                 <td className="py-2 pr-3 text-xs text-muted-foreground">기간 합계</td>
                 <td className="py-2 pr-3">
                   <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">자동집계</Badge>
@@ -577,40 +580,76 @@ export default function ExpenseInputPage() {
               </tr>
 
               {loading ? (
-                <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">불러오는 중...</td></tr>
+                <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">불러오는 중...</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">등록된 지출이 없습니다</td></tr>
+                <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">등록된 지출이 없습니다</td></tr>
               ) : (
-                rows.map((r) => (
-                  <tr key={r.id} className="border-b border-border/30 hover:bg-muted/30">
-                    <td className="py-2 pr-3">{r.spend_date}</td>
-                    <td className="py-2 pr-3">
-                      <Badge variant="outline"
-                        className={`text-[10px] ${r.category === "광고비" ? "border-primary/40 text-primary" : "border-muted-foreground/40"}`}>
-                        {r.category}
-                      </Badge>
-                    </td>
-                    <td className="py-2 pr-3 font-medium">{r.expense_type ?? r.media}</td>
-                    <td className="py-2 pr-3 text-muted-foreground">{r.channel ?? "-"}</td>
-                    <td className="py-2 pr-3 text-muted-foreground truncate max-w-[240px]">{r.campaign ?? "-"}</td>
-                    <td className="py-2 pr-3 text-right font-mono font-semibold text-expense">
-                      {formatKRW(Number(r.amount))}
-                    </td>
-                    <td className="py-2 pr-3 text-right">
-                      {user?.id === r.created_by && (
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)} className="size-8">
-                          <Trash2 className="size-4 text-destructive" />
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))
+                rows.map((r) => {
+                  const sel = bulk.isSelected(r.id);
+                  return (
+                    <tr key={r.id} className={`border-b border-border/30 hover:bg-muted/30 ${sel ? "bg-primary/5" : ""}`} data-state={sel ? "selected" : undefined}>
+                      <td className="py-2 pr-2"><Checkbox checked={sel} onCheckedChange={() => bulk.toggle(r.id)} /></td>
+                      <td className="py-2 pr-3">{r.spend_date}</td>
+                      <td className="py-2 pr-3">
+                        <Badge variant="outline"
+                          className={`text-[10px] ${r.category === "광고비" ? "border-primary/40 text-primary" : "border-muted-foreground/40"}`}>
+                          {r.category}
+                        </Badge>
+                      </td>
+                      <td className="py-2 pr-3 font-medium">{r.expense_type ?? r.media}</td>
+                      <td className="py-2 pr-3 text-muted-foreground">{r.channel ?? "-"}</td>
+                      <td className="py-2 pr-3 text-muted-foreground truncate max-w-[240px]">{r.campaign ?? "-"}</td>
+                      <td className="py-2 pr-3 text-right font-mono font-semibold text-expense">
+                        {formatKRW(Number(r.amount))}
+                      </td>
+                      <td className="py-2 pr-3 text-right">
+                        {user?.id === r.created_by && (
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)} className="size-8">
+                            <Trash2 className="size-4 text-destructive" />
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
         <PaginationBar page={page} pageSize={PAGE_SIZE} total={total} onChange={setPage} />
       </Card>
+
+      <BulkActionBar count={bulk.selectedCount} onClear={bulk.clear}>
+        <Button size="sm" variant="destructive" onClick={() => setBulkDeleteOpen(true)} disabled={bulkBusy}>
+          <Trash2 className="size-3.5 mr-1" /> 선택 삭제
+        </Button>
+      </BulkActionBar>
+
+      <BulkDeleteDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        count={bulk.selectedCount}
+        itemLabel="건의 지출 내역을 삭제하시겠습니까?"
+        onConfirm={bulkDelete}
+        loading={bulkBusy}
+        confirmLabel="삭제"
+      />
+
+      <PurgeByFilterDialog
+        open={purgeOpen}
+        onOpenChange={setPurgeOpen}
+        filter={{
+          table: "ad_spend",
+          filters: [
+            { column: "spend_date", op: "gte", value: startDate },
+            { column: "spend_date", op: "lte", value: endDate },
+            ...(tab === "광고비" ? [{ column: "category", op: "eq" as const, value: "광고비" }] : []),
+            ...(tab === "기타지출" ? [{ column: "category", op: "eq" as const, value: "기타지출" }] : []),
+          ],
+          summary: `집행일 ${startDate} ~ ${endDate} · 분류=${tab}`,
+        }}
+        onDone={fetchRows}
+      />
     </div>
   );
 }
