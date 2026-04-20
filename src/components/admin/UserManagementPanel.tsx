@@ -76,6 +76,20 @@ export function UserManagementPanel() {
   const [editing, setEditing] = useState<UserRow | null>(null);
   const [resetting, setResetting] = useState<UserRow | null>(null);
   const [tempPwd, setTempPwd] = useState("");
+  const [override, setOverride] = useState<{ user: UserRow; link: string; expires: string } | null>(null);
+
+  const issueOverride = async (u: UserRow) => {
+    const { data, error } = await supabase.functions.invoke("admin-user-management", {
+      body: { action: "admin_issue_magic_link", user_id: u.user_id },
+    });
+    if (error || (data as any)?.error) {
+      toast.error("임시 승인 링크 발급 실패: " + (error?.message || (data as any)?.error));
+      return;
+    }
+    const t = (data as any).token;
+    const link = `${window.location.origin}/magic-link?token=${t}`;
+    setOverride({ user: u, link, expires: (data as any).expires_at });
+  };
 
   const fetchAll = async () => {
     setLoading(true);
