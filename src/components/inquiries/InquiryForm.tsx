@@ -21,10 +21,14 @@ const today = () => new Date().toISOString().slice(0, 10);
 export const InquiryForm = ({ onSaved }: Props) => {
   const { user } = useAuth();
   const { options: channels } = useFieldOptions("inquiry_channel" as any);
+  const { options: products } = useFieldOptions("product" as any);
+  const CARRIERS = ["SKT", "KT", "LGU+", "알뜰폰", "기타"];
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({
     inquiry_date: today(),
     channel: "",
+    carrier: "",
+    product: "",
     customer_name: "",
     phone: "",
     content: "",
