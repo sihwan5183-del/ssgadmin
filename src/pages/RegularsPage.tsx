@@ -17,11 +17,14 @@ import { HeartHandshake, Send, RefreshCw, Trash2, Search, TrendingUp } from "luc
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
+import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { BulkActionBar } from "@/components/common/BulkActionBar";
 import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
+import { PurgeByFilterDialog, type PurgeFilter } from "@/components/common/PurgeByFilterDialog";
+import { ShieldAlert } from "lucide-react";
 
 interface Regular {
   id: string;
@@ -55,6 +58,8 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 const RegularsPage = () => {
   const { user } = useAuth();
+  const { isAdmin } = useRole();
+  const [purgeOpen, setPurgeOpen] = useState(false);
   const { options: channelOptions } = useFieldOptions("channel");
   const [list, setList] = useState<Regular[]>([]);
   const [loading, setLoading] = useState(false);
@@ -446,7 +451,33 @@ const RegularsPage = () => {
           <Badge variant="outline" className="border-primary/40 text-primary-glow ml-auto">
             {filtered.length}건
           </Badge>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-destructive/40 text-destructive hover:bg-destructive/10"
+              onClick={() => setPurgeOpen(true)}
+              disabled={filtered.length === 0}
+            >
+              <ShieldAlert className="size-4 mr-1.5" /> 조건 전체삭제
+            </Button>
+          )}
         </div>
+
+        <PurgeByFilterDialog
+          open={purgeOpen}
+          onOpenChange={setPurgeOpen}
+          filter={{
+            table: "regulars",
+            filters: [
+              ...(filterChannel !== "all" ? [{ column: "channel", op: "eq" as const, value: filterChannel }] : []),
+              ...(filterConverted === "y" ? [{ column: "converted", op: "eq" as const, value: true }] : []),
+              ...(filterConverted === "n" ? [{ column: "converted", op: "eq" as const, value: false }] : []),
+            ],
+            summary: `채널=${filterChannel === "all" ? "전체" : filterChannel} · 전환=${filterConverted === "all" ? "전체" : filterConverted === "y" ? "전환완료" : "미전환"}`,
+          }}
+          onDone={load}
+        />
 
         {loading ? (
           <div className="text-center py-8 text-sm text-muted-foreground">불러오는 중…</div>
