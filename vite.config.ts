@@ -42,7 +42,7 @@ export default defineConfig(({ mode }) => ({
             "@radix-ui/react-tooltip",
           ],
           "icons": ["lucide-react"],
-          "excel": ["xlsx", "exceljs"],
+          "excel": ["xlsx"],
           "motion": ["framer-motion"],
         },
       },
