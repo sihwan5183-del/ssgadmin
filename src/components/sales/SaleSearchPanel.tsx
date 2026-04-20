@@ -33,6 +33,12 @@ import { MoneyInput } from "@/components/ui/money-input";
 import { useSearchParams } from "react-router-dom";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { CalendarDays } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Trash2, ShieldCheck } from "lucide-react";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { BulkActionBar } from "@/components/common/BulkActionBar";
+import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
+import { PurgeByFilterDialog, type PurgeFilter } from "@/components/common/PurgeByFilterDialog";
 
 type ApprovalStatus = "승인대기" | "확정" | "반려" | "수정요청" | "환수" | "취소";
 
