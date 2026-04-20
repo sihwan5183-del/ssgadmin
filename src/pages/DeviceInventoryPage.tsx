@@ -37,14 +37,20 @@ import { useRole } from "@/hooks/useRole";
 import { ShieldAlert } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileListCard } from "@/components/common/MobileListCard";
+import { QuickScanDialog } from "@/components/inventory/QuickScanDialog";
+import { ScanLine } from "lucide-react";
 
-const STATUSES = ["재고", "판매중", "이동중", "개통완료", "반품"] as const;
+const STATUSES = ["입고", "재고", "판매중", "이동중", "개통완료", "반품", "반납", "불량"] as const;
 type Status = typeof STATUSES[number];
+
+const KINDS = ["휴대폰", "IoT(도그마루)"] as const;
+type Kind = typeof KINDS[number];
 
 type Device = {
   id: string;
   created_by: string;
   model: string;
+  device_kind: string | null;
   serial_no: string | null;
   color: string | null;
   capacity: string | null;
@@ -56,21 +62,34 @@ type Device = {
 };
 
 const STATUS_COLOR: Record<string, string> = {
+  입고: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
   재고: "bg-primary/15 text-primary border-primary/30",
   판매중: "bg-warning/15 text-warning border-warning/30",
   이동중: "bg-secondary/15 text-secondary-foreground border-secondary/30",
   개통완료: "bg-muted/40 text-muted-foreground border-border",
   반품: "bg-destructive/15 text-destructive border-destructive/30",
+  반납: "bg-amber-500/15 text-amber-300 border-amber-500/40",
+  불량: "bg-destructive/20 text-destructive border-destructive/40",
 };
+
+const KIND_COLOR: Record<string, string> = {
+  "휴대폰": "bg-primary/10 text-primary border-primary/30",
+  "IoT(도그마루)": "bg-purple-500/15 text-purple-300 border-purple-500/40",
+};
+
+/** 바코드 입력 정제: 공백/하이픈/제어문자 제거 + 대문자 (서버 normalize_serial_no와 동일) */
+const cleanSerial = (raw: string) =>
+  (raw ?? "").replace(/[\s\-_\u0000-\u001F]+/g, "").toUpperCase();
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
 const emptyForm = {
   model: "",
+  device_kind: "휴대폰" as Kind,
   serial_no: "",
   color: "",
   capacity: "",
-  status: "재고" as Status,
+  status: "입고" as Status,
   note: "",
   stock_in_date: todayISO(),
   purchase_price: 0,
@@ -86,6 +105,7 @@ export default function DeviceInventoryPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [kindFilter, setKindFilter] = useState<string>("all");
   const [storeFilter, setStoreFilter] = useState<string>("all");
   const [agedOnly, setAgedOnly] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -96,8 +116,10 @@ export default function DeviceInventoryPage() {
   const [ocrResults, setOcrResults] = useState<Array<typeof emptyForm>>([]);
   const [ocrPreview, setOcrPreview] = useState<string | null>(null);
   const [transferDevice, setTransferDevice] = useState<Device | null>(null);
+  const [quickScanOpen, setQuickScanOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const xlsxInputRef = useRef<HTMLInputElement>(null);
+  const serialInputRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
     setLoading(true);
@@ -129,6 +151,7 @@ export default function DeviceInventoryPage() {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (kindFilter !== "all" && (r.device_kind ?? "휴대폰") !== kindFilter) return false;
       if (storeFilter !== "all" && r.current_store_id !== storeFilter) return false;
       if (agedOnly && !isAged(r.stock_in_date)) return false;
       if (!q) return true;
@@ -136,7 +159,7 @@ export default function DeviceInventoryPage() {
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
     });
-  }, [rows, search, statusFilter, storeFilter, agedOnly, isAged]);
+  }, [rows, search, statusFilter, kindFilter, storeFilter, agedOnly, isAged]);
 
   // 일괄 선택
   const bulk = useBulkSelection<string>(filtered.map((r) => r.id));
@@ -199,6 +222,7 @@ export default function DeviceInventoryPage() {
     setEditing(d);
     setForm({
       model: d.model ?? "",
+      device_kind: ((d.device_kind as Kind) ?? "휴대폰") as Kind,
       serial_no: d.serial_no ?? "",
       color: d.color ?? "",
       capacity: d.capacity ?? "",
@@ -216,9 +240,24 @@ export default function DeviceInventoryPage() {
       toast.error("모델명을 입력하세요");
       return;
     }
+    const cleanedSerial = form.serial_no ? cleanSerial(form.serial_no) : null;
+    // 클라이언트 사전 중복 체크 (활성 재고 한정)
+    if (cleanedSerial) {
+      const dup = rows.find(
+        (r) =>
+          r.serial_no === cleanedSerial &&
+          r.id !== editing?.id &&
+          !["개통완료", "판매완료", "반품", "반납", "불량"].includes(r.status),
+      );
+      if (dup) {
+        toast.error(`이미 등록된 재고입니다 (${dup.model} · ${dup.status})`);
+        return;
+      }
+    }
     const payload: any = {
       model: form.model,
-      serial_no: form.serial_no || null,
+      device_kind: form.device_kind,
+      serial_no: cleanedSerial,
       color: form.color || null,
       capacity: form.capacity || null,
       status: form.status,
@@ -268,17 +307,23 @@ export default function DeviceInventoryPage() {
         return null;
       };
       const records = data
-        .map((r) => ({
-          model: String(pick(r, "모델", "모델명", "Model") ?? "").trim(),
-          serial_no: pick(r, "일련번호", "IMEI", "시리얼", "Serial") ? String(pick(r, "일련번호", "IMEI", "시리얼", "Serial")) : null,
-          color: pick(r, "색상", "Color") ? String(pick(r, "색상", "Color")) : null,
-          capacity: pick(r, "용량", "Capacity") ? String(pick(r, "용량", "Capacity")) : null,
-          status: String(pick(r, "상태", "Status") ?? "재고"),
-          note: pick(r, "메모", "Note") ? String(pick(r, "메모", "Note")) : null,
-          stock_in_date: pick(r, "입고일", "StockInDate") ? String(pick(r, "입고일", "StockInDate")) : todayISO(),
-          purchase_price: Number(pick(r, "매입가", "PurchasePrice")) || 0,
-          created_by: user.id,
-        }))
+        .map((r) => {
+          const kindRaw = String(pick(r, "재고유형", "유형", "Kind") ?? "휴대폰").trim();
+          const kind = kindRaw.toLowerCase().includes("iot") || kindRaw.includes("도그마루") ? "IoT(도그마루)" : "휴대폰";
+          const rawSerial = pick(r, "일련번호", "IMEI", "시리얼", "Serial");
+          return {
+            model: String(pick(r, "모델", "모델명", "Model") ?? "").trim(),
+            device_kind: kind,
+            serial_no: rawSerial ? cleanSerial(String(rawSerial)) : null,
+            color: pick(r, "색상", "Color") ? String(pick(r, "색상", "Color")) : null,
+            capacity: pick(r, "용량", "Capacity") ? String(pick(r, "용량", "Capacity")) : null,
+            status: String(pick(r, "상태", "Status") ?? "입고"),
+            note: pick(r, "메모", "Note") ? String(pick(r, "메모", "Note")) : null,
+            stock_in_date: pick(r, "입고일", "StockInDate") ? String(pick(r, "입고일", "StockInDate")) : todayISO(),
+            purchase_price: Number(pick(r, "매입가", "PurchasePrice")) || 0,
+            created_by: user.id,
+          };
+        })
         .filter((r) => r.model);
       if (records.length === 0) return toast.error("등록할 데이터가 없습니다");
       const { error } = await supabase.from("device_inventory").insert(records);
@@ -340,7 +385,8 @@ export default function DeviceInventoryPage() {
       .filter((r) => r.model.trim())
       .map((r) => ({
         model: r.model,
-        serial_no: r.serial_no || null,
+        device_kind: r.device_kind || "휴대폰",
+        serial_no: r.serial_no ? cleanSerial(r.serial_no) : null,
         color: r.color || null,
         capacity: r.capacity || null,
         status: r.status,
@@ -402,6 +448,9 @@ export default function DeviceInventoryPage() {
           <Button variant="outline" onClick={() => xlsxInputRef.current?.click()}>
             <FileSpreadsheet className="size-4 mr-2" /> 엑셀 업로드
           </Button>
+          <Button variant="outline" onClick={() => setQuickScanOpen(true)}>
+            <ScanLine className="size-4 mr-2" /> 연속 스캔
+          </Button>
           <Button
             variant="outline"
             onClick={() => {
@@ -416,6 +465,8 @@ export default function DeviceInventoryPage() {
           </Button>
         </div>
       </div>
+
+      <QuickScanDialog open={quickScanOpen} onOpenChange={setQuickScanOpen} onDone={load} />
 
       {/* 상단 KPI */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -463,6 +514,17 @@ export default function DeviceInventoryPage() {
             <SelectItem value="all">전체 상태</SelectItem>
             {STATUSES.map((s) => (
               <SelectItem key={s} value={s}>{s}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={kindFilter} onValueChange={setKindFilter}>
+          <SelectTrigger className="w-40 h-11 bg-input/60">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">전체 유형</SelectItem>
+            {KINDS.map((k) => (
+              <SelectItem key={k} value={k}>{k}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -713,8 +775,34 @@ export default function DeviceInventoryPage() {
             <Field label="모델 *">
               <Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} />
             </Field>
-            <Field label="일련번호 / IMEI">
-              <Input value={form.serial_no} onChange={(e) => setForm({ ...form, serial_no: e.target.value })} />
+            <Field label="재고 유형 *">
+              <Select value={form.device_kind} onValueChange={(v) => setForm({ ...form, device_kind: v as Kind })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {KINDS.map((k) => <SelectItem key={k} value={k}>{k}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="일련번호 / IMEI / SN" full>
+              <Input
+                ref={serialInputRef}
+                value={form.serial_no}
+                onChange={(e) => setForm({ ...form, serial_no: cleanSerial(e.target.value) })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    // 다음 필드(색상)로 자동 이동
+                    const next = (e.currentTarget.closest(".grid")?.querySelectorAll("input") ?? []) as NodeListOf<HTMLInputElement>;
+                    const idx = Array.from(next).indexOf(e.currentTarget);
+                    next[idx + 1]?.focus();
+                  }
+                }}
+                maxLength={120}
+                autoComplete="off"
+                spellCheck={false}
+                className="font-mono"
+                placeholder="바코드 스캔 또는 직접 입력 (Enter로 다음 칸)"
+              />
             </Field>
             <Field label="색상">
               <Input value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} />
