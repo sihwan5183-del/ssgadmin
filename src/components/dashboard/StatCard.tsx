@@ -21,26 +21,28 @@ const accentMap = {
 export const StatCard = ({ label, value, delta, icon: Icon, accent = "primary", hint }: StatCardProps) => {
   const positive = (delta ?? 0) >= 0;
   return (
-    <div className="group relative glass rounded-2xl p-5 overflow-hidden shadow-card-elevated hover:shadow-elevated transition-all duration-500 hover:-translate-y-0.5">
-      <div className={cn("absolute -top-12 -right-12 size-40 rounded-full bg-gradient-to-br blur-2xl opacity-60 group-hover:opacity-100 transition-opacity", accentMap[accent])} />
+    <div
+      className="group relative glass rounded-xl p-3 overflow-hidden shadow-card-elevated hover:shadow-elevated transition-all duration-300 hover:-translate-y-0.5"
+      title={hint}
+    >
+      <div className={cn("absolute -top-10 -right-10 size-32 rounded-full bg-gradient-to-br blur-2xl opacity-60 group-hover:opacity-100 transition-opacity", accentMap[accent])} />
       <div className="relative">
-        <div className="flex items-start justify-between">
-          <div className={cn("size-10 rounded-xl grid place-items-center bg-gradient-to-br", accentMap[accent])}>
-            <Icon className="size-5" />
+        <div className="flex items-center justify-between">
+          <div className={cn("size-8 rounded-lg grid place-items-center bg-gradient-to-br", accentMap[accent])}>
+            <Icon className="size-4" />
           </div>
           {typeof delta === "number" && (
             <div className={cn(
-              "flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full",
+              "flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
               positive ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
             )}>
-              {positive ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}
+              {positive ? <ArrowUpRight className="size-2.5" /> : <ArrowDownRight className="size-2.5" />}
               {Math.abs(delta).toFixed(1)}%
             </div>
           )}
         </div>
-        <div className="mt-5 text-sm text-muted-foreground">{label}</div>
-        <div className="mt-1 text-2xl md:text-3xl font-bold tracking-tight">{value}</div>
-        {hint && <div className="mt-2 text-xs text-muted-foreground">{hint}</div>}
+        <div className="mt-2 text-[11px] text-muted-foreground truncate">{label}</div>
+        <div className="mt-0.5 text-lg md:text-xl font-bold tracking-tight tabular-nums">{value}</div>
       </div>
     </div>
   );

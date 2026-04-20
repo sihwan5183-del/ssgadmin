@@ -60,8 +60,8 @@ export const Sidebar = () => {
   };
 
   return (
-    <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-64 flex-col glass-strong border-r border-border/40 z-40">
-      <div className="px-6 py-7 flex items-center gap-3">
+    <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-[13.5rem] flex-col glass-strong border-r border-border/40 z-40">
+      <div className="px-4 py-4 flex items-center gap-2.5">
         <div className="size-10 rounded-xl bg-gradient-primary grid place-items-center shadow-glow">
           <Sparkles className="size-5 text-primary-foreground" />
         </div>
