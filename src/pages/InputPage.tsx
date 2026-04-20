@@ -421,6 +421,52 @@ const InputPage = () => {
     load();
   };
 
+  // === 양식 샘플 다운로드 ===
+  // handleFile이 인식하는 헤더 순서와 정확히 동일하게 유지 (헤더는 2행)
+  const TEMPLATE_HEADERS = [
+    "번호", "인입경로", "모요\n미적용", "담당자", "개통년월", "가입상품", "판매유형", "동판/번들",
+    "개통방식", "최종상태", "개통일자", "고객명", "생년월일", "연락처",
+    "단말기", "일련번호", "USIM", "일련번호.1", "개통요금제",
+    "부가서비스.1", "부가서비스.2",
+    "단가표 기준", "부가서비스 수수료",
+    "상품권\n*반납시 작성", "반납\n유/무",
+    "금액", "입금\n유/무",
+    "현금개통", "유통망", "추가지원금", "입금금액", "은행", "입금계좌", "예금주",
+    "수수료", "발송유형", "운송장", "특이사항",
+  ];
+
+  const downloadTemplate = () => {
+    try {
+      const wb = XLSX.utils.book_new();
+      // 1행: 안내 / 2행: 헤더 (handleFile은 range:1로 2번째 행을 헤더로 사용)
+      const aoa: any[][] = [
+        ["실적장표 — 이 행은 안내용입니다 (삭제하지 마세요). 데이터는 3행부터 입력하세요."],
+        TEMPLATE_HEADERS,
+        // 예시 1행 (선택) — 실제 업로드 전 삭제 가능
+        [
+          1, "모요", "", "홍길동", "2025-04", "모바일", "MNP", "",
+          "선개통", "개통완료", "2025-04-10", "김고객", "900101", "010-1234-5678",
+          "iPhone 15", "", "USIM", "", "5G 스탠다드",
+          "", "",
+          0, 0,
+          "", "",
+          0, "",
+          "", 0, 0, 0, "", "", "",
+          0, "택배발송", "", "",
+        ],
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws["!cols"] = TEMPLATE_HEADERS.map(() => ({ wch: 14 }));
+      XLSX.utils.book_append_sheet(wb, ws, "실적장표");
+      XLSX.writeFile(wb, `실적장표_양식샘플_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      toast.success("양식 샘플을 다운로드했습니다", {
+        description: "3행부터 데이터를 입력하고 '기본 양식 업로드'로 올려주세요.",
+      });
+    } catch (e) {
+      toast.error("양식 다운로드 실패", { description: e instanceof Error ? e.message : String(e) });
+    }
+  };
+
   // === 엑셀 업로드 ===
   const handleFile = async (file: File) => {
     if (!user) return;
