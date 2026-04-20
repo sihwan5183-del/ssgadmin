@@ -762,6 +762,10 @@ export type Database = {
           created_at: string
           display_name: string
           id: string
+          phone: string | null
+          position: string | null
+          status: string
+          store: string | null
           team: string | null
           updated_at: string
           user_id: string
@@ -770,6 +774,10 @@ export type Database = {
           created_at?: string
           display_name: string
           id?: string
+          phone?: string | null
+          position?: string | null
+          status?: string
+          store?: string | null
           team?: string | null
           updated_at?: string
           user_id: string
@@ -778,6 +786,10 @@ export type Database = {
           created_at?: string
           display_name?: string
           id?: string
+          phone?: string | null
+          position?: string | null
+          status?: string
+          store?: string | null
           team?: string | null
           updated_at?: string
           user_id?: string
@@ -1158,10 +1170,18 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_user_active: { Args: { _user_id: string }; Returns: boolean }
       normalize_device_model: { Args: { _raw: string }; Returns: string }
     }
     Enums: {
-      app_role: "admin" | "manager" | "user"
+      app_role:
+        | "admin"
+        | "manager"
+        | "user"
+        | "ceo"
+        | "planner"
+        | "team_lead"
+        | "staff"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1289,7 +1309,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "manager", "user"],
+      app_role: [
+        "admin",
+        "manager",
+        "user",
+        "ceo",
+        "planner",
+        "team_lead",
+        "staff",
+      ],
     },
   },
 } as const
