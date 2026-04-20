@@ -235,7 +235,13 @@ export default function DeviceInventoryPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ ...emptyForm, stock_in_date: todayISO() });
+    const isIotTab = tab === "iot";
+    setForm({
+      ...emptyForm,
+      stock_in_date: todayISO(),
+      device_kind: isIotTab ? "IoT(도그마루)" : "휴대폰",
+      model: isIotTab ? IOT_FIXED_MODEL : "",
+    });
     setDialogOpen(true);
   };
   const openEdit = (d: Device) => {
