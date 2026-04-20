@@ -15,6 +15,59 @@ import type { MappingTarget } from "./ExcelMappingDialog";
 
 const SKIP = "__skip__";
 
+/**
+ * 한글 엑셀 헤더 → 시스템 field_key 별칭 사전.
+ * 헤더는 정규화(공백/특수문자 제거 + 소문자) 키 기준으로 매칭.
+ * 같은 의미의 다양한 표기를 한 곳에 모아 자동매핑 적중률을 높입니다.
+ */
+const HEADER_ALIASES: Record<string, string> = {
+  // 기본 식별
+  "번호": "seq", "순번": "seq", "no": "seq",
+  "인입경로": "channel", "채널": "channel", "유입경로": "channel",
+  "모요미적용": "moyo_excluded", "모요제외": "moyo_excluded", "모요\n미적용": "moyo_excluded",
+  "담당자": "manager", "담당": "manager",
+  "개통년월": "open_month", "개통월": "open_month",
+  "개통일": "open_date", "개통일자": "open_date",
+  "가입상품": "product", "상품": "product",
+  "판매유형": "sale_type", "판매타입": "sale_type",
+  "동판번들": "bundle", "동판/번들": "bundle", "번들": "bundle",
+  "개통방식": "open_method", "개통방법": "open_method",
+  "최종상태": "status", "상태": "status",
+  // 고객 정보
+  "고객명": "customer_name", "성명": "customer_name", "이름": "customer_name",
+  "생년월일": "birth_date", "생일": "birth_date",
+  "연락처": "phone", "전화번호": "phone", "휴대폰": "phone",
+  // 단말/유심
+  "단말기": "device_model", "단말": "device_model", "기종": "device_model", "모델": "device_model", "단말기모델": "device_model",
+  "일련번호": "device_serial", "단말일련번호": "device_serial", "imei": "device_serial",
+  "usim": "usim_model", "유심": "usim_model", "usim모델": "usim_model",
+  "일련번호1": "usim_serial", "usim일련번호": "usim_serial", "유심일련번호": "usim_serial",
+  "개통요금제": "rate_plan", "요금제": "rate_plan",
+  "부가서비스1": "vas1", "부가서비스주셋톱": "vas1", "부가서비스.1": "vas1",
+  "부가서비스2": "vas2", "부가서비스부셋톱": "vas2", "부가서비스.2": "vas2",
+  // 금액 — 핵심 (대시보드 매출/마진 계산에 직접 영향)
+  "단가표기준": "unit_price", "단가표기준원": "unit_price", "단가": "unit_price",
+  "부가서비스수수료": "vas_fee", "부가서비스수수료원": "vas_fee", "vas수수료": "vas_fee",
+  "유통망": "distributor_amount", "유통망원": "distributor_amount", "유통망지원금": "distributor_amount", "유통망지원금원": "distributor_amount",
+  "추가지원금": "extra_subsidy", "추가지원금원": "extra_subsidy",
+  "현금지원금": "cash_support_amount", "현금지원금원": "cash_support_amount", "현금지원": "cash_support_amount", "현금지원원": "cash_support_amount",
+  "수수료": "net_fee", "수수료원": "net_fee", "정산수수료": "net_fee", "정산수수료원": "net_fee", "정산금": "net_fee",
+  "미수금": "receivable_amount", "미수금원": "receivable_amount",
+  "미수금입금": "receivable_paid", "미수금납입": "receivable_paid",
+  "현금개통": "cash_open",
+  // 상품권 / 입금
+  "상품권": "voucher", "상품권반납시작성": "voucher",
+  "반납유무": "voucher_returned", "상품권회수": "voucher_returned",
+  "은행": "cash_bank",
+  "입금계좌": "cash_account", "계좌": "cash_account", "계좌번호": "cash_account",
+  "예금주": "cash_holder", "예금자": "cash_holder",
+  // 발송
+  "발송유형": "delivery_type", "배송유형": "delivery_type",
+  "운송장": "tracking_no", "송장번호": "tracking_no", "운송장번호": "tracking_no",
+  "특이사항": "note", "비고": "note", "메모": "note",
+  // 입금 관련 (양식의 '금액', '입금 유/무' 같은 모호한 헤더는 사용자 매핑 유도)
+};
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -30,12 +83,20 @@ interface Props {
 type Step = "mapping" | "validate" | "confirm";
 
 const autoMap = (headers: string[], targets: MappingTarget[]) => {
-  const norm = (s: string) => s.replace(/[\s()₩\n]/g, "").toLowerCase();
+  const norm = (s: string) => s.replace(/[\s()₩\n\.\-_/\\\[\]]+/g, "").toLowerCase();
+  const targetByKey = new Map(targets.map((t) => [t.field_key, t]));
   const m: Record<string, string> = {};
   for (const h of headers) {
-    const t = targets.find(
-      (t) => t.label === h || t.field_key === h || norm(t.label) === norm(h) || norm(t.field_key) === norm(h),
+    const nh = norm(h);
+    // 1) 정확/정규화 일치 (label or field_key)
+    let t = targets.find(
+      (t) => t.label === h || t.field_key === h || norm(t.label) === nh || norm(t.field_key) === nh,
     );
+    // 2) 별칭 사전 (한글 헤더 변형 → field_key)
+    if (!t) {
+      const aliasKey = HEADER_ALIASES[nh] ?? HEADER_ALIASES[h];
+      if (aliasKey && targetByKey.has(aliasKey)) t = targetByKey.get(aliasKey)!;
+    }
     m[h] = t ? t.field_key : SKIP;
   }
   return m;

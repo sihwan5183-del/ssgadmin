@@ -31,6 +31,7 @@ import {
 import { DynamicFieldsManager } from "@/components/admin/DynamicFieldsManager";
 import { FormulaEditor } from "@/components/admin/FormulaEditor";
 import { DeviceModelsManager } from "@/components/admin/DeviceModelsManager";
+import { UnmappedModelsResolver } from "@/components/admin/UnmappedModelsResolver";
 import { SystemAuditLog } from "@/components/admin/SystemAuditLog";
 import { IncentiveRatesManager } from "@/components/admin/IncentiveRatesManager";
 import { ReviewChecklistManager } from "@/components/admin/ReviewChecklistManager";
@@ -212,7 +213,8 @@ export default function AdminPage() {
           <FormulaEditor />
         </TabsContent>
 
-        <TabsContent value="models">
+        <TabsContent value="models" className="space-y-3">
+          <UnmappedModelsResolver />
           <DeviceModelsManager />
         </TabsContent>
 
