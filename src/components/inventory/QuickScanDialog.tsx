@@ -195,10 +195,12 @@ export const QuickScanDialog = ({ open, onOpenChange, onDone, iotMode = false }:
                 <Input
                   type="number"
                   inputMode="numeric"
-              value={purchasePrice}
-              onChange={(e) => setPurchasePrice(Number(e.target.value) || 0)}
-            />
-          </div>
+                  value={purchasePrice}
+                  onChange={(e) => setPurchasePrice(Number(e.target.value) || 0)}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         <div className="mt-2 p-3 rounded-lg border border-primary/30 bg-primary/5">
