@@ -118,15 +118,16 @@ export const QuickScanDialog = ({ open, onOpenChange, onDone, iotMode = false }:
     if (!model.trim()) return toast.error("모델명을 먼저 입력하세요");
     if (list.length === 0) return toast.error("등록할 일련번호를 스캔하세요");
     setBusy(true);
+    const isIot = iotMode || kind === "IoT(도그마루)";
     const records = list.map((s) => ({
-      model: model.trim(),
+      model: isIot ? IOT_FIXED_MODEL : model.trim(),
       device_kind: kind,
       serial_no: s,
-      color: color || null,
-      capacity: capacity || null,
+      color: isIot ? null : (color || null),
+      capacity: isIot ? null : (capacity || null),
       status: "입고",
       stock_in_date: stockInDate || todayISO(),
-      purchase_price: Number(purchasePrice) || 0,
+      purchase_price: isIot ? 0 : (Number(purchasePrice) || 0),
       created_by: user.id,
     }));
     const { error } = await supabase.from("device_inventory").insert(records);
