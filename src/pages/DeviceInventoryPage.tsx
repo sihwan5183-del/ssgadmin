@@ -38,7 +38,8 @@ import { ShieldAlert } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileListCard } from "@/components/common/MobileListCard";
 import { QuickScanDialog } from "@/components/inventory/QuickScanDialog";
-import { ScanLine } from "lucide-react";
+import { InventorySuperView } from "@/components/inventory/InventorySuperView";
+import { ScanLine, Building2, Cpu } from "lucide-react";
 
 const STATUSES = ["입고", "재고", "판매중", "이동중", "개통완료", "반품", "반납", "불량"] as const;
 type Status = typeof STATUSES[number];
@@ -106,6 +107,13 @@ export default function DeviceInventoryPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [kindFilter, setKindFilter] = useState<string>("all");
+  const [tab, setTab] = useState<"super" | "phone" | "iot">(isAdmin ? "super" : "phone");
+
+  // 탭이 휴대폰/IoT 일 때 kindFilter 강제
+  useEffect(() => {
+    if (tab === "phone") setKindFilter("휴대폰");
+    else if (tab === "iot") setKindFilter("IoT(도그마루)");
+  }, [tab]);
   const [storeFilter, setStoreFilter] = useState<string>("all");
   const [agedOnly, setAgedOnly] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -477,6 +485,28 @@ export default function DeviceInventoryPage() {
 
       <QuickScanDialog open={quickScanOpen} onOpenChange={setQuickScanOpen} onDone={load} />
 
+      <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="space-y-5">
+        <TabsList>
+          {isAdmin && (
+            <TabsTrigger value="super" className="gap-2">
+              <Building2 className="size-4" /> 슈퍼 뷰
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="phone" className="gap-2">
+            <Smartphone className="size-4" /> 모바일 재고관리
+          </TabsTrigger>
+          <TabsTrigger value="iot" className="gap-2">
+            <Cpu className="size-4" /> 도그마루 재고관리
+          </TabsTrigger>
+        </TabsList>
+
+        {isAdmin && (
+          <TabsContent value="super" className="space-y-5">
+            <InventorySuperView />
+          </TabsContent>
+        )}
+
+        <TabsContent value={tab === "iot" ? "iot" : "phone"} forceMount className={tab === "super" ? "hidden" : "space-y-5"}>
       {/* 상단 KPI — 유형/자산 요약 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="p-4 glass border-primary/30">
@@ -783,6 +813,8 @@ export default function DeviceInventoryPage() {
         </div>
       </Card>
       )}
+        </TabsContent>
+      </Tabs>
 
       <BulkActionBar count={bulk.selectedCount} onClear={bulk.clear}>
         {STATUSES.map((s) => (
