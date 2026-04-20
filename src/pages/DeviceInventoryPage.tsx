@@ -151,6 +151,7 @@ export default function DeviceInventoryPage() {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (kindFilter !== "all" && (r.device_kind ?? "휴대폰") !== kindFilter) return false;
       if (storeFilter !== "all" && r.current_store_id !== storeFilter) return false;
       if (agedOnly && !isAged(r.stock_in_date)) return false;
       if (!q) return true;
@@ -158,7 +159,7 @@ export default function DeviceInventoryPage() {
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
     });
-  }, [rows, search, statusFilter, storeFilter, agedOnly, isAged]);
+  }, [rows, search, statusFilter, kindFilter, storeFilter, agedOnly, isAged]);
 
   // 일괄 선택
   const bulk = useBulkSelection<string>(filtered.map((r) => r.id));
