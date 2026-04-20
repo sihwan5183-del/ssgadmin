@@ -31,6 +31,7 @@ import { useNetFeeFormula } from "@/hooks/useNetFeeFormula";
 import { DynamicFieldRenderer } from "@/components/admin/DynamicFieldRenderer";
 import { ExcelMappingDialog, type MappingTarget } from "@/components/admin/ExcelMappingDialog";
 import { ExcelTemplateEditor } from "@/components/admin/ExcelTemplateEditor";
+import { useQuickExport, useLastUpdated } from "@/hooks/useQuickExport";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -117,6 +118,8 @@ const InputPage = () => {
   const [mappingOpen, setMappingOpen] = useState(false);
   const [mappingFile, setMappingFile] = useState<File | null>(null);
   const { startDate, endDate, label: periodLabel } = usePeriod();
+  const quickExport = useQuickExport();
+  const lastUpdated = useLastUpdated("sales");
   const { fields: dynamicFields } = useFieldDefinitions("sales");
   const { calc: calcNetFee, formula: netFeeFormula } = useNetFeeFormula();
   const { isAdmin } = useRole();
