@@ -26,6 +26,7 @@ import {
   Smartphone,
   History,
   Coins,
+  Sparkles,
 } from "lucide-react";
 import { DynamicFieldsManager } from "@/components/admin/DynamicFieldsManager";
 import { FormulaEditor } from "@/components/admin/FormulaEditor";
@@ -33,6 +34,7 @@ import { DeviceModelsManager } from "@/components/admin/DeviceModelsManager";
 import { SystemAuditLog } from "@/components/admin/SystemAuditLog";
 import { IncentiveRatesManager } from "@/components/admin/IncentiveRatesManager";
 import { ReviewChecklistManager } from "@/components/admin/ReviewChecklistManager";
+import { StrategyConfigManager } from "@/components/admin/StrategyConfigManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole, type AppRole } from "@/hooks/useRole";
@@ -173,10 +175,17 @@ export default function AdminPage() {
           <TabsTrigger value="checklist" className="gap-2">
             <ListChecks className="size-4" /> 검수 체크리스트
           </TabsTrigger>
+          <TabsTrigger value="strategy" className="gap-2">
+            <Sparkles className="size-4" /> 전략 / 임계값
+          </TabsTrigger>
           <TabsTrigger value="audit" className="gap-2">
             <History className="size-4" /> 시스템 로그
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="strategy">
+          <StrategyConfigManager />
+        </TabsContent>
 
         <TabsContent value="checklist">
           <ReviewChecklistManager />

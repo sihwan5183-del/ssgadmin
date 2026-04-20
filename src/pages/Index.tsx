@@ -12,6 +12,7 @@ import { ChannelModelAnalysis } from "@/components/dashboard/ChannelModelAnalysi
 import { OverallModelAnalysis } from "@/components/dashboard/OverallModelAnalysis";
 import { AdScheduleWidget } from "@/components/dashboard/AdScheduleWidget";
 import { InventoryWidget } from "@/components/dashboard/InventoryWidget";
+import { StrategyModelGauges } from "@/components/dashboard/StrategyModelGauges";
 import { PendingItemsCard } from "@/components/dashboard/PendingItemsCard";
 import { CashTodayCard } from "@/components/dashboard/CashTodayCard";
 import { MyReviewAlerts } from "@/components/dashboard/MyReviewAlerts";
@@ -109,6 +110,7 @@ const Index = () => {
         </div>
         <div className="lg:col-span-2 space-y-4">
           <InventoryWidget />
+          <StrategyModelGauges />
           <AdScheduleWidget />
           <RankingPanel />
         </div>

@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Smartphone, AlertTriangle, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useInventoryAging } from "@/hooks/useInventoryAging";
+import { useLowStock } from "@/hooks/useLowStock";
 import { Link } from "react-router-dom";
 import { formatShortKRW } from "@/data/mockData";
 
@@ -19,6 +20,7 @@ export const InventoryWidget = () => {
   const [rows, setRows] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const { agingDays, fallbackPrice, isAged, daysSince } = useInventoryAging();
+  const { threshold: lowThreshold, low: lowModels } = useLowStock();
 
   useEffect(() => {
     const load = async () => {
@@ -78,18 +80,13 @@ export const InventoryWidget = () => {
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      <div className="grid grid-cols-3 gap-2 mb-4">
         <div className="p-3 rounded-lg bg-muted/30">
-          <div className="text-[11px] text-muted-foreground">총 재고 자산</div>
+          <div className="text-[11px] text-muted-foreground">총 재고</div>
           <div className="text-lg font-bold tabular-nums mt-0.5">
             {loading ? "…" : formatShortKRW(totalAsset)}
           </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">
-            보유 {rows.length}대
-            {fallbackPrice === 0 && rows.some((r) => !r.purchase_price) && (
-              <span className="ml-1 text-warning">· 매입가 미입력 일부</span>
-            )}
-          </div>
+          <div className="text-[10px] text-muted-foreground mt-0.5">{rows.length}대 보유</div>
         </div>
         <div
           className={`p-3 rounded-lg ${
@@ -98,12 +95,26 @@ export const InventoryWidget = () => {
         >
           <div className="text-[11px] flex items-center gap-1 text-muted-foreground">
             {aged.length > 0 && <AlertTriangle className="size-3 text-destructive" />}
-            장기재고 ({agingDays}일+)
+            장기 ({agingDays}일+)
           </div>
           <div className={`text-lg font-bold tabular-nums mt-0.5 ${aged.length > 0 ? "text-destructive" : ""}`}>
             {loading ? "…" : `${aged.length}대`}
           </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">우선 판매 권장</div>
+          <div className="text-[10px] text-muted-foreground mt-0.5">우선 판매</div>
+        </div>
+        <div
+          className={`p-3 rounded-lg ${
+            lowModels.length > 0 ? "bg-warning/15 border border-warning/40" : "bg-muted/30"
+          }`}
+        >
+          <div className="text-[11px] flex items-center gap-1 text-muted-foreground">
+            {lowModels.length > 0 && <AlertTriangle className="size-3 text-warning" />}
+            부족 (≤{lowThreshold}대)
+          </div>
+          <div className={`text-lg font-bold tabular-nums mt-0.5 ${lowModels.length > 0 ? "text-warning" : ""}`}>
+            {loading ? "…" : `${lowModels.length}종`}
+          </div>
+          <div className="text-[10px] text-muted-foreground mt-0.5">발주 검토</div>
         </div>
       </div>
 
@@ -114,22 +125,32 @@ export const InventoryWidget = () => {
         {top5.length === 0 && !loading ? (
           <div className="text-xs text-muted-foreground py-2">재고 데이터가 없습니다</div>
         ) : (
-          top5.map(([model, count]) => (
-            <div key={model} className="flex items-center gap-2 text-sm">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="truncate font-medium">{model}</span>
-                  <span className="tabular-nums text-muted-foreground text-xs">{count}대</span>
-                </div>
-                <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-primary"
-                    style={{ width: `${(count / maxCount) * 100}%` }}
-                  />
+          top5.map(([model, count]) => {
+            const isLow = count <= lowThreshold;
+            return (
+              <div key={model} className="flex items-center gap-2 text-sm">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1 gap-2">
+                    <span className="truncate font-medium flex items-center gap-1.5">
+                      {model}
+                      {isLow && (
+                        <Badge className="text-[9px] px-1.5 py-0 h-4 bg-warning/20 text-warning border-warning/40">
+                          부족
+                        </Badge>
+                      )}
+                    </span>
+                    <span className="tabular-nums text-muted-foreground text-xs">{count}대</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden">
+                    <div
+                      className={`h-full ${isLow ? "bg-warning" : "bg-gradient-primary"}`}
+                      style={{ width: `${(count / maxCount) * 100}%` }}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -149,6 +170,21 @@ export const InventoryWidget = () => {
                   </Badge>
                 );
               })}
+          </div>
+        </div>
+      )}
+
+      {lowModels.length > 0 && (
+        <div className="mt-4 pt-3 border-t border-border/40">
+          <div className="text-[11px] font-semibold text-warning mb-1.5 flex items-center gap-1">
+            <AlertTriangle className="size-3" /> 부족재고 모델 (≤{lowThreshold}대)
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {lowModels.slice(0, 8).map(([m, c]) => (
+              <Badge key={m} className="text-[10px] bg-warning/15 text-warning border-warning/40">
+                {m} · {c}대
+              </Badge>
+            ))}
           </div>
         </div>
       )}
