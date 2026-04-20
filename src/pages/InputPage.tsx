@@ -117,6 +117,51 @@ const InputPage = () => {
   const { startDate, endDate, label: periodLabel } = usePeriod();
   const { fields: dynamicFields } = useFieldDefinitions("sales");
   const { calc: calcNetFee, formula: netFeeFormula } = useNetFeeFormula();
+  const { isAdmin } = useRole();
+  const [searchQ, setSearchQ] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // 리베이트(unit_price) - 오퍼(지원금 합) = 최종 수익
+  const offerOf = (r: SaleRow) =>
+    (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0);
+  const profitOf = (r: SaleRow) => (r.unit_price ?? 0) - offerOf(r);
+
+  const filteredRows = useMemo(() => {
+    const q = searchQ.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) => {
+      const name = (r.customer_name ?? "").toLowerCase();
+      const phone = (r.phone ?? "").replace(/[^0-9]/g, "");
+      return name.includes(q) || phone.includes(q.replace(/[^0-9]/g, ""));
+    });
+  }, [rows, searchQ]);
+
+  const summary = useMemo(() => {
+    const totalRebate = filteredRows.reduce((s, r) => s + (r.unit_price ?? 0), 0);
+    const totalOffer = filteredRows.reduce((s, r) => s + offerOf(r), 0);
+    const totalProfit = totalRebate - totalOffer;
+    return { count: filteredRows.length, totalRebate, totalOffer, totalProfit };
+  }, [filteredRows]);
+
+  const allSelected = filteredRows.length > 0 && filteredRows.every((r) => selected.has(r.id));
+  const toggleAll = () => {
+    setSelected((prev) => {
+      if (allSelected) {
+        const n = new Set(prev);
+        filteredRows.forEach((r) => n.delete(r.id));
+        return n;
+      }
+      const n = new Set(prev);
+      filteredRows.forEach((r) => n.add(r.id));
+      return n;
+    });
+  };
+  const toggleOne = (id: string) =>
+    setSelected((prev) => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
 
   const set = <K extends keyof SaleRow>(k: K, v: SaleRow[K] | undefined) =>
     setForm((f) => ({ ...f, [k]: v }));
