@@ -1,8 +1,31 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Radio, Flame } from "lucide-react";
+import { Radio, Flame, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
+import { cn } from "@/lib/utils";
+
+type ProductFilter = "전체" | "모바일" | "홈" | "업셀" | "IoT";
+
+const PRODUCT_FILTERS: ProductFilter[] = ["전체", "모바일", "홈", "업셀", "IoT"];
+
+// 상품 카테고리 매칭 규칙 (sales.product 값 기준)
+const matchesProduct = (product: string | null | undefined, filter: ProductFilter): boolean => {
+  if (filter === "전체") return true;
+  const p = (product ?? "").trim();
+  switch (filter) {
+    case "모바일":
+      return p === "모바일" || p === "USIM MNP" || p === "세컨";
+    case "홈":
+      return p === "인터넷" || p === "TV프리" || p === "홈";
+    case "업셀":
+      return p === "대명";
+    case "IoT":
+      return p === "IOT" || p.toLowerCase() === "iot";
+    default:
+      return false;
+  }
+};
 
 const CHANNEL_COLORS: Record<string, string> = {
   "당근": "hsl(35 95% 60%)",
