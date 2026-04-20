@@ -47,6 +47,9 @@ type Status = typeof STATUSES[number];
 const KINDS = ["휴대폰", "IoT(도그마루)"] as const;
 type Kind = typeof KINDS[number];
 
+/** 도그마루 IoT 고정 모델명 */
+const IOT_FIXED_MODEL = "우리집지킴이Easy2";
+
 type Device = {
   id: string;
   created_by: string;
