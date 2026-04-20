@@ -54,10 +54,10 @@ export const ChannelEfficiencyAnalysis = () => {
       const [{ data: salesRows }, { data: inquiryRows }] = await Promise.all([
         supabase
           .from("sales")
-          .select("channel, net_fee, distributor_amount, cash_support_amount, extra_subsidy")
+          .select("channel, product, vas1, vas2, vas_fee, net_fee, distributor_amount, cash_support_amount, extra_subsidy")
           .gte("open_date", startDate)
           .lte("open_date", endDate)
-          .limit(10000),
+          .limit(20000),
         supabase
           .from("inquiries")
           .select("channel")
@@ -70,7 +70,14 @@ export const ChannelEfficiencyAnalysis = () => {
       const map = new Map<string, ChannelBubble>();
       const ensure = (k: string) =>
         map.get(k) ??
-        (map.set(k, { channel: k, inquiries: 0, activations: 0, conversion: 0, margin: 0 }), map.get(k)!);
+        (map.set(k, {
+          channel: k,
+          inquiries: 0,
+          activations: 0,
+          conversion: 0,
+          margin: 0,
+          byCat: { mobile: 0, home: 0, upsell: 0 },
+        }), map.get(k)!);
 
       (inquiryRows ?? []).forEach((r: any) => {
         const k = r.channel || "기타";
@@ -79,12 +86,11 @@ export const ChannelEfficiencyAnalysis = () => {
       (salesRows ?? []).forEach((r: any) => {
         const k = r.channel || "기타";
         const cur = ensure(k);
-        cur.activations += 1;
-        cur.margin +=
-          (Number(r.net_fee) || 0) -
-          (Number(r.distributor_amount) || 0) -
-          (Number(r.cash_support_amount) || 0) -
-          (Number(r.extra_subsidy) || 0);
+        const cat = classifySale(r);
+        const p = pureProfit(r);
+        cur.byCat[cat] += p;
+        cur.margin += p;
+        if (cat !== "upsell") cur.activations += 1;
       });
 
       const arr = Array.from(map.values()).map((b) => ({
