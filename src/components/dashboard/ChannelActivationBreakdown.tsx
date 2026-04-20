@@ -45,42 +45,48 @@ const colorFor = (name: string, idx: number) => {
 
 export const ChannelActivationBreakdown = () => {
   const { startDate, endDate } = usePeriod();
-  const [rows, setRows] = useState<{ channel: string; monthly: number; today: number }[]>([]);
+  const [raw, setRaw] = useState<{ channel: string; product: string | null; open_date: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [productFilter, setProductFilter] = useState<ProductFilter>("전체");
 
   useEffect(() => {
     let alive = true;
     (async () => {
       setLoading(true);
-      const todayISO = new Date().toISOString().slice(0, 10);
       const { data } = await supabase
         .from("sales")
-        .select("channel, open_date")
+        .select("channel, product, open_date")
         .gte("open_date", startDate)
         .lte("open_date", endDate)
         .limit(10000);
       if (!alive) return;
-      const map = new Map<string, { monthly: number; today: number }>();
-      (data ?? []).forEach((r: any) => {
-        const ch = r.channel || "기타";
-        const cur = map.get(ch) ?? { monthly: 0, today: 0 };
-        cur.monthly += 1;
-        if (r.open_date === todayISO) cur.today += 1;
-        map.set(ch, cur);
-      });
-      const list = Array.from(map.entries())
-        .map(([channel, v]) => ({ channel, ...v }))
-        .sort((a, b) => b.monthly - a.monthly);
-      setRows(list);
+      setRaw((data ?? []) as any);
       setLoading(false);
     })();
     return () => { alive = false; };
   }, [startDate, endDate]);
 
+  const rows = useMemo(() => {
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const map = new Map<string, { monthly: number; today: number }>();
+    raw.forEach((r) => {
+      if (!matchesProduct(r.product, productFilter)) return;
+      const ch = r.channel || "기타";
+      const cur = map.get(ch) ?? { monthly: 0, today: 0 };
+      cur.monthly += 1;
+      if (r.open_date === todayISO) cur.today += 1;
+      map.set(ch, cur);
+    });
+    return Array.from(map.entries())
+      .map(([channel, v]) => ({ channel, ...v }))
+      .sort((a, b) => b.monthly - a.monthly);
+  }, [raw, productFilter]);
+
   const totalMonthly = useMemo(() => rows.reduce((s, r) => s + r.monthly, 0), [rows]);
   const totalToday = useMemo(() => rows.reduce((s, r) => s + r.today, 0), [rows]);
   const maxMonthly = Math.max(1, ...rows.map((r) => r.monthly));
   const topToday = [...rows].sort((a, b) => b.today - a.today)[0];
+  const filterLabel = productFilter === "전체" ? "전체" : productFilter;
 
   return (
     <section className="mb-6">
