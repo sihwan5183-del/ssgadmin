@@ -105,6 +105,7 @@ export default function DeviceInventoryPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [kindFilter, setKindFilter] = useState<string>("all");
   const [storeFilter, setStoreFilter] = useState<string>("all");
   const [agedOnly, setAgedOnly] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -115,8 +116,10 @@ export default function DeviceInventoryPage() {
   const [ocrResults, setOcrResults] = useState<Array<typeof emptyForm>>([]);
   const [ocrPreview, setOcrPreview] = useState<string | null>(null);
   const [transferDevice, setTransferDevice] = useState<Device | null>(null);
+  const [quickScanOpen, setQuickScanOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const xlsxInputRef = useRef<HTMLInputElement>(null);
+  const serialInputRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
     setLoading(true);
