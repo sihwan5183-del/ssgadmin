@@ -144,7 +144,7 @@ export const ExcelTemplateEditor = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[88vh] flex flex-col">
+      <DialogContent className="max-w-3xl h-[88vh] flex flex-col min-h-0">
         <DialogHeader>
           <DialogTitle>{title ?? "엑셀 양식 편집"}</DialogTitle>
         </DialogHeader>
@@ -182,7 +182,7 @@ export const ExcelTemplateEditor = ({
           </div>
         </div>
 
-        <ScrollArea className="flex-1 rounded-lg border border-border/40">
+        <ScrollArea className="min-h-0 flex-1 rounded-lg border border-border/40">
           <table className="w-full text-sm">
             <thead className="bg-muted/40 text-muted-foreground sticky top-0">
               <tr>
