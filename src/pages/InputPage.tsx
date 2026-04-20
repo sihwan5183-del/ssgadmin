@@ -614,6 +614,16 @@ const InputPage = () => {
           />
           <Button
             type="button"
+            onClick={downloadTemplate}
+            disabled={busy}
+            variant="outline"
+            className="rounded-xl border-primary/40 text-primary-glow hover:bg-primary/10"
+          >
+            <Download className="size-4 mr-2" />
+            양식 샘플 다운로드
+          </Button>
+          <Button
+            type="button"
             onClick={() => fileRef.current?.click()}
             disabled={busy}
             variant="outline"
