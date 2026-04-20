@@ -17,6 +17,7 @@ const TABLES = [
   { key: "sales", label: "실적 (sales)" },
   { key: "device_inventory", label: "단말기 재고" },
   { key: "ad_spend", label: "지출 (ad_spend)" },
+  { key: "inquiries", label: "채널 인입 (inquiries)" },
 ] as const;
 
 const TYPES = ["text", "number", "date", "select", "boolean", "textarea"] as const;
