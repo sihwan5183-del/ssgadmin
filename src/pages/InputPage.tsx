@@ -192,46 +192,6 @@ const InputPage = () => {
     return Number.isFinite(n) ? n : 0;
   };
 
-  const load = async () => {
-    const from = page * PAGE_SIZE;
-    const to = from + PAGE_SIZE - 1;
-    let query = supabase
-      .from("sales")
-      .select("*", { count: "exact" })
-      .gte("open_date", startDate)
-      .lte("open_date", endDate);
-    if (statusFilter) {
-      query = query.in("status", [statusFilter, ...(statusFilter === "개통대기" ? ["접수완료"] : [])]);
-    }
-    const { data, error, count } = await query
-      .order("open_date", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false })
-      .range(from, to);
-    if (error) {
-      toast.error("목록 불러오기 실패", { description: error.message });
-      return;
-    }
-    setRows((data ?? []) as SaleRow[]);
-    setTotal(count ?? 0);
-  };
-
-  useEffect(() => {
-    load();
-    loadSummary();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, startDate, endDate, statusFilter]);
-
-  // Re-fetch summary when search changes (debounced)
-  useEffect(() => {
-    const t = setTimeout(() => loadSummary(searchQ), 300);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQ, startDate, endDate]);
-
-  useEffect(() => {
-    setPage(0);
-  }, [startDate, endDate]);
-
   const handleExport = async () => {
     const { data, error } = await supabase
       .from("sales")
