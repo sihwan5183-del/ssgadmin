@@ -346,6 +346,10 @@ const ChannelIntakePage = () => {
 
   const saveStatus = async () => {
     if (!editingRow) return;
+    if (editStatus === "실패(종결)" && !editFailReason) {
+      toast.error("실패(종결) 선택 시 사유를 반드시 선택해주세요");
+      return;
+    }
     const update = {
       status: editStatus,
       retry_at: ["부재", "재케어(예약)"].includes(editStatus) && editRetryAt ? new Date(editRetryAt).toISOString() : null as string | null,
