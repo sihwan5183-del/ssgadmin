@@ -154,10 +154,17 @@ const InputPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [linkedInquiryId, setLinkedInquiryId] = useState<string | null>(null);
   const [dbSummary, setDbSummary] = useState({ count: 0, totalRebate: 0, totalOffer: 0, totalProfit: 0 });
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   // 인입 → 실적 자동 채움 (URL 파라미터)
   useEffect(() => {
     const fromInquiry = searchParams.get("from_inquiry");
+    const statusParam = searchParams.get("status");
+    if (statusParam) {
+      setStatusFilter(statusParam);
+      searchParams.delete("status");
+      setSearchParams(searchParams, { replace: true });
+    }
     if (!fromInquiry) return;
     const customer = searchParams.get("customer_name") ?? "";
     const phone = searchParams.get("phone") ?? "";
@@ -265,11 +272,15 @@ const InputPage = () => {
   const load = async () => {
     const from = page * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
-    const { data, error, count } = await supabase
+    let query = supabase
       .from("sales")
       .select("*", { count: "exact" })
       .gte("open_date", startDate)
-      .lte("open_date", endDate)
+      .lte("open_date", endDate);
+    if (statusFilter) {
+      query = query.in("status", [statusFilter, ...(statusFilter === "개통대기" ? ["접수완료"] : [])]);
+    }
+    const { data, error, count } = await query
       .order("open_date", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
       .range(from, to);
@@ -285,7 +296,7 @@ const InputPage = () => {
     load();
     loadSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, startDate, endDate]);
+  }, [page, startDate, endDate, statusFilter]);
 
   // Re-fetch summary when search changes (debounced)
   useEffect(() => {
@@ -1135,6 +1146,15 @@ const InputPage = () => {
 
         {/* 통합 검색 + 관리자 삭제 */}
         <div className="flex flex-wrap gap-2 mb-4">
+          {statusFilter && (
+            <Badge
+              variant="outline"
+              className="border-warning/40 text-warning bg-warning/10 gap-1 cursor-pointer hover:bg-warning/20"
+              onClick={() => setStatusFilter(null)}
+            >
+              필터: {statusFilter} ✕
+            </Badge>
+          )}
           <div className="relative flex-1 min-w-[260px] max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
