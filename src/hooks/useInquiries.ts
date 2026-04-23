@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-export const INQUIRY_STATUSES = ["문의중", "방문예약", "개통완료", "종료"] as const;
+export const INQUIRY_STATUSES = ["미처리", "부재", "재케어(예약)", "성공(개통)", "실패(종결)"] as const;
 export type InquiryStatus = (typeof INQUIRY_STATUSES)[number];
 
 export interface Inquiry {
