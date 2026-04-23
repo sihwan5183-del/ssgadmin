@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Smartphone, Check } from "lucide-react";
+import { AlertTriangle, Smartphone, Check, Star } from "lucide-react";
 import { useDeviceModels, type DeviceModel } from "@/hooks/useDeviceModels";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +39,13 @@ export const ModelAutocomplete = ({
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  const suggestions: DeviceModel[] = input.trim() ? searchModels(input, 8) : models.slice(0, 8);
+  const rawSuggestions: DeviceModel[] = input.trim() ? searchModels(input, 8) : models.slice(0, 8);
+  // Strategy models first
+  const suggestions = [...rawSuggestions].sort((a, b) => {
+    const sa = (a as any).is_strategy ? 1 : 0;
+    const sb = (b as any).is_strategy ? 1 : 0;
+    return sb - sa;
+  });
   const matched = matchModel(input);
   const isMapped = !!matched && matched.model_name === input;
   const showUnmappedWarn = !loading && input.trim().length > 0 && !matched;
@@ -121,7 +127,11 @@ export const ModelAutocomplete = ({
                 i === highlight ? "bg-primary/15" : "hover:bg-muted/40",
               )}
             >
-              <Smartphone className="size-3.5 text-primary-glow shrink-0" />
+              {(m as any).is_strategy ? (
+                <Star className="size-3.5 text-amber-400 fill-amber-400 shrink-0" />
+              ) : (
+                <Smartphone className="size-3.5 text-primary-glow shrink-0" />
+              )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold">{m.model_name}</span>
