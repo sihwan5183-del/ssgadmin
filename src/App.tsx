@@ -32,6 +32,7 @@ import RecentActivitiesPage from "./pages/RecentActivitiesPage.tsx";
 import MenuManagerPage from "./pages/MenuManagerPage.tsx";
 import DownloadsPage from "./pages/DownloadsPage.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import ChannelIntakePage from "./pages/ChannelIntakePage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +76,7 @@ const App = () => (
                         <Route path="/device-models" element={<DeviceModelsPage />} />
                         <Route path="/incentive-rates" element={<IncentiveRatesPage />} />
                         <Route path="/downloads" element={<DownloadsPage />} />
+                        <Route path="/channel-intake" element={<ChannelIntakePage />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </AppShell>

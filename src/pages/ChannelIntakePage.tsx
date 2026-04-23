@@ -345,12 +345,12 @@ const ChannelIntakePage = () => {
 
   const saveStatus = async () => {
     if (!editingRow) return;
-    const update: Record<string, any> = {
+    const update = {
       status: editStatus,
-      retry_at: ["부재", "재케어"].includes(editStatus) && editRetryAt ? new Date(editRetryAt).toISOString() : null,
-      fail_reason: editStatus === "실패" ? editFailReason || null : null,
-      last_action_at: new Date().toISOString(),
-    };
+      retry_at: ["부재", "재케어"].includes(editStatus) && editRetryAt ? new Date(editRetryAt).toISOString() : null as string | null,
+      fail_reason: editStatus === "실패" ? (editFailReason || null) : null as string | null,
+      last_action_at: new Date().toISOString() as string | null,
+    } as const;
     const { error } = await supabase.from("inquiries").update(update).eq("id", editingRow.id);
     if (error) { toast.error(error.message); return; }
     toast.success("상태 변경 완료");
