@@ -47,7 +47,7 @@ export const LeadSourceChart = ({ rows }: { rows: Row[] }) => {
             <XAxis dataKey="channel" fontSize={11} tickLine={false} axisLine={false} />
             <YAxis fontSize={10} tickLine={false} axisLine={false} unit="%" />
             <Tooltip
-              contentStyle={{ background: "hsl(240 18% 8% / 0.95)", border: "1px solid hsl(var(--border))", borderRadius: 10, fontSize: 12 }}
+              contentStyle={{ background: "hsl(0 0% 100% / 0.96)", color: "#374151", border: "1px solid hsl(0 0% 88%)", borderRadius: 12, fontSize: 12, boxShadow: "0 4px 20px hsl(0 0% 0% / 0.10)", padding: "8px 12px" }}
               formatter={(v: number, _: string, p: any) => [`${v}% (${p.payload.success}/${p.payload.total}건)`, "성공률"]}
             />
             <Bar dataKey="rate" radius={[6, 6, 0, 0]}>
