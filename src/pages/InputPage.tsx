@@ -1172,13 +1172,6 @@ const InputPage = () => {
                 disabled={customFields.has_offer === false}
               />
             </Field>
-            <Field label="③ 고객입금 금액 (₩)">
-              <MoneyInput
-                value={form.receivable_amount}
-                onChange={(v) => set("receivable_amount", v)}
-                disabled={customFields.has_offer === false}
-              />
-            </Field>
           </Grid>
           <Grid cols={3}>
             <Field label="입금 유/무 (입금일 또는 표시값)">
@@ -1187,7 +1180,6 @@ const InputPage = () => {
                 onChange={(e) => set("receivable_paid", e.target.value)}
                 placeholder="유 / 완료 / 2026-04-19"
                 className="h-9 bg-input/60 text-xs"
-                disabled={customFields.has_offer === false}
               />
             </Field>
             <Field label="추가지원금 (₩)">
