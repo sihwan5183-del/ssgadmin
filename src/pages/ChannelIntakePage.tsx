@@ -25,7 +25,7 @@ import { StaffTimelinePanel } from "@/components/inquiries/StaffTimelinePanel";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const CRM_STATUSES = ["문의중", "부재", "재케어", "실패", "방문예약", "개통완료"] as const;
+const CRM_STATUSES = ["미처리", "문의중", "부재", "재케어", "실패", "방문예약", "개통완료"] as const;
 type CrmStatus = (typeof CRM_STATUSES)[number];
 
 const FAIL_REASONS = [
@@ -39,6 +39,7 @@ const FAIL_REASONS = [
 ] as const;
 
 const STATUS_CONFIG: Record<string, { icon: typeof PhoneOff; color: string; label: string }> = {
+  미처리: { icon: AlertTriangle, color: "hsl(25 95% 45%)", label: "미처리" },
   부재: { icon: PhoneOff, color: "hsl(35 90% 55%)", label: "부재" },
   재케어: { icon: RefreshCw, color: "hsl(200 80% 55%)", label: "재케어" },
   실패: { icon: XCircle, color: "hsl(0 70% 55%)", label: "실패" },
@@ -69,6 +70,14 @@ interface LogEntry {
   created_at: string;
 }
 
+// 미처리 판별: 상담 결과·메모·실적 연결 모두 없으면 미처리
+const isNewLead = (r: InquiryRow): boolean => {
+  if (r.status === "미처리") return true;
+  // 문의중이면서 아직 아무 상담 기록이 없는 경우
+  if (r.status === "문의중" && !r.last_action_at && !r.note && !r.content) return true;
+  return false;
+};
+
 // ── 방치 감지: 24시간 초과 ──
 const isAbandoned = (lastAction: string | null) => {
   if (!lastAction) return true;
@@ -85,6 +94,8 @@ const formatTime = (iso: string | null) => {
 function SummaryCards({ rows }: { rows: InquiryRow[] }) {
   const today = new Date().toISOString().slice(0, 10);
   const todayRows = rows.filter((r) => r.inquiry_date === today);
+  const untreated = rows.filter(isNewLead).length;
+  const todayUntreated = todayRows.filter(isNewLead).length;
   const absent = rows.filter((r) => r.status === "부재").length;
   const recare = rows.filter((r) => r.status === "재케어").length;
   const failed = rows.filter((r) => r.status === "실패").length;
@@ -93,9 +104,10 @@ function SummaryCards({ rows }: { rows: InquiryRow[] }) {
 
   const cards = [
     { label: "오늘 인입", value: todayRows.length, unit: "건", color: "text-foreground" },
+    { label: "미처리", value: untreated, unit: "건", color: "text-orange-600" },
+    { label: "오늘 신규 미처리", value: todayUntreated, unit: "건", color: "text-orange-600" },
     { label: "부재", value: absent, unit: "건", color: "text-amber-400" },
     { label: "재케어", value: recare, unit: "건", color: "text-blue-400" },
-    { label: "실패율", value: failRate, unit: "%", color: "text-destructive" },
   ];
 
   return (
@@ -335,7 +347,12 @@ const ChannelIntakePage = () => {
 
   const filtered = useMemo(() => {
     let list = rows;
-    if (statusFilter !== "전체") list = list.filter((r) => r.status === statusFilter);
+    // "미처리" 필터는 isNewLead 로직 적용
+    if (statusFilter === "미처리") {
+      list = list.filter(isNewLead);
+    } else if (statusFilter !== "전체") {
+      list = list.filter((r) => r.status === statusFilter);
+    }
     const q = search.trim().toLowerCase();
     if (q) {
       list = list.filter((r) =>
@@ -344,6 +361,12 @@ const ChannelIntakePage = () => {
           .some((v) => String(v).toLowerCase().includes(q))
       );
     }
+    // 미처리 항목 최상단 고정
+    list = [...list].sort((a, b) => {
+      const aNew = isNewLead(a) ? 0 : 1;
+      const bNew = isNewLead(b) ? 0 : 1;
+      return aNew - bNew;
+    });
     return list;
   }, [rows, statusFilter, search]);
 
@@ -371,7 +394,13 @@ const ChannelIntakePage = () => {
 
   const statusCounts = useMemo(() => {
     const map: Record<string, number> = { 전체: rows.length };
-    CRM_STATUSES.forEach((s) => { map[s] = rows.filter((r) => r.status === s).length; });
+    CRM_STATUSES.forEach((s) => {
+      if (s === "미처리") {
+        map[s] = rows.filter(isNewLead).length;
+      } else {
+        map[s] = rows.filter((r) => r.status === s && !isNewLead(r)).length;
+      }
+    });
     return map;
   }, [rows]);
 
@@ -450,9 +479,15 @@ const ChannelIntakePage = () => {
                   <tr><td colSpan={9} className="text-center py-10 text-muted-foreground">데이터 없음</td></tr>
                 ) : (
                   filtered.map((r) => {
-                    const abandoned = isAbandoned(r.last_action_at) && !["개통완료", "실패", "종료"].includes(r.status);
+                    const newLead = isNewLead(r);
+                    const abandoned = !newLead && isAbandoned(r.last_action_at) && !["개통완료", "실패", "종료"].includes(r.status);
+                    const displayStatus = newLead ? "미처리" : r.status;
                     return (
-                      <tr key={r.id} className={cn("border-t border-border/30 hover:bg-muted/20", abandoned && "bg-destructive/5")}>
+                      <tr key={r.id} className={cn(
+                        "border-t border-border/30 hover:bg-muted/20",
+                        newLead && "bg-orange-50 dark:bg-orange-950/20",
+                        abandoned && !newLead && "bg-destructive/5"
+                      )}>
                         <td className="px-3 py-2 text-xs tabular-nums">{r.inquiry_date}</td>
                         <td className="px-3 py-2">
                           <Badge variant="outline" className="text-[10px]">{r.channel}</Badge>
@@ -470,15 +505,21 @@ const ChannelIntakePage = () => {
                             <Badge
                               className={cn(
                                 "text-[10px]",
-                                r.status === "부재" && "bg-amber-100 text-amber-700 border-amber-300",
-                                r.status === "재케어" && "bg-blue-500/20 text-blue-300 border-blue-500/30",
-                                r.status === "실패" && "bg-destructive/20 text-destructive border-destructive/30",
-                                r.status === "개통완료" && "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+                                newLead && "bg-orange-100 text-orange-700 border-orange-400 font-bold dark:bg-orange-900/40 dark:text-orange-300 dark:border-orange-600",
+                                !newLead && r.status === "부재" && "bg-amber-100 text-amber-700 border-amber-300",
+                                !newLead && r.status === "재케어" && "bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/30",
+                                !newLead && r.status === "실패" && "bg-red-100 text-red-700 border-red-300 dark:bg-destructive/20 dark:text-destructive dark:border-destructive/30",
+                                !newLead && r.status === "개통완료" && "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30",
+                                !newLead && r.status === "문의중" && "bg-sky-50 text-sky-700 border-sky-300 dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/30",
+                                !newLead && r.status === "방문예약" && "bg-violet-100 text-violet-700 border-violet-300 dark:bg-violet-500/20 dark:text-violet-300 dark:border-violet-500/30",
                               )}
                               variant="outline"
                             >
-                              {r.status}
+                              {displayStatus}
                             </Badge>
+                            {newLead && (
+                              <AlertTriangle className="size-3.5 text-orange-600 dark:text-orange-400 animate-pulse" />
+                            )}
                             {abandoned && (
                               <Badge variant="destructive" className="text-[9px] h-4 px-1 animate-pulse">
                                 방치

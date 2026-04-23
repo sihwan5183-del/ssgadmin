@@ -21,6 +21,7 @@ import { StrategyModelGauges } from "@/components/dashboard/StrategyModelGauges"
 import { PendingItemsCard } from "@/components/dashboard/PendingItemsCard";
 import { CashTodayCard } from "@/components/dashboard/CashTodayCard";
 import { MyReviewAlerts } from "@/components/dashboard/MyReviewAlerts";
+import { UntreatedLeadsCard } from "@/components/dashboard/UntreatedLeadsCard";
 import { summaryStats, formatShortKRW } from "@/data/mockData";
 import { TrendingUp, Wallet, Megaphone, Target } from "lucide-react";
 import { useMarketingSpend } from "@/hooks/useMarketingSpend";
@@ -98,7 +99,7 @@ const Index = () => {
 
       {/* [2] 중간 — 수익 및 효율 */}
       {isVisible("stat_cards") && (
-      <section className="grid grid-cols-2 lg:grid-cols-6 gap-1.5 mb-1.5">
+      <section className="grid grid-cols-2 lg:grid-cols-7 gap-1.5 mb-1.5">
         <StatCard
           label="당월 순이익"
           value={formatShortKRW(summaryStats.netProfit)}
@@ -132,6 +133,7 @@ const Index = () => {
         />
         <CashTodayCard />
         <PendingItemsCard />
+        {isVisible("untreated_leads") && <UntreatedLeadsCard />}
       </section>
       )}
 
