@@ -88,7 +88,6 @@ const EDITABLE_FIELDS: Array<{ key: keyof SaleHit; label: string; type?: string 
   { key: "manager", label: "담당자" },
   { key: "open_date", label: "개통일", type: "date" },
   { key: "unit_price", label: "단가", type: "number" },
-  { key: "net_fee", label: "순수익", type: "number" },
   { key: "note", label: "메모" },
 ];
 
@@ -453,7 +452,7 @@ export const SaleSearchPanel = () => {
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        일별 순수익 합계 <span className="font-bold tabular-nums text-foreground">₩{dailyNet.toLocaleString("ko-KR")}</span>
+                        일별 건수 <span className="font-bold tabular-nums text-foreground">{list.length}건</span>
                       </div>
                     </div>
                     <div className="divide-y divide-border/30">
@@ -498,9 +497,6 @@ export const SaleSearchPanel = () => {
                                 <span className="flex items-center gap-1"><Phone className="size-3" />{r.phone ?? "-"}</span>
                                 <span className="flex items-center gap-1"><Smartphone className="size-3" />{r.device_serial ?? "-"}</span>
                                 <span>{r.channel ?? "-"} / {r.product ?? "-"}</span>
-                                {r.net_fee != null && (
-                                  <span className="text-foreground/80 tabular-nums">순수익 ₩{Number(r.net_fee).toLocaleString("ko-KR")}</span>
-                                )}
                               </div>
                             </div>
                             <Edit3 className="size-3.5 text-muted-foreground self-center mr-3" />

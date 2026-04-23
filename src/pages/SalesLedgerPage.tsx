@@ -29,6 +29,9 @@ import { useQuickExport, useLastUpdated } from "@/hooks/useQuickExport";
 import { maskPhone, maskName } from "@/lib/maskPii";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const PAGE_SIZE = 25;
 
@@ -127,7 +130,10 @@ const SalesLedgerPage = () => {
 
   const offerOf = (r: SaleRow) =>
     (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0);
-  const profitOf = (r: SaleRow) => (r.unit_price ?? 0) - offerOf(r);
+  const profitOf = (r: SaleRow) =>
+    (r.unit_price ?? 0) + (r.vas_fee ?? 0) + (r.trade_in_enabled ? (r.trade_in_confirmed ?? 0) : 0) - offerOf(r) - (r.receivable_amount ?? 0);
+  const hasDeductions = (r: SaleRow) =>
+    offerOf(r) > 0 || (r.receivable_amount ?? 0) > 0;
 
   const load = useCallback(async () => {
     const from = page * PAGE_SIZE;
@@ -158,13 +164,16 @@ const SalesLedgerPage = () => {
   const loadSummary = useCallback(async () => {
     const { data } = await supabase
       .from("sales")
-      .select("unit_price, distributor_amount, extra_subsidy, cash_support_amount")
+      .select("unit_price, vas_fee, distributor_amount, extra_subsidy, cash_support_amount, receivable_amount, trade_in_enabled, trade_in_confirmed")
       .gte("open_date", startDate)
       .lte("open_date", endDate);
     const rows = data ?? [];
     const totalRebate = rows.reduce((s, r) => s + (r.unit_price ?? 0), 0);
     const totalOffer = rows.reduce((s, r) => s + (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0), 0);
-    setDbSummary({ count: rows.length, totalRebate, totalOffer, totalProfit: totalRebate - totalOffer });
+    const totalVas = rows.reduce((s, r) => s + (r.vas_fee ?? 0), 0);
+    const totalTradeIn = rows.reduce((s, r) => s + (r.trade_in_enabled ? (r.trade_in_confirmed ?? 0) : 0), 0);
+    const totalReceivable = rows.reduce((s, r) => s + (r.receivable_amount ?? 0), 0);
+    setDbSummary({ count: rows.length, totalRebate, totalOffer, totalProfit: totalRebate + totalVas + totalTradeIn - totalOffer - totalReceivable });
 
     const { count: uc } = await supabase
       .from("sales")
@@ -574,9 +583,27 @@ const SalesLedgerPage = () => {
                     <td className="px-3 py-2.5 text-right tabular-nums text-warning">{offer.toLocaleString("ko-KR")}</td>
                     <td className={cn(
                       "px-3 py-2.5 text-right tabular-nums font-semibold",
-                      negative ? "text-destructive" : "text-revenue"
+                      negative ? "text-destructive" : hasDeductions(r) ? "text-warning" : "text-revenue"
                     )}>
-                      {profit.toLocaleString("ko-KR")}
+                      <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="cursor-help">{profit.toLocaleString("ko-KR")}</span>
+                          </TooltipTrigger>
+                          <TooltipContent side="left" className="text-xs space-y-0.5 max-w-[220px]">
+                            <p className="font-semibold mb-1">수익 상세 내역</p>
+                            <p>단가: +{(r.unit_price ?? 0).toLocaleString()}</p>
+                            {(r.vas_fee ?? 0) > 0 && <p>부가수익: +{(r.vas_fee ?? 0).toLocaleString()}</p>}
+                            {r.trade_in_enabled && (r.trade_in_confirmed ?? 0) > 0 && <p>중고폰: +{(r.trade_in_confirmed ?? 0).toLocaleString()}</p>}
+                            {(r.distributor_amount ?? 0) > 0 && <p className="text-destructive">유통망: -{(r.distributor_amount ?? 0).toLocaleString()}</p>}
+                            {(r.extra_subsidy ?? 0) > 0 && <p className="text-destructive">상품권: -{(r.extra_subsidy ?? 0).toLocaleString()}</p>}
+                            {(r.cash_support_amount ?? 0) > 0 && <p className="text-destructive">현금지원: -{(r.cash_support_amount ?? 0).toLocaleString()}</p>}
+                            {(r.receivable_amount ?? 0) > 0 && <p className="text-destructive">고객입금: -{(r.receivable_amount ?? 0).toLocaleString()}</p>}
+                            <hr className="border-border/40 my-1" />
+                            <p className="font-bold">최종: {profit.toLocaleString()}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </td>
                     <td className="px-3 py-2.5 text-right tabular-nums">
                       {r.trade_in_enabled ? (
