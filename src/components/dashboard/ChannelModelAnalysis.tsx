@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
@@ -9,8 +9,11 @@ import { cn } from "@/lib/utils";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const formatKRW = (n: number) => n.toLocaleString("ko-KR") + "원";
+
+const CHART_MIN_HEIGHT = 352;
 
 const MAKER_COLORS: Record<string, string> = {
   삼성: "hsl(220 80% 55%)",
@@ -19,9 +22,15 @@ const MAKER_COLORS: Record<string, string> = {
 };
 
 export const ChannelModelAnalysis = () => {
-  const { channelData, stackedData, modelsInfo, policyShare, getTop5, hasData, matchModel } = useModelAnalysis();
+  const { channelData, stackedData, stackedSegmentsByChannel, modelsInfo, policyShare, getTop5, hasData, matchModel, loading } = useModelAnalysis();
   const [selectedChannel, setSelectedChannel] = useState<string>("");
   const [detailModel, setDetailModel] = useState<any>(null);
+
+  useEffect(() => {
+    if (!selectedChannel && channelData[0]?.channel) {
+      setSelectedChannel(channelData[0].channel);
+    }
+  }, [channelData, selectedChannel]);
 
   // auto-select first channel when data arrives
   const effectiveChannel = selectedChannel || (channelData[0]?.channel ?? "");
@@ -31,6 +40,35 @@ export const ChannelModelAnalysis = () => {
   const channelAvgRebate = selectedRow && channelTotal > 0
     ? Math.round(selectedRow.models.reduce((s, m) => s + m.avgRebate * m.count, 0) / channelTotal)
     : 0;
+
+  const chartMinWidth = useMemo(() => Math.max(stackedData.length * 128, 640), [stackedData.length]);
+
+  const tooltipContent = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null;
+    const channel = String(label ?? "");
+    const segments = stackedSegmentsByChannel.get(channel) ?? [];
+    const total = segments.reduce((sum, segment) => sum + segment.value, 0);
+
+    return (
+      <div className="min-w-[220px] rounded-xl border border-border/60 bg-card px-3 py-3 shadow-card-elevated">
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <span className="text-sm font-semibold">{channel}</span>
+          <span className="text-[11px] text-muted-foreground tabular-nums">총 {total}건</span>
+        </div>
+        <div className="space-y-1.5">
+          {segments.map((segment) => (
+            <div key={segment.key} className="flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: segment.color }} />
+                <span className="truncate font-medium text-foreground">{segment.label}</span>
+              </div>
+              <span className="shrink-0 tabular-nums text-foreground font-semibold">{segment.value}건</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <section className="glass-strong rounded-2xl p-5 md:p-6 shadow-card-elevated">
@@ -55,38 +93,42 @@ export const ChannelModelAnalysis = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         {/* Stacked Bar — 채널별 모델 판매 */}
-        <div className="lg:col-span-3 rounded-2xl p-5 bg-card/20 border border-border/30">
+        <div className="lg:col-span-3 rounded-2xl border border-border/40 bg-card p-5 min-h-[440px]">
           <div className="flex items-baseline justify-between mb-3">
             <h4 className="text-base font-semibold tracking-tight">채널별 모델 판매 비중</h4>
             <span className="text-[11px] text-muted-foreground">단위: 건</span>
           </div>
-          <div className="h-80 overflow-x-auto">
-            <div style={{ minWidth: Math.max(stackedData.length * 100, 400) }} className="h-full">
-            <ResponsiveContainer width="100%" height="100%">
+          {loading ? (
+            <div className="space-y-4" style={{ minHeight: CHART_MIN_HEIGHT }}>
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-[280px] w-full rounded-xl" />
+              <div className="flex gap-3">
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-16" />
+              </div>
+            </div>
+          ) : (
+          <div className="overflow-x-auto" style={{ minHeight: CHART_MIN_HEIGHT }}>
+            <div style={{ minWidth: chartMinWidth, height: CHART_MIN_HEIGHT }} className="pr-3">
+            <ResponsiveContainer width="100%" height="100%" debounce={180} minWidth={chartMinWidth}>
               <BarChart
                 data={stackedData}
-                margin={{ top: 10, right: 10, left: -10, bottom: 5 }}
-                barSize={stackedData.length <= 4 ? 60 : 40}
+                margin={{ top: 12, right: 16, left: 8, bottom: 12 }}
+                barCategoryGap={24}
+                barGap={0}
+                maxBarSize={72}
                 onClick={(e: any) => {
                   if (e?.activeLabel) setSelectedChannel(e.activeLabel as string);
                 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.3)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.4)" vertical={false} />
                 <XAxis dataKey="channel" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
                 <Tooltip
                   cursor={{ fill: "hsl(var(--primary) / 0.06)" }}
-                  contentStyle={{
-                    background: "hsl(240 18% 8% / 0.95)",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: 12,
-                    fontSize: 13,
-                    padding: "10px 14px",
-                  }}
-                  formatter={(v: number, name: string) => [
-                    <span className="font-bold">{v}건</span>,
-                    name,
-                  ]}
+                  isAnimationActive={false}
+                  content={tooltipContent}
                 />
                 {modelsInfo.map((m, i) => (
                   <Bar
@@ -94,14 +136,16 @@ export const ChannelModelAnalysis = () => {
                     dataKey={m.name}
                     stackId="a"
                     fill={m.color}
-                    radius={i === modelsInfo.length - 1 ? [6, 6, 0, 0] : 0}
+                    radius={i === modelsInfo.length - 1 ? [8, 8, 0, 0] : i === 0 ? [0, 0, 8, 8] : 0}
                     cursor="pointer"
+                    isAnimationActive={false}
                   />
                 ))}
               </BarChart>
             </ResponsiveContainer>
             </div>
           </div>
+          )}
           {/* Compact legend — top 5 + 기타 only */}
           <div className="flex flex-wrap items-center gap-3 mt-3 px-1">
             {modelsInfo.map((m) => (
@@ -114,14 +158,27 @@ export const ChannelModelAnalysis = () => {
         </div>
 
         {/* 정책 vs 일반 (채널별 100% 누적) */}
-        <div className="lg:col-span-2 glass rounded-2xl p-5">
+        <div className="lg:col-span-2 rounded-2xl border border-border/40 bg-card p-5 min-h-[440px]">
           <div className="flex items-baseline justify-between mb-3">
             <h4 className="text-base font-semibold tracking-tight">채널별 정책/일반 모델 비중</h4>
             <span className="text-[11px] text-muted-foreground">100% 기준</span>
           </div>
-          <div className="space-y-3">
+          {loading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="rounded-xl border border-border/40 p-4">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="mt-3 h-2.5 w-full rounded-full" />
+                  <div className="mt-3 flex justify-between gap-3">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+          <div className="space-y-3 min-h-[352px]">
             {policyShare.map((p) => {
-              const active = p.channel === selectedChannel;
               return (
                 <button
                   key={p.channel}
@@ -141,12 +198,12 @@ export const ChannelModelAnalysis = () => {
                   </div>
                   <div className="flex h-2.5 rounded-full overflow-hidden bg-muted/60">
                     <div
-                      className="bg-gradient-primary transition-all duration-500"
+                      className="bg-gradient-primary transition-all duration-300"
                       style={{ width: `${p.strategyPct}%` }}
                       title={`정책 ${p.strategyPct}%`}
                     />
                     <div
-                      className="bg-muted-foreground/50 transition-all duration-500"
+                      className="bg-muted-foreground/50 transition-all duration-300"
                       style={{ width: `${p.generalPct}%` }}
                       title={`일반 ${p.generalPct}%`}
                     />
@@ -163,12 +220,13 @@ export const ChannelModelAnalysis = () => {
               );
             })}
           </div>
+          )}
         </div>
       </div>
 
       {/* TOP 5 + 채널 요약 */}
       <div className="mt-4 grid grid-cols-1 lg:grid-cols-5 gap-4">
-        <div className="lg:col-span-2 glass rounded-2xl p-5">
+        <div className="lg:col-span-2 rounded-2xl border border-border/40 bg-card p-5 min-h-[280px]">
           <div className="text-xs text-muted-foreground">선택된 채널</div>
           <div className="mt-1 text-2xl font-bold text-gradient">{effectiveChannel || "데이터 없음"}</div>
 
@@ -197,7 +255,7 @@ export const ChannelModelAnalysis = () => {
           </div>
         </div>
 
-        <div className="lg:col-span-3 glass rounded-2xl p-5">
+        <div className="lg:col-span-3 rounded-2xl border border-border/40 bg-card p-5 min-h-[280px]">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-base font-semibold tracking-tight flex items-center gap-2">
               <Trophy className="size-4 text-primary-glow" />
@@ -229,7 +287,7 @@ export const ChannelModelAnalysis = () => {
                     className={cn(
                       "size-6 rounded-md grid place-items-center text-[11px] font-bold tabular-nums shrink-0",
                       i === 0
-                        ? "bg-gradient-to-br from-amber-400/40 to-orange-500/10 text-amber-300 ring-1 ring-amber-400/40"
+                        ? "bg-primary/10 text-primary ring-1 ring-primary/25"
                         : "bg-muted/60 text-muted-foreground"
                     )}
                   >

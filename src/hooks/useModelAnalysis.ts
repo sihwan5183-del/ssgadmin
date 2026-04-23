@@ -57,6 +57,13 @@ export interface PolicyShare {
   total: number;
 }
 
+export interface ChannelStackSegment {
+  key: string;
+  label: string;
+  value: number;
+  color: string;
+}
+
 export function useModelAnalysis() {
   const { startDate, endDate } = usePeriod();
   const { matchModel } = useDeviceModels();
@@ -193,6 +200,19 @@ export function useModelAnalysis() {
       return flat;
     });
 
+    const stackedSegmentsByChannel = new Map<string, ChannelStackSegment[]>();
+    stackedData.forEach((row) => {
+      const segments = modelsInfo
+        .map((info) => ({
+          key: info.name,
+          label: info.petName,
+          value: Number(row[info.name] ?? 0),
+          color: info.color,
+        }))
+        .filter((segment) => segment.value > 0);
+      stackedSegmentsByChannel.set(String(row.channel), segments);
+    });
+
     // modelsInfo — only top 5 + 기타 (max 6 entries for the chart)
     const modelsInfo = [
       ...globalTop5Series.map((s) => ({
@@ -238,7 +258,8 @@ export function useModelAnalysis() {
     const policyShare: PolicyShare[] = channelData.map((row) => {
       let strategy = 0, general = 0;
       row.models.forEach((m) => {
-        if (strategySet.has(m.name.toLowerCase())) strategy += m.count;
+        const { pet } = resolvePetName(m.name, matchModel);
+        if (strategySet.has(m.name.toLowerCase()) || strategySet.has(pet.toLowerCase())) strategy += m.count;
         else general += m.count;
       });
       const total = strategy + general;
@@ -256,6 +277,7 @@ export function useModelAnalysis() {
       overallStats,
       channelData,
       stackedData,
+      stackedSegmentsByChannel,
       modelsInfo,
       policyShare,
       getTop5,
