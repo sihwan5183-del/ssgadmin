@@ -30,6 +30,7 @@ export const WIDGET_REGISTRY: { id: string; label: string }[] = [
   { id: "strategy_gauges", label: "전략 모델 게이지" },
   { id: "ad_schedule", label: "광고 일정" },
   { id: "ranking_panel", label: "랭킹 패널" },
+  { id: "my_incentive", label: "나의 예상 인센티브" },
 ];
 
 const SETTINGS_KEY = "dashboard.layout";
