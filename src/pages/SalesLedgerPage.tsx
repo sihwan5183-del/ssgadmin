@@ -99,6 +99,9 @@ type SaleRow = {
   pending_note?: string | null;
   pending_resolved?: boolean | null;
   approval_status?: string | null;
+  trade_in_enabled?: boolean | null;
+  trade_in_model?: string | null;
+  trade_in_confirmed?: number | null;
 };
 
 const SalesLedgerPage = () => {
@@ -515,6 +518,7 @@ const SalesLedgerPage = () => {
                 <th className="text-right px-3 py-2 font-medium">리베이트 단가</th>
                 <th className="text-right px-3 py-2 font-medium">오퍼(지원금)</th>
                 <th className="text-right px-3 py-2 font-medium">최종 수익</th>
+                <th className="text-right px-3 py-2 font-medium">중고폰</th>
                 <th className="text-right px-3 py-2 font-medium">관리</th>
               </tr>
             </thead>
@@ -574,6 +578,17 @@ const SalesLedgerPage = () => {
                     )}>
                       {profit.toLocaleString("ko-KR")}
                     </td>
+                    <td className="px-3 py-2.5 text-right tabular-nums">
+                      {r.trade_in_enabled ? (
+                        <span className="text-primary" title={r.trade_in_model ?? ""}>
+                          {(r.trade_in_confirmed ?? 0) > 0
+                            ? `₩${(r.trade_in_confirmed ?? 0).toLocaleString("ko-KR")}`
+                            : "대기"}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </td>
                     <td className="px-3 py-2.5 text-right">
                       {mine ? (
                         <div className="inline-flex gap-1">
@@ -592,7 +607,7 @@ const SalesLedgerPage = () => {
                 );
               })}
               {filteredRows.length === 0 && (
-                <tr><td colSpan={isAdmin ? 12 : 11} className="text-center py-10 text-muted-foreground">
+                <tr><td colSpan={isAdmin ? 13 : 12} className="text-center py-10 text-muted-foreground">
                   {searchQ ? "검색 결과가 없습니다." : "선택한 기간에 데이터가 없습니다."}
                 </td></tr>
               )}
