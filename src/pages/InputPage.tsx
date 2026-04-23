@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { Header } from "@/components/layout/Header";
 import { Input } from "@/components/ui/input";
@@ -122,6 +122,7 @@ const emptyForm: Partial<SaleRow> = {
 
 const InputPage = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { options: CHANNELS } = useFieldOptions("channel");
   const { options: PRODUCTS } = useFieldOptions("product");
   const { options: SALE_TYPES } = useFieldOptions("sale_type");
@@ -137,10 +138,7 @@ const InputPage = () => {
   const [pendingNote, setPendingNote] = useState<string>("");
   const [pendingResolved, setPendingResolved] = useState<boolean>(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [rows, setRows] = useState<SaleRow[]>([]);
   const [busy, setBusy] = useState(false);
-  const [page, setPage] = useState(0);
-  const [total, setTotal] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const mappingFileRef = useRef<HTMLInputElement>(null);
   const [mappingOpen, setMappingOpen] = useState(false);
@@ -151,16 +149,8 @@ const InputPage = () => {
   const { fields: dynamicFields } = useFieldDefinitions("sales");
   const { calc: calcNetFee, formula: netFeeFormula } = useNetFeeFormula();
   const { isAdmin } = useRole();
-  const [searchQ, setSearchQ] = useState("");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [searchParams, setSearchParams] = useSearchParams();
   const [linkedInquiryId, setLinkedInquiryId] = useState<string | null>(null);
-  const [dbSummary, setDbSummary] = useState({ count: 0, totalRebate: 0, totalOffer: 0, totalProfit: 0 });
-  const [unpaidCount, setUnpaidCount] = useState(0);
-  const [unreturnedCount, setUnreturnedCount] = useState(0);
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [quickFilter, setQuickFilter] = useState<"unpaid" | "unreturned" | null>(null);
-
   // 인입 → 실적 자동 채움 (URL 파라미터)
   useEffect(() => {
     const fromInquiry = searchParams.get("from_inquiry");
