@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Header } from "@/components/layout/Header";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,11 +6,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import {
   Crown, Medal, Trophy, Star, TrendingUp, Flame, Zap,
-  Award, BarChart3, Smartphone, Gift, ChevronDown,
+  Award, BarChart3, Smartphone, Gift, ChevronDown, CheckCircle2, Sparkles,
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import confetti from "canvas-confetti";
 
 /* ─── types ─── */
 type ProfileMap = Record<string, { display_name: string; store: string | null }>;
@@ -24,6 +25,8 @@ type RankedUser = {
   voucherReturned: number;
   streak: number;
   yesterdayDelta: number;
+  isClean: boolean;
+  cleanDays: number;
 };
 type ModelRank = { model: string; count: number; isStrategy: boolean };
 
