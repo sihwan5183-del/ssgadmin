@@ -1,55 +1,77 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Sun, TrendingUp, ArrowUpRight, ArrowDownRight, Clock, AlertTriangle, Smartphone, Monitor, Package } from "lucide-react";
+import { Sun, TrendingUp, ArrowUpRight, ArrowDownRight, Clock, AlertTriangle, Smartphone, Monitor, Package, Wifi, Tv, Home, Star, CreditCard, Lightbulb } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
-type Segment = "all" | "mobile" | "home";
+type Segment = "all" | "모바일" | "USIM MNP" | "2nd" | "홈" | "TV프리" | "스마트홈" | "대명" | "맞춤제안" | "기타";
 
-const SEGMENTS: { key: Segment; label: string; icon: typeof Smartphone }[] = [
-  { key: "all", label: "전체", icon: Package },
-  { key: "mobile", label: "모바일", icon: Smartphone },
-  { key: "home", label: "홈상품", icon: Monitor },
+const PRODUCT_BADGES: { key: Segment; label: string; short: string; icon: typeof Smartphone; color: string }[] = [
+  { key: "all", label: "전체", short: "전체", icon: Package, color: "text-foreground" },
+  { key: "모바일", label: "모바일", short: "M", icon: Smartphone, color: "text-primary" },
+  { key: "USIM MNP", label: "USIM", short: "U", icon: CreditCard, color: "text-chart-1" },
+  { key: "2nd", label: "2nd", short: "2", icon: Smartphone, color: "text-chart-2" },
+  { key: "홈", label: "홈", short: "H", icon: Wifi, color: "text-chart-3" },
+  { key: "TV프리", label: "TV프리", short: "TV", icon: Tv, color: "text-chart-4" },
+  { key: "스마트홈", label: "스마트홈", short: "SH", icon: Home, color: "text-chart-5" },
+  { key: "대명", label: "대명", short: "DM", icon: Star, color: "text-warning" },
+  { key: "맞춤제안", label: "업셀", short: "UP", icon: Lightbulb, color: "text-success" },
+  { key: "기타", label: "기타", short: "E", icon: Package, color: "text-muted-foreground" },
 ];
 
-const isMobile = (p?: string | null) => !p || p.includes("모바일") || p === "USIM MNP" || p === "세컨";
-const isHome = (p?: string | null) => !!p && (p.includes("인터넷") || p.includes("TV") || p.includes("IOT") || p.includes("홈"));
+const classifyProduct = (p: string | null): Segment => {
+  if (!p) return "기타";
+  if (p.includes("모바일")) return "모바일";
+  if (p === "USIM MNP" || p.includes("USIM")) return "USIM MNP";
+  if (p === "세컨" || p === "2nd" || p.includes("세컨")) return "2nd";
+  if (p === "홈" || p.includes("인터넷")) return "홈";
+  if (p.includes("TV프리") || p.includes("TV")) return "TV프리";
+  if (p.includes("스마트홈") || p.includes("IOT")) return "스마트홈";
+  if (p.includes("대명")) return "대명";
+  if (p.includes("맞춤") || p.includes("업셀")) return "맞춤제안";
+  return "기타";
+};
 
 const matchSegment = (product: string | null, seg: Segment) => {
   if (seg === "all") return true;
-  if (seg === "mobile") return isMobile(product);
-  return isHome(product);
+  return classifyProduct(product) === seg;
 };
 
-interface SegCount { mobile: number; home: number; etc: number; total: number }
-const countBySegment = (rows: { product: string | null }[]): SegCount => {
-  let mobile = 0, home = 0, etc = 0;
-  rows.forEach((r) => {
-    if (isMobile(r.product)) mobile++;
-    else if (isHome(r.product)) home++;
-    else etc++;
-  });
-  return { mobile, home, etc, total: mobile + home + etc };
+type SegMap = Record<Segment, number>;
+const countAll = (rows: { product: string | null }[]): SegMap => {
+  const m: SegMap = { all: 0, "모바일": 0, "USIM MNP": 0, "2nd": 0, "홈": 0, "TV프리": 0, "스마트홈": 0, "대명": 0, "맞춤제안": 0, "기타": 0 };
+  rows.forEach((r) => { const k = classifyProduct(r.product); m[k]++; m.all++; });
+  return m;
 };
 
-const SegBadges = ({ seg }: { seg: SegCount }) => (
-  <div className="flex items-center gap-1.5 mt-1">
-    <span className="inline-flex items-center gap-0.5 text-[10px] text-primary font-medium">
-      <Smartphone className="size-2.5" />{seg.mobile}
-    </span>
-    <span className="inline-flex items-center gap-0.5 text-[10px] text-accent-foreground font-medium">
-      <Monitor className="size-2.5" />{seg.home}
-    </span>
-    {seg.etc > 0 && (
-      <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground font-medium">
-        <Package className="size-2.5" />{seg.etc}
-      </span>
-    )}
-  </div>
-);
+const SegBadges = ({ counts, onSelect, active }: { counts: SegMap; onSelect: (s: Segment) => void; active: Segment }) => {
+  const items = PRODUCT_BADGES.filter((b) => b.key !== "all" && counts[b.key] > 0);
+  if (items.length === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-1 mt-1">
+      {items.map((b) => (
+        <button
+          key={b.key}
+          onClick={(e) => { e.stopPropagation(); onSelect(active === b.key ? "all" : b.key); }}
+          className={cn(
+            "inline-flex items-center gap-0.5 text-[9px] font-semibold px-1 py-0.5 rounded border transition-all",
+            active === b.key
+              ? "bg-primary/15 border-primary/30 text-primary"
+              : "bg-muted/40 border-transparent hover:border-border",
+            b.color
+          )}
+          title={b.label}
+        >
+          <b.icon className="size-2" />
+          {b.short}:{counts[b.key]}
+        </button>
+      ))}
+    </div>
+  );
+};
 
 const Delta = ({ value, label }: { value: number; label: string }) => {
   const positive = value >= 0;
@@ -124,9 +146,9 @@ export const HeroPerformance = () => {
     return { cur: cur.length, prev: prev.length, tod: tod.length, yd: yd.length, pend: pend.length, urgent: urgent.length };
   }, [segment, currentRows, prevRows, todayRows, ydayRows, pendingRows]);
 
-  const todaySeg = useMemo(() => countBySegment(todayRows), [todayRows]);
-  const pendSeg = useMemo(() => countBySegment(pendingRows), [pendingRows]);
-  const curSeg = useMemo(() => countBySegment(currentRows), [currentRows]);
+  const todaySeg = useMemo(() => countAll(todayRows), [todayRows]);
+  const pendSeg = useMemo(() => countAll(pendingRows), [pendingRows]);
+  const curSeg = useMemo(() => countAll(currentRows), [currentRows]);
 
   const periodDelta = filtered.prev === 0 ? (filtered.cur > 0 ? 100 : 0) : ((filtered.cur - filtered.prev) / filtered.prev) * 100;
   const todayDelta = filtered.yd === 0 ? (filtered.tod > 0 ? 100 : 0) : ((filtered.tod - filtered.yd) / filtered.yd) * 100;
@@ -136,22 +158,22 @@ export const HeroPerformance = () => {
   return (
     <section className="h-full flex flex-col gap-1.5">
       {/* Segment tabs */}
-      <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-0.5 w-fit">
-        {SEGMENTS.map((s) => {
-          const active = segment === s.key;
+      <div className="flex items-center gap-0.5 bg-muted/50 rounded-lg p-0.5 w-fit flex-wrap">
+        {PRODUCT_BADGES.map((s) => {
+          const isActive = segment === s.key;
           return (
             <button
               key={s.key}
               onClick={() => setSegment(s.key)}
               className={cn(
-                "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all",
-                active
+                "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-medium transition-all",
+                isActive
                   ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
               <s.icon className="size-3" />
-              {s.label}
+              {s.short === s.label ? s.label : s.label}
             </button>
           );
         })}
@@ -169,7 +191,7 @@ export const HeroPerformance = () => {
             <span className="text-3xl font-bold text-foreground tabular-nums leading-none">{filtered.tod}</span>
             <span className="text-sm text-muted-foreground">건</span>
           </div>
-          {segment === "all" && <SegBadges seg={todaySeg} />}
+          <SegBadges counts={todaySeg} onSelect={setSegment} active={segment} />
           <div className="mt-1">
             <Delta value={todayDelta} label="전일 대비" />
           </div>
@@ -193,7 +215,7 @@ export const HeroPerformance = () => {
             </span>
             <span className="text-sm text-muted-foreground">건</span>
           </div>
-          {segment === "all" && <SegBadges seg={pendSeg} />}
+          <SegBadges counts={pendSeg} onSelect={setSegment} active={segment} />
           <div className="mt-1">
             {filtered.urgent > 0 ? (
               <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md text-destructive bg-destructive/10 border border-destructive/20">
@@ -216,7 +238,7 @@ export const HeroPerformance = () => {
             <span className="text-3xl font-bold text-foreground tabular-nums leading-none">{filtered.cur}</span>
             <span className="text-sm text-muted-foreground">건</span>
           </div>
-          {segment === "all" && <SegBadges seg={curSeg} />}
+          <SegBadges counts={curSeg} onSelect={setSegment} active={segment} />
           <div className="mt-1">
             <Delta value={periodDelta} label={prevLabel} />
           </div>
