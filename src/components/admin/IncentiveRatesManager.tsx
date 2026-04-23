@@ -575,7 +575,7 @@ function SimulationPanel({ policies, linkageRule }: { policies: DraftPolicy[]; l
       const [{ data: salesData }, { data: profiles }] = await Promise.all([
         supabase
           .from("sales")
-          .select("id, open_date, device_model, product, sale_type, net_fee, customer_name, created_by")
+          .select("id, open_date, device_model, product, sale_type, net_fee, customer_name, created_by, bundle, custom_fields")
           .gte("open_date", period.startDate)
           .lte("open_date", period.endDate),
         supabase.from("profiles").select("user_id, display_name, position").eq("status", "active"),
