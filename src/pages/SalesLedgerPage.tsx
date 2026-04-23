@@ -17,7 +17,7 @@ import {
 import {
   Download, Search, Trash2, Pencil, ShieldAlert, Hash,
   Wallet as WalletIcon, Gift, TrendingUp, Banknote, FileText,
-  AlertTriangle, Filter, X,
+  AlertTriangle, Filter, X, Lock,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -534,18 +534,34 @@ const SalesLedgerPage = () => {
             <tbody>
               {filteredRows.map((r) => {
                 const mine = r.created_by === user?.id;
+                const canEdit = mine || isAdmin;
+                const isLocked = r.approval_status === "확정";
                 const hasPending = (r.pending_items?.length ?? 0) > 0 && r.pending_resolved === false;
                 const offer = offerOf(r);
                 const profit = profitOf(r);
                 const negative = profit < 0;
+                const handleRowClick = () => {
+                  if (isLocked) {
+                    toast.info("확정된 실적은 수정할 수 없습니다", { description: "관리자에게 잠금 해제를 요청하세요." });
+                    return;
+                  }
+                  if (!canEdit) {
+                    toast.info("본인이 등록한 실적만 수정할 수 있습니다");
+                    return;
+                  }
+                  navigate(`/input?edit=${r.id}`);
+                };
                 return (
                   <tr key={r.id} className={cn(
-                    "border-b border-border/20 hover:bg-white/[0.03]",
+                    "border-b border-border/20 hover:bg-white/[0.03] cursor-pointer transition-colors",
                     mine && "bg-primary/[0.04]",
-                    hasPending && "bg-amber-50/70 hover:bg-amber-500/[0.12]"
-                  )}>
+                    hasPending && "bg-amber-50/70 hover:bg-amber-500/[0.12]",
+                    isLocked && "opacity-80",
+                  )}
+                  onClick={handleRowClick}
+                  >
                     {isAdmin && (
-                      <td className="px-3 py-2.5">
+                      <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selected.has(r.id)}
                           onCheckedChange={() => toggleOne(r.id)}
@@ -560,6 +576,11 @@ const SalesLedgerPage = () => {
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span>{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
+                        {isLocked && (
+                          <Badge variant="outline" className="text-[9px] gap-0.5 border-border/60 px-1.5 py-0">
+                            <Lock className="size-2.5" /> 확정
+                          </Badge>
+                        )}
                         {hasPending && (
                           <Badge variant="outline" className="text-[9px] gap-0.5 border-amber-400 text-amber-700 bg-amber-50 px-1.5 py-0">
                             <AlertTriangle className="size-2.5" /> 미처리 {r.pending_items?.length}
@@ -616,16 +637,20 @@ const SalesLedgerPage = () => {
                         <span className="text-muted-foreground">-</span>
                       )}
                     </td>
-                    <td className="px-3 py-2.5 text-right">
-                      {mine ? (
+                    <td className="px-3 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
+                      {canEdit && !isLocked ? (
                         <div className="inline-flex gap-1">
                           <button onClick={() => navigate(`/input?edit=${r.id}`)} className="size-7 rounded-lg grid place-items-center text-primary-glow hover:bg-primary/10">
                             <Pencil className="size-3.5" />
                           </button>
-                          <button onClick={() => onDelete(r.id)} className="size-7 rounded-lg grid place-items-center text-destructive hover:bg-destructive/10">
-                            <Trash2 className="size-3.5" />
-                          </button>
+                          {(mine || isAdmin) && (
+                            <button onClick={() => onDelete(r.id)} className="size-7 rounded-lg grid place-items-center text-destructive hover:bg-destructive/10">
+                              <Trash2 className="size-3.5" />
+                            </button>
+                          )}
                         </div>
+                      ) : isLocked ? (
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1 justify-end"><Lock className="size-3" /> 잠금</span>
                       ) : (
                         <span className="text-[10px] text-muted-foreground">읽기전용</span>
                       )}
