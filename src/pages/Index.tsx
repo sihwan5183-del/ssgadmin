@@ -15,6 +15,7 @@ import { PerformanceLedger } from "@/components/dashboard/PerformanceLedger";
 import { ChannelModelAnalysis } from "@/components/dashboard/ChannelModelAnalysis";
 import { OverallModelAnalysis } from "@/components/dashboard/OverallModelAnalysis";
 import { AdScheduleWidget } from "@/components/dashboard/AdScheduleWidget";
+import { QuickLinksWidget } from "@/components/dashboard/QuickLinksWidget";
 import { InventoryWidget } from "@/components/dashboard/InventoryWidget";
 import { StrategyModelGauges } from "@/components/dashboard/StrategyModelGauges";
 import { PendingItemsCard } from "@/components/dashboard/PendingItemsCard";
@@ -43,6 +44,11 @@ const Index = () => {
 
       {/* === 본인 검수 피드백 (반려/수정요청) === */}
       <MyReviewAlerts />
+
+      {/* 업무 바로가기 */}
+      <section className="mb-3">
+        <QuickLinksWidget />
+      </section>
 
       {excludedLabels.length > 0 && (
         <div className="mb-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-2.5 flex items-center gap-2 text-sm">

@@ -19,13 +19,24 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { InquiryForm } from "@/components/inquiries/InquiryForm";
+import { FailureAnalysisChart } from "@/components/inquiries/FailureAnalysisChart";
+import { LeadSourceChart } from "@/components/inquiries/LeadSourceChart";
+import { StaffTimelinePanel } from "@/components/inquiries/StaffTimelinePanel";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const CRM_STATUSES = ["문의중", "부재", "재케어", "실패", "방문예약", "개통완료"] as const;
 type CrmStatus = (typeof CRM_STATUSES)[number];
 
-const FAIL_REASONS = ["가격 불만", "결합 조건", "타사 개통", "단순 변심", "연락두절", "기타"] as const;
+const FAIL_REASONS = [
+  "가격(지원금) 불만",
+  "결합/위약금 문제",
+  "기기 재고 없음",
+  "타사 유지",
+  "단순 변심",
+  "연락 두절",
+  "기타",
+] as const;
 
 const STATUS_CONFIG: Record<string, { icon: typeof PhoneOff; color: string; label: string }> = {
   부재: { icon: PhoneOff, color: "hsl(35 90% 55%)", label: "부재" },
@@ -372,6 +383,15 @@ const ChannelIntakePage = () => {
         <SummaryCards rows={rows} />
         <IntakeFunnel rows={rows} />
 
+        {/* 실패 사유 분석 + 인입 경로별 성공률 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <FailureAnalysisChart rows={rows} />
+          <LeadSourceChart rows={rows} />
+        </div>
+
+        {/* 담당자별 상세 리포트 */}
+        <StaffTimelinePanel rows={rows as any} />
+
         {/* Status filter tabs */}
         <div className="flex flex-wrap gap-2">
           {["전체", ...CRM_STATUSES].map((s) => (
@@ -543,7 +563,9 @@ const ChannelIntakePage = () => {
 
             {editStatus === "실패" && (
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">거절 사유</label>
+                <label className="text-xs text-muted-foreground mb-1 block">
+                  거절 사유 <span className="text-destructive">*</span>
+                </label>
                 <Select value={editFailReason} onValueChange={setEditFailReason}>
                   <SelectTrigger className="h-9"><SelectValue placeholder="사유 선택" /></SelectTrigger>
                   <SelectContent>
@@ -555,9 +577,18 @@ const ChannelIntakePage = () => {
               </div>
             )}
 
+            {editStatus === "실패" && !editFailReason && (
+              <p className="text-[11px] text-destructive">실패 시 거절 사유를 반드시 선택해주세요</p>
+            )}
+
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setEditingRow(null)}>취소</Button>
-              <Button onClick={saveStatus}>저장</Button>
+              <Button
+                onClick={saveStatus}
+                disabled={editStatus === "실패" && !editFailReason}
+              >
+                저장
+              </Button>
             </div>
           </div>
         </DialogContent>
