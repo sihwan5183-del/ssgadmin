@@ -7,7 +7,7 @@ import { OfferTrendChart } from "@/components/finance/OfferTrendChart";
 import { ChannelMarginRanking } from "@/components/finance/ChannelMarginRanking";
 import { SettlementGap } from "@/components/finance/SettlementGap";
 import { EmptyHint } from "@/components/finance/EmptyHint";
-import { TrendingUp, TrendingDown, Sparkles, Target, Banknote, Wallet, HandCoins } from "lucide-react";
+import { TrendingUp, TrendingDown, Sparkles, Target, Banknote, Wallet, HandCoins, Store } from "lucide-react";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { useFinanceData } from "@/hooks/useFinanceData";
 
@@ -54,6 +54,16 @@ const ExpensesPage = () => {
         <KpiTile label="유통망 지원금 (지출)" value={formatKRW(f.totalDistributor)} tone="expense" Icon={HandCoins} hint="실적 자동 집계 · 총지출 반영" />
         <KpiTile label="고객입금 금액 (지출)" value={formatKRW(f.totalCustomerDeposit)} tone="expense" Icon={Wallet} hint="우리가 고객에게 지급 · 총지출 반영" />
         <KpiTile label="현금개통 금액 (시재 유입)" value={formatKRW(f.totalCashOpen)} tone="primary" Icon={Banknote} hint="고객 현금 완납 · 매장 시재" />
+      </section>
+
+      {/* 모요 플랫폼 수수료 */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <KpiTile label="모요 정산 예정금액" value={formatKRW(f.moyoFee)} tone="expense" Icon={Store}
+          hint={`모요 적용 ${f.moyoAppliedCount}건 × 88,000원`} />
+        <KpiTile label="모요 미적용 건수" value={`${f.moyoExcludedCount}건`} tone="primary" Icon={Store}
+          hint="모요 수수료 비적용 건" />
+        <KpiTile label="모요 적용 건수" value={`${f.moyoAppliedCount}건`} tone="expense" Icon={Store}
+          hint="수수료 발생 대상" />
       </section>
 
       <SectionTitle index={1} title="지출 상세 분석" subtitle="매체별 광고비 집행 + 채널별 CPA" />
