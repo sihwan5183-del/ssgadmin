@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, forwardRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { Header } from "@/components/layout/Header";
