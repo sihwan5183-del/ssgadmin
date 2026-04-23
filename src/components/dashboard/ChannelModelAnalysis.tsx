@@ -287,7 +287,7 @@ export const ChannelModelAnalysis = () => {
                     className={cn(
                       "size-6 rounded-md grid place-items-center text-[11px] font-bold tabular-nums shrink-0",
                       i === 0
-                        ? "bg-gradient-to-br from-amber-400/40 to-orange-500/10 text-amber-300 ring-1 ring-amber-400/40"
+                        ? "bg-primary/10 text-primary ring-1 ring-primary/25"
                         : "bg-muted/60 text-muted-foreground"
                     )}
                   >
