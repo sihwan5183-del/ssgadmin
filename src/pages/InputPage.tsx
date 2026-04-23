@@ -154,12 +154,6 @@ const InputPage = () => {
   // 인입 → 실적 자동 채움 (URL 파라미터)
   useEffect(() => {
     const fromInquiry = searchParams.get("from_inquiry");
-    const statusParam = searchParams.get("status");
-    if (statusParam) {
-      setStatusFilter(statusParam);
-      searchParams.delete("status");
-      setSearchParams(searchParams, { replace: true });
-    }
     if (!fromInquiry) return;
     const customer = searchParams.get("customer_name") ?? "";
     const phone = searchParams.get("phone") ?? "";
@@ -179,105 +173,6 @@ const InputPage = () => {
     setSearchParams({}, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // 리베이트(unit_price) - 오퍼(지원금 합) = 최종 수익
-  const offerOf = (r: SaleRow) =>
-    (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0);
-  const profitOf = (r: SaleRow) => (r.unit_price ?? 0) - offerOf(r);
-
-  const filteredRows = useMemo(() => {
-    const q = searchQ.trim().toLowerCase();
-    let result = rows;
-    if (quickFilter === "unpaid") {
-      result = result.filter((r) => (r.receivable_amount ?? 0) > 0 && r.receivable_paid !== "완료");
-    } else if (quickFilter === "unreturned") {
-      result = result.filter((r) => r.voucher && r.voucher.trim() !== "" && r.voucher_returned !== "유");
-    }
-    if (!q) return result;
-    return result.filter((r) => {
-      const name = (r.customer_name ?? "").toLowerCase();
-      const phone = (r.phone ?? "").replace(/[^0-9]/g, "");
-      return name.includes(q) || phone.includes(q.replace(/[^0-9]/g, ""));
-    });
-  }, [rows, searchQ, quickFilter]);
-
-  // Fetch full aggregates from DB (not limited by pagination)
-  const loadSummary = useCallback(async (sq?: string) => {
-    const q = (sq ?? searchQ).trim().toLowerCase();
-    // If searching, we need to fetch matching rows' aggregates
-    if (q) {
-      const like = `%${q}%`;
-      const { data, error } = await supabase
-        .from("sales")
-        .select("unit_price, distributor_amount, extra_subsidy, cash_support_amount")
-        .gte("open_date", startDate)
-        .lte("open_date", endDate)
-        .or(`customer_name.ilike.${like},phone.ilike.${like}`);
-      if (error) return;
-      const rows = data ?? [];
-      const totalRebate = rows.reduce((s, r) => s + (r.unit_price ?? 0), 0);
-      const totalOffer = rows.reduce((s, r) => s + (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0), 0);
-      setDbSummary({ count: rows.length, totalRebate, totalOffer, totalProfit: totalRebate - totalOffer });
-    } else {
-      // No search: aggregate all rows in the period
-      const { data, error } = await supabase
-        .from("sales")
-        .select("unit_price, distributor_amount, extra_subsidy, cash_support_amount")
-        .gte("open_date", startDate)
-        .lte("open_date", endDate);
-      if (error) return;
-      const rows = data ?? [];
-      const totalRebate = rows.reduce((s, r) => s + (r.unit_price ?? 0), 0);
-      const totalOffer = rows.reduce((s, r) => s + (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0), 0);
-      setDbSummary({ count: rows.length, totalRebate, totalOffer, totalProfit: totalRebate - totalOffer });
-    }
-    // Unpaid/unreturned counts
-    const { count: uc } = await supabase
-      .from("sales")
-      .select("id", { count: "exact", head: true })
-      .gte("open_date", startDate)
-      .lte("open_date", endDate)
-      .gt("receivable_amount", 0)
-      .neq("receivable_paid", "완료");
-    setUnpaidCount(uc ?? 0);
-    const { count: urc } = await supabase
-      .from("sales")
-      .select("id", { count: "exact", head: true })
-      .gte("open_date", startDate)
-      .lte("open_date", endDate)
-      .neq("voucher", "")
-      .not("voucher", "is", null)
-      .neq("voucher_returned", "유");
-    setUnreturnedCount(urc ?? 0);
-  }, [searchQ, startDate, endDate]);
-
-  const summary = dbSummary;
-
-  // Animated values for summary cards
-  const animCount = useAnimatedNumber(summary.count);
-  const animRebate = useAnimatedNumber(summary.totalRebate);
-  const animOffer = useAnimatedNumber(summary.totalOffer);
-  const animProfit = useAnimatedNumber(summary.totalProfit);
-
-  const allSelected = filteredRows.length > 0 && filteredRows.every((r) => selected.has(r.id));
-  const toggleAll = () => {
-    setSelected((prev) => {
-      if (allSelected) {
-        const n = new Set(prev);
-        filteredRows.forEach((r) => n.delete(r.id));
-        return n;
-      }
-      const n = new Set(prev);
-      filteredRows.forEach((r) => n.add(r.id));
-      return n;
-    });
-  };
-  const toggleOne = (id: string) =>
-    setSelected((prev) => {
-      const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
-      return n;
-    });
 
   // Track which fields were auto-filled from product defaults
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
