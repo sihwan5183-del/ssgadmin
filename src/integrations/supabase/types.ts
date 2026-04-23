@@ -751,9 +751,12 @@ export type Database = {
       incentive_policies: {
         Row: {
           active: boolean
+          calc_method: string
           created_at: string
           created_by: string | null
+          fixed_amount: number
           id: string
+          match_model: string | null
           name: string
           note: string | null
           target_products: string[]
@@ -765,9 +768,12 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          calc_method?: string
           created_at?: string
           created_by?: string | null
+          fixed_amount?: number
           id?: string
+          match_model?: string | null
           name: string
           note?: string | null
           target_products?: string[]
@@ -779,9 +785,12 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          calc_method?: string
           created_at?: string
           created_by?: string | null
+          fixed_amount?: number
           id?: string
+          match_model?: string | null
           name?: string
           note?: string | null
           target_products?: string[]
