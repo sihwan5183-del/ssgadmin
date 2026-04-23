@@ -9,6 +9,7 @@ export interface DeviceModel {
   aliases: string[];          // 유사 키워드
   retail_price: number;
   active: boolean;
+  is_strategy: boolean;
   sort_order: number;
   created_at?: string;
   updated_at?: string;
