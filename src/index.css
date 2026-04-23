@@ -179,8 +179,8 @@
     border-right: none !important;
   }
 
-  /* === 터치 타깃: 모바일에서만 체크박스/스위치/아이콘버튼 키우기 (PC 보호) === */
-  @media (max-width: 767px) {
+  /* === 터치 타깃: 모바일에서 체크박스/스위치/아이콘버튼 키우기 === */
+  @media (max-width: 1023px) {
     [role="checkbox"], button[role="checkbox"] {
       min-width: 1.25rem;
       min-height: 1.25rem;

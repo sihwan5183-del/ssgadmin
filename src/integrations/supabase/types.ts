@@ -310,65 +310,6 @@ export type Database = {
         }
         Relationships: []
       }
-      calendar_events: {
-        Row: {
-          all_day: boolean
-          assignee: string | null
-          category: string
-          created_at: string
-          created_by: string
-          description: string | null
-          end_date: string
-          id: string
-          is_important: boolean
-          location: string | null
-          start_date: string
-          store_id: string | null
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          all_day?: boolean
-          assignee?: string | null
-          category?: string
-          created_at?: string
-          created_by: string
-          description?: string | null
-          end_date: string
-          id?: string
-          is_important?: boolean
-          location?: string | null
-          start_date: string
-          store_id?: string | null
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          all_day?: boolean
-          assignee?: string | null
-          category?: string
-          created_at?: string
-          created_by?: string
-          description?: string | null
-          end_date?: string
-          id?: string
-          is_important?: boolean
-          location?: string | null
-          start_date?: string
-          store_id?: string | null
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "calendar_events_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       device_inventory: {
         Row: {
           activated_at: string | null
@@ -1181,42 +1122,6 @@ export type Database = {
           team?: string | null
           updated_at?: string
           user_id?: string
-        }
-        Relationships: []
-      }
-      quick_links: {
-        Row: {
-          active: boolean
-          created_at: string
-          created_by: string | null
-          icon: string
-          id: string
-          label: string
-          sort_order: number
-          updated_at: string
-          url: string
-        }
-        Insert: {
-          active?: boolean
-          created_at?: string
-          created_by?: string | null
-          icon?: string
-          id?: string
-          label: string
-          sort_order?: number
-          updated_at?: string
-          url: string
-        }
-        Update: {
-          active?: boolean
-          created_at?: string
-          created_by?: string | null
-          icon?: string
-          id?: string
-          label?: string
-          sort_order?: number
-          updated_at?: string
-          url?: string
         }
         Relationships: []
       }

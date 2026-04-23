@@ -23,10 +23,9 @@ interface Props {
 }
 
 const statusVariant = (s: string): "default" | "secondary" | "destructive" | "outline" => {
-  if (s === "성공(개통)") return "default";
-  if (s === "재케어(예약)") return "secondary";
-  if (s === "실패(종결)") return "destructive";
-  if (s === "부재") return "outline";
+  if (s === "개통완료") return "default";
+  if (s === "방문예약") return "secondary";
+  if (s === "종료") return "destructive";
   return "outline";
 };
 
@@ -47,7 +46,7 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
       toast.error("상태 변경 실패", { description: error.message });
       return;
     }
-    if (status === "성공(개통)") {
+    if (status === "개통완료") {
       const params = new URLSearchParams({
         from_inquiry: row.id,
         customer_name: row.customer_name ?? "",
@@ -147,8 +146,8 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
                 }
                 actions={
                   <>
-                    {r.status !== "성공(개통)" && (
-                      <Button size="sm" onClick={() => updateStatus(r, "성공(개통)")} className="h-10 flex-1 min-w-[120px]">
+                    {r.status !== "개통완료" && (
+                      <Button size="sm" onClick={() => updateStatus(r, "개통완료")} className="h-10 flex-1 min-w-[120px]">
                         실적 등록 <ArrowRight className="size-4 ml-1" />
                       </Button>
                     )}
@@ -209,8 +208,8 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
                     </Select>
                   </TableCell>
                   <TableCell className="text-right">
-                    {r.status !== "성공(개통)" && (
-                      <Button size="sm" variant="ghost" onClick={() => updateStatus(r, "성공(개통)")} className="h-7 text-xs gap-1">
+                    {r.status !== "개통완료" && (
+                      <Button size="sm" variant="ghost" onClick={() => updateStatus(r, "개통완료")} className="h-7 text-xs gap-1">
                         실적등록 <ArrowRight className="size-3" />
                       </Button>
                     )}

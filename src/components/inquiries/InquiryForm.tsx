@@ -33,7 +33,7 @@ export const InquiryForm = ({ onSaved }: Props) => {
   const { fields, loading } = useFieldDefinitions("inquiries");
   const [busy, setBusy] = useState(false);
   const [inquiryDate, setInquiryDate] = useState(today());
-  const [status, setStatus] = useState<string>("미처리");
+  const [status, setStatus] = useState<string>("문의중");
   const [values, setValues] = useState<Record<string, any>>({});
 
   const submit = async (e: React.FormEvent) => {
@@ -83,7 +83,7 @@ export const InquiryForm = ({ onSaved }: Props) => {
     }
     toast.success("인입 등록 완료");
     setValues({});
-    setStatus("미처리");
+    setStatus("문의중");
     setInquiryDate(today());
     onSaved();
   };

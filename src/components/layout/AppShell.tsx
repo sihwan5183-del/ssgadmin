@@ -13,7 +13,7 @@ export const AppShell = ({ children }: { children: ReactNode }) => {
       <Sidebar />
       <MobileTopBar />
       <main className="lg:pl-[13.5rem] pb-24 lg:pb-6">
-        <div className="px-3 md:px-5 lg:px-6 pt-3 lg:pt-4 max-w-[1600px] mx-auto animate-fade-in">
+        <div className="px-3 md:px-5 lg:px-6 pt-3 lg:pt-4 max-w-[1600px] mx-auto animate-fade-in text-[0.95rem] md:text-[0.92rem]">
           {children}
         </div>
       </main>
