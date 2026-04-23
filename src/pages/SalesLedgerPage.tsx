@@ -404,6 +404,30 @@ const SalesLedgerPage = () => {
           >
             🎫 상품권 미반납 {unreturnedCount > 0 && `(${unreturnedCount})`}
           </Badge>
+          <Badge
+            variant="outline"
+            className={cn(
+              "gap-1 cursor-pointer transition-colors h-9 px-3",
+              bundleFilter
+                ? "border-primary/60 text-primary bg-primary/15"
+                : "border-border/40 text-muted-foreground hover:bg-muted/40"
+            )}
+            onClick={() => setBundleFilter(!bundleFilter)}
+          >
+            📦 동판 건만
+          </Badge>
+          <Badge
+            variant="outline"
+            className={cn(
+              "gap-1 cursor-pointer transition-colors h-9 px-3",
+              noOfferFilter
+                ? "border-primary/60 text-primary bg-primary/15"
+                : "border-border/40 text-muted-foreground hover:bg-muted/40"
+            )}
+            onClick={() => setNoOfferFilter(!noOfferFilter)}
+          >
+            🚫 무오퍼 건만
+          </Badge>
 
           <div className="relative flex-1 min-w-[200px] max-w-md ml-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
