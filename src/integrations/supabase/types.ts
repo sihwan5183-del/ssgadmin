@@ -310,6 +310,65 @@ export type Database = {
         }
         Relationships: []
       }
+      calendar_events: {
+        Row: {
+          all_day: boolean
+          assignee: string | null
+          category: string
+          created_at: string
+          created_by: string
+          description: string | null
+          end_date: string
+          id: string
+          is_important: boolean
+          location: string | null
+          start_date: string
+          store_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          all_day?: boolean
+          assignee?: string | null
+          category?: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_date: string
+          id?: string
+          is_important?: boolean
+          location?: string | null
+          start_date: string
+          store_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          all_day?: boolean
+          assignee?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_date?: string
+          id?: string
+          is_important?: boolean
+          location?: string | null
+          start_date?: string
+          store_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       device_inventory: {
         Row: {
           activated_at: string | null
