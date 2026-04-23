@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
-import { useAppSettings } from "./useAppSettings";
 import { useDeviceModels } from "./useDeviceModels";
 
 /** Strip capacity / color suffixes to get the series name (e.g. "S942-256" → "S942") */
