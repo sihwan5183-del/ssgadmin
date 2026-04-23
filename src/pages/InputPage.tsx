@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Check, Upload, Zap, Pencil, X, FileSpreadsheet, Download, Search, Camera } from "lucide-react";
+import { exportToExcel, SALES_COLUMNS, OFFER_COLUMNS } from "@/lib/excelExport";
 import { useRole } from "@/hooks/useRole";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,7 +26,7 @@ import { ExcelMappingDialog, type MappingTarget } from "@/components/admin/Excel
 import { ExcelTemplateEditor } from "@/components/admin/ExcelTemplateEditor";
 import { ExcelUploadWizard } from "@/components/admin/ExcelUploadWizard";
 import type { FieldRule } from "@/lib/excelValidation";
-import { useLastUpdated } from "@/hooks/useQuickExport";
+import { useQuickExport, useLastUpdated } from "@/hooks/useQuickExport";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
 import { MoneyInput } from "@/components/ui/money-input";
