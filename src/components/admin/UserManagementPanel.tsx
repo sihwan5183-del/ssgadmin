@@ -159,6 +159,11 @@ export function UserManagementPanel() {
     return !cleanSet.has(r.user_id);
   });
 
+  // When filtering clean, sort clean first
+  if (cleanFilter === "clean") {
+    filtered.sort((a, b) => a.display_name.localeCompare(b.display_name));
+  }
+
   const ids = filtered.map((r) => r.user_id);
   const bulk = useBulkSelection<string>(ids);
   const [bulkBusy, setBulkBusy] = useState(false);
