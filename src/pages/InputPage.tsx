@@ -1351,6 +1351,30 @@ const InputPage = () => {
               필터: {statusFilter} ✕
             </Badge>
           )}
+          <Badge
+            variant="outline"
+            className={cn(
+              "gap-1 cursor-pointer transition-colors",
+              quickFilter === "unpaid"
+                ? "border-destructive/60 text-destructive bg-destructive/15"
+                : "border-border/40 text-muted-foreground hover:bg-muted/40"
+            )}
+            onClick={() => setQuickFilter(quickFilter === "unpaid" ? null : "unpaid")}
+          >
+            💰 미수금 건
+          </Badge>
+          <Badge
+            variant="outline"
+            className={cn(
+              "gap-1 cursor-pointer transition-colors",
+              quickFilter === "unreturned"
+                ? "border-destructive/60 text-destructive bg-destructive/15"
+                : "border-border/40 text-muted-foreground hover:bg-muted/40"
+            )}
+            onClick={() => setQuickFilter(quickFilter === "unreturned" ? null : "unreturned")}
+          >
+            🎫 상품권 미반납
+          </Badge>
           <div className="relative flex-1 min-w-[260px] max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
