@@ -134,9 +134,9 @@ const SalesLedgerPage = () => {
   const offerOf = (r: SaleRow) =>
     (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0);
   const profitOf = (r: SaleRow) =>
-    (r.unit_price ?? 0) + (r.vas_fee ?? 0) + (r.trade_in_enabled ? (r.trade_in_confirmed ?? 0) : 0) - offerOf(r) - (r.receivable_amount ?? 0);
+    (r.unit_price ?? 0) + (r.vas_fee ?? 0) + (r.trade_in_enabled ? (r.trade_in_confirmed ?? 0) : 0) - offerOf(r);
   const hasDeductions = (r: SaleRow) =>
-    offerOf(r) > 0 || (r.receivable_amount ?? 0) > 0;
+    offerOf(r) > 0;
 
   const load = useCallback(async () => {
     const from = page * PAGE_SIZE;
