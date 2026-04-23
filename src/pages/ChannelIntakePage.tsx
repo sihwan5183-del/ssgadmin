@@ -22,15 +22,15 @@ import { InquiryForm } from "@/components/inquiries/InquiryForm";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const CRM_STATUSES = ["문의중", "부재", "재케어", "실패", "방문예약", "개통완료"] as const;
+const CRM_STATUSES = ["미처리", "부재", "재케어(예약)", "성공(개통)", "실패(종결)"] as const;
 type CrmStatus = (typeof CRM_STATUSES)[number];
 
 const FAIL_REASONS = ["가격 불만", "결합 조건", "타사 개통", "단순 변심", "연락두절", "기타"] as const;
 
 const STATUS_CONFIG: Record<string, { icon: typeof PhoneOff; color: string; label: string }> = {
   부재: { icon: PhoneOff, color: "hsl(35 90% 55%)", label: "부재" },
-  재케어: { icon: RefreshCw, color: "hsl(200 80% 55%)", label: "재케어" },
-  실패: { icon: XCircle, color: "hsl(0 70% 55%)", label: "실패" },
+  "재케어(예약)": { icon: RefreshCw, color: "hsl(200 80% 55%)", label: "재케어(예약)" },
+  "실패(종결)": { icon: XCircle, color: "hsl(0 70% 55%)", label: "실패(종결)" },
 };
 
 interface InquiryRow {
@@ -75,8 +75,8 @@ function SummaryCards({ rows }: { rows: InquiryRow[] }) {
   const today = new Date().toISOString().slice(0, 10);
   const todayRows = rows.filter((r) => r.inquiry_date === today);
   const absent = rows.filter((r) => r.status === "부재").length;
-  const recare = rows.filter((r) => r.status === "재케어").length;
-  const failed = rows.filter((r) => r.status === "실패").length;
+  const recare = rows.filter((r) => r.status === "재케어(예약)").length;
+  const failed = rows.filter((r) => r.status === "실패(종결)").length;
   const total = rows.length;
   const failRate = total > 0 ? Math.round((failed / total) * 100) : 0;
 
@@ -111,9 +111,9 @@ function IntakeFunnel({ rows }: { rows: InquiryRow[] }) {
       const cur = map.get(ch) ?? { total: 0, absent: 0, recare: 0, failed: 0, success: 0 };
       cur.total++;
       if (r.status === "부재") cur.absent++;
-      else if (r.status === "재케어") cur.recare++;
-      else if (r.status === "실패") cur.failed++;
-      else if (r.status === "개통완료") cur.success++;
+      else if (r.status === "재케어(예약)") cur.recare++;
+      else if (r.status === "실패(종결)") cur.failed++;
+      else if (r.status === "성공(개통)") cur.success++;
       map.set(ch, cur);
     }
     return Array.from(map.entries())
@@ -123,9 +123,9 @@ function IntakeFunnel({ rows }: { rows: InquiryRow[] }) {
 
   // overall funnel
   const totalInquiries = rows.length;
-  const contacted = rows.filter((r) => r.status !== "부재").length;
-  const caring = rows.filter((r) => ["재케어", "방문예약", "개통완료"].includes(r.status)).length;
-  const converted = rows.filter((r) => r.status === "개통완료").length;
+  const contacted = rows.filter((r) => r.status !== "부재" && r.status !== "미처리").length;
+  const caring = rows.filter((r) => ["재케어(예약)", "성공(개통)"].includes(r.status)).length;
+  const converted = rows.filter((r) => r.status === "성공(개통)").length;
 
   const funnelData = [
     { name: "총 인입", value: totalInquiries, fill: "hsl(var(--primary))" },
@@ -430,7 +430,7 @@ const ChannelIntakePage = () => {
                   <tr><td colSpan={9} className="text-center py-10 text-muted-foreground">데이터 없음</td></tr>
                 ) : (
                   filtered.map((r) => {
-                    const abandoned = isAbandoned(r.last_action_at) && !["개통완료", "실패", "종료"].includes(r.status);
+                    const abandoned = isAbandoned(r.last_action_at) && !["성공(개통)", "실패(종결)"].includes(r.status);
                     return (
                       <tr key={r.id} className={cn("border-t border-border/30 hover:bg-muted/20", abandoned && "bg-destructive/5")}>
                         <td className="px-3 py-2 text-xs tabular-nums">{r.inquiry_date}</td>
@@ -451,9 +451,10 @@ const ChannelIntakePage = () => {
                               className={cn(
                                 "text-[10px]",
                                 r.status === "부재" && "bg-amber-100 text-amber-700 border-amber-300",
-                                r.status === "재케어" && "bg-blue-500/20 text-blue-300 border-blue-500/30",
-                                r.status === "실패" && "bg-destructive/20 text-destructive border-destructive/30",
-                                r.status === "개통완료" && "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+                                r.status === "재케어(예약)" && "bg-blue-500/20 text-blue-300 border-blue-500/30",
+                                r.status === "실패(종결)" && "bg-destructive/20 text-destructive border-destructive/30",
+                                r.status === "성공(개통)" && "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+                                r.status === "미처리" && "bg-muted text-muted-foreground border-border",
                               )}
                               variant="outline"
                             >
@@ -527,7 +528,7 @@ const ChannelIntakePage = () => {
               </Select>
             </div>
 
-            {["부재", "재케어"].includes(editStatus) && (
+            {["부재", "재케어(예약)"].includes(editStatus) && (
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">
                   {editStatus === "부재" ? "재연결 예정 시각" : "재연락 날짜"}
@@ -541,7 +542,7 @@ const ChannelIntakePage = () => {
               </div>
             )}
 
-            {editStatus === "실패" && (
+            {editStatus === "실패(종결)" && (
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">거절 사유</label>
                 <Select value={editFailReason} onValueChange={setEditFailReason}>
