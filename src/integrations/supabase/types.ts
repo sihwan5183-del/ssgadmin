@@ -1392,10 +1392,12 @@ export type Database = {
           cash_open: boolean | null
           cash_support_amount: number | null
           channel: string | null
+          corp_card_amount: number | null
           created_at: string
           created_by: string
           custom_fields: Json
           customer_name: string | null
+          customer_support_amount: number | null
           delivery_type: string | null
           device_model: string | null
           device_serial: string | null
@@ -1454,10 +1456,12 @@ export type Database = {
           cash_open?: boolean | null
           cash_support_amount?: number | null
           channel?: string | null
+          corp_card_amount?: number | null
           created_at?: string
           created_by: string
           custom_fields?: Json
           customer_name?: string | null
+          customer_support_amount?: number | null
           delivery_type?: string | null
           device_model?: string | null
           device_serial?: string | null
@@ -1516,10 +1520,12 @@ export type Database = {
           cash_open?: boolean | null
           cash_support_amount?: number | null
           channel?: string | null
+          corp_card_amount?: number | null
           created_at?: string
           created_by?: string
           custom_fields?: Json
           customer_name?: string | null
+          customer_support_amount?: number | null
           delivery_type?: string | null
           device_model?: string | null
           device_serial?: string | null

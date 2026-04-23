@@ -106,6 +106,8 @@ type SaleRow = {
   trade_in_model?: string | null;
   trade_in_confirmed?: number | null;
   custom_fields?: Record<string, any> | null;
+  customer_support_amount?: number | null;
+  corp_card_amount?: number | null;
 };
 
 const SalesLedgerPage = () => {
@@ -132,7 +134,7 @@ const SalesLedgerPage = () => {
   const [unreturnedCount, setUnreturnedCount] = useState(0);
 
   const offerOf = (r: SaleRow) =>
-    (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0);
+    (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0) + (r.customer_support_amount ?? 0) + (r.corp_card_amount ?? 0);
   const profitOf = (r: SaleRow) =>
     (r.unit_price ?? 0) + (r.vas_fee ?? 0) + (r.trade_in_enabled ? (r.trade_in_confirmed ?? 0) : 0) - offerOf(r);
   const hasDeductions = (r: SaleRow) =>
@@ -173,10 +175,13 @@ const SalesLedgerPage = () => {
     const rows = data ?? [];
     const totalRebate = rows.reduce((s, r) => s + (r.unit_price ?? 0), 0);
     const totalOffer = rows.reduce((s, r) => s + (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0), 0);
+    const totalCustomerSupport = rows.reduce((s, r) => s + ((r as any).customer_support_amount ?? 0), 0);
+    const totalCorpCard = rows.reduce((s, r) => s + ((r as any).corp_card_amount ?? 0), 0);
+    const totalOfferAll = totalOffer + totalCustomerSupport + totalCorpCard;
     const totalVas = rows.reduce((s, r) => s + (r.vas_fee ?? 0), 0);
     const totalTradeIn = rows.reduce((s, r) => s + (r.trade_in_enabled ? (r.trade_in_confirmed ?? 0) : 0), 0);
     const totalReceivable = rows.reduce((s, r) => s + (r.receivable_amount ?? 0), 0);
-    setDbSummary({ count: rows.length, totalRebate, totalOffer, totalProfit: totalRebate + totalVas + totalTradeIn - totalOffer - totalReceivable });
+    setDbSummary({ count: rows.length, totalRebate, totalOffer: totalOfferAll, totalProfit: totalRebate + totalVas + totalTradeIn - totalOfferAll });
 
     const { count: uc } = await supabase
       .from("sales")
@@ -559,6 +564,8 @@ const SalesLedgerPage = () => {
                 <th className="text-right px-3 py-2 font-medium">오퍼(지원금)</th>
                 <th className="text-right px-3 py-2 font-medium">최종 수익</th>
                 <th className="text-right px-3 py-2 font-medium">미수금</th>
+                <th className="text-right px-3 py-2 font-medium">고객지원</th>
+                <th className="text-right px-3 py-2 font-medium">법인카드</th>
                 <th className="text-right px-3 py-2 font-medium">중고폰</th>
                 <th className="text-right px-3 py-2 font-medium">관리</th>
               </tr>
@@ -659,6 +666,8 @@ const SalesLedgerPage = () => {
                             {(r.distributor_amount ?? 0) > 0 && <p className="text-destructive">유통망: -{(r.distributor_amount ?? 0).toLocaleString()}</p>}
                             {(r.extra_subsidy ?? 0) > 0 && <p className="text-destructive">상품권: -{(r.extra_subsidy ?? 0).toLocaleString()}</p>}
                             {(r.cash_support_amount ?? 0) > 0 && <p className="text-destructive">현금지원: -{(r.cash_support_amount ?? 0).toLocaleString()}</p>}
+                            {(r.customer_support_amount ?? 0) > 0 && <p className="text-destructive">고객지원: -{(r.customer_support_amount ?? 0).toLocaleString()}</p>}
+                            {(r.corp_card_amount ?? 0) > 0 && <p className="text-destructive">법인카드: -{(r.corp_card_amount ?? 0).toLocaleString()}</p>}
                             <hr className="border-border/40 my-1" />
                             <p className="font-bold">최종: {profit.toLocaleString()}</p>
                             {(r.receivable_amount ?? 0) > 0 && <p className="text-warning">미수금: {(r.receivable_amount ?? 0).toLocaleString()} ({r.receivable_paid === "완료" ? "수급완료" : "미수급"})</p>}
@@ -672,6 +681,16 @@ const SalesLedgerPage = () => {
                           {(r.receivable_amount ?? 0).toLocaleString("ko-KR")}
                         </span>
                       ) : <span className="text-muted-foreground">-</span>}
+                    </td>
+                    <td className="px-3 py-2.5 text-right tabular-nums">
+                      {(r.customer_support_amount ?? 0) > 0
+                        ? <span className="text-warning">{(r.customer_support_amount ?? 0).toLocaleString("ko-KR")}</span>
+                        : <span className="text-muted-foreground">-</span>}
+                    </td>
+                    <td className="px-3 py-2.5 text-right tabular-nums">
+                      {(r.corp_card_amount ?? 0) > 0
+                        ? <span className="text-warning">{(r.corp_card_amount ?? 0).toLocaleString("ko-KR")}</span>
+                        : <span className="text-muted-foreground">-</span>}
                     </td>
                     <td className="px-3 py-2.5 text-right tabular-nums">
                       {r.trade_in_enabled ? (
@@ -706,7 +725,7 @@ const SalesLedgerPage = () => {
                 );
               })}
               {filteredRows.length === 0 && (
-                <tr><td colSpan={isAdmin ? 13 : 12} className="text-center py-10 text-muted-foreground">
+                <tr><td colSpan={isAdmin ? 18 : 17} className="text-center py-10 text-muted-foreground">
                   {searchQ ? "검색 결과가 없습니다." : "선택한 기간에 데이터가 없습니다."}
                 </td></tr>
               )}

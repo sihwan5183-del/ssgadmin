@@ -72,6 +72,8 @@ type SaleRow = {
   cash_holder: string | null;
   net_fee: number | null;
   delivery_type: string | null;
+  customer_support_amount: number | null;
+  corp_card_amount: number | null;
   tracking_no: string | null;
   note: string | null;
   bundle: string | null;
@@ -204,6 +206,8 @@ const InputPage = () => {
         trade_in_model: s.trade_in_model,
         trade_in_estimate: s.trade_in_estimate ?? 0,
         trade_in_confirmed: s.trade_in_confirmed ?? 0,
+        customer_support_amount: (s as any).customer_support_amount ?? 0,
+        corp_card_amount: (s as any).corp_card_amount ?? 0,
       });
       setCustomFields(s.custom_fields ?? {});
       setPendingItems(Array.isArray(s.pending_items) ? s.pending_items : []);
@@ -298,6 +302,8 @@ const InputPage = () => {
       cash_support_amount: num(form.cash_support_amount),
       trade_in_estimate: num(form.trade_in_estimate),
       trade_in_confirmed: num(form.trade_in_confirmed),
+      customer_support_amount: num(form.customer_support_amount),
+      corp_card_amount: num(form.corp_card_amount),
     };
     const payload = {
       ...form,
@@ -419,7 +425,7 @@ const InputPage = () => {
           }
         }
         // 숫자 컬럼 변환
-        ["unit_price", "vas_fee", "receivable_amount", "distributor_amount", "extra_subsidy", "cash_support_amount", "net_fee"].forEach((k) => {
+        ["unit_price", "vas_fee", "receivable_amount", "distributor_amount", "extra_subsidy", "cash_support_amount", "net_fee", "customer_support_amount", "corp_card_amount"].forEach((k) => {
           if (base[k] != null) base[k] = num(base[k]);
         });
         if (base.net_fee == null || base.net_fee === 0) base.net_fee = calcNetFee(base);
@@ -1082,6 +1088,14 @@ const InputPage = () => {
                   <span className="text-muted-foreground">- 추가보조금</span>
                   <span className="text-destructive">₩{(form.extra_subsidy ?? 0).toLocaleString()}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">- 고객지원금</span>
+                  <span className="text-destructive">₩{(form.customer_support_amount ?? 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">- 법인카드</span>
+                  <span className="text-destructive">₩{(form.corp_card_amount ?? 0).toLocaleString()}</span>
+                </div>
                 {form.trade_in_enabled && (form.trade_in_confirmed ?? 0) > 0 && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">+ 중고폰 반납</span>
@@ -1092,7 +1106,8 @@ const InputPage = () => {
                   <span className="font-semibold">최종 순이익</span>
                   {(() => {
                     const net = (form.unit_price ?? 0) + (form.vas_fee ?? 0) + (form.trade_in_enabled ? (form.trade_in_confirmed ?? 0) : 0) - (form.distributor_amount ?? 0) - (form.cash_support_amount ?? 0) - (form.extra_subsidy ?? 0);
-                    return <span className={`font-bold ${net >= 0 ? "text-primary" : "text-destructive"}`}>₩{net.toLocaleString()}</span>;
+                    const netFinal = net - (form.customer_support_amount ?? 0) - (form.corp_card_amount ?? 0);
+                    return <span className={`font-bold ${netFinal >= 0 ? "text-primary" : "text-destructive"}`}>₩{netFinal.toLocaleString()}</span>;
                   })()}
                 </div>
                 {(form.receivable_amount ?? 0) > 0 && (
@@ -1143,6 +1158,8 @@ const InputPage = () => {
                     set("distributor_amount", 0);
                     set("extra_subsidy", 0);
                     set("cash_support_amount", 0);
+                    set("customer_support_amount", 0);
+                    set("corp_card_amount", 0);
                     set("cash_open", false);
                     set("cash_bank", null);
                     set("cash_account", null);
@@ -1176,16 +1193,16 @@ const InputPage = () => {
             </Field>
           </Grid>
           <Grid cols={3}>
-            <Field label="입금 유/무 (입금일 또는 표시값)">
-              <Input
-                value={form.receivable_paid ?? ""}
-                onChange={(e) => set("receivable_paid", e.target.value)}
-                placeholder="유 / 완료 / 2026-04-19"
-                className="h-9 bg-input/60 text-xs"
-              />
-            </Field>
-            <Field label="추가지원금 (₩)">
+            <Field label="③ 추가지원금 (₩)">
               <MoneyInput value={form.extra_subsidy} onChange={(v) => set("extra_subsidy", v)} disabled={customFields.has_offer === false} />
+            </Field>
+            <Field label="④ 고객지원금 (₩)">
+              <MoneyInput value={form.customer_support_amount} onChange={(v) => set("customer_support_amount", v)} disabled={customFields.has_offer === false} />
+              <p className="text-[10px] text-muted-foreground mt-0.5">고객에게 별도 지급하는 지원금 (수익에서 차감)</p>
+            </Field>
+            <Field label="⑤ 법인카드 결제금액 (₩)">
+              <MoneyInput value={form.corp_card_amount} onChange={(v) => set("corp_card_amount", v)} disabled={customFields.has_offer === false} />
+              <p className="text-[10px] text-muted-foreground mt-0.5">법인카드로 결제한 금액 (수익에서 차감)</p>
             </Field>
           </Grid>
           <Grid cols={3}>
