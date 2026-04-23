@@ -39,6 +39,7 @@ import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ModelAutocomplete } from "@/components/ui/model-autocomplete";
 import { Sparkles, AlertTriangle, Wallet, Banknote, Building2 } from "lucide-react";
+import { CreditCard } from "lucide-react";
 
 const PAGE_SIZE = 25;
 
@@ -969,6 +970,27 @@ const InputPage = () => {
               <Input value={form.phone ?? ""} onChange={(e) => set("phone", e.target.value)} placeholder="010-0000-0000" className="h-11 bg-input/60" />
             </Field>
           </Grid>
+          {/* 가입번호 + 간단 메모 */}
+          <Grid cols={2}>
+            <Field label="가입 번호">
+              <Input
+                value={customFields.subscription_no ?? ""}
+                onChange={(e) => setCustomFields((f) => ({ ...f, subscription_no: e.target.value }))}
+                placeholder="010-0000-0000"
+                className="h-11 bg-input/60"
+                maxLength={13}
+              />
+            </Field>
+            <Field label="간단 메모">
+              <Input
+                value={customFields.quick_memo ?? ""}
+                onChange={(e) => setCustomFields((f) => ({ ...f, quick_memo: e.target.value }))}
+                placeholder="메모 입력"
+                className="h-11 bg-input/60"
+                maxLength={100}
+              />
+            </Field>
+          </Grid>
           <Grid cols={2}>
             <Field label="단말기">
               <ModelAutocomplete
@@ -1244,6 +1266,61 @@ const InputPage = () => {
               <Input value={form.cash_holder ?? ""} onChange={(e) => set("cash_holder", e.target.value)} className="h-11 bg-input/60" />
             </Field>
           </Grid>
+
+          {/* 법인카드 결제 */}
+          <div className="border-t border-border/30 pt-4 mt-2">
+            <div className="flex items-center gap-2 mb-3">
+              <CreditCard className="size-4 text-primary" />
+              <span className="text-sm font-semibold">법인카드 결제</span>
+              <Switch
+                checked={customFields.card_payment === true}
+                onCheckedChange={(v) => {
+                  setCustomFields((f) => ({
+                    ...f,
+                    card_payment: v,
+                    ...(v ? {} : { card_company: "", card_last4: "", card_amount: 0 }),
+                  }));
+                }}
+              />
+            </div>
+            {customFields.card_payment && (
+              <div className="animate-fade-in">
+                <Grid cols={3}>
+                  <Field label="카드사">
+                    <Select
+                      value={customFields.card_company ?? ""}
+                      onValueChange={(v) => setCustomFields((f) => ({ ...f, card_company: v }))}
+                    >
+                      <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
+                      <SelectContent>
+                        {["국민", "신한", "현대", "삼성", "롯데", "하나", "우리", "BC", "NH농협"].map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label="카드 뒷 4자리">
+                    <Input
+                      value={customFields.card_last4 ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                        setCustomFields((f) => ({ ...f, card_last4: v }));
+                      }}
+                      placeholder="0000"
+                      maxLength={4}
+                      className="h-11 bg-input/60 tabular-nums"
+                    />
+                  </Field>
+                  <Field label="카드 결제금액 (₩)">
+                    <MoneyInput
+                      value={customFields.card_amount ?? 0}
+                      onChange={(v) => setCustomFields((f) => ({ ...f, card_amount: v }))}
+                    />
+                  </Field>
+                </Grid>
+              </div>
+            )}
+          </div>
         </FormSection>
 
         <FormSection title="최종 / 배송">
