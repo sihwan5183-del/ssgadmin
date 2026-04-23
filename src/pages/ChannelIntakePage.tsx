@@ -479,9 +479,15 @@ const ChannelIntakePage = () => {
                   <tr><td colSpan={9} className="text-center py-10 text-muted-foreground">데이터 없음</td></tr>
                 ) : (
                   filtered.map((r) => {
-                    const abandoned = isAbandoned(r.last_action_at) && !["개통완료", "실패", "종료"].includes(r.status);
+                    const newLead = isNewLead(r);
+                    const abandoned = !newLead && isAbandoned(r.last_action_at) && !["개통완료", "실패", "종료"].includes(r.status);
+                    const displayStatus = newLead ? "미처리" : r.status;
                     return (
-                      <tr key={r.id} className={cn("border-t border-border/30 hover:bg-muted/20", abandoned && "bg-destructive/5")}>
+                      <tr key={r.id} className={cn(
+                        "border-t border-border/30 hover:bg-muted/20",
+                        newLead && "bg-orange-50 dark:bg-orange-950/20",
+                        abandoned && !newLead && "bg-destructive/5"
+                      )}>
                         <td className="px-3 py-2 text-xs tabular-nums">{r.inquiry_date}</td>
                         <td className="px-3 py-2">
                           <Badge variant="outline" className="text-[10px]">{r.channel}</Badge>
@@ -499,15 +505,21 @@ const ChannelIntakePage = () => {
                             <Badge
                               className={cn(
                                 "text-[10px]",
-                                r.status === "부재" && "bg-amber-100 text-amber-700 border-amber-300",
-                                r.status === "재케어" && "bg-blue-500/20 text-blue-300 border-blue-500/30",
-                                r.status === "실패" && "bg-destructive/20 text-destructive border-destructive/30",
-                                r.status === "개통완료" && "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+                                newLead && "bg-orange-100 text-orange-700 border-orange-400 font-bold dark:bg-orange-900/40 dark:text-orange-300 dark:border-orange-600",
+                                !newLead && r.status === "부재" && "bg-amber-100 text-amber-700 border-amber-300",
+                                !newLead && r.status === "재케어" && "bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/30",
+                                !newLead && r.status === "실패" && "bg-red-100 text-red-700 border-red-300 dark:bg-destructive/20 dark:text-destructive dark:border-destructive/30",
+                                !newLead && r.status === "개통완료" && "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30",
+                                !newLead && r.status === "문의중" && "bg-sky-50 text-sky-700 border-sky-300 dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/30",
+                                !newLead && r.status === "방문예약" && "bg-violet-100 text-violet-700 border-violet-300 dark:bg-violet-500/20 dark:text-violet-300 dark:border-violet-500/30",
                               )}
                               variant="outline"
                             >
-                              {r.status}
+                              {displayStatus}
                             </Badge>
+                            {newLead && (
+                              <AlertTriangle className="size-3.5 text-orange-600 dark:text-orange-400 animate-pulse" />
+                            )}
                             {abandoned && (
                               <Badge variant="destructive" className="text-[9px] h-4 px-1 animate-pulse">
                                 방치
