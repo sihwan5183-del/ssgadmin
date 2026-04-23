@@ -3,11 +3,17 @@ import {
   Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend,
 } from "recharts";
 import { Sparkles, Trophy, TrendingUp } from "lucide-react";
-import { useModelAnalysis } from "@/hooks/useModelAnalysis";
+import { useModelAnalysis, resolvePetName } from "@/hooks/useModelAnalysis";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-const formatKRW = (n: number) => "₩" + n.toLocaleString("ko-KR");
+const formatKRW = (n: number) => n.toLocaleString("ko-KR") + "원";
+
+const MAKER_COLORS: Record<string, string> = {
+  삼성: "hsl(220 80% 55%)",
+  애플: "hsl(0 0% 45%)",
+  기타: "hsl(200 10% 50%)",
+};
 
 export const ChannelModelAnalysis = () => {
   const { channelData, stackedData, modelsInfo, policyShare, getTop5, hasData } = useModelAnalysis();
@@ -150,21 +156,21 @@ export const ChannelModelAnalysis = () => {
           <div className="text-xs text-muted-foreground">선택된 채널</div>
           <div className="mt-1 text-2xl font-bold text-gradient">{effectiveChannel || "데이터 없음"}</div>
 
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-card/40 border border-border/40 p-3">
-              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <TrendingUp className="size-3" /> 총 판매
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="rounded-lg bg-card/40 border border-border/40 p-2.5">
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                <TrendingUp className="size-3" /> 총판매
               </div>
-              <div className="mt-1 text-xl font-bold tabular-nums">
+              <div className="mt-0.5 text-lg font-semibold tabular-nums">
                 {channelTotal}
                 <span className="text-xs text-muted-foreground ml-1">건</span>
               </div>
             </div>
-            <div className="rounded-xl bg-card/40 border border-border/40 p-3">
-              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <Sparkles className="size-3" /> 건당 평균 리베이트
+            <div className="rounded-lg bg-card/40 border border-border/40 p-2.5">
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                <Sparkles className="size-3" /> 건당 평균
               </div>
-              <div className="mt-1 text-xl font-bold tabular-nums text-secondary">
+              <div className="mt-0.5 text-lg font-semibold tabular-nums text-secondary">
                 {formatKRW(channelAvgRebate)}
               </div>
             </div>
@@ -184,17 +190,24 @@ export const ChannelModelAnalysis = () => {
             <span className="text-[11px] text-muted-foreground">건수 기준</span>
           </div>
 
-          <ul className="space-y-2">
+          <ul className="space-y-1.5">
             {top5.map((m, i) => {
+              const { pet, maker } = resolvePetName(m.name);
               const pct = channelTotal > 0 ? Math.round((m.count / channelTotal) * 100) : 0;
+              const isTop3 = i < 3;
               return (
                 <li
                   key={m.name}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-card/40 border border-border/40 hover:border-primary/30 transition-colors"
+                  className={cn(
+                    "flex items-center gap-2.5 p-2 rounded-lg border transition-colors",
+                    isTop3
+                      ? "bg-primary/5 border-primary/20"
+                      : "bg-card/40 border-border/40 hover:border-primary/30"
+                  )}
                 >
                   <div
                     className={cn(
-                      "size-7 rounded-lg grid place-items-center text-xs font-bold tabular-nums",
+                      "size-6 rounded-md grid place-items-center text-[11px] font-bold tabular-nums shrink-0",
                       i === 0
                         ? "bg-gradient-to-br from-amber-400/40 to-orange-500/10 text-amber-300 ring-1 ring-amber-400/40"
                         : "bg-muted/60 text-muted-foreground"
@@ -202,27 +215,35 @@ export const ChannelModelAnalysis = () => {
                   >
                     {i + 1}
                   </div>
-                  <span className="size-2.5 rounded-full" style={{ background: m.color }} />
+                  <span
+                    className="shrink-0 rounded text-[9px] font-bold px-1 py-0.5 leading-none"
+                    style={{
+                      background: MAKER_COLORS[maker] ?? MAKER_COLORS["기타"],
+                      color: "#fff",
+                    }}
+                  >
+                    {maker === "삼성" ? "S" : maker === "애플" ? "A" : "·"}
+                  </span>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-sm truncate">{m.name}</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={cn("text-xs truncate", isTop3 ? "font-bold" : "font-medium")}>{pet}</span>
                       {m.isStrategy ? (
-                        <Badge className="bg-gradient-primary border-0 text-primary-foreground text-[10px] h-5 px-1.5">
-                          전략 모델
+                        <Badge className="bg-gradient-primary border-0 text-primary-foreground text-[9px] h-3.5 px-1">
+                          전략
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="border-border text-muted-foreground text-[10px] h-5 px-1.5">
-                          일반 모델
+                        <Badge variant="outline" className="border-border text-muted-foreground text-[9px] h-3.5 px-1">
+                          일반
                         </Badge>
                       )}
                     </div>
-                    <div className="text-[11px] text-muted-foreground mt-0.5">
-                      평균 리베이트 {formatKRW(m.avgRebate)}
+                    <div className="text-[10px] text-muted-foreground mt-0.5 tabular-nums">
+                      평균 {formatKRW(m.avgRebate)}
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-bold tabular-nums">{m.count}건</div>
-                    <div className="text-[10px] text-muted-foreground tabular-nums">{pct}%</div>
+                    <div className={cn("tabular-nums", isTop3 ? "text-xs font-bold" : "text-xs font-medium")}>{m.count}건</div>
+                    <div className="text-[9px] text-muted-foreground tabular-nums">{pct}%</div>
                   </div>
                 </li>
               );
