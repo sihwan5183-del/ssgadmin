@@ -126,7 +126,7 @@ const InputPage = () => {
   const { options: OPEN_METHODS } = useFieldOptions("open_method");
   const { options: STATUSES } = useFieldOptions("status");
   const { options: RATE_PLANS } = useFieldOptions("rate_plan");
-  const { getPlansForProduct } = useProductRatePlans();
+  const { getPlansForProduct, getDefaultsForProduct, getAllowedSaleTypes } = useProductRatePlans();
   const { options: DELIVERY_TYPES } = useFieldOptions("delivery_type");
   const { options: BANKS } = useFieldOptions("bank");
   const [form, setForm] = useState<Partial<SaleRow>>(emptyForm);
@@ -260,8 +260,17 @@ const InputPage = () => {
       return n;
     });
 
+  // Track which fields were auto-filled from product defaults
+  const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
+
   const set = <K extends keyof SaleRow>(k: K, v: SaleRow[K] | undefined) =>
-    setForm((f) => ({ ...f, [k]: v }));
+    setForm((f) => {
+      // Clear auto-filled marker when user manually changes a field
+      if (autoFilledFields.has(k)) {
+        setAutoFilledFields((prev) => { const n = new Set(prev); n.delete(k); return n; });
+      }
+      return { ...f, [k]: v };
+    });
 
   const num = (v: unknown) => {
     if (v === "" || v == null) return 0;
@@ -854,6 +863,28 @@ const InputPage = () => {
                       !f.rate_plan || allowed.length === 0 || allowed.includes(f.rate_plan);
                     return { ...f, product: v, rate_plan: keepRate ? f.rate_plan : null };
                   });
+                  // Auto-fill defaults from product master
+                  const defaults = getDefaultsForProduct(v);
+                  if (defaults) {
+                    const filled = new Set<string>();
+                    setForm((f) => {
+                      const updates: Partial<SaleRow> = {};
+                      if (defaults.default_sale_type && !f.sale_type) {
+                        updates.sale_type = defaults.default_sale_type;
+                        filled.add("sale_type");
+                      }
+                      if (defaults.default_vas1 && !f.vas1) {
+                        updates.vas1 = defaults.default_vas1;
+                        filled.add("vas1");
+                      }
+                      if (defaults.default_vas2 && !f.vas2) {
+                        updates.vas2 = defaults.default_vas2;
+                        filled.add("vas2");
+                      }
+                      return { ...f, ...updates };
+                    });
+                    setAutoFilledFields(filled);
+                  }
                 }}
               >
                 <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
@@ -861,10 +892,25 @@ const InputPage = () => {
               </Select>
             </Field>
             <Field label="판매유형 *">
-              <Select value={form.sale_type ?? ""} onValueChange={(v) => set("sale_type", v)}>
-                <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
-                <SelectContent>{SALE_TYPES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-              </Select>
+              {(() => {
+                const allowed = getAllowedSaleTypes(form.product);
+                const types = allowed.length > 0 ? SALE_TYPES.filter((s) => allowed.includes(s)) : SALE_TYPES;
+                const defaults = getDefaultsForProduct(form.product);
+                const mismatch = defaults?.default_sale_type && form.sale_type && form.sale_type !== defaults.default_sale_type && !autoFilledFields.has("sale_type");
+                return (
+                  <div>
+                    <Select value={form.sale_type ?? ""} onValueChange={(v) => set("sale_type", v)}>
+                      <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
+                      <SelectContent>{types.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                    </Select>
+                    {mismatch && (
+                      <p className="text-[10px] text-amber-500 mt-1 flex items-center gap-1">
+                        <AlertTriangle className="size-3" /> 기본 설정({defaults.default_sale_type})과 다릅니다
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
             </Field>
             <Field label="개통방식">
               <Select value={form.open_method ?? ""} onValueChange={(v) => set("open_method", v)}>
@@ -939,10 +985,36 @@ const InputPage = () => {
               })()}
             </Field>
             <Field label="부가서비스 1 (주셋톱)">
-              <Input value={form.vas1 ?? ""} onChange={(e) => set("vas1", e.target.value)} className="h-11 bg-input/60" />
+              {(() => {
+                const defaults = getDefaultsForProduct(form.product);
+                const mismatch = defaults?.default_vas1 && form.vas1 && form.vas1 !== defaults.default_vas1 && !autoFilledFields.has("vas1");
+                return (
+                  <div>
+                    <Input value={form.vas1 ?? ""} onChange={(e) => set("vas1", e.target.value)} className="h-11 bg-input/60" />
+                    {mismatch && (
+                      <p className="text-[10px] text-amber-500 mt-1 flex items-center gap-1">
+                        <AlertTriangle className="size-3" /> 기본 설정({defaults.default_vas1})과 다릅니다
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
             </Field>
             <Field label="부가서비스 2 (부셋톱)">
-              <Input value={form.vas2 ?? ""} onChange={(e) => set("vas2", e.target.value)} className="h-11 bg-input/60" />
+              {(() => {
+                const defaults = getDefaultsForProduct(form.product);
+                const mismatch = defaults?.default_vas2 && form.vas2 && form.vas2 !== defaults.default_vas2 && !autoFilledFields.has("vas2");
+                return (
+                  <div>
+                    <Input value={form.vas2 ?? ""} onChange={(e) => set("vas2", e.target.value)} className="h-11 bg-input/60" />
+                    {mismatch && (
+                      <p className="text-[10px] text-amber-500 mt-1 flex items-center gap-1">
+                        <AlertTriangle className="size-3" /> 기본 설정({defaults.default_vas2})과 다릅니다
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
             </Field>
           </Grid>
         </FormSection>

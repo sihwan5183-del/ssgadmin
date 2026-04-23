@@ -993,33 +993,51 @@ export type Database = {
       product_rate_plans: {
         Row: {
           active: boolean
+          allowed_sale_types: string[] | null
           created_at: string
           created_by: string | null
+          default_sale_type: string | null
+          default_vas1: string | null
+          default_vas2: string | null
           id: string
           product: string
           rate_plan: string
           sort_order: number
           updated_at: string
+          vas1_duration: number | null
+          vas2_duration: number | null
         }
         Insert: {
           active?: boolean
+          allowed_sale_types?: string[] | null
           created_at?: string
           created_by?: string | null
+          default_sale_type?: string | null
+          default_vas1?: string | null
+          default_vas2?: string | null
           id?: string
           product: string
           rate_plan: string
           sort_order?: number
           updated_at?: string
+          vas1_duration?: number | null
+          vas2_duration?: number | null
         }
         Update: {
           active?: boolean
+          allowed_sale_types?: string[] | null
           created_at?: string
           created_by?: string | null
+          default_sale_type?: string | null
+          default_vas1?: string | null
+          default_vas2?: string | null
           id?: string
           product?: string
           rate_plan?: string
           sort_order?: number
           updated_at?: string
+          vas1_duration?: number | null
+          vas2_duration?: number | null
         }
         Relationships: []
       }
