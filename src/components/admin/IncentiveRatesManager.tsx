@@ -585,7 +585,12 @@ function SimulationPanel({ policies, linkageRule }: { policies: DraftPolicy[]; l
       for (const s of salesData ?? []) {
         const uid = (s as any).created_by;
         if (!byUser.has(uid)) byUser.set(uid, []);
-        byUser.get(uid)!.push(s as SaleForIncentive);
+        const cf = (s as any).custom_fields ?? {};
+        byUser.get(uid)!.push({
+          ...(s as any),
+          bundle: (s as any).bundle ?? null,
+          has_offer: cf.has_offer !== false,
+        } as SaleForIncentive);
       }
 
       const nameMap = new Map((profiles ?? []).map((p: any) => [p.user_id, { name: p.display_name, position: p.position }]));
