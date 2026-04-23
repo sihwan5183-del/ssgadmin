@@ -671,11 +671,14 @@ export type Database = {
           created_by: string
           custom_fields: Json
           customer_name: string | null
+          fail_reason: string | null
           id: string
           inquiry_date: string
+          last_action_at: string | null
           manager: string | null
           note: string | null
           phone: string | null
+          retry_at: string | null
           status: string
           updated_at: string
         }
@@ -687,11 +690,14 @@ export type Database = {
           created_by: string
           custom_fields?: Json
           customer_name?: string | null
+          fail_reason?: string | null
           id?: string
           inquiry_date?: string
+          last_action_at?: string | null
           manager?: string | null
           note?: string | null
           phone?: string | null
+          retry_at?: string | null
           status?: string
           updated_at?: string
         }
@@ -703,15 +709,53 @@ export type Database = {
           created_by?: string
           custom_fields?: Json
           customer_name?: string | null
+          fail_reason?: string | null
           id?: string
           inquiry_date?: string
+          last_action_at?: string | null
           manager?: string | null
           note?: string | null
           phone?: string | null
+          retry_at?: string | null
           status?: string
           updated_at?: string
         }
         Relationships: []
+      }
+      inquiry_logs: {
+        Row: {
+          action: string
+          content: string | null
+          created_at: string
+          created_by: string
+          id: string
+          inquiry_id: string
+        }
+        Insert: {
+          action?: string
+          content?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          inquiry_id: string
+        }
+        Update: {
+          action?: string
+          content?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          inquiry_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inquiry_logs_inquiry_id_fkey"
+            columns: ["inquiry_id"]
+            isOneToOne: false
+            referencedRelation: "inquiries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       magic_link_tokens: {
         Row: {
