@@ -242,6 +242,7 @@ export type Database = {
           description: string | null
           field_mapping: string | null
           id: string
+          is_included_in_base: boolean
           label: string
           sort_order: number
           updated_at: string
@@ -255,6 +256,7 @@ export type Database = {
           description?: string | null
           field_mapping?: string | null
           id?: string
+          is_included_in_base?: boolean
           label: string
           sort_order?: number
           updated_at?: string
@@ -268,6 +270,7 @@ export type Database = {
           description?: string | null
           field_mapping?: string | null
           id?: string
+          is_included_in_base?: boolean
           label?: string
           sort_order?: number
           updated_at?: string

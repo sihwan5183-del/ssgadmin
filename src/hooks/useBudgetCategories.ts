@@ -10,6 +10,7 @@ export interface BudgetCategory {
   dashboard_included: boolean;
   sort_order: number;
   active: boolean;
+  is_included_in_base: boolean;
 }
 
 export function useBudgetCategories() {

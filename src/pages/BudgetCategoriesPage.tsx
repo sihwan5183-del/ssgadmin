@@ -110,6 +110,7 @@ export default function BudgetCategoriesPage() {
               <th className="text-left px-3 py-2">항목명</th>
               <th className="text-left px-3 py-2">매핑 필드</th>
               <th className="text-center px-3 py-2">대시보드 합산</th>
+              <th className="text-center px-3 py-2">기본가 포함</th>
               <th className="text-center px-3 py-2">순서</th>
               <th className="text-right px-3 py-2">관리</th>
             </tr>
@@ -144,6 +145,19 @@ export default function BudgetCategoriesPage() {
                     <Switch
                       checked={c.dashboard_included}
                       onCheckedChange={() => handleToggle(c)}
+                    />
+                  </td>
+                  <td className="px-3 py-2.5 text-center">
+                    <Switch
+                      checked={c.is_included_in_base}
+                      onCheckedChange={async () => {
+                        const { error } = await supabase
+                          .from("budget_categories")
+                          .update({ is_included_in_base: !c.is_included_in_base } as any)
+                          .eq("id", c.id);
+                        if (error) toast.error(error.message);
+                        else { toast.success(`${c.label}: ${c.is_included_in_base ? "별도 항목" : "기본가 포함"}`); reload(); }
+                      }}
                     />
                   </td>
                   <td className="px-3 py-2.5 text-center tabular-nums text-muted-foreground text-xs">

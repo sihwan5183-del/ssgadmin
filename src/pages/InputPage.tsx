@@ -1027,6 +1027,58 @@ const InputPage = () => {
             <Field label="부가서비스 수수료 (₩)">
               <MoneyInput value={form.vas_fee} onChange={(v) => set("vas_fee", v)} />
             </Field>
+          </Grid>
+          {/* 수익 중복 입력 경고 */}
+          {(form.vas_fee ?? 0) > 0 && (form.unit_price ?? 0) > 0 && (form.vas_fee ?? 0) > (form.unit_price ?? 0) && (
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 mt-2 mb-2 flex items-center gap-2 text-xs text-amber-600">
+              <AlertTriangle className="size-3.5 shrink-0" />
+              <span>부가서비스 수수료가 단가표 기준보다 높습니다. <strong>수익 중복 입력 여부를 확인하세요.</strong></span>
+            </div>
+          )}
+          {/* 정산 시뮬레이션 */}
+          {((form.unit_price ?? 0) > 0 || (form.vas_fee ?? 0) > 0 || (form.distributor_amount ?? 0) > 0) && (
+            <div className="rounded-lg border border-border/40 bg-muted/20 px-4 py-3 mt-2 mb-2">
+              <p className="text-[11px] font-semibold text-muted-foreground mb-1.5">📊 정산 시뮬레이션</p>
+              <div className="text-xs space-y-0.5 font-mono tabular-nums">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">기본 수수료 (단가표)</span>
+                  <span>₩{(form.unit_price ?? 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">+ 부가서비스 수수료</span>
+                  <span>₩{(form.vas_fee ?? 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between border-t border-border/30 pt-1 mt-1">
+                  <span className="text-muted-foreground font-medium">총 수익</span>
+                  <span className="text-primary font-semibold">₩{((form.unit_price ?? 0) + (form.vas_fee ?? 0)).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between mt-1">
+                  <span className="text-muted-foreground">- 유통망지원금</span>
+                  <span className="text-destructive">₩{(form.distributor_amount ?? 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">- 현금지원금</span>
+                  <span className="text-destructive">₩{(form.cash_support_amount ?? 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">- 추가보조금</span>
+                  <span className="text-destructive">₩{(form.extra_subsidy ?? 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">- 고객입금(반환)</span>
+                  <span className="text-destructive">₩{(form.receivable_amount ?? 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between border-t border-border/30 pt-1 mt-1">
+                  <span className="font-semibold">최종 순이익</span>
+                  {(() => {
+                    const net = (form.unit_price ?? 0) + (form.vas_fee ?? 0) - (form.distributor_amount ?? 0) - (form.cash_support_amount ?? 0) - (form.extra_subsidy ?? 0) - (form.receivable_amount ?? 0);
+                    return <span className={`font-bold ${net >= 0 ? "text-primary" : "text-destructive"}`}>₩{net.toLocaleString()}</span>;
+                  })()}
+                </div>
+              </div>
+            </div>
+          )}
+          <Grid cols={4}>
             <Field label="상품권">
               <Input value={form.voucher ?? ""} onChange={(e) => set("voucher", e.target.value)} className="h-11 bg-input/60" />
             </Field>
