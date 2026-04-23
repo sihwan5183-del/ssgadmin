@@ -287,22 +287,12 @@ const InputPage = () => {
         toast.success("판매 실적 저장 완료", { description: "대시보드에 즉시 반영됩니다." });
       }
       reset();
-      load();
+      navigate("/sales-ledger");
     } catch (err) {
       toast.error("저장 실패", { description: err instanceof Error ? err.message : String(err) });
     } finally {
       setBusy(false);
     }
-  };
-
-  const onEdit = (r: SaleRow) => {
-    setEditingId(r.id);
-    setForm(r);
-    setCustomFields(((r as any).custom_fields as Record<string, any>) ?? {});
-    setPendingItems(((r as any).pending_items as string[]) ?? []);
-    setPendingNote(((r as any).pending_note as string) ?? "");
-    setPendingResolved(((r as any).pending_resolved as boolean) ?? true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   // === 매핑 엔진 업로드 ===
