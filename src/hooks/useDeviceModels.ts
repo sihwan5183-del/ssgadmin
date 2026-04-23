@@ -37,8 +37,8 @@ export const useDeviceModels = (activeOnly = true) => {
         "postgres_changes",
         { event: "*", schema: "public", table: "device_models" },
         () => load(),
-      )
-      .subscribe();
+      );
+    ch.subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
