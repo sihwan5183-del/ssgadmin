@@ -881,19 +881,17 @@ const InputPage = () => {
         </FormSection>
 
         <FormSection title="가입 정보">
-          <Grid cols={3}>
+          <Grid cols={6}>
             <Field label="가입상품 *">
               <Select
                 value={form.product ?? ""}
                 onValueChange={(v) => {
-                  // 상품 변경 시, 기존 요금제가 새 상품 매핑에 없으면 초기화
                   setForm((f) => {
                     const allowed = getPlansForProduct(v);
                     const keepRate =
                       !f.rate_plan || allowed.length === 0 || allowed.includes(f.rate_plan);
                     return { ...f, product: v, rate_plan: keepRate ? f.rate_plan : null };
                   });
-                  // Auto-fill defaults from product master
                   const defaults = getDefaultsForProduct(v);
                   if (defaults) {
                     const filled = new Set<string>();
@@ -917,7 +915,7 @@ const InputPage = () => {
                   }
                 }}
               >
-                <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
                 <SelectContent>{PRODUCTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
@@ -930,7 +928,7 @@ const InputPage = () => {
                 return (
                   <div>
                     <Select value={form.sale_type ?? ""} onValueChange={(v) => set("sale_type", v)}>
-                      <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
+                      <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
                       <SelectContent>{types.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>
                     {mismatch && (
@@ -944,42 +942,39 @@ const InputPage = () => {
             </Field>
             <Field label="개통방식">
               <Select value={form.open_method ?? ""} onValueChange={(v) => set("open_method", v)}>
-                <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
                 <SelectContent>{OPEN_METHODS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
             <Field label="최종상태">
               <Select value={form.status ?? "개통완료"} onValueChange={(v) => set("status", v)}>
-                <SelectTrigger className="h-11 bg-input/60"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
             <Field label="개통일자">
-              <Input type="date" value={form.open_date ?? ""} onChange={(e) => set("open_date", e.target.value)} className="h-11 bg-input/60" />
+              <Input type="date" value={form.open_date ?? ""} onChange={(e) => set("open_date", e.target.value)} className="h-9 bg-input/60 text-xs" />
             </Field>
             <Field label="동판/번들">
-              <Input value={form.bundle ?? ""} onChange={(e) => set("bundle", e.target.value)} className="h-11 bg-input/60" />
+              <Input value={form.bundle ?? ""} onChange={(e) => set("bundle", e.target.value)} className="h-9 bg-input/60 text-xs" />
             </Field>
           </Grid>
-          <Grid cols={3}>
+          <Grid cols={5}>
             <Field label="고객명 *">
-              <Input value={form.customer_name ?? ""} onChange={(e) => set("customer_name", e.target.value)} className="h-11 bg-input/60" required />
+              <Input value={form.customer_name ?? ""} onChange={(e) => set("customer_name", e.target.value)} className="h-9 bg-input/60 text-xs" required />
             </Field>
             <Field label="생년월일">
-              <Input value={form.birth_date ?? ""} onChange={(e) => set("birth_date", e.target.value)} placeholder="900101" className="h-11 bg-input/60" />
+              <Input value={form.birth_date ?? ""} onChange={(e) => set("birth_date", e.target.value)} placeholder="900101" className="h-9 bg-input/60 text-xs" />
             </Field>
             <Field label="연락처">
-              <Input value={form.phone ?? ""} onChange={(e) => set("phone", e.target.value)} placeholder="010-0000-0000" className="h-11 bg-input/60" />
+              <Input value={form.phone ?? ""} onChange={(e) => set("phone", e.target.value)} placeholder="010-0000-0000" className="h-9 bg-input/60 text-xs" />
             </Field>
-          </Grid>
-          {/* 가입번호 + 간단 메모 */}
-          <Grid cols={2}>
             <Field label="가입 번호">
               <Input
                 value={customFields.subscription_no ?? ""}
                 onChange={(e) => setCustomFields((f) => ({ ...f, subscription_no: e.target.value }))}
                 placeholder="010-0000-0000"
-                className="h-11 bg-input/60"
+                className="h-9 bg-input/60 text-xs"
                 maxLength={13}
               />
             </Field>
@@ -988,12 +983,15 @@ const InputPage = () => {
                 value={customFields.quick_memo ?? ""}
                 onChange={(e) => setCustomFields((f) => ({ ...f, quick_memo: e.target.value }))}
                 placeholder="메모 입력"
-                className="h-11 bg-input/60"
+                className="h-9 bg-input/60 text-xs"
                 maxLength={100}
               />
             </Field>
           </Grid>
-          <Grid cols={2}>
+        </FormSection>
+
+        <FormSection title="기기 정보">
+          <Grid cols={4}>
             <Field label="단말기">
               <ModelAutocomplete
                 value={form.device_model ?? ""}
@@ -1002,13 +1000,13 @@ const InputPage = () => {
               />
             </Field>
             <Field label="단말 일련번호">
-              <Input value={form.device_serial ?? ""} onChange={(e) => set("device_serial", e.target.value)} className="h-11 bg-input/60" />
+              <Input value={form.device_serial ?? ""} onChange={(e) => set("device_serial", e.target.value)} className="h-9 bg-input/60 text-xs" />
             </Field>
             <Field label="USIM">
-              <Input value={form.usim_model ?? ""} onChange={(e) => set("usim_model", e.target.value)} className="h-11 bg-input/60" />
+              <Input value={form.usim_model ?? ""} onChange={(e) => set("usim_model", e.target.value)} className="h-9 bg-input/60 text-xs" />
             </Field>
             <Field label="USIM 일련번호">
-              <Input value={form.usim_serial ?? ""} onChange={(e) => set("usim_serial", e.target.value)} className="h-11 bg-input/60" />
+              <Input value={form.usim_serial ?? ""} onChange={(e) => set("usim_serial", e.target.value)} className="h-9 bg-input/60 text-xs" />
             </Field>
           </Grid>
           <Grid cols={3}>
@@ -1023,7 +1021,7 @@ const InputPage = () => {
                     : "선택";
                 return (
                   <Select value={form.rate_plan ?? ""} onValueChange={(v) => set("rate_plan", v)}>
-                    <SelectTrigger className="h-11 bg-input/60">
+                    <SelectTrigger className="h-9 bg-input/60 text-xs">
                       <SelectValue placeholder={placeholder} />
                     </SelectTrigger>
                     <SelectContent>
@@ -1041,7 +1039,7 @@ const InputPage = () => {
             const defaults = getDefaultsForProduct(form.product);
             const vasRequired = defaults?.vas_required ?? true;
             if (!vasRequired && form.product) return (
-              <div className="text-xs text-muted-foreground italic px-1 py-2">
+              <div className="text-[11px] text-muted-foreground italic px-1 py-1">
                 이 상품은 부가서비스 입력이 필요하지 않습니다
               </div>
             );
@@ -1060,7 +1058,7 @@ const InputPage = () => {
                           <Input
                             value={form.vas1 ?? ""}
                             onChange={(e) => set("vas1", e.target.value)}
-                            className={cn("h-11 bg-input/60", locked && "opacity-70 cursor-not-allowed")}
+                            className={cn("h-9 bg-input/60 text-xs", locked && "opacity-70 cursor-not-allowed")}
                             readOnly={!!locked}
                           />
                           {locked && (
@@ -1084,7 +1082,7 @@ const InputPage = () => {
                           <Input
                             value={form.vas2 ?? ""}
                             onChange={(e) => set("vas2", e.target.value)}
-                            className={cn("h-11 bg-input/60", locked && "opacity-70 cursor-not-allowed")}
+                            className={cn("h-9 bg-input/60 text-xs", locked && "opacity-70 cursor-not-allowed")}
                             readOnly={!!locked}
                           />
                           {locked && (
