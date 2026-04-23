@@ -854,44 +854,44 @@ const InputPage = () => {
       </section>
 
       {/* 입력 폼 */}
-      <form onSubmit={onSubmit} className="space-y-5 pb-10">
+      <form onSubmit={onSubmit} className="space-y-3 pb-8">
         <FormSection title="기본 정보" icon={<Zap className="size-3" />}>
-          <Grid cols={3}>
+          <Grid cols={4}>
             <Field label="인입경로 *">
               <Select value={form.channel ?? ""} onValueChange={(v) => set("channel", v)}>
-                <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
                 <SelectContent>
                   {CHANNELS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                 </SelectContent>
               </Select>
             </Field>
             <Field label="담당자 *">
-              <Input value={form.manager ?? ""} onChange={(e) => set("manager", e.target.value)} className="h-11 bg-input/60" required />
+              <Input value={form.manager ?? ""} onChange={(e) => set("manager", e.target.value)} className="h-9 bg-input/60 text-xs" required />
             </Field>
             <Field label="개통년월">
-              <Input value={form.open_month ?? ""} onChange={(e) => set("open_month", e.target.value)} placeholder="2026. 4. 10" className="h-11 bg-input/60" />
+              <Input value={form.open_month ?? ""} onChange={(e) => set("open_month", e.target.value)} placeholder="2026. 4. 10" className="h-9 bg-input/60 text-xs" />
+            </Field>
+            <Field label="옵션">
+              <div className="flex items-center gap-2 h-9">
+                <Switch checked={!!form.moyo_excluded} onCheckedChange={(v) => set("moyo_excluded", v)} />
+                <span className="text-[11px] text-muted-foreground">모요 미적용</span>
+              </div>
             </Field>
           </Grid>
-          <div className="flex items-center gap-3 pt-2">
-            <Switch checked={!!form.moyo_excluded} onCheckedChange={(v) => set("moyo_excluded", v)} />
-            <Label className="text-xs">모요 미적용</Label>
-          </div>
         </FormSection>
 
         <FormSection title="가입 정보">
-          <Grid cols={3}>
+          <Grid cols={6}>
             <Field label="가입상품 *">
               <Select
                 value={form.product ?? ""}
                 onValueChange={(v) => {
-                  // 상품 변경 시, 기존 요금제가 새 상품 매핑에 없으면 초기화
                   setForm((f) => {
                     const allowed = getPlansForProduct(v);
                     const keepRate =
                       !f.rate_plan || allowed.length === 0 || allowed.includes(f.rate_plan);
                     return { ...f, product: v, rate_plan: keepRate ? f.rate_plan : null };
                   });
-                  // Auto-fill defaults from product master
                   const defaults = getDefaultsForProduct(v);
                   if (defaults) {
                     const filled = new Set<string>();
@@ -915,7 +915,7 @@ const InputPage = () => {
                   }
                 }}
               >
-                <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
                 <SelectContent>{PRODUCTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
@@ -928,7 +928,7 @@ const InputPage = () => {
                 return (
                   <div>
                     <Select value={form.sale_type ?? ""} onValueChange={(v) => set("sale_type", v)}>
-                      <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
+                      <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
                       <SelectContent>{types.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>
                     {mismatch && (
@@ -942,42 +942,39 @@ const InputPage = () => {
             </Field>
             <Field label="개통방식">
               <Select value={form.open_method ?? ""} onValueChange={(v) => set("open_method", v)}>
-                <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
                 <SelectContent>{OPEN_METHODS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
             <Field label="최종상태">
               <Select value={form.status ?? "개통완료"} onValueChange={(v) => set("status", v)}>
-                <SelectTrigger className="h-11 bg-input/60"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
             <Field label="개통일자">
-              <Input type="date" value={form.open_date ?? ""} onChange={(e) => set("open_date", e.target.value)} className="h-11 bg-input/60" />
+              <Input type="date" value={form.open_date ?? ""} onChange={(e) => set("open_date", e.target.value)} className="h-9 bg-input/60 text-xs" />
             </Field>
             <Field label="동판/번들">
-              <Input value={form.bundle ?? ""} onChange={(e) => set("bundle", e.target.value)} className="h-11 bg-input/60" />
+              <Input value={form.bundle ?? ""} onChange={(e) => set("bundle", e.target.value)} className="h-9 bg-input/60 text-xs" />
             </Field>
           </Grid>
-          <Grid cols={3}>
+          <Grid cols={5}>
             <Field label="고객명 *">
-              <Input value={form.customer_name ?? ""} onChange={(e) => set("customer_name", e.target.value)} className="h-11 bg-input/60" required />
+              <Input value={form.customer_name ?? ""} onChange={(e) => set("customer_name", e.target.value)} className="h-9 bg-input/60 text-xs" required />
             </Field>
             <Field label="생년월일">
-              <Input value={form.birth_date ?? ""} onChange={(e) => set("birth_date", e.target.value)} placeholder="900101" className="h-11 bg-input/60" />
+              <Input value={form.birth_date ?? ""} onChange={(e) => set("birth_date", e.target.value)} placeholder="900101" className="h-9 bg-input/60 text-xs" />
             </Field>
             <Field label="연락처">
-              <Input value={form.phone ?? ""} onChange={(e) => set("phone", e.target.value)} placeholder="010-0000-0000" className="h-11 bg-input/60" />
+              <Input value={form.phone ?? ""} onChange={(e) => set("phone", e.target.value)} placeholder="010-0000-0000" className="h-9 bg-input/60 text-xs" />
             </Field>
-          </Grid>
-          {/* 가입번호 + 간단 메모 */}
-          <Grid cols={2}>
             <Field label="가입 번호">
               <Input
                 value={customFields.subscription_no ?? ""}
                 onChange={(e) => setCustomFields((f) => ({ ...f, subscription_no: e.target.value }))}
                 placeholder="010-0000-0000"
-                className="h-11 bg-input/60"
+                className="h-9 bg-input/60 text-xs"
                 maxLength={13}
               />
             </Field>
@@ -986,12 +983,15 @@ const InputPage = () => {
                 value={customFields.quick_memo ?? ""}
                 onChange={(e) => setCustomFields((f) => ({ ...f, quick_memo: e.target.value }))}
                 placeholder="메모 입력"
-                className="h-11 bg-input/60"
+                className="h-9 bg-input/60 text-xs"
                 maxLength={100}
               />
             </Field>
           </Grid>
-          <Grid cols={2}>
+        </FormSection>
+
+        <FormSection title="기기 정보">
+          <Grid cols={4}>
             <Field label="단말기">
               <ModelAutocomplete
                 value={form.device_model ?? ""}
@@ -1000,13 +1000,13 @@ const InputPage = () => {
               />
             </Field>
             <Field label="단말 일련번호">
-              <Input value={form.device_serial ?? ""} onChange={(e) => set("device_serial", e.target.value)} className="h-11 bg-input/60" />
+              <Input value={form.device_serial ?? ""} onChange={(e) => set("device_serial", e.target.value)} className="h-9 bg-input/60 text-xs" />
             </Field>
             <Field label="USIM">
-              <Input value={form.usim_model ?? ""} onChange={(e) => set("usim_model", e.target.value)} className="h-11 bg-input/60" />
+              <Input value={form.usim_model ?? ""} onChange={(e) => set("usim_model", e.target.value)} className="h-9 bg-input/60 text-xs" />
             </Field>
             <Field label="USIM 일련번호">
-              <Input value={form.usim_serial ?? ""} onChange={(e) => set("usim_serial", e.target.value)} className="h-11 bg-input/60" />
+              <Input value={form.usim_serial ?? ""} onChange={(e) => set("usim_serial", e.target.value)} className="h-9 bg-input/60 text-xs" />
             </Field>
           </Grid>
           <Grid cols={3}>
@@ -1021,7 +1021,7 @@ const InputPage = () => {
                     : "선택";
                 return (
                   <Select value={form.rate_plan ?? ""} onValueChange={(v) => set("rate_plan", v)}>
-                    <SelectTrigger className="h-11 bg-input/60">
+                    <SelectTrigger className="h-9 bg-input/60 text-xs">
                       <SelectValue placeholder={placeholder} />
                     </SelectTrigger>
                     <SelectContent>
@@ -1039,7 +1039,7 @@ const InputPage = () => {
             const defaults = getDefaultsForProduct(form.product);
             const vasRequired = defaults?.vas_required ?? true;
             if (!vasRequired && form.product) return (
-              <div className="text-xs text-muted-foreground italic px-1 py-2">
+              <div className="text-[11px] text-muted-foreground italic px-1 py-1">
                 이 상품은 부가서비스 입력이 필요하지 않습니다
               </div>
             );
@@ -1058,7 +1058,7 @@ const InputPage = () => {
                           <Input
                             value={form.vas1 ?? ""}
                             onChange={(e) => set("vas1", e.target.value)}
-                            className={cn("h-11 bg-input/60", locked && "opacity-70 cursor-not-allowed")}
+                            className={cn("h-9 bg-input/60 text-xs", locked && "opacity-70 cursor-not-allowed")}
                             readOnly={!!locked}
                           />
                           {locked && (
@@ -1082,7 +1082,7 @@ const InputPage = () => {
                           <Input
                             value={form.vas2 ?? ""}
                             onChange={(e) => set("vas2", e.target.value)}
-                            className={cn("h-11 bg-input/60", locked && "opacity-70 cursor-not-allowed")}
+                            className={cn("h-9 bg-input/60 text-xs", locked && "opacity-70 cursor-not-allowed")}
                             readOnly={!!locked}
                           />
                           {locked && (
@@ -1103,7 +1103,7 @@ const InputPage = () => {
           })()}
         </FormSection>
 
-        <FormSection title="수익성 / 단가">
+        <FormSection title="수익 및 정산">
           <Grid cols={4}>
             <Field label="단가표 기준 (₩)">
               <MoneyInput value={form.unit_price} onChange={(v) => set("unit_price", v)} />
@@ -1115,7 +1115,7 @@ const InputPage = () => {
               <MoneyInput value={form.receivable_amount} onChange={(v) => set("receivable_amount", v)} />
             </Field>
             <Field label="수급 상태">
-              <div className="flex items-center gap-2 h-11">
+              <div className="flex items-center gap-2 h-9">
                 <Switch
                   checked={form.receivable_paid === "완료"}
                   onCheckedChange={(v) => set("receivable_paid", v ? "완료" : "미수급")}
@@ -1179,7 +1179,7 @@ const InputPage = () => {
           <Grid cols={4}>
             <Field label="상품권">
               <Select value={form.voucher ?? ""} onValueChange={(v) => set("voucher", v)}>
-                <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
                 <SelectContent>
                   {["신세계", "롯데", "모바일", "기타"].map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
                 </SelectContent>
@@ -1189,7 +1189,7 @@ const InputPage = () => {
               <MoneyInput value={form.extra_subsidy} onChange={(v) => set("extra_subsidy", v)} />
             </Field>
             <Field label="반납 상태">
-              <div className="flex items-center gap-2 h-11">
+              <div className="flex items-center gap-2 h-9">
                 <Switch
                   checked={form.voucher_returned === "유"}
                   onCheckedChange={(v) => set("voucher_returned", v ? "유" : "무")}
@@ -1202,20 +1202,14 @@ const InputPage = () => {
           </Grid>
         </FormSection>
 
-        <FormSection title="오퍼(지원금) 관리" icon={<Wallet className="size-3" />}>
-          <p className="text-[11px] text-muted-foreground -mt-2 mb-3">
-            아래 3개 항목은 <span className="text-foreground font-medium">지출 대시보드</span>에 자동 집계됩니다.
-            숫자만 입력 가능하며 천 단위 콤마가 자동 표시됩니다.
-          </p>
+        <FormSection title="오퍼 및 카드결제" icon={<Wallet className="size-3" />}>
+          <p className="text-[10px] text-muted-foreground -mt-1 mb-2">지출 대시보드에 자동 집계 · 숫자만 입력 · 천 단위 콤마 자동 표시</p>
           <Grid cols={3}>
             <Field label="① 유통망 지원금 (₩)">
               <MoneyInput
                 value={form.distributor_amount}
                 onChange={(v) => set("distributor_amount", v)}
               />
-              <div className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
-                <Building2 className="size-3" /> 회사가 유통망 차원에서 지급한 지원금 (지출 합산)
-              </div>
             </Field>
             <Field label="② 현금개통 금액 (₩)">
               <MoneyInput
@@ -1225,27 +1219,21 @@ const InputPage = () => {
                   set("cash_open", v > 0);
                 }}
               />
-              <div className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
-                <Banknote className="size-3" /> 고객이 기기값을 현금 완납하여 개통한 금액 (현금시재)
-              </div>
             </Field>
             <Field label="③ 고객입금 금액 (₩)">
               <MoneyInput
                 value={form.receivable_amount}
                 onChange={(v) => set("receivable_amount", v)}
               />
-              <div className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
-                <Wallet className="size-3" /> 수납·기타 사유로 고객에게 직접 입금받은 금액
-              </div>
             </Field>
           </Grid>
-          <Grid cols={2}>
+          <Grid cols={3}>
             <Field label="입금 유/무 (입금일 또는 표시값)">
               <Input
                 value={form.receivable_paid ?? ""}
                 onChange={(e) => set("receivable_paid", e.target.value)}
                 placeholder="유 / 완료 / 2026-04-19"
-                className="h-11 bg-input/60"
+                className="h-9 bg-input/60 text-xs"
               />
             </Field>
             <Field label="추가지원금 (₩)">
@@ -1255,23 +1243,23 @@ const InputPage = () => {
           <Grid cols={3}>
             <Field label="은행">
               <Select value={form.cash_bank ?? ""} onValueChange={(v) => set("cash_bank", v)}>
-                <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
                 <SelectContent>{BANKS.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
             <Field label="입금계좌">
-              <Input value={form.cash_account ?? ""} onChange={(e) => set("cash_account", e.target.value)} className="h-11 bg-input/60" />
+              <Input value={form.cash_account ?? ""} onChange={(e) => set("cash_account", e.target.value)} className="h-9 bg-input/60 text-xs" />
             </Field>
             <Field label="예금주">
-              <Input value={form.cash_holder ?? ""} onChange={(e) => set("cash_holder", e.target.value)} className="h-11 bg-input/60" />
+              <Input value={form.cash_holder ?? ""} onChange={(e) => set("cash_holder", e.target.value)} className="h-9 bg-input/60 text-xs" />
             </Field>
           </Grid>
 
           {/* 법인카드 결제 */}
-          <div className="border-t border-border/30 pt-4 mt-2">
-            <div className="flex items-center gap-2 mb-3">
-              <CreditCard className="size-4 text-primary" />
-              <span className="text-sm font-semibold">법인카드 결제</span>
+          <div className="border-t border-border/30 pt-3 mt-1">
+            <div className="flex items-center gap-2 mb-2">
+              <CreditCard className="size-3.5 text-primary" />
+              <span className="text-xs font-semibold">법인카드 결제</span>
               <Switch
                 checked={customFields.card_payment === true}
                 onCheckedChange={(v) => {
@@ -1291,7 +1279,7 @@ const InputPage = () => {
                       value={customFields.card_company ?? ""}
                       onValueChange={(v) => setCustomFields((f) => ({ ...f, card_company: v }))}
                     >
-                      <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
+                      <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
                       <SelectContent>
                         {["국민", "신한", "현대", "삼성", "롯데", "하나", "우리", "BC", "NH농협"].map((c) => (
                           <SelectItem key={c} value={c}>{c}</SelectItem>
@@ -1308,7 +1296,7 @@ const InputPage = () => {
                       }}
                       placeholder="0000"
                       maxLength={4}
-                      className="h-11 bg-input/60 tabular-nums"
+                      className="h-9 bg-input/60 text-xs tabular-nums"
                     />
                   </Field>
                   <Field label="카드 결제금액 (₩)">
@@ -1327,17 +1315,17 @@ const InputPage = () => {
           <Grid cols={3}>
             <Field label="발송유형">
               <Select value={form.delivery_type ?? ""} onValueChange={(v) => set("delivery_type", v)}>
-                <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
                 <SelectContent>{DELIVERY_TYPES.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
             <Field label="운송장">
-              <Input value={form.tracking_no ?? ""} onChange={(e) => set("tracking_no", e.target.value)} className="h-11 bg-input/60" />
+              <Input value={form.tracking_no ?? ""} onChange={(e) => set("tracking_no", e.target.value)} className="h-9 bg-input/60 text-xs" />
+            </Field>
+            <Field label="특이사항">
+              <Input value={form.note ?? ""} onChange={(e) => set("note", e.target.value)} className="h-9 bg-input/60 text-xs" placeholder="메모" />
             </Field>
           </Grid>
-          <Field label="특이사항">
-            <Textarea value={form.note ?? ""} onChange={(e) => set("note", e.target.value)} rows={2} className="bg-input/60" />
-          </Field>
         </FormSection>
 
         {/* 미처리 항목 */}
@@ -1383,18 +1371,18 @@ const InputPage = () => {
           </div>
         )}
 
-        <div className="text-[11px] text-muted-foreground text-right -mb-2">
+        <div className="text-[10px] text-muted-foreground text-right -mb-1">
           수익 자동계산 수식: <code className="font-mono text-primary/80">{netFeeFormula}</code>
         </div>
 
         <div className="flex gap-3">
           {editingId && (
-            <Button type="button" variant="outline" onClick={reset} className="h-12 rounded-2xl">
+            <Button type="button" variant="outline" onClick={reset} className="h-10 rounded-2xl text-sm">
               <X className="size-4 mr-2" /> 취소
             </Button>
           )}
-          <Button type="submit" disabled={busy} className="flex-1 h-12 bg-gradient-primary shadow-glow rounded-2xl text-base font-semibold">
-            <Check className="size-5 mr-2" /> {editingId ? "수정 저장" : "판매 1건 저장"}
+          <Button type="submit" disabled={busy} className="flex-1 h-10 bg-gradient-primary shadow-glow rounded-2xl text-sm font-semibold">
+            <Check className="size-4 mr-2" /> {editingId ? "수정 저장" : "판매 1건 저장"}
           </Button>
         </div>
       </form>
@@ -1701,24 +1689,31 @@ const SummaryCard = ({
 };
 
 const FormSection = ({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) => (
-  <section className="glass rounded-2xl p-5 md:p-6 space-y-4 shadow-card-elevated">
-    <div className="flex items-center gap-2">
+  <section className="glass rounded-2xl p-4 md:p-5 space-y-3 shadow-card-elevated">
+    <div className="flex items-center gap-2 pb-1 border-b border-border/30">
       {icon && <Badge className="bg-gradient-primary text-primary-foreground border-0">{icon}</Badge>}
-      <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
+      <h3 className="text-xs font-semibold tracking-tight">{title}</h3>
     </div>
     {children}
   </section>
 );
 
-const Grid = ({ cols, children }: { cols: 2 | 3 | 4; children: React.ReactNode }) => (
-  <div className={cn("grid gap-3", cols === 2 && "grid-cols-1 md:grid-cols-2", cols === 3 && "grid-cols-1 md:grid-cols-3", cols === 4 && "grid-cols-2 md:grid-cols-4")}>
+const Grid = ({ cols, children }: { cols: 2 | 3 | 4 | 5 | 6; children: React.ReactNode }) => (
+  <div className={cn(
+    "grid gap-x-3 gap-y-2",
+    cols === 2 && "grid-cols-1 md:grid-cols-2",
+    cols === 3 && "grid-cols-1 md:grid-cols-3",
+    cols === 4 && "grid-cols-2 md:grid-cols-4",
+    cols === 5 && "grid-cols-2 md:grid-cols-5",
+    cols === 6 && "grid-cols-2 md:grid-cols-6",
+  )}>
     {children}
   </div>
 );
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div className="space-y-1.5">
-    <Label className="text-xs text-muted-foreground font-medium">{label}</Label>
+  <div className="space-y-0.5">
+    <Label className="text-[11px] text-muted-foreground font-medium leading-none">{label}</Label>
     {children}
   </div>
 );

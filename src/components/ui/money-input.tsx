@@ -53,7 +53,7 @@ export const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
           value={display}
           onChange={handleChange}
           placeholder={placeholder ?? "0"}
-          className={cn("h-11 bg-input/60 tabular-nums pr-9 text-right font-medium", className)}
+          className={cn("h-9 bg-input/60 tabular-nums pr-9 text-right font-medium text-xs", className)}
           {...props}
         />
         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
