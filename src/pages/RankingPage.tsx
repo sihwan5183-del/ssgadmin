@@ -327,11 +327,14 @@ const RankingPage = () => {
                 </p>
               </div>
             </div>
-            {myRank.data.streak >= 3 && (
-              <Badge className="bg-gradient-to-r from-orange-500/20 to-red-500/20 text-orange-300 border-orange-500/30 gap-1">
-                <Flame className="size-3" /> {myRank.data.streak}일 연속 열일 중! 🔥
-              </Badge>
-            )}
+            <div className="flex items-center gap-2 flex-wrap">
+              {myRank.data.isClean && <CleanBadge size="lg" />}
+              {myRank.data.streak >= 3 && (
+                <Badge className="bg-gradient-to-r from-orange-500/20 to-red-500/20 text-orange-300 border-orange-500/30 gap-1">
+                  <Flame className="size-3" /> {myRank.data.streak}일 연속 열일 중! 🔥
+                </Badge>
+              )}
+            </div>
           </div>
         </section>
       )}
@@ -429,6 +432,9 @@ const RankingPage = () => {
                         <span className="text-[10px]">{tier.icon}</span>
                         <span className="text-[10px] text-muted-foreground">{tier.label}</span>
                       </div>
+                      {u.isClean && (
+                        <div className="mt-1"><CleanBadge /></div>
+                      )}
                       {u.streak >= 3 && (
                         <Badge className="absolute top-2 right-2 text-[9px] bg-orange-500/20 text-orange-300 border-orange-500/30 px-1 py-0">
                           <Flame className="size-2.5" /> {u.streak}일
@@ -454,6 +460,7 @@ const RankingPage = () => {
                         <span className="text-[10px]">{tier.icon}</span>
                         <span className="text-sm font-medium">{u.name}</span>
                         {u.store && <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded bg-muted/60">{u.store}</span>}
+                        {u.isClean && <CleanBadge />}
                         {u.streak >= 3 && (
                           <span className="text-[10px] text-orange-400 flex items-center gap-0.5"><Flame className="size-2.5" />{u.streak}일</span>
                         )}
