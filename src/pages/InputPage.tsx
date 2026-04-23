@@ -1139,6 +1139,13 @@ const InputPage = () => {
                   if (!v) {
                     set("distributor_amount", 0);
                     set("extra_subsidy", 0);
+                    set("cash_support_amount", 0);
+                    set("cash_open", false);
+                    set("receivable_amount", 0);
+                    set("receivable_paid", null);
+                    set("cash_bank", null);
+                    set("cash_account", null);
+                    set("cash_holder", null);
                   }
                 }}
               />
