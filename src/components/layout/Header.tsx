@@ -1,6 +1,7 @@
 import { ScopeToggle } from "./ScopeToggle";
 import { PeriodFilter } from "./PeriodFilter";
 import { NotificationBell } from "./NotificationBell";
+import { GlobalSearch } from "./GlobalSearch";
 
 interface HeaderProps {
   title: string;
@@ -33,6 +34,7 @@ export const Header = ({
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
+        <GlobalSearch className="w-52 hidden md:block" />
         {showPeriodFilter && <PeriodFilter />}
         {showScopeToggle && <ScopeToggle />}
         {rightSlot}
