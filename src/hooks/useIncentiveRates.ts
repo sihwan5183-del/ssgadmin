@@ -13,7 +13,7 @@ export function useIncentiveRates() {
       .select("*")
       .order("priority", { ascending: false })
       .order("created_at", { ascending: false });
-    setRates((data ?? []) as IncentiveRate[]);
+    setRates((data ?? []) as unknown as IncentiveRate[]);
     setLoading(false);
   }, []);
 
