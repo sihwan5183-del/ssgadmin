@@ -7,7 +7,8 @@ import { OfferTrendChart } from "@/components/finance/OfferTrendChart";
 import { ChannelMarginRanking } from "@/components/finance/ChannelMarginRanking";
 import { SettlementGap } from "@/components/finance/SettlementGap";
 import { EmptyHint } from "@/components/finance/EmptyHint";
-import { TrendingUp, TrendingDown, Sparkles, Target, Banknote, Wallet, HandCoins, Store } from "lucide-react";
+import { TrendingUp, TrendingDown, Sparkles, Target, Banknote, Wallet, HandCoins, Store, EyeOff } from "lucide-react";
+import { Link } from "react-router-dom";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { useFinanceData } from "@/hooks/useFinanceData";
 
@@ -25,6 +26,18 @@ const ExpensesPage = () => {
       />
 
       {/* 데이터 검증 안내 */}
+      {!f.loading && f.excludedLabels.length > 0 && (
+        <div className="mb-4 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 flex items-center gap-2 text-sm">
+          <EyeOff className="size-4 text-destructive shrink-0" />
+          <span className="text-muted-foreground">
+            현재 대시보드 합산 제외:{" "}
+            <span className="font-semibold text-foreground">{f.excludedLabels.join(", ")}</span>
+          </span>
+          <Link to="/budget-categories" className="ml-auto text-xs text-primary hover:underline shrink-0">
+            항목 관리 →
+          </Link>
+        </div>
+      )}
       {!f.loading && (f.hasSales !== f.hasSpend) && (
         <div className="mb-4">
           <EmptyHint
