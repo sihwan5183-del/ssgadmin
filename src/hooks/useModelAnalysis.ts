@@ -118,7 +118,7 @@ export function useModelAnalysis() {
 
     const overallStats: ModelStat[] = allModels.map((name) => {
       const stat = modelMap.get(name)!;
-      const { pet, maker } = resolvePetName(name);
+      const { pet, maker } = resolvePetName(name, matchModel);
       return {
         name,
         petName: pet,
@@ -152,7 +152,7 @@ export function useModelAnalysis() {
     const stackedData = channelData.map((row) => {
       const flat: Record<string, number | string> = { channel: row.channel };
       row.models.forEach((m) => {
-        const { pet } = resolvePetName(m.name);
+        const { pet } = resolvePetName(m.name, matchModel);
         flat[pet] = ((flat[pet] as number) || 0) + m.count;
       });
       return flat;
@@ -163,7 +163,7 @@ export function useModelAnalysis() {
     const petSeen = new Set<string>();
     const modelsInfo: { name: string; petName: string; isStrategy: boolean; color: string }[] = [];
     for (const name of allModels) {
-      const { pet } = resolvePetName(name);
+      const { pet } = resolvePetName(name, matchModel);
       if (petSeen.has(pet)) continue;
       petSeen.add(pet);
       modelsInfo.push({
@@ -215,5 +215,5 @@ export function useModelAnalysis() {
       totalCount,
       hasData: totalCount > 0,
     };
-  }, [rows, loading, strategyModelNames]);
+  }, [rows, loading, strategyModelNames, matchModel]);
 }
