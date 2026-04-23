@@ -40,7 +40,7 @@ interface FeedSale {
 }
 
 const FEED_LIMIT = 30;
-const SIDE_LIMIT = 10;
+  const SIDE_LIMIT = 20;
 
 function statusTone(s?: string | null) {
   switch (s) {
@@ -83,6 +83,8 @@ export function LiveFeedSection() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
 
+  const [pendingSideRows, setPendingSideRows] = useState<FeedSale[]>([]);
+
   const load = async () => {
     setLoading(true);
     let q = supabase
@@ -114,6 +116,21 @@ export function LiveFeedSection() {
 
     setRows(mapped);
     setLoading(false);
+
+    // Separate query for pending items panel — not limited by FEED_LIMIT
+    const { data: pendingData } = await supabase
+      .from("sales")
+      .select("id, customer_name, phone, device_model, device_serial, channel, open_date, manager, approval_status, created_at, created_by, pending_items, pending_note, pending_resolved")
+      .eq("pending_resolved", false)
+      .order("created_at", { ascending: false })
+      .limit(SIDE_LIMIT);
+    const pendingMapped: FeedSale[] = (pendingData ?? [])
+      .map((s: any) => ({
+        ...s,
+        pending_items: Array.isArray(s.pending_items) ? s.pending_items : [],
+      }))
+      .filter((r) => r.pending_items.length > 0);
+    setPendingSideRows(pendingMapped);
   };
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [scope, user?.id]);
@@ -139,10 +156,7 @@ export function LiveFeedSection() {
     () => rows.filter((r) => (r.doc_count ?? 0) === 0).slice(0, SIDE_LIMIT),
     [rows]
   );
-  const pendingItems = useMemo(
-    () => rows.filter((r) => !r.pending_resolved && r.pending_items.length > 0).slice(0, SIDE_LIMIT),
-    [rows]
-  );
+  const pendingItems = pendingSideRows;
 
   const openPendingEditor = (r: FeedSale) => {
     setPendingTarget(r);
