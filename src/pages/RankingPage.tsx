@@ -31,7 +31,7 @@ type RankedUser = {
 type ModelRank = { model: string; count: number; isStrategy: boolean };
 
 /* ─── Clean Master Badge ─── */
-const CleanBadge = ({ size = "sm" }: { size?: "sm" | "lg" }) => (
+const CleanBadge = ({ size = "sm", days }: { size?: "sm" | "lg"; days?: number }) => (
   <span className={cn(
     "inline-flex items-center gap-0.5 font-semibold rounded-full border",
     "bg-gradient-to-r from-amber-400/25 to-emerald-400/15 text-amber-300 border-amber-400/40",
@@ -40,7 +40,7 @@ const CleanBadge = ({ size = "sm" }: { size?: "sm" | "lg" }) => (
   )}>
     <CheckCircle2 className={size === "lg" ? "size-3" : "size-2.5"} />
     <Sparkles className={size === "lg" ? "size-2.5" : "size-2"} />
-    클린 마스터
+    클린 마스터{days && days > 1 ? ` ${days}일` : ""}
   </span>
 );
 
@@ -287,6 +287,10 @@ const RankingPage = () => {
       confettiFired.current = true;
       setTimeout(() => {
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ["#FFD700", "#FFA500", "#10B981", "#3B82F6"] });
+        // Show toast
+        import("sonner").then(({ toast }) => {
+          toast.success("🎉 완벽한 정산입니다! 클린 마스터 배지를 획득했습니다!", { duration: 5000 });
+        });
       }, 500);
     }
   }, [cleanMap, user]);
@@ -328,7 +332,7 @@ const RankingPage = () => {
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              {myRank.data.isClean && <CleanBadge size="lg" />}
+              {myRank.data.isClean && <CleanBadge size="lg" days={myRank.data.cleanDays} />}
               {myRank.data.streak >= 3 && (
                 <Badge className="bg-gradient-to-r from-orange-500/20 to-red-500/20 text-orange-300 border-orange-500/30 gap-1">
                   <Flame className="size-3" /> {myRank.data.streak}일 연속 열일 중! 🔥
@@ -432,8 +436,8 @@ const RankingPage = () => {
                         <span className="text-[10px]">{tier.icon}</span>
                         <span className="text-[10px] text-muted-foreground">{tier.label}</span>
                       </div>
-                      {u.isClean && (
-                        <div className="mt-1"><CleanBadge /></div>
+                      {u.isClean && u.cleanDays > 0 && (
+                        <div className="mt-1"><CleanBadge days={u.cleanDays} /></div>
                       )}
                       {u.streak >= 3 && (
                         <Badge className="absolute top-2 right-2 text-[9px] bg-orange-500/20 text-orange-300 border-orange-500/30 px-1 py-0">
@@ -460,7 +464,7 @@ const RankingPage = () => {
                         <span className="text-[10px]">{tier.icon}</span>
                         <span className="text-sm font-medium">{u.name}</span>
                         {u.store && <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded bg-muted/60">{u.store}</span>}
-                        {u.isClean && <CleanBadge />}
+                        {u.isClean && <CleanBadge days={u.cleanDays} />}
                         {u.streak >= 3 && (
                           <span className="text-[10px] text-orange-400 flex items-center gap-0.5"><Flame className="size-2.5" />{u.streak}일</span>
                         )}
