@@ -9,7 +9,8 @@ import { GlobalSearch } from "./GlobalSearch";
  */
 export const MobileTopBar = () => {
   return (
-    <div className="lg:hidden sticky top-0 z-30 glass-strong border-b border-border/40 px-3 py-2 flex items-center gap-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
+    <div className="lg:hidden sticky top-0 z-30 glass-strong border-b border-border/40 pt-[max(0.5rem,env(safe-area-inset-top))]">
+    <div className="px-3 py-2 flex items-center gap-2">
       <MobileSidebar />
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <div className="size-8 rounded-lg bg-gradient-primary grid place-items-center shadow-glow shrink-0">
@@ -22,8 +23,9 @@ export const MobileTopBar = () => {
       </div>
       <NotificationBell />
     </div>
-    <div className="lg:hidden px-3 pb-2">
+    <div className="px-3 pb-2">
       <GlobalSearch className="w-full" />
+    </div>
     </div>
   );
 };
