@@ -190,8 +190,8 @@ function DashboardGrid({
           width={width}
           layout={layout}
           gridConfig={{ cols: 12, rowHeight: 60, margin: [8, 8] as [number, number] }}
-          dragConfig={{ isDraggable: editing, draggableHandle: ".widget-drag-handle" }}
-          resizeConfig={{ isResizable: editing }}
+          dragConfig={{ enabled: editing, handle: ".widget-drag-handle" }}
+          resizeConfig={{ enabled: editing }}
           onLayoutChange={(newLayout) => onLayoutChange([...newLayout])}
         >
           {layout.map((item) => {
