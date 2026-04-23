@@ -1184,6 +1184,42 @@ export type Database = {
         }
         Relationships: []
       }
+      quick_links: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          icon: string
+          id: string
+          label: string
+          sort_order: number
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          icon?: string
+          id?: string
+          label: string
+          sort_order?: number
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          icon?: string
+          id?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       regulars: {
         Row: {
           birth_date: string | null

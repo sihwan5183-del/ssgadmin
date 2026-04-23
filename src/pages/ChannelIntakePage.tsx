@@ -21,11 +21,12 @@ import { usePeriod } from "@/contexts/PeriodContext";
 import { InquiryForm } from "@/components/inquiries/InquiryForm";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { QuickLinksBar } from "@/components/dashboard/QuickLinksBar";
 
 const CRM_STATUSES = ["미처리", "부재", "재케어(예약)", "성공(개통)", "실패(종결)"] as const;
 type CrmStatus = (typeof CRM_STATUSES)[number];
 
-const FAIL_REASONS = ["가격 불만", "결합 조건", "타사 개통", "단순 변심", "연락두절", "기타"] as const;
+const FAIL_REASONS = ["가격(지원금) 불만", "결합/위약금 문제", "기기 재고 없음", "타사 유지", "단순 변심", "연락 두절", "기타"] as const;
 
 const STATUS_CONFIG: Record<string, { icon: typeof PhoneOff; color: string; label: string }> = {
   부재: { icon: PhoneOff, color: "hsl(35 90% 55%)", label: "부재" },
@@ -345,10 +346,14 @@ const ChannelIntakePage = () => {
 
   const saveStatus = async () => {
     if (!editingRow) return;
+    if (editStatus === "실패(종결)" && !editFailReason) {
+      toast.error("실패(종결) 선택 시 사유를 반드시 선택해주세요");
+      return;
+    }
     const update = {
       status: editStatus,
-      retry_at: ["부재", "재케어"].includes(editStatus) && editRetryAt ? new Date(editRetryAt).toISOString() : null as string | null,
-      fail_reason: editStatus === "실패" ? (editFailReason || null) : null as string | null,
+      retry_at: ["부재", "재케어(예약)"].includes(editStatus) && editRetryAt ? new Date(editRetryAt).toISOString() : null as string | null,
+      fail_reason: editStatus === "실패(종결)" ? (editFailReason || null) : null as string | null,
       last_action_at: new Date().toISOString() as string | null,
     } as const;
     const { error } = await supabase.from("inquiries").update(update).eq("id", editingRow.id);
@@ -369,6 +374,7 @@ const ChannelIntakePage = () => {
       <Header title="채널별 인입 정리" subtitle="인입 현황판 · 고객 관리 · CRM" />
 
       <div className="space-y-5">
+        <QuickLinksBar />
         <SummaryCards rows={rows} />
         <IntakeFunnel rows={rows} />
 
