@@ -14,7 +14,10 @@ import { useIncentiveRates } from "@/hooks/useIncentiveRates";
 import { SALE_TYPES, PRODUCTS } from "@/data/salesOptions";
 import { useDeviceModels } from "@/hooks/useDeviceModels";
 import { toast } from "sonner";
-import type { TieredStep } from "@/lib/incentiveEngine";
+import type { TieredStep, LinkageRule } from "@/lib/incentiveEngine";
+import { DEFAULT_LINKAGE } from "@/lib/incentiveEngine";
+import { useAppSettings } from "@/hooks/useAppSettings";
+import { Wifi, ShieldCheck } from "lucide-react";
 
 const NONE = "__none";
 
@@ -360,6 +363,139 @@ export function IncentiveRatesManager() {
         <Badge variant="outline" className="border-blue-400/60 text-blue-400"><Layers className="size-3 mr-1" /> 계단식: 월말 건수 기준 구간 단가 적용</Badge>
         <Badge variant="outline" className="border-purple-400/60 text-purple-400"><Award className="size-3 mr-1" /> 그레이드: 직급별 추가 지원금</Badge>
       </div>
+
+      {/* === 인터넷 연동 지급률 설정 === */}
+      <LinkageConfigPanel />
+    </Card>
+  );
+}
+
+function LinkageConfigPanel() {
+  const { linkageRule, upsert } = useAppSettings();
+  const [local, setLocal] = useState<LinkageRule>(linkageRule);
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    setLocal(linkageRule);
+    setDirty(false);
+  }, [JSON.stringify(linkageRule)]);
+
+  const update = (patch: Partial<LinkageRule>) => {
+    setLocal((prev) => ({ ...prev, ...patch }));
+    setDirty(true);
+  };
+
+  const updateTier = (idx: number, patch: Partial<{ min_qty: number; rate: number }>) => {
+    const tiers = local.tiers.map((t, i) => (i === idx ? { ...t, ...patch } : t));
+    update({ tiers });
+  };
+
+  const addTier = () => {
+    const last = local.tiers[local.tiers.length - 1];
+    update({ tiers: [...local.tiers, { min_qty: (last?.min_qty ?? 0) + 1, rate: 100 }] });
+  };
+
+  const removeTier = (idx: number) => {
+    update({ tiers: local.tiers.filter((_, i) => i !== idx) });
+  };
+
+  const toggleGrade = (grade: string) => {
+    const list = local.exempt_grades.includes(grade)
+      ? local.exempt_grades.filter((g) => g !== grade)
+      : [...local.exempt_grades, grade];
+    update({ exempt_grades: list });
+  };
+
+  const save = async () => {
+    const { error } = await upsert("incentive.linkage", local);
+    if (error) toast.error("저장 실패");
+    else { toast.success("인터넷 연동 설정 저장"); setDirty(false); }
+  };
+
+  return (
+    <Card className="p-5 border-cyan-500/20 bg-cyan-500/5 space-y-4">
+      <div className="flex items-center justify-between">
+        <h4 className="font-semibold text-sm flex items-center gap-2">
+          <Wifi className="size-4 text-cyan-400" /> 인터넷 연동 지급률 (모바일 인센티브 조건부 적용)
+        </h4>
+        <Switch checked={local.enabled} onCheckedChange={(v) => update({ enabled: v })} />
+      </div>
+
+      {local.enabled && (
+        <>
+          <p className="text-xs text-muted-foreground">
+            개인별 인터넷 개통 건수에 따라 해당 월 모바일 인센티브의 최종 지급 비율을 차등 적용합니다.
+            모바일 구간 단가가 계산된 후 마지막 단계에서 이 비율이 곱해집니다.
+          </p>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-xs font-medium">
+              <span>인터넷 건수별 지급률</span>
+              <Button variant="outline" size="sm" className="h-6 text-[10px] ml-auto" onClick={addTier}>
+                <Plus className="size-3 mr-0.5" /> 구간 추가
+              </Button>
+            </div>
+            {local.tiers.map((t, i) => (
+              <div key={i} className="flex items-center gap-2 bg-background/60 rounded-lg px-3 py-1.5">
+                <span className="text-[11px] text-muted-foreground">인터넷</span>
+                <Input
+                  type="number"
+                  value={t.min_qty}
+                  onChange={(e) => updateTier(i, { min_qty: Number(e.target.value) })}
+                  className="h-7 text-xs w-16"
+                  min={0}
+                />
+                <span className="text-[11px] text-muted-foreground">건 이상 →</span>
+                <Input
+                  type="number"
+                  value={t.rate}
+                  onChange={(e) => updateTier(i, { rate: Number(e.target.value) })}
+                  className="h-7 text-xs w-16"
+                  min={0}
+                  max={200}
+                />
+                <span className="text-[11px] text-muted-foreground">%</span>
+                {local.tiers.length > 1 && (
+                  <Button variant="ghost" size="sm" className="h-6 px-1 text-destructive" onClick={() => removeTier(i)}>
+                    <Trash2 className="size-3" />
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* 예외 그레이드 */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-xs font-medium">
+              <ShieldCheck className="size-3.5 text-emerald-400" />
+              <span>예외 직급 (항상 100% 지급)</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {DEFAULT_GRADES.map((g) => (
+                <button
+                  key={g}
+                  onClick={() => toggleGrade(g)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
+                    local.exempt_grades.includes(g)
+                      ? "bg-emerald-500/10 border-emerald-400/40 text-emerald-400"
+                      : "border-border/50 text-muted-foreground hover:border-border"
+                  }`}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {dirty && (
+        <div className="flex justify-end">
+          <Button size="sm" onClick={save}>
+            <Save className="size-3.5 mr-1" /> 연동 설정 저장
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }
