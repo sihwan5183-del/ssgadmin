@@ -1,10 +1,28 @@
 // 인센티브 계산 엔진 v2
-// 계단식 단가, 정액/정률, 그레이드 보너스 지원
+// 계단식 단가, 정액/정률, 그레이드 보너스, 인터넷 연동 지급률 지원
 
 export interface TieredStep {
   min_qty: number;
   amount: number;
 }
+
+export interface LinkageRule {
+  enabled: boolean;
+  /** 인터넷 건수별 모바일 지급률 배열 (오름차순). 예: [{min_qty:0,rate:0},{min_qty:1,rate:50},{min_qty:2,rate:100}] */
+  tiers: { min_qty: number; rate: number }[];
+  /** 예외 그레이드 목록 — 이 직급은 항상 100% 지급 */
+  exempt_grades: string[];
+}
+
+export const DEFAULT_LINKAGE: LinkageRule = {
+  enabled: true,
+  tiers: [
+    { min_qty: 0, rate: 0 },
+    { min_qty: 1, rate: 50 },
+    { min_qty: 2, rate: 100 },
+  ],
+  exempt_grades: [],
+};
 
 export interface IncentiveRate {
   id: string;
@@ -140,24 +158,62 @@ export function calcGradeBonus(rates: IncentiveRate[], grade?: string | null): n
 }
 
 /**
+ * 인터넷 연동 지급률 계산
+ */
+export function calcLinkageRate(linkage: LinkageRule, internetCount: number, grade?: string | null): number {
+  if (!linkage.enabled) return 100;
+  if (grade && linkage.exempt_grades.includes(grade)) return 100;
+  const sorted = [...linkage.tiers].sort((a, b) => b.min_qty - a.min_qty);
+  for (const t of sorted) {
+    if (internetCount >= t.min_qty) return t.rate;
+  }
+  return 0;
+}
+
+/**
  * 전체 인센티브 집계 (계단식 + 정률 + 그레이드 보너스)
  */
 export function calcTotalIncentive(
   sales: SaleForIncentive[],
   rates: IncentiveRate[],
   grade?: string | null,
+  linkage?: LinkageRule | null,
+  internetCount?: number,
 ) {
   const qtyMap = buildQtyMap(sales, rates);
   let total = 0;
+  let mobileTotal = 0;
+  let nonMobileTotal = 0;
   const breakdowns: IncentiveBreakdown[] = [];
   for (const s of sales) {
     const b = calcIncentiveForSale(s, rates, qtyMap);
-    total += b.amount;
+    // 모바일 계열 판별 (product가 '모바일' 또는 sale_type 기반)
+    const isMobile = (s.product ?? "").includes("모바일") || (s.sale_type ?? "") === "번호이동" || (s.sale_type ?? "") === "기기변경" || (s.sale_type ?? "") === "신규가입";
+    if (isMobile) {
+      mobileTotal += b.amount;
+    } else {
+      nonMobileTotal += b.amount;
+    }
     breakdowns.push(b);
   }
+
+  // 인터넷 연동 지급률 적용
+  const linkageRate = linkage ? calcLinkageRate(linkage, internetCount ?? 0, grade) : 100;
+  const adjustedMobile = Math.round(mobileTotal * linkageRate / 100);
+  total = adjustedMobile + nonMobileTotal;
+
   const gradeBonus = calcGradeBonus(rates, grade);
   total += gradeBonus;
-  return { total, breakdowns, gradeBonus };
+
+  return {
+    total,
+    breakdowns,
+    gradeBonus,
+    mobileTotal,
+    adjustedMobile,
+    nonMobileTotal,
+    linkageRate,
+  };
 }
 
 /**
