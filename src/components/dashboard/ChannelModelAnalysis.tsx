@@ -16,7 +16,7 @@ const MAKER_COLORS: Record<string, string> = {
 };
 
 export const ChannelModelAnalysis = () => {
-  const { channelData, stackedData, modelsInfo, policyShare, getTop5, hasData } = useModelAnalysis();
+  const { channelData, stackedData, modelsInfo, policyShare, getTop5, hasData, matchModel } = useModelAnalysis();
   const [selectedChannel, setSelectedChannel] = useState<string>("");
 
   // auto-select first channel when data arrives
@@ -192,7 +192,7 @@ export const ChannelModelAnalysis = () => {
 
           <ul className="space-y-1.5">
             {top5.map((m, i) => {
-              const { pet, maker } = resolvePetName(m.name);
+              const { pet, maker } = resolvePetName(m.name, matchModel);
               const pct = channelTotal > 0 ? Math.round((m.count / channelTotal) * 100) : 0;
               const isTop3 = i < 3;
               return (
