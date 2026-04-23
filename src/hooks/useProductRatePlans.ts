@@ -13,6 +13,9 @@ export interface ProductRatePlan {
   vas1_duration: number | null;
   vas2_duration: number | null;
   allowed_sale_types: string[];
+  vas_required: boolean;
+  vas1_locked: boolean;
+  vas2_locked: boolean;
 }
 
 /**
