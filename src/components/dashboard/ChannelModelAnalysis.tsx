@@ -21,6 +21,7 @@ const MAKER_COLORS: Record<string, string> = {
 export const ChannelModelAnalysis = () => {
   const { channelData, stackedData, modelsInfo, policyShare, getTop5, hasData, matchModel } = useModelAnalysis();
   const [selectedChannel, setSelectedChannel] = useState<string>("");
+  const [detailModel, setDetailModel] = useState<any>(null);
 
   // auto-select first channel when data arrives
   const effectiveChannel = selectedChannel || (channelData[0]?.channel ?? "");
@@ -270,6 +271,22 @@ export const ChannelModelAnalysis = () => {
           </ul>
         </div>
       </div>
+
+      {/* Detail popup for raw model breakdown */}
+      <Dialog open={!!detailModel} onOpenChange={(v) => !v && setDetailModel(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{detailModel?.name} — 상세 스펙 내역</DialogTitle>
+          </DialogHeader>
+          <ul className="space-y-1.5 max-h-60 overflow-y-auto">
+            {(detailModel?.rawModels ?? []).map((rm: string) => (
+              <li key={rm} className="flex items-center justify-between text-sm p-2 rounded-lg bg-muted/30 border border-border/30">
+                <span>{rm}</span>
+              </li>
+            ))}
+          </ul>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 };
