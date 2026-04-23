@@ -754,14 +754,18 @@ export type Database = {
           amount: number
           created_at: string
           created_by: string | null
+          grade_bonus: Json
           id: string
           label: string
           match_model: string | null
           match_product: string | null
           match_sale_type: string | null
           note: string | null
+          pay_percent: number
+          pay_type: string
           priority: number
           scope: string
+          tiered_rates: Json
           updated_at: string
           valid_from: string | null
           valid_to: string | null
@@ -771,14 +775,18 @@ export type Database = {
           amount?: number
           created_at?: string
           created_by?: string | null
+          grade_bonus?: Json
           id?: string
           label: string
           match_model?: string | null
           match_product?: string | null
           match_sale_type?: string | null
           note?: string | null
+          pay_percent?: number
+          pay_type?: string
           priority?: number
           scope?: string
+          tiered_rates?: Json
           updated_at?: string
           valid_from?: string | null
           valid_to?: string | null
@@ -788,14 +796,18 @@ export type Database = {
           amount?: number
           created_at?: string
           created_by?: string | null
+          grade_bonus?: Json
           id?: string
           label?: string
           match_model?: string | null
           match_product?: string | null
           match_sale_type?: string | null
           note?: string | null
+          pay_percent?: number
+          pay_type?: string
           priority?: number
           scope?: string
+          tiered_rates?: Json
           updated_at?: string
           valid_from?: string | null
           valid_to?: string | null
