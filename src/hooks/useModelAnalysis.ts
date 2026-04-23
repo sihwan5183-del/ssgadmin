@@ -2,46 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { useAppSettings } from "./useAppSettings";
+import { useDeviceModels } from "./useDeviceModels";
 
-// ── 펫네임 매핑 (기기코드 → 소비자명) ──
-const PET_NAME_MAP: Record<string, { pet: string; maker: string }> = {
-  "S942": { pet: "갤럭시 S25 Ultra", maker: "삼성" },
-  "S948": { pet: "갤럭시 S26 Ultra", maker: "삼성" },
-  "S947": { pet: "갤럭시 S26+", maker: "삼성" },
-  "S937": { pet: "갤럭시 S25+", maker: "삼성" },
-  "S936": { pet: "갤럭시 S25", maker: "삼성" },
-  "S928": { pet: "갤럭시 S24 Ultra", maker: "삼성" },
-  "S926": { pet: "갤럭시 S24+", maker: "삼성" },
-  "S921": { pet: "갤럭시 S24", maker: "삼성" },
-  "S911": { pet: "갤럭시 S23", maker: "삼성" },
-  "F966": { pet: "갤럭시 Z Fold6", maker: "삼성" },
-  "F766": { pet: "갤럭시 Z Flip6", maker: "삼성" },
-  "A566": { pet: "갤럭시 A56", maker: "삼성" },
-  "A366": { pet: "갤럭시 A36", maker: "삼성" },
-  "L325": { pet: "갤럭시 Buddy4", maker: "삼성" },
-  "UIP17PR": { pet: "iPhone 17 Pro Max", maker: "애플" },
-  "UIP17PM": { pet: "iPhone 17 Pro Max", maker: "애플" },
-  "UIP17": { pet: "iPhone 17", maker: "애플" },
-  "UIP16PR": { pet: "iPhone 16 Pro", maker: "애플" },
-  "UIP16PM": { pet: "iPhone 16 Pro Max", maker: "애플" },
-  "UIP16": { pet: "iPhone 16", maker: "애플" },
-  "UIP15PR": { pet: "iPhone 15 Pro", maker: "애플" },
-  "UIP15": { pet: "iPhone 15", maker: "애플" },
-  "UIP": { pet: "iPhone (기타)", maker: "애플" },
-};
-
-export function resolvePetName(raw: string): { pet: string; maker: string } {
-  let cleaned = raw.replace(/^SM-/i, "").replace(/N?\d*(GB|TB)?$/i, "");
-  cleaned = cleaned.replace(/[-_]?(256|512|128|1T|1TB)$/i, "").trim();
-  if (PET_NAME_MAP[cleaned]) return PET_NAME_MAP[cleaned];
-  const upper = cleaned.toUpperCase();
-  for (const [key, val] of Object.entries(PET_NAME_MAP)) {
-    if (upper === key.toUpperCase()) return val;
+/** device_models DB 기반 펫네임 해석 — matchModel 함수를 받아서 사용 */
+export function resolvePetName(raw: string, matchModel?: (s: string) => any): { pet: string; maker: string } {
+  if (matchModel) {
+    const hit = matchModel(raw);
+    if (hit) return { pet: hit.model_name, maker: hit.manufacturer || "기타" };
   }
-  const sorted = Object.keys(PET_NAME_MAP).sort((a, b) => b.length - a.length);
-  for (const key of sorted) {
-    if (upper.startsWith(key.toUpperCase())) return PET_NAME_MAP[key];
-  }
+  // fallback
   if (/^(UIP|IP)/i.test(raw)) return { pet: raw, maker: "애플" };
   if (/^(SM-|S|F|A|L|N)/i.test(raw)) return { pet: raw, maker: "삼성" };
   return { pet: raw, maker: "기타" };
