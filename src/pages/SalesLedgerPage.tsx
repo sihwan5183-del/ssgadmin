@@ -105,6 +105,7 @@ type SaleRow = {
   trade_in_enabled?: boolean | null;
   trade_in_model?: string | null;
   trade_in_confirmed?: number | null;
+  custom_fields?: Record<string, any> | null;
 };
 
 const SalesLedgerPage = () => {
@@ -121,6 +122,8 @@ const SalesLedgerPage = () => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [quickFilter, setQuickFilter] = useState<"unpaid" | "unreturned" | null>(null);
+  const [bundleFilter, setBundleFilter] = useState(false);
+  const [noOfferFilter, setNoOfferFilter] = useState(false);
   const [managerFilter, setManagerFilter] = useState<string>("all");
   const [storeFilter, setStoreFilter] = useState<string>("all");
 
@@ -217,13 +220,15 @@ const SalesLedgerPage = () => {
     } else if (quickFilter === "unreturned") {
       result = result.filter((r) => r.voucher && r.voucher.trim() !== "" && r.voucher_returned !== "유");
     }
+    if (bundleFilter) result = result.filter((r) => r.bundle === "Y");
+    if (noOfferFilter) result = result.filter((r) => (r.custom_fields as any)?.has_offer === false);
     if (!q) return result;
     return result.filter((r) => {
       const name = (r.customer_name ?? "").toLowerCase();
       const phone = (r.phone ?? "").replace(/[^0-9]/g, "");
       return name.includes(q) || phone.includes(q.replace(/[^0-9]/g, ""));
     });
-  }, [rows, searchQ, quickFilter]);
+  }, [rows, searchQ, quickFilter, bundleFilter, noOfferFilter]);
 
   const allSelected = filteredRows.length > 0 && filteredRows.every((r) => selected.has(r.id));
   const toggleAll = () => {
@@ -399,6 +404,30 @@ const SalesLedgerPage = () => {
           >
             🎫 상품권 미반납 {unreturnedCount > 0 && `(${unreturnedCount})`}
           </Badge>
+          <Badge
+            variant="outline"
+            className={cn(
+              "gap-1 cursor-pointer transition-colors h-9 px-3",
+              bundleFilter
+                ? "border-primary/60 text-primary bg-primary/15"
+                : "border-border/40 text-muted-foreground hover:bg-muted/40"
+            )}
+            onClick={() => setBundleFilter(!bundleFilter)}
+          >
+            📦 동판 건만
+          </Badge>
+          <Badge
+            variant="outline"
+            className={cn(
+              "gap-1 cursor-pointer transition-colors h-9 px-3",
+              noOfferFilter
+                ? "border-primary/60 text-primary bg-primary/15"
+                : "border-border/40 text-muted-foreground hover:bg-muted/40"
+            )}
+            onClick={() => setNoOfferFilter(!noOfferFilter)}
+          >
+            🚫 무오퍼 건만
+          </Badge>
 
           <div className="relative flex-1 min-w-[200px] max-w-md ml-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -524,6 +553,8 @@ const SalesLedgerPage = () => {
                 <th className="text-left px-3 py-2 font-medium">고객</th>
                 <th className="text-left px-3 py-2 font-medium">연락처</th>
                 <th className="text-left px-3 py-2 font-medium">단말</th>
+                <th className="text-center px-2 py-2 font-medium">동판</th>
+                <th className="text-center px-2 py-2 font-medium">오퍼</th>
                 <th className="text-right px-3 py-2 font-medium">리베이트 단가</th>
                 <th className="text-right px-3 py-2 font-medium">오퍼(지원금)</th>
                 <th className="text-right px-3 py-2 font-medium">최종 수익</th>
@@ -600,6 +631,14 @@ const SalesLedgerPage = () => {
                     </td>
                     <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{isAdmin ? (r.phone ?? "-") : maskPhone(r.phone) || "-"}</td>
                     <td className="px-3 py-2.5 text-muted-foreground">{r.device_model ?? "-"}</td>
+                    <td className="px-2 py-2.5 text-center">
+                      {r.bundle === "Y" ? <Badge variant="outline" className="text-[9px] border-primary/40 text-primary px-1.5 py-0">동판</Badge> : <span className="text-muted-foreground text-[10px]">-</span>}
+                    </td>
+                    <td className="px-2 py-2.5 text-center">
+                      {(r.custom_fields as any)?.has_offer === false
+                        ? <Badge variant="secondary" className="text-[9px] px-1.5 py-0">무오퍼</Badge>
+                        : <Badge variant="outline" className="text-[9px] px-1.5 py-0">오퍼</Badge>}
+                    </td>
                     <td className="px-3 py-2.5 text-right tabular-nums">{(r.unit_price ?? 0).toLocaleString("ko-KR")}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums text-warning">{offer.toLocaleString("ko-KR")}</td>
                     <td className={cn(

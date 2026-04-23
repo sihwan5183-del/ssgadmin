@@ -816,9 +816,6 @@ const InputPage = () => {
             <Field label="개통일자">
               <Input type="date" value={form.open_date ?? ""} onChange={(e) => set("open_date", e.target.value)} className="h-9 bg-input/60 text-xs" />
             </Field>
-            <Field label="동판/번들">
-              <Input value={form.bundle ?? ""} onChange={(e) => set("bundle", e.target.value)} className="h-9 bg-input/60 text-xs" />
-            </Field>
           </Grid>
           <Grid cols={5}>
             <Field label="고객명 *">
@@ -878,7 +875,7 @@ const InputPage = () => {
               </div>
             </Field>
           </Grid>
-          <Grid cols={3}>
+          <Grid cols={2}>
             <Field label="개통요금제">
               {(() => {
                 const mapped = getPlansForProduct(form.product);
@@ -901,6 +898,17 @@ const InputPage = () => {
                   </Select>
                 );
               })()}
+            </Field>
+            <Field label="동판/번들">
+              <div className="flex items-center gap-2 h-9">
+                <Switch
+                  checked={form.bundle === "Y"}
+                  onCheckedChange={(v) => set("bundle", v ? "Y" : null)}
+                />
+                <span className={cn("text-xs font-medium", form.bundle === "Y" ? "text-primary" : "text-muted-foreground")}>
+                  {form.bundle === "Y" ? "동판/번들" : "해당없음"}
+                </span>
+              </div>
             </Field>
           </Grid>
           {/* 부가서비스 - 조건부 렌더링 */}
@@ -1120,12 +1128,31 @@ const InputPage = () => {
         </FormSection>
 
         <FormSection title="오퍼 및 카드결제" icon={<Wallet className="size-3" />}>
-          <p className="text-[10px] text-muted-foreground -mt-1 mb-2">지출 대시보드에 자동 집계 · 숫자만 입력 · 천 단위 콤마 자동 표시</p>
+          <div className="flex items-center justify-between -mt-1 mb-2">
+            <p className="text-[10px] text-muted-foreground">지출 대시보드에 자동 집계 · 숫자만 입력 · 천 단위 콤마 자동 표시</p>
+            <div className="flex items-center gap-2">
+              <span className={cn("text-xs font-medium", customFields.has_offer === false ? "text-muted-foreground" : "text-foreground")}>오퍼</span>
+              <Switch
+                checked={customFields.has_offer !== false}
+                onCheckedChange={(v) => {
+                  setCustomFields((f) => ({ ...f, has_offer: v }));
+                  if (!v) {
+                    set("distributor_amount", 0);
+                    set("extra_subsidy", 0);
+                  }
+                }}
+              />
+              <Badge variant={customFields.has_offer === false ? "secondary" : "default"} className="text-[10px]">
+                {customFields.has_offer === false ? "무오퍼" : "오퍼"}
+              </Badge>
+            </div>
+          </div>
           <Grid cols={3}>
             <Field label="① 유통망 지원금 (₩)">
               <MoneyInput
                 value={form.distributor_amount}
                 onChange={(v) => set("distributor_amount", v)}
+                disabled={customFields.has_offer === false}
               />
             </Field>
             <Field label="② 현금개통 금액 (₩)">
@@ -1154,7 +1181,7 @@ const InputPage = () => {
               />
             </Field>
             <Field label="추가지원금 (₩)">
-              <MoneyInput value={form.extra_subsidy} onChange={(v) => set("extra_subsidy", v)} />
+              <MoneyInput value={form.extra_subsidy} onChange={(v) => set("extra_subsidy", v)} disabled={customFields.has_offer === false} />
             </Field>
           </Grid>
           <Grid cols={3}>
