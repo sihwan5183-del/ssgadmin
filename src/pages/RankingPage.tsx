@@ -34,7 +34,7 @@ type ModelRank = { model: string; count: number; isStrategy: boolean };
 const CleanBadge = ({ size = "sm", days }: { size?: "sm" | "lg"; days?: number }) => (
   <span className={cn(
     "inline-flex items-center gap-0.5 font-semibold rounded-full border",
-    "bg-gradient-to-r from-amber-400/25 to-emerald-400/15 text-amber-300 border-amber-400/40",
+    "bg-gradient-to-r from-amber-100 to-emerald-400/15 text-amber-700 border-amber-400",
     "animate-[pulse_3s_ease-in-out_infinite]",
     size === "lg" ? "text-[10px] px-2 py-0.5 gap-1" : "text-[8px] px-1.5 py-0"
   )}>
@@ -55,7 +55,7 @@ const fmtKRW = (n: number) => {
 const TIERS = [
   { min: 0, label: "브론즈", color: "from-orange-700/40 to-orange-900/20 text-orange-300 border-orange-600/40", icon: "🥉" },
   { min: 10, label: "실버", color: "from-slate-400/30 to-slate-600/10 text-slate-200 border-slate-400/40", icon: "🥈" },
-  { min: 25, label: "골드", color: "from-amber-400/30 to-amber-600/10 text-amber-300 border-amber-400/40", icon: "🥇" },
+  { min: 25, label: "골드", color: "from-amber-100 to-amber-100 text-amber-700 border-amber-400", icon: "🥇" },
   { min: 50, label: "플래티넘", color: "from-cyan-400/30 to-cyan-600/10 text-cyan-200 border-cyan-400/40", icon: "💎" },
   { min: 100, label: "다이아몬드", color: "from-violet-400/40 to-violet-600/15 text-violet-200 border-violet-400/50", icon: "👑" },
 ];
@@ -103,7 +103,7 @@ const TABS: { key: TabKey; label: string; icon: typeof Crown; sortFn: (a: Ranked
 ];
 
 const PODIUM_STYLES = [
-  { bg: "bg-gradient-to-br from-amber-400/30 to-orange-500/10 ring-amber-400/40", icon: Crown, color: "text-amber-300" },
+  { bg: "bg-gradient-to-br from-amber-100 to-orange-100 ring-amber-400", icon: Crown, color: "text-amber-700" },
   { bg: "bg-gradient-to-br from-slate-300/25 to-slate-500/5 ring-slate-300/40", icon: Trophy, color: "text-slate-200" },
   { bg: "bg-gradient-to-br from-orange-700/30 to-amber-800/10 ring-orange-600/40", icon: Medal, color: "text-orange-400" },
 ];

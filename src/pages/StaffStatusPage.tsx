@@ -69,7 +69,7 @@ const CATEGORY_ICON: Record<string, typeof Smartphone> = {
 
 const STATUS_BADGE: Record<string, { label: string; className: string; icon: typeof CheckCircle2 }> = {
   확정: { label: "승인", className: "border-emerald-500/40 text-emerald-300 bg-emerald-500/10", icon: CheckCircle2 },
-  승인대기: { label: "대기", className: "border-amber-500/40 text-amber-300 bg-amber-500/10", icon: Clock },
+  승인대기: { label: "대기", className: "border-amber-400 text-amber-700 bg-amber-50", icon: Clock },
   반려: { label: "반려", className: "border-destructive/40 text-destructive bg-destructive/10", icon: XCircle },
   수정요청: { label: "수정요청", className: "border-orange-500/40 text-orange-300 bg-orange-500/10", icon: XCircle },
   환수: { label: "환수", className: "border-orange-500/40 text-orange-300 bg-orange-500/10", icon: XCircle },
@@ -327,7 +327,7 @@ export default function StaffStatusPage() {
                       <div className="flex items-center justify-between mb-2.5">
                         <div className="flex items-center gap-2 min-w-0">
                           <div className={`size-7 rounded-lg grid place-items-center text-[11px] font-bold shrink-0 ${
-                            rank === 1 ? "bg-amber-500/20 text-amber-300" :
+                            rank === 1 ? "bg-amber-100 text-amber-700" :
                             rank === 2 ? "bg-slate-400/20 text-slate-200" :
                             rank === 3 ? "bg-orange-500/20 text-orange-300" :
                             "bg-card/60 text-muted-foreground"
@@ -342,7 +342,7 @@ export default function StaffStatusPage() {
                           </div>
                         </div>
                         {row.pendingCount > 0 && (
-                          <Badge variant="outline" className="border-amber-500/40 text-amber-300 bg-amber-500/10 text-[10px] shrink-0">
+                          <Badge variant="outline" className="border-amber-400 text-amber-700 bg-amber-50 text-[10px] shrink-0">
                             미처리 {row.pendingCount}
                           </Badge>
                         )}
@@ -354,7 +354,7 @@ export default function StaffStatusPage() {
                         </div>
                         <div>
                           <div className="text-[10px] text-muted-foreground">인센티브</div>
-                          <div className="text-base font-bold text-amber-300 tabular-nums">
+                          <div className="text-base font-bold text-amber-700 tabular-nums">
                             {formatKRWShort(row.incentive)}
                           </div>
                         </div>
@@ -391,11 +391,11 @@ export default function StaffStatusPage() {
                 ============================================ */}
             <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               {/* 1. 이번 달 총 인센티브 */}
-              <Card className="p-7 glass relative overflow-hidden border-amber-500/30 bg-gradient-to-br from-amber-500/[0.12] via-amber-500/[0.04] to-transparent">
-                <div className="absolute -right-10 -top-10 size-40 rounded-full bg-amber-500/15 blur-3xl pointer-events-none" />
+              <Card className="p-7 glass relative overflow-hidden border-amber-300 bg-gradient-to-br from-amber-500/[0.12] via-amber-500/[0.04] to-transparent">
+                <div className="absolute -right-10 -top-10 size-40 rounded-full bg-amber-50 blur-3xl pointer-events-none" />
                 <div className="relative">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm font-medium text-amber-200/80">
+                    <div className="flex items-center gap-2 text-sm font-medium text-amber-700/80">
                       <Coins className="size-4 text-amber-400" />
                       이번 달 총 인센티브
                     </div>
@@ -408,7 +408,7 @@ export default function StaffStatusPage() {
                       </TooltipContent>
                     </Tooltip>
                   </div>
-                  <div className="mt-4 text-4xl lg:text-5xl font-extrabold tracking-tight text-amber-300 tabular-nums leading-none">
+                  <div className="mt-4 text-4xl lg:text-5xl font-extrabold tracking-tight text-amber-700 tabular-nums leading-none">
                     {formatKRWShort(incentive.total)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-3">
@@ -474,7 +474,7 @@ export default function StaffStatusPage() {
                     </RadialBarChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <div className="text-4xl font-extrabold text-amber-300 tabular-nums leading-none">{incentive.goalPct}%</div>
+                    <div className="text-4xl font-extrabold text-amber-700 tabular-nums leading-none">{incentive.goalPct}%</div>
                     <div className="text-[10px] text-muted-foreground mt-1">목표 {formatKRWShort(incentive.goal)}</div>
                   </div>
                 </div>
@@ -482,7 +482,7 @@ export default function StaffStatusPage() {
                   <Sparkles className="size-3.5 text-amber-400 shrink-0 mt-0.5" />
                   <span>
                     {incentive.salesNeeded > 0
-                      ? <>약 <span className="text-amber-300 font-bold">{incentive.salesNeeded}건</span> 더 판매하면 <span className="text-emerald-300 font-bold">{formatKRWShort(incentive.gapToGoal)}</span> 추가!</>
+                      ? <>약 <span className="text-amber-700 font-bold">{incentive.salesNeeded}건</span> 더 판매하면 <span className="text-emerald-300 font-bold">{formatKRWShort(incentive.gapToGoal)}</span> 추가!</>
                       : "인센티브 단가를 등록하면 동기부여 메시지가 표시됩니다."}
                   </span>
                 </p>
@@ -547,7 +547,7 @@ export default function StaffStatusPage() {
                             <div className="text-sm font-medium truncate">{c.name}</div>
                             <div className="text-[11px] text-muted-foreground">{pct}% 비중</div>
                           </div>
-                          <div className="text-base font-bold text-amber-300 tabular-nums">{formatKRWShort(c.value)}</div>
+                          <div className="text-base font-bold text-amber-700 tabular-nums">{formatKRWShort(c.value)}</div>
                         </li>
                       );
                     })}
@@ -613,9 +613,9 @@ export default function StaffStatusPage() {
                 </div>
                 {simResult.amount > 0 && (
                   <p className="mt-3 text-[11px] text-muted-foreground">
-                    예상 합계: <span className="text-amber-300 font-semibold">{formatKRWShort(incentive.total + simResult.amount)}</span>
+                    예상 합계: <span className="text-amber-700 font-semibold">{formatKRWShort(incentive.total + simResult.amount)}</span>
                     {" "}→ 달성률{" "}
-                    <span className="text-amber-300 font-semibold">
+                    <span className="text-amber-700 font-semibold">
                       {Math.min(100, Math.round(((incentive.total + simResult.amount) / Math.max(1, incentive.goal)) * 100))}%
                     </span>
                   </p>
@@ -664,7 +664,7 @@ export default function StaffStatusPage() {
                         }`}
                       >
                         {amount > 0 && (
-                          <div className="absolute -right-6 -top-6 size-20 rounded-full bg-amber-500/10 blur-2xl pointer-events-none" />
+                          <div className="absolute -right-6 -top-6 size-20 rounded-full bg-amber-50 blur-2xl pointer-events-none" />
                         )}
                         <div className="relative space-y-2.5">
                           {/* Header */}
@@ -699,7 +699,7 @@ export default function StaffStatusPage() {
                             </div>
                             <div className="text-right">
                               <div className="text-[10px] text-muted-foreground">발생 인센티브</div>
-                              <div className={`text-xl font-extrabold tabular-nums ${amount > 0 ? "text-amber-300" : "text-muted-foreground/70"}`}>
+                              <div className={`text-xl font-extrabold tabular-nums ${amount > 0 ? "text-amber-700" : "text-muted-foreground/70"}`}>
                                 {amount > 0 ? `+${formatKRWShort(amount)}` : "₩0"}
                               </div>
                             </div>
@@ -708,7 +708,7 @@ export default function StaffStatusPage() {
                           {matched.length > 0 && (
                             <div className="pt-1 flex flex-wrap gap-1">
                               {matched.slice(0, 3).map((m) => (
-                                <Badge key={m.rateId} variant="outline" className="border-amber-500/25 text-amber-200/80 text-[10px]">
+                                <Badge key={m.rateId} variant="outline" className="border-amber-300 text-amber-700/80 text-[10px]">
                                   {m.label}
                                 </Badge>
                               ))}

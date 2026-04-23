@@ -22,7 +22,7 @@ export interface MobileListCardProps {
 
 const toneMap = {
   default: "border-border/40",
-  warning: "border-amber-500/40 bg-amber-500/5",
+  warning: "border-amber-400 bg-amber-50/50",
   danger: "border-destructive/40 bg-destructive/5",
 };
 

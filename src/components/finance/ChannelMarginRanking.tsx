@@ -14,7 +14,7 @@ export const ChannelMarginRanking = () => {
     .sort((a, b) => b.marginRate - a.marginRate);
 
   const podium = [
-    { wrap: "from-amber-400/30 to-orange-500/10 ring-amber-400/40 text-amber-300", Icon: Crown },
+    { wrap: "from-amber-100 to-orange-100 ring-amber-400 text-amber-700", Icon: Crown },
     { wrap: "from-slate-300/25 to-slate-500/5 ring-slate-300/40 text-slate-200", Icon: Trophy },
     { wrap: "from-orange-700/30 to-amber-800/10 ring-orange-600/40 text-orange-300", Icon: Medal },
   ];

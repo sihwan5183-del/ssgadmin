@@ -179,7 +179,7 @@ export function IncentiveRatesManager() {
             {rows.length === 0 ? (
               <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">등록된 인센티브 단가가 없습니다. '단가 추가' 버튼을 눌러 시작하세요.</TableCell></TableRow>
             ) : rows.map((row) => (
-              <TableRow key={row.id} className={row.dirty ? "bg-amber-500/5" : ""}>
+              <TableRow key={row.id} className={row.dirty ? "bg-amber-50/50" : ""}>
                 <TableCell>
                   <Input value={row.label} onChange={(e) => updateDraft(row.id!, { label: e.target.value })} className="h-9" />
                 </TableCell>
@@ -242,7 +242,7 @@ export function IncentiveRatesManager() {
       </div>
 
       <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-        <Badge variant="outline" className="border-amber-500/40 text-amber-400"><Calendar className="size-3 mr-1" /> 유효기간 미설정 = 상시 적용</Badge>
+        <Badge variant="outline" className="border-amber-400 text-amber-400"><Calendar className="size-3 mr-1" /> 유효기간 미설정 = 상시 적용</Badge>
         <Badge variant="outline">조건 미설정 = 모든 실적에 적용</Badge>
         <Badge variant="outline">중복 매칭 시 합산</Badge>
       </div>

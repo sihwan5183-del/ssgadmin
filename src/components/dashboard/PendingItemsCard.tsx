@@ -19,7 +19,7 @@ export const PendingItemsCard = () => {
   return (
     <Link
       to="/activities?pending=1"
-      className="glass rounded-xl p-3 shadow-card-elevated hover:border-amber-500/40 transition-colors group block relative overflow-hidden"
+      className="glass rounded-xl p-3 shadow-card-elevated hover:border-amber-400 transition-colors group block relative overflow-hidden"
       title={urgent ? "긴급 처리 필요" : "클릭하면 활동관리에서 미처리만 필터됩니다"}
     >
       {urgent && (
@@ -31,7 +31,7 @@ export const PendingItemsCard = () => {
       <div className="flex items-center justify-between">
         <div
           className={
-            "size-8 rounded-lg grid place-items-center bg-gradient-to-br from-amber-400/30 to-orange-500/10 text-amber-500 " +
+            "size-8 rounded-lg grid place-items-center bg-gradient-to-br from-amber-100 to-orange-100 text-amber-500 " +
             (urgent ? "animate-pulse" : "")
           }
         >

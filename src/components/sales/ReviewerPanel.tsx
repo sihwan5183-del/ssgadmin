@@ -56,7 +56,7 @@ interface Props {
 }
 
 const STATUS_META: Record<string, { tone: string; icon: typeof CheckCircle2; label: string }> = {
-  승인대기: { tone: "border-amber-500/40 text-amber-300 bg-amber-500/10", icon: AlertCircle, label: "승인대기" },
+  승인대기: { tone: "border-amber-400 text-amber-700 bg-amber-50", icon: AlertCircle, label: "승인대기" },
   확정: { tone: "border-emerald-500/40 text-emerald-300 bg-emerald-500/10", icon: CheckCircle2, label: "확정" },
   반려: { tone: "border-destructive/40 text-destructive bg-destructive/10", icon: XCircle, label: "반려" },
   수정요청: { tone: "border-orange-500/40 text-orange-300 bg-orange-500/10", icon: Edit3, label: "수정요청" },
@@ -229,7 +229,7 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
             <CheckCircle2 className="size-3.5 text-emerald-400" />
             검수 체크리스트
           </span>
-          <Badge variant="outline" className={`text-[10px] ${allChecked ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10" : "border-amber-500/40 text-amber-300 bg-amber-500/10"}`}>
+          <Badge variant="outline" className={`text-[10px] ${allChecked ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10" : "border-amber-400 text-amber-700 bg-amber-50"}`}>
             {checkedCount} / {checklistItems.length}
           </Badge>
         </div>

@@ -4,7 +4,7 @@ import { employeeRanking, teamRanking, formatShortKRW } from "@/data/mockData";
 import { cn } from "@/lib/utils";
 
 const rankStyles = [
-  { wrap: "bg-gradient-to-br from-amber-400/30 to-orange-500/10 ring-amber-400/40", icon: Crown, color: "text-amber-300" },
+  { wrap: "bg-gradient-to-br from-amber-100 to-orange-100 ring-amber-400", icon: Crown, color: "text-amber-700" },
   { wrap: "bg-gradient-to-br from-slate-300/25 to-slate-500/5 ring-slate-300/40", icon: Trophy, color: "text-slate-200" },
   { wrap: "bg-gradient-to-br from-orange-700/30 to-amber-800/10 ring-orange-600/40", icon: Medal, color: "text-orange-300" },
 ];

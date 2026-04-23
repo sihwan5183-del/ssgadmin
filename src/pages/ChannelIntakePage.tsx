@@ -450,7 +450,7 @@ const ChannelIntakePage = () => {
                             <Badge
                               className={cn(
                                 "text-[10px]",
-                                r.status === "부재" && "bg-amber-500/20 text-amber-300 border-amber-500/30",
+                                r.status === "부재" && "bg-amber-100 text-amber-700 border-amber-300",
                                 r.status === "재케어" && "bg-blue-500/20 text-blue-300 border-blue-500/30",
                                 r.status === "실패" && "bg-destructive/20 text-destructive border-destructive/30",
                                 r.status === "개통완료" && "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
