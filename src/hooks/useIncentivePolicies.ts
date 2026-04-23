@@ -23,6 +23,9 @@ export function useIncentivePolicies() {
         valid_from: r.valid_from,
         valid_to: r.valid_to,
         note: r.note,
+        calc_method: (r as any).calc_method ?? "tiered",
+        fixed_amount: Number((r as any).fixed_amount ?? 0),
+        match_model: (r as any).match_model ?? null,
       }))
     );
     setLoading(false);
