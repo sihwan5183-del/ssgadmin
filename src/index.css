@@ -42,7 +42,7 @@
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
+    --warning-foreground: 24 80% 30%;
 
     /* 수익/지출 시맨틱 */
     --revenue: 158 65% 42%;
