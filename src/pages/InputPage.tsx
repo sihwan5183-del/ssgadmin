@@ -558,7 +558,6 @@ const InputPage = () => {
         if (error) throw error;
       }
       toast.success(`엑셀 업로드 완료`, { description: `${records.length}건이 저장되었습니다.` });
-      load();
     } catch (err) {
       toast.error("엑셀 업로드 실패", { description: err instanceof Error ? err.message : String(err) });
     } finally {
