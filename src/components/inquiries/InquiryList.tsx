@@ -47,7 +47,7 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
       toast.error("상태 변경 실패", { description: error.message });
       return;
     }
-    if (status === "개통완료") {
+    if (status === "성공(개통)") {
       const params = new URLSearchParams({
         from_inquiry: row.id,
         customer_name: row.customer_name ?? "",

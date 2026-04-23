@@ -22,15 +22,15 @@ import { InquiryForm } from "@/components/inquiries/InquiryForm";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const CRM_STATUSES = ["문의중", "부재", "재케어", "실패", "방문예약", "개통완료"] as const;
+const CRM_STATUSES = ["미처리", "부재", "재케어(예약)", "성공(개통)", "실패(종결)"] as const;
 type CrmStatus = (typeof CRM_STATUSES)[number];
 
 const FAIL_REASONS = ["가격 불만", "결합 조건", "타사 개통", "단순 변심", "연락두절", "기타"] as const;
 
 const STATUS_CONFIG: Record<string, { icon: typeof PhoneOff; color: string; label: string }> = {
   부재: { icon: PhoneOff, color: "hsl(35 90% 55%)", label: "부재" },
-  재케어: { icon: RefreshCw, color: "hsl(200 80% 55%)", label: "재케어" },
-  실패: { icon: XCircle, color: "hsl(0 70% 55%)", label: "실패" },
+  "재케어(예약)": { icon: RefreshCw, color: "hsl(200 80% 55%)", label: "재케어(예약)" },
+  "실패(종결)": { icon: XCircle, color: "hsl(0 70% 55%)", label: "실패(종결)" },
 };
 
 interface InquiryRow {
