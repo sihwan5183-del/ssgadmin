@@ -645,16 +645,18 @@ function SimulationPanel({ policies, linkageRule }: { policies: DraftPolicy[]; l
                       </td>
                     );
                   })}
-                  <td className="py-2 text-right font-bold text-foreground">{formatKRW(r.calc.total)}</td>
                   {(() => {
-                    const byMethod = { tiered: 0, margin_100: 0, fixed_amount: 0 };
+                    const byMethod: Record<string, number> = { tiered: 0, margin_100: 0, fixed_amount: 0 };
                     r.calc.policyResults.forEach((pr) => { byMethod[pr.calcMethod] = (byMethod[pr.calcMethod] || 0) + pr.subtotal; });
                     return (
                       <>
-                        {/* These are inserted before 최종 - need reorder. Actually let me put them before the total */}
+                        <td className="py-2 text-right text-muted-foreground">{byMethod.tiered ? formatKRW(byMethod.tiered) : "-"}</td>
+                        <td className="py-2 text-right text-muted-foreground">{byMethod.margin_100 ? formatKRW(byMethod.margin_100) : "-"}</td>
+                        <td className="py-2 text-right text-muted-foreground">{byMethod.fixed_amount ? formatKRW(byMethod.fixed_amount) : "-"}</td>
                       </>
                     );
                   })()}
+                  <td className="py-2 text-right font-bold text-foreground">{formatKRW(r.calc.total)}</td>
                 </tr>
               ))}
             </tbody>
