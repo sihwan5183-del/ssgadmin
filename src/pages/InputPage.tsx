@@ -1202,20 +1202,14 @@ const InputPage = () => {
           </Grid>
         </FormSection>
 
-        <FormSection title="오퍼(지원금) 관리" icon={<Wallet className="size-3" />}>
-          <p className="text-[11px] text-muted-foreground -mt-2 mb-3">
-            아래 3개 항목은 <span className="text-foreground font-medium">지출 대시보드</span>에 자동 집계됩니다.
-            숫자만 입력 가능하며 천 단위 콤마가 자동 표시됩니다.
-          </p>
+        <FormSection title="오퍼 및 카드결제" icon={<Wallet className="size-3" />}>
+          <p className="text-[10px] text-muted-foreground -mt-1 mb-2">지출 대시보드에 자동 집계 · 숫자만 입력 · 천 단위 콤마 자동 표시</p>
           <Grid cols={3}>
             <Field label="① 유통망 지원금 (₩)">
               <MoneyInput
                 value={form.distributor_amount}
                 onChange={(v) => set("distributor_amount", v)}
               />
-              <div className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
-                <Building2 className="size-3" /> 회사가 유통망 차원에서 지급한 지원금 (지출 합산)
-              </div>
             </Field>
             <Field label="② 현금개통 금액 (₩)">
               <MoneyInput
@@ -1225,27 +1219,21 @@ const InputPage = () => {
                   set("cash_open", v > 0);
                 }}
               />
-              <div className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
-                <Banknote className="size-3" /> 고객이 기기값을 현금 완납하여 개통한 금액 (현금시재)
-              </div>
             </Field>
             <Field label="③ 고객입금 금액 (₩)">
               <MoneyInput
                 value={form.receivable_amount}
                 onChange={(v) => set("receivable_amount", v)}
               />
-              <div className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
-                <Wallet className="size-3" /> 수납·기타 사유로 고객에게 직접 입금받은 금액
-              </div>
             </Field>
           </Grid>
-          <Grid cols={2}>
+          <Grid cols={3}>
             <Field label="입금 유/무 (입금일 또는 표시값)">
               <Input
                 value={form.receivable_paid ?? ""}
                 onChange={(e) => set("receivable_paid", e.target.value)}
                 placeholder="유 / 완료 / 2026-04-19"
-                className="h-11 bg-input/60"
+                className="h-9 bg-input/60 text-xs"
               />
             </Field>
             <Field label="추가지원금 (₩)">
@@ -1255,23 +1243,23 @@ const InputPage = () => {
           <Grid cols={3}>
             <Field label="은행">
               <Select value={form.cash_bank ?? ""} onValueChange={(v) => set("cash_bank", v)}>
-                <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
                 <SelectContent>{BANKS.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
             <Field label="입금계좌">
-              <Input value={form.cash_account ?? ""} onChange={(e) => set("cash_account", e.target.value)} className="h-11 bg-input/60" />
+              <Input value={form.cash_account ?? ""} onChange={(e) => set("cash_account", e.target.value)} className="h-9 bg-input/60 text-xs" />
             </Field>
             <Field label="예금주">
-              <Input value={form.cash_holder ?? ""} onChange={(e) => set("cash_holder", e.target.value)} className="h-11 bg-input/60" />
+              <Input value={form.cash_holder ?? ""} onChange={(e) => set("cash_holder", e.target.value)} className="h-9 bg-input/60 text-xs" />
             </Field>
           </Grid>
 
           {/* 법인카드 결제 */}
-          <div className="border-t border-border/30 pt-4 mt-2">
-            <div className="flex items-center gap-2 mb-3">
-              <CreditCard className="size-4 text-primary" />
-              <span className="text-sm font-semibold">법인카드 결제</span>
+          <div className="border-t border-border/30 pt-3 mt-1">
+            <div className="flex items-center gap-2 mb-2">
+              <CreditCard className="size-3.5 text-primary" />
+              <span className="text-xs font-semibold">법인카드 결제</span>
               <Switch
                 checked={customFields.card_payment === true}
                 onCheckedChange={(v) => {
@@ -1291,7 +1279,7 @@ const InputPage = () => {
                       value={customFields.card_company ?? ""}
                       onValueChange={(v) => setCustomFields((f) => ({ ...f, card_company: v }))}
                     >
-                      <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
+                      <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
                       <SelectContent>
                         {["국민", "신한", "현대", "삼성", "롯데", "하나", "우리", "BC", "NH농협"].map((c) => (
                           <SelectItem key={c} value={c}>{c}</SelectItem>
@@ -1308,7 +1296,7 @@ const InputPage = () => {
                       }}
                       placeholder="0000"
                       maxLength={4}
-                      className="h-11 bg-input/60 tabular-nums"
+                      className="h-9 bg-input/60 text-xs tabular-nums"
                     />
                   </Field>
                   <Field label="카드 결제금액 (₩)">
