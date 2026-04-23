@@ -1184,16 +1184,16 @@ const InputPage = () => {
             </Field>
           </Grid>
           <Grid cols={3}>
-            <Field label="입금 유/무 (입금일 또는 표시값)">
-              <Input
-                value={form.receivable_paid ?? ""}
-                onChange={(e) => set("receivable_paid", e.target.value)}
-                placeholder="유 / 완료 / 2026-04-19"
-                className="h-9 bg-input/60 text-xs"
-              />
-            </Field>
-            <Field label="추가지원금 (₩)">
+            <Field label="③ 추가지원금 (₩)">
               <MoneyInput value={form.extra_subsidy} onChange={(v) => set("extra_subsidy", v)} disabled={customFields.has_offer === false} />
+            </Field>
+            <Field label="④ 고객지원금 (₩)">
+              <MoneyInput value={form.customer_support_amount} onChange={(v) => set("customer_support_amount", v)} disabled={customFields.has_offer === false} />
+              <p className="text-[10px] text-muted-foreground mt-0.5">고객에게 별도 지급하는 지원금 (수익에서 차감)</p>
+            </Field>
+            <Field label="⑤ 법인카드 결제금액 (₩)">
+              <MoneyInput value={form.corp_card_amount} onChange={(v) => set("corp_card_amount", v)} disabled={customFields.has_offer === false} />
+              <p className="text-[10px] text-muted-foreground mt-0.5">법인카드로 결제한 금액 (수익에서 차감)</p>
             </Field>
           </Grid>
           <Grid cols={3}>
