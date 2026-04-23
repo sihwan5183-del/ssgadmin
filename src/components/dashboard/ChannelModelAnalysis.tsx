@@ -1,11 +1,14 @@
 import { useState } from "react";
 import {
-  Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend,
+  Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { Sparkles, Trophy, TrendingUp } from "lucide-react";
-import { useModelAnalysis, resolvePetName } from "@/hooks/useModelAnalysis";
+import { useModelAnalysis, resolvePetName, seriesName } from "@/hooks/useModelAnalysis";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 
 const formatKRW = (n: number) => n.toLocaleString("ko-KR") + "원";
 
@@ -51,36 +54,38 @@ export const ChannelModelAnalysis = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         {/* Stacked Bar — 채널별 모델 판매 */}
-        <div className="lg:col-span-3 glass rounded-2xl p-5">
+        <div className="lg:col-span-3 rounded-2xl p-5 bg-card/20 border border-border/30">
           <div className="flex items-baseline justify-between mb-3">
             <h4 className="text-base font-semibold tracking-tight">채널별 모델 판매 비중</h4>
             <span className="text-[11px] text-muted-foreground">단위: 건</span>
           </div>
-          <div className="h-80">
+          <div className="h-80 overflow-x-auto">
+            <div style={{ minWidth: Math.max(stackedData.length * 100, 400) }} className="h-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={stackedData}
-                margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+                margin={{ top: 10, right: 10, left: -10, bottom: 5 }}
+                barSize={stackedData.length <= 4 ? 60 : 40}
                 onClick={(e: any) => {
                   if (e?.activeLabel) setSelectedChannel(e.activeLabel as string);
                 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.3)" vertical={false} />
                 <XAxis dataKey="channel" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
                 <Tooltip
-                  cursor={{ fill: "hsl(var(--primary) / 0.08)" }}
+                  cursor={{ fill: "hsl(var(--primary) / 0.06)" }}
                   contentStyle={{
                     background: "hsl(240 18% 8% / 0.95)",
                     border: "1px solid hsl(var(--border))",
                     borderRadius: 12,
-                    fontSize: 12,
+                    fontSize: 13,
+                    padding: "10px 14px",
                   }}
-                  formatter={(v: number, name: string) => [`${v}건`, name]}
-                />
-                <Legend
-                  wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
-                  iconType="circle"
+                  formatter={(v: number, name: string) => [
+                    <span className="font-bold">{v}건</span>,
+                    name,
+                  ]}
                 />
                 {modelsInfo.map((m, i) => (
                   <Bar
@@ -88,12 +93,22 @@ export const ChannelModelAnalysis = () => {
                     dataKey={m.name}
                     stackId="a"
                     fill={m.color}
-                    radius={i === modelsInfo.length - 1 ? [8, 8, 0, 0] : 0}
+                    radius={i === modelsInfo.length - 1 ? [6, 6, 0, 0] : 0}
                     cursor="pointer"
                   />
                 ))}
               </BarChart>
             </ResponsiveContainer>
+            </div>
+          </div>
+          {/* Compact legend — top 5 + 기타 only */}
+          <div className="flex flex-wrap items-center gap-3 mt-3 px-1">
+            {modelsInfo.map((m) => (
+              <div key={m.name} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <span className="size-2.5 rounded-full shrink-0" style={{ background: m.color }} />
+                {m.name}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -190,20 +205,24 @@ export const ChannelModelAnalysis = () => {
             <span className="text-[11px] text-muted-foreground">건수 기준</span>
           </div>
 
-          <ul className="space-y-1.5">
+          <ul className="space-y-1">
             {top5.map((m, i) => {
-              const { pet, maker } = resolvePetName(m.name, matchModel);
+              const maker = resolvePetName(m.name, matchModel).maker;
               const pct = channelTotal > 0 ? Math.round((m.count / channelTotal) * 100) : 0;
               const isTop3 = i < 3;
               return (
                 <li
                   key={m.name}
                   className={cn(
-                    "flex items-center gap-2.5 p-2 rounded-lg border transition-colors",
+                    "flex items-center gap-2.5 p-2 rounded-lg border transition-colors cursor-pointer",
                     isTop3
                       ? "bg-primary/5 border-primary/20"
                       : "bg-card/40 border-border/40 hover:border-primary/30"
                   )}
+                  onClick={() => {
+                    if ((m as any).rawModels?.length > 1) setDetailModel(m);
+                  }}
+                  title={(m as any).rawModels?.length > 1 ? "클릭하여 상세 스펙 보기" : undefined}
                 >
                   <div
                     className={cn(
@@ -226,7 +245,7 @@ export const ChannelModelAnalysis = () => {
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className={cn("text-xs truncate", isTop3 ? "font-bold" : "font-medium")}>{pet}</span>
+                      <span className={cn("text-xs truncate", isTop3 ? "font-bold" : "font-medium")}>{m.name}</span>
                       {m.isStrategy ? (
                         <Badge className="bg-gradient-primary border-0 text-primary-foreground text-[9px] h-3.5 px-1">
                           전략
