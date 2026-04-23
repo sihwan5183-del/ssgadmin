@@ -58,6 +58,10 @@ export interface FinanceData {
   roi: number;                  // netMargin / totalExpense * 100
   cpaAvg: number;               // totalAdSpend / totalSuccess
   marginRate: number;           // netMargin / totalRevenue * 100
+  // 모요
+  moyoAppliedCount: number;     // 모요 적용 건수
+  moyoExcludedCount: number;    // 모요 미적용 건수
+  moyoFee: number;              // 모요 수수료 (적용건 × 88,000)
   // 차트용
   channels: FinanceChannelRow[];
   mediaTotals: FinanceMediaTotal[];
@@ -108,7 +112,7 @@ export function useFinanceData(): FinanceData {
         supabase
           .from("sales")
           .select(
-            "channel, product, open_date, unit_price, distributor_amount, cash_support_amount, extra_subsidy, receivable_amount",
+            "channel, product, open_date, unit_price, distributor_amount, cash_support_amount, extra_subsidy, receivable_amount, moyo_excluded",
           )
           .gte("open_date", startDate)
           .lte("open_date", endDate)
@@ -137,20 +141,33 @@ export function useFinanceData(): FinanceData {
     let totalCashOpen = 0;
     let totalCustomerDeposit = 0;
     let totalOffer = 0;
-    const totalSuccess = salesRows.length;
+    let totalSuccess = 0;
+    let moyoAppliedCount = 0;
+    let moyoExcludedCount = 0;
     for (const r of salesRows) {
+      totalSuccess += 1;
       totalRevenue += Number(r.unit_price ?? 0);
       totalDistributor += Number(r.distributor_amount ?? 0);
       totalCashOpen += Number(r.cash_support_amount ?? 0);
       totalCustomerDeposit += Number(r.receivable_amount ?? 0);
       totalOffer +=
         Number(r.cash_support_amount ?? 0) + Number(r.extra_subsidy ?? 0);
+      // 모요 채널 건 분류
+      const ch = (r.channel ?? "").toString().trim();
+      if (ch === "모요") {
+        if (r.moyo_excluded) {
+          moyoExcludedCount += 1;
+        } else {
+          moyoAppliedCount += 1;
+        }
+      }
     }
+    const moyoFee = moyoAppliedCount * 88000;
     const totalAdSpend = spendRows.reduce(
       (s, r) => s + Number(r.amount ?? 0),
       0,
     );
-    const totalExpense = totalAdSpend + totalDistributor + totalCustomerDeposit;
+    const totalExpense = totalAdSpend + totalDistributor + totalCustomerDeposit + moyoFee;
     const netMargin = totalRevenue - totalExpense;
     const roi = totalExpense > 0 ? (netMargin / totalExpense) * 100 : 0;
     const cpaAvg = totalSuccess > 0 ? totalAdSpend / totalSuccess : 0;
@@ -284,6 +301,9 @@ export function useFinanceData(): FinanceData {
       roi,
       cpaAvg,
       marginRate,
+      moyoAppliedCount,
+      moyoExcludedCount,
+      moyoFee,
       channels,
       mediaTotals,
       daily,
