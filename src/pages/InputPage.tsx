@@ -816,8 +816,16 @@ const InputPage = () => {
             <Field label="개통일자">
               <Input type="date" value={form.open_date ?? ""} onChange={(e) => set("open_date", e.target.value)} className="h-9 bg-input/60 text-xs" />
             </Field>
-            <Field label="동판/번들">
-              <Input value={form.bundle ?? ""} onChange={(e) => set("bundle", e.target.value)} className="h-9 bg-input/60 text-xs" />
+            <Field label="동판/번들 여부">
+              <div className="flex items-center gap-2 h-9">
+                <Switch
+                  checked={form.bundle === "Y"}
+                  onCheckedChange={(v) => set("bundle", v ? "Y" : null)}
+                />
+                <span className={cn("text-xs font-medium", form.bundle === "Y" ? "text-primary" : "text-muted-foreground")}>
+                  {form.bundle === "Y" ? "동판/번들" : "해당없음"}
+                </span>
+              </div>
             </Field>
           </Grid>
           <Grid cols={5}>
@@ -878,7 +886,7 @@ const InputPage = () => {
               </div>
             </Field>
           </Grid>
-          <Grid cols={3}>
+          <Grid cols={2}>
             <Field label="개통요금제">
               {(() => {
                 const mapped = getPlansForProduct(form.product);
@@ -901,6 +909,17 @@ const InputPage = () => {
                   </Select>
                 );
               })()}
+            </Field>
+            <Field label="동판/번들">
+              <div className="flex items-center gap-2 h-9">
+                <Switch
+                  checked={form.bundle === "Y"}
+                  onCheckedChange={(v) => set("bundle", v ? "Y" : null)}
+                />
+                <span className={cn("text-xs font-medium", form.bundle === "Y" ? "text-primary" : "text-muted-foreground")}>
+                  {form.bundle === "Y" ? "동판/번들" : "해당없음"}
+                </span>
+              </div>
             </Field>
           </Grid>
           {/* 부가서비스 - 조건부 렌더링 */}
