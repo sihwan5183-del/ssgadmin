@@ -108,7 +108,8 @@ export function useModelAnalysis() {
       chMap.set(model, chCur);
     }
 
-    const totalCount = rows.length;
+    // totalCount = 모바일 필터링 후 실제 집계 건수
+    const totalCount = Array.from(modelMap.values()).reduce((s, v) => s + v.count, 0);
     const allModels = Array.from(modelMap.keys()).sort(
       (a, b) => (modelMap.get(b)?.count ?? 0) - (modelMap.get(a)?.count ?? 0)
     );
