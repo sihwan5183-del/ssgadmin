@@ -355,7 +355,7 @@ const InputPage = () => {
       const { error } = await supabase.from("sales").insert(records.slice(i, i + chunk) as any);
       if (error) throw error;
     }
-    load();
+    toast.success("업로드 완료");
   };
 
   const handleMappingConfirm = async (mapped: Record<string, any>[]): Promise<void> => {
@@ -393,37 +393,6 @@ const InputPage = () => {
       }
     }
     toast.success(`${records.length}건 등록되었습니다`);
-    load();
-  };
-
-  const onDelete = async (id: string) => {
-    if (!confirm("정말 삭제하시겠어요?")) return;
-    const { error } = await supabase.from("sales").delete().eq("id", id);
-    if (error) return toast.error("삭제 실패", { description: error.message });
-    toast.success("삭제 완료");
-    load();
-  };
-
-  const deleteSelected = async () => {
-    if (selected.size === 0) return;
-    const ids = Array.from(selected);
-    const { error } = await supabase.from("sales").delete().in("id", ids);
-    if (error) return toast.error("선택 삭제 실패", { description: error.message });
-    toast.success(`${ids.length}건 삭제 완료`);
-    setSelected(new Set());
-    load();
-  };
-
-  const deleteAllInPeriod = async () => {
-    const { error, count } = await supabase
-      .from("sales")
-      .delete({ count: "exact" })
-      .gte("open_date", startDate)
-      .lte("open_date", endDate);
-    if (error) return toast.error("전체 삭제 실패", { description: error.message });
-    toast.success(`${count ?? 0}건 삭제 완료`);
-    setSelected(new Set());
-    load();
   };
 
   // === 양식 샘플 다운로드 (관리자가 편집 — app_settings.sales_excel_template) ===
