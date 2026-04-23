@@ -614,7 +614,18 @@ const InputPage = () => {
 
   return (
     <>
-      <Header title="실적 입력 / 원장" subtitle="엑셀 '실적장표' 시트와 동일한 모든 항목을 1건 단위로 저장합니다" showScopeToggle={false} showPeriodFilter />
+      <Header title={editingId ? "실적 수정" : "실적 입력 / 원장"} subtitle={editingId ? "기존 데이터를 수정하고 있습니다. 완료 후 '수정 저장'을 눌러주세요." : "엑셀 '실적장표' 시트와 동일한 모든 항목을 1건 단위로 저장합니다"} showScopeToggle={false} showPeriodFilter />
+
+      {editingId && (
+        <div className="mb-4 rounded-xl border border-warning/40 bg-warning/10 px-4 py-2.5 flex items-center gap-2 text-sm">
+          <Pencil className="size-4 text-warning shrink-0" />
+          <span className="font-semibold text-warning">실적 수정 중</span>
+          <span className="text-muted-foreground">— 변경 후 하단의 '수정 저장' 버튼을 눌러 반영하세요.</span>
+          <Button size="sm" variant="ghost" className="ml-auto text-xs" onClick={() => { reset(); navigate("/sales-ledger"); }}>
+            <X className="size-3.5 mr-1" /> 수정 취소
+          </Button>
+        </div>
+      )}
 
       {/* 엑셀 업로드 */}
       <section className="glass rounded-2xl p-5 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-card-elevated">
