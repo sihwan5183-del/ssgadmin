@@ -88,7 +88,6 @@ const EDITABLE_FIELDS: Array<{ key: keyof SaleHit; label: string; type?: string 
   { key: "manager", label: "담당자" },
   { key: "open_date", label: "개통일", type: "date" },
   { key: "unit_price", label: "단가", type: "number" },
-  { key: "net_fee", label: "순수익", type: "number" },
   { key: "note", label: "메모" },
 ];
 
@@ -453,7 +452,7 @@ export const SaleSearchPanel = () => {
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        일별 순수익 합계 <span className="font-bold tabular-nums text-foreground">₩{dailyNet.toLocaleString("ko-KR")}</span>
+                        일별 건수 <span className="font-bold tabular-nums text-foreground">{list.length}건</span>
                       </div>
                     </div>
                     <div className="divide-y divide-border/30">
