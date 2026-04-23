@@ -126,7 +126,7 @@ const InputPage = () => {
   const { options: OPEN_METHODS } = useFieldOptions("open_method");
   const { options: STATUSES } = useFieldOptions("status");
   const { options: RATE_PLANS } = useFieldOptions("rate_plan");
-  const { getPlansForProduct } = useProductRatePlans();
+  const { getPlansForProduct, getDefaultsForProduct, getAllowedSaleTypes } = useProductRatePlans();
   const { options: DELIVERY_TYPES } = useFieldOptions("delivery_type");
   const { options: BANKS } = useFieldOptions("bank");
   const [form, setForm] = useState<Partial<SaleRow>>(emptyForm);
@@ -260,8 +260,17 @@ const InputPage = () => {
       return n;
     });
 
+  // Track which fields were auto-filled from product defaults
+  const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
+
   const set = <K extends keyof SaleRow>(k: K, v: SaleRow[K] | undefined) =>
-    setForm((f) => ({ ...f, [k]: v }));
+    setForm((f) => {
+      // Clear auto-filled marker when user manually changes a field
+      if (autoFilledFields.has(k)) {
+        setAutoFilledFields((prev) => { const n = new Set(prev); n.delete(k); return n; });
+      }
+      return { ...f, [k]: v };
+    });
 
   const num = (v: unknown) => {
     if (v === "" || v == null) return 0;
