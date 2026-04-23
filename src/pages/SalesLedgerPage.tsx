@@ -134,9 +134,9 @@ const SalesLedgerPage = () => {
   const offerOf = (r: SaleRow) =>
     (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0);
   const profitOf = (r: SaleRow) =>
-    (r.unit_price ?? 0) + (r.vas_fee ?? 0) + (r.trade_in_enabled ? (r.trade_in_confirmed ?? 0) : 0) - offerOf(r) - (r.receivable_amount ?? 0);
+    (r.unit_price ?? 0) + (r.vas_fee ?? 0) + (r.trade_in_enabled ? (r.trade_in_confirmed ?? 0) : 0) - offerOf(r);
   const hasDeductions = (r: SaleRow) =>
-    offerOf(r) > 0 || (r.receivable_amount ?? 0) > 0;
+    offerOf(r) > 0;
 
   const load = useCallback(async () => {
     const from = page * PAGE_SIZE;
@@ -558,6 +558,7 @@ const SalesLedgerPage = () => {
                 <th className="text-right px-3 py-2 font-medium">리베이트 단가</th>
                 <th className="text-right px-3 py-2 font-medium">오퍼(지원금)</th>
                 <th className="text-right px-3 py-2 font-medium">최종 수익</th>
+                <th className="text-right px-3 py-2 font-medium">미수금</th>
                 <th className="text-right px-3 py-2 font-medium">중고폰</th>
                 <th className="text-right px-3 py-2 font-medium">관리</th>
               </tr>
@@ -658,12 +659,19 @@ const SalesLedgerPage = () => {
                             {(r.distributor_amount ?? 0) > 0 && <p className="text-destructive">유통망: -{(r.distributor_amount ?? 0).toLocaleString()}</p>}
                             {(r.extra_subsidy ?? 0) > 0 && <p className="text-destructive">상품권: -{(r.extra_subsidy ?? 0).toLocaleString()}</p>}
                             {(r.cash_support_amount ?? 0) > 0 && <p className="text-destructive">현금지원: -{(r.cash_support_amount ?? 0).toLocaleString()}</p>}
-                            {(r.receivable_amount ?? 0) > 0 && <p className="text-destructive">고객입금: -{(r.receivable_amount ?? 0).toLocaleString()}</p>}
                             <hr className="border-border/40 my-1" />
                             <p className="font-bold">최종: {profit.toLocaleString()}</p>
+                            {(r.receivable_amount ?? 0) > 0 && <p className="text-warning">미수금: {(r.receivable_amount ?? 0).toLocaleString()} ({r.receivable_paid === "완료" ? "수급완료" : "미수급"})</p>}
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
+                    </td>
+                    <td className="px-3 py-2.5 text-right tabular-nums">
+                      {(r.receivable_amount ?? 0) > 0 ? (
+                        <span className={r.receivable_paid === "완료" ? "text-muted-foreground line-through" : "text-warning font-medium"}>
+                          {(r.receivable_amount ?? 0).toLocaleString("ko-KR")}
+                        </span>
+                      ) : <span className="text-muted-foreground">-</span>}
                     </td>
                     <td className="px-3 py-2.5 text-right tabular-nums">
                       {r.trade_in_enabled ? (

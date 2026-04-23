@@ -1032,6 +1032,7 @@ const InputPage = () => {
             </Field>
             <Field label="미수금 (₩)">
               <MoneyInput value={form.receivable_amount} onChange={(v) => set("receivable_amount", v)} />
+              <p className="text-[10px] text-muted-foreground mt-0.5">고객에게 아직 받지 못한 기기값/수납금 등 (수익에 포함)</p>
             </Field>
             <Field label="수급 상태">
               <div className="flex items-center gap-2 h-9">
@@ -1081,10 +1082,6 @@ const InputPage = () => {
                   <span className="text-muted-foreground">- 추가보조금</span>
                   <span className="text-destructive">₩{(form.extra_subsidy ?? 0).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">- 고객입금(반환)</span>
-                  <span className="text-destructive">₩{(form.receivable_amount ?? 0).toLocaleString()}</span>
-                </div>
                 {form.trade_in_enabled && (form.trade_in_confirmed ?? 0) > 0 && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">+ 중고폰 반납</span>
@@ -1094,10 +1091,16 @@ const InputPage = () => {
                 <div className="flex justify-between border-t border-border/30 pt-1 mt-1">
                   <span className="font-semibold">최종 순이익</span>
                   {(() => {
-                    const net = (form.unit_price ?? 0) + (form.vas_fee ?? 0) + (form.trade_in_enabled ? (form.trade_in_confirmed ?? 0) : 0) - (form.distributor_amount ?? 0) - (form.cash_support_amount ?? 0) - (form.extra_subsidy ?? 0) - (form.receivable_amount ?? 0);
+                    const net = (form.unit_price ?? 0) + (form.vas_fee ?? 0) + (form.trade_in_enabled ? (form.trade_in_confirmed ?? 0) : 0) - (form.distributor_amount ?? 0) - (form.cash_support_amount ?? 0) - (form.extra_subsidy ?? 0);
                     return <span className={`font-bold ${net >= 0 ? "text-primary" : "text-destructive"}`}>₩{net.toLocaleString()}</span>;
                   })()}
                 </div>
+                {(form.receivable_amount ?? 0) > 0 && (
+                  <div className="flex justify-between mt-1 pt-1 border-t border-border/20">
+                    <span className="text-muted-foreground text-[10px]">📌 미수금 (별도 추적)</span>
+                    <span className="text-warning font-medium">₩{(form.receivable_amount ?? 0).toLocaleString()}</span>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1141,8 +1144,6 @@ const InputPage = () => {
                     set("extra_subsidy", 0);
                     set("cash_support_amount", 0);
                     set("cash_open", false);
-                    set("receivable_amount", 0);
-                    set("receivable_paid", null);
                     set("cash_bank", null);
                     set("cash_account", null);
                     set("cash_holder", null);
@@ -1171,13 +1172,7 @@ const InputPage = () => {
                 }}
                 disabled={customFields.has_offer === false}
               />
-            </Field>
-            <Field label="③ 고객입금 금액 (₩)">
-              <MoneyInput
-                value={form.receivable_amount}
-                onChange={(v) => set("receivable_amount", v)}
-                disabled={customFields.has_offer === false}
-              />
+              <p className="text-[10px] text-muted-foreground mt-0.5">고객에게 지급(입금)하는 서비스 금액 (수익에서 차감)</p>
             </Field>
           </Grid>
           <Grid cols={3}>
@@ -1187,7 +1182,6 @@ const InputPage = () => {
                 onChange={(e) => set("receivable_paid", e.target.value)}
                 placeholder="유 / 완료 / 2026-04-19"
                 className="h-9 bg-input/60 text-xs"
-                disabled={customFields.has_offer === false}
               />
             </Field>
             <Field label="추가지원금 (₩)">
