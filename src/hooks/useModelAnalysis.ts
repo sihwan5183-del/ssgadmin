@@ -177,16 +177,28 @@ export function useModelAnalysis() {
     // stacked chart data
     const stackedData = channelData.map((row) => {
       const flat: Record<string, number | string> = { channel: row.channel };
-      row.models.forEach((m) => { flat[m.name] = m.count; });
+      row.models.forEach((m) => {
+        const { pet } = resolvePetName(m.name);
+        flat[pet] = ((flat[pet] as number) || 0) + m.count;
+      });
       return flat;
     });
 
     // models info for stacked bar keys
-    const modelsInfo = allModels.map((name) => ({
-      name,
-      isStrategy: strategySet.has(name.toLowerCase()),
-      color: colorMap.get(name)!,
-    }));
+    // Deduplicate by petName (multiple raw models can map to same pet)
+    const petSeen = new Set<string>();
+    const modelsInfo: { name: string; petName: string; isStrategy: boolean; color: string }[] = [];
+    for (const name of allModels) {
+      const { pet } = resolvePetName(name);
+      if (petSeen.has(pet)) continue;
+      petSeen.add(pet);
+      modelsInfo.push({
+        name: pet,
+        petName: pet,
+        isStrategy: strategySet.has(name.toLowerCase()),
+        color: colorMap.get(name)!,
+      });
+    }
 
     // helpers
     const getTop5 = (channel: string) => {
