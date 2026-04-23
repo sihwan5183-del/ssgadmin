@@ -748,6 +748,51 @@ export type Database = {
         }
         Relationships: []
       }
+      incentive_policies: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          note: string | null
+          target_products: string[]
+          target_sale_types: string[]
+          tiers: Json
+          updated_at: string
+          valid_from: string | null
+          valid_to: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          note?: string | null
+          target_products?: string[]
+          target_sale_types?: string[]
+          tiers?: Json
+          updated_at?: string
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          note?: string | null
+          target_products?: string[]
+          target_sale_types?: string[]
+          tiers?: Json
+          updated_at?: string
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Relationships: []
+      }
       incentive_rates: {
         Row: {
           active: boolean

@@ -1,9 +1,29 @@
 // 인센티브 계산 엔진 v2
-// 계단식 단가, 정액/정률, 그레이드 보너스, 인터넷 연동 지급률 지원
+// 정책 기반 커스텀 빌더 + 계단식 단가 + 인터넷 연동 지급률 지원
 
 export interface TieredStep {
   min_qty: number;
   amount: number;
+}
+
+/** 정책 기반 구간 (min_qty 이상 ~ max_qty 미만) */
+export interface PolicyTier {
+  min_qty: number;
+  max_qty: number | null; // null = 이상(무제한)
+  amount: number;
+}
+
+/** 인센티브 정책 (커스텀 빌더) */
+export interface IncentivePolicy {
+  id: string;
+  name: string;
+  target_sale_types: string[];
+  target_products: string[];
+  tiers: PolicyTier[];
+  active: boolean;
+  valid_from: string | null;
+  valid_to: string | null;
+  note: string | null;
 }
 
 export interface LinkageRule {
@@ -23,6 +43,110 @@ export const DEFAULT_LINKAGE: LinkageRule = {
   ],
   exempt_grades: [],
 };
+
+/**
+ * 정책 기반 인센티브 계산 (커스텀 빌더)
+ * - 각 정책의 target_sale_types/target_products에 매칭되는 실적만 합산
+ * - 합산 건수를 기준으로 해당 정책의 구간 단가 결정
+ * - 매칭되는 모든 건에 해당 단가를 적용
+ */
+export interface PolicyCalcResult {
+  policyId: string;
+  policyName: string;
+  matchedCount: number;
+  tierAmount: number;
+  subtotal: number;
+}
+
+function policyMatchesSale(policy: IncentivePolicy, sale: SaleForIncentive): boolean {
+  if (!policy.active) return false;
+  if (!inDateRange(sale.open_date, policy.valid_from, policy.valid_to)) return false;
+  const stMatch = policy.target_sale_types.length === 0 || policy.target_sale_types.includes(sale.sale_type ?? "");
+  const pMatch = policy.target_products.length === 0 || policy.target_products.includes(sale.product ?? "");
+  return stMatch && pMatch;
+}
+
+function resolvePolicyTierAmount(tiers: PolicyTier[], qty: number): number {
+  // Sort descending by min_qty
+  const sorted = [...tiers].sort((a, b) => b.min_qty - a.min_qty);
+  for (const t of sorted) {
+    if (qty >= t.min_qty) {
+      if (t.max_qty === null || qty < t.max_qty) return Number(t.amount);
+      // qty >= max_qty → continue to check higher tier
+    }
+  }
+  // Fallback: find the tier where qty falls within range
+  for (const t of tiers) {
+    if (qty >= t.min_qty && (t.max_qty === null || qty < t.max_qty)) {
+      return Number(t.amount);
+    }
+  }
+  return 0;
+}
+
+export function calcPolicyIncentives(
+  sales: SaleForIncentive[],
+  policies: IncentivePolicy[],
+): PolicyCalcResult[] {
+  const results: PolicyCalcResult[] = [];
+  for (const p of policies) {
+    if (!p.active) continue;
+    const matched = sales.filter((s) => policyMatchesSale(p, s));
+    const count = matched.length;
+    const tierAmount = resolvePolicyTierAmount(p.tiers, count);
+    results.push({
+      policyId: p.id,
+      policyName: p.name,
+      matchedCount: count,
+      tierAmount,
+      subtotal: tierAmount * count,
+    });
+  }
+  return results;
+}
+
+/**
+ * 정책 + 연동 지급률 통합 계산
+ */
+export function calcFullIncentive(
+  sales: SaleForIncentive[],
+  policies: IncentivePolicy[],
+  linkage: LinkageRule | null,
+  internetCount: number,
+  grade?: string | null,
+) {
+  const policyResults = calcPolicyIncentives(sales, policies);
+  let rawTotal = policyResults.reduce((s, r) => s + r.subtotal, 0);
+
+  // 인터넷 연동 비율은 모바일 계열 정책에만 적용
+  const linkageRate = linkage ? calcLinkageRate(linkage, internetCount, grade) : 100;
+  // 모바일 계열 판정: target_products/target_sale_types에 모바일 관련 항목 포함
+  const MOBILE_KEYWORDS = ["모바일", "MNP", "USIM"];
+  let mobileSubtotal = 0;
+  let otherSubtotal = 0;
+  for (const r of policyResults) {
+    const policy = policies.find((p) => p.id === r.policyId);
+    const isMobile = policy && (
+      policy.target_sale_types.some((t) => MOBILE_KEYWORDS.some((k) => t.includes(k))) ||
+      policy.target_products.some((p) => MOBILE_KEYWORDS.some((k) => p.includes(k)))
+    );
+    if (isMobile) mobileSubtotal += r.subtotal;
+    else otherSubtotal += r.subtotal;
+  }
+
+  const adjustedMobile = Math.round(mobileSubtotal * linkageRate / 100);
+  const total = adjustedMobile + otherSubtotal;
+
+  return {
+    policyResults,
+    rawTotal,
+    mobileSubtotal,
+    adjustedMobile,
+    otherSubtotal,
+    linkageRate,
+    total,
+  };
+}
 
 export interface IncentiveRate {
   id: string;

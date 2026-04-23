@@ -4,11 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { Coins, Wifi, AlertTriangle, TrendingUp, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIncentiveRates } from "@/hooks/useIncentiveRates";
+import { useIncentivePolicies } from "@/hooks/useIncentivePolicies";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
-import { calcTotalIncentive, calcLinkageRate, forecastIncentive, type SaleForIncentive, type LinkageRule } from "@/lib/incentiveEngine";
+import { calcFullIncentive, type SaleForIncentive } from "@/lib/incentiveEngine";
 
 function formatKRW(n: number) {
   if (n >= 10000) return `${(n / 10000).toFixed(1)}만원`;
@@ -17,7 +18,7 @@ function formatKRW(n: number) {
 
 export function MyIncentiveWidget() {
   const { user } = useAuth();
-  const { rates } = useIncentiveRates();
+  const { policies } = useIncentivePolicies();
   const { linkageRule } = useAppSettings();
   const period = usePeriod();
   const [sales, setSales] = useState<SaleForIncentive[]>([]);
@@ -49,11 +50,9 @@ export function MyIncentiveWidget() {
 
     const grade = profile.position ?? null;
 
-    const calc = calcTotalIncentive(sales, rates, grade, linkageRule, internetCount);
-
-    // 시뮬레이션: 인터넷 +1, +2 했을 때
-    const sim1 = calcTotalIncentive(sales, rates, grade, linkageRule, internetCount + 1);
-    const sim2 = calcTotalIncentive(sales, rates, grade, linkageRule, internetCount + 2);
+    const calc = calcFullIncentive(sales, policies, linkageRule, internetCount, grade);
+    const sim1 = calcFullIncentive(sales, policies, linkageRule, internetCount + 1, grade);
+    const sim2 = calcFullIncentive(sales, policies, linkageRule, internetCount + 2, grade);
 
     return {
       ...calc,
@@ -63,7 +62,7 @@ export function MyIncentiveWidget() {
       sim2Total: sim2.total,
       salesCount: sales.length,
     };
-  }, [sales, rates, linkageRule, profile.position]);
+  }, [sales, policies, linkageRule, profile.position]);
 
   if (!result) {
     return (
@@ -93,7 +92,7 @@ export function MyIncentiveWidget() {
       <div className="text-center">
         <div className="text-3xl font-bold tracking-tight">{formatKRW(result.total)}</div>
         <div className="text-xs text-muted-foreground mt-1">
-          모바일 {formatKRW(result.adjustedMobile)} + 기타 {formatKRW(result.nonMobileTotal)} + 등급보너스 {formatKRW(result.gradeBonus)}
+          모바일 {formatKRW(result.adjustedMobile)} + 기타 {formatKRW(result.otherSubtotal)}
         </div>
       </div>
 
@@ -101,9 +100,7 @@ export function MyIncentiveWidget() {
       {linkageRule.enabled && (
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs">
-            <span className="flex items-center gap-1 text-muted-foreground">
-              <Wifi className="size-3" /> 인터넷 연동 지급률
-            </span>
+          <span className="flex items-center gap-1 text-muted-foreground"><Wifi className="size-3" /> 인터넷 연동 지급률</span>
             <span className={`font-bold ${gaugePercent === 100 ? "text-emerald-400" : gaugePercent > 0 ? "text-amber-400" : "text-destructive"}`}>
               {gaugePercent}%
             </span>
@@ -125,10 +122,7 @@ export function MyIncentiveWidget() {
               />
             ))}
           </div>
-          <div className="flex justify-between text-[10px] text-muted-foreground">
-            <span>인터넷 {result.internetCount}건</span>
-            <span>모바일 원래 단가: {formatKRW(result.mobileTotal)}</span>
-          </div>
+          <div className="flex justify-between text-[10px] text-muted-foreground"><span>인터넷 {result.internetCount}건</span><span>모바일 원래: {formatKRW(result.mobileSubtotal)}</span></div>
         </div>
       )}
 
