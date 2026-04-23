@@ -44,7 +44,7 @@ export const FailureAnalysisChart = ({ rows }: { rows: Row[] }) => {
             <XAxis type="number" fontSize={10} tickLine={false} axisLine={false} />
             <YAxis type="category" dataKey="reason" fontSize={11} tickLine={false} axisLine={false} width={75} />
             <Tooltip
-              contentStyle={{ background: "hsl(240 18% 8% / 0.95)", border: "1px solid hsl(var(--border))", borderRadius: 10, fontSize: 12 }}
+              contentStyle={{ background: "hsl(0 0% 100% / 0.96)", color: "#374151", border: "1px solid hsl(0 0% 88%)", borderRadius: 12, fontSize: 12, boxShadow: "0 4px 20px hsl(0 0% 0% / 0.10)", padding: "8px 12px" }}
               formatter={(v: number) => [`${v}건`, "실패"]}
             />
             <Bar dataKey="count" radius={[0, 6, 6, 0]}>

@@ -66,7 +66,7 @@ export const InquiryDashboard = ({ rows }: Props) => {
                 <XAxis dataKey="channel" stroke="hsl(var(--muted-foreground))" fontSize={11} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
                 <Tooltip
-                  contentStyle={{ background: "hsl(240 18% 8% / 0.95)", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                  contentStyle={{ background: "hsl(0 0% 100% / 0.96)", color: "#374151", border: "1px solid hsl(0 0% 88%)", borderRadius: 12, fontSize: 12, boxShadow: "0 4px 20px hsl(0 0% 0% / 0.10)", padding: "8px 12px" }}
                   formatter={(v: number, n: string, p: any) => {
                     if (n === "total") return [`${v}건 (전환 ${p.payload.converted}건 · ${p.payload.rate}%)`, "인입"];
                     return [v, n];
@@ -101,7 +101,7 @@ export const InquiryDashboard = ({ rows }: Props) => {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                 <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={11} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                <Tooltip contentStyle={{ background: "hsl(240 18% 8% / 0.95)", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+                <Tooltip contentStyle={{ background: "hsl(0 0% 100% / 0.96)", color: "#374151", border: "1px solid hsl(0 0% 88%)", borderRadius: 12, fontSize: 12, boxShadow: "0 4px 20px hsl(0 0% 0% / 0.10)", padding: "8px 12px" }} />
                 <Line type="monotone" dataKey="인입" stroke="hsl(270 90% 70%)" strokeWidth={2.5} dot={{ r: 3 }} />
                 <Line type="monotone" dataKey="개통" stroke="hsl(320 90% 70%)" strokeWidth={2.5} dot={{ r: 3 }} />
               </LineChart>
