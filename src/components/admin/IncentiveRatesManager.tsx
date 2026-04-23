@@ -19,6 +19,8 @@ import { usePeriod } from "@/contexts/PeriodContext";
 import { toast } from "sonner";
 import type { PolicyTier, LinkageRule, IncentivePolicy, SaleForIncentive } from "@/lib/incentiveEngine";
 import { DEFAULT_LINKAGE, calcFullIncentive } from "@/lib/incentiveEngine";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 const DEFAULT_GRADES = ["매장장", "부매장장", "사원", "인턴"];
 
@@ -32,6 +34,9 @@ interface DraftPolicy {
   valid_from: string | null;
   valid_to: string | null;
   note: string | null;
+  calc_method: "tiered" | "margin_100" | "fixed_amount";
+  fixed_amount: number;
+  match_model: string | null;
   isNew?: boolean;
   dirty?: boolean;
 }
@@ -79,6 +84,9 @@ export function IncentiveRatesManager() {
         valid_from: null,
         valid_to: null,
         note: null,
+        calc_method: "tiered",
+        fixed_amount: 0,
+        match_model: null,
         isNew: true,
         dirty: true,
       },
@@ -136,6 +144,9 @@ export function IncentiveRatesManager() {
       valid_from: row.valid_from,
       valid_to: row.valid_to,
       note: row.note,
+      calc_method: row.calc_method,
+      fixed_amount: row.fixed_amount,
+      match_model: row.match_model,
     };
     if (row.isNew) {
       const { error } = await supabase.from("incentive_policies").insert({ ...payload, created_by: user?.id } as any);
@@ -307,7 +318,55 @@ export function IncentiveRatesManager() {
                       </div>
 
                       {/* 구간 설정 */}
-                      <div>
+                      {/* 계산 방식 선택 */}
+                      <div className="space-y-3">
+                        <h4 className="text-xs font-semibold flex items-center gap-1.5">
+                          <Coins className="size-3.5 text-amber-400" /> 계산 방식 선택
+                        </h4>
+                        <RadioGroup
+                          value={row.calc_method}
+                          onValueChange={(v) => updatePolicy(row.id, { calc_method: v as any })}
+                          className="flex flex-wrap gap-4"
+                        >
+                          <div className="flex items-center gap-2">
+                            <RadioGroupItem value="tiered" id={`${row.id}-tiered`} />
+                            <Label htmlFor={`${row.id}-tiered`} className="text-xs cursor-pointer">구간 합산 단가</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <RadioGroupItem value="margin_100" id={`${row.id}-margin`} />
+                            <Label htmlFor={`${row.id}-margin`} className="text-xs cursor-pointer">순마진 100% 지급</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <RadioGroupItem value="fixed_amount" id={`${row.id}-fixed`} />
+                            <Label htmlFor={`${row.id}-fixed`} className="text-xs cursor-pointer">고정 금액 지급</Label>
+                          </div>
+                        </RadioGroup>
+                        {row.calc_method === "fixed_amount" && (
+                          <div className="flex items-center gap-2 bg-muted/30 rounded-lg px-3 py-2 max-w-xs">
+                            <span className="text-[11px] text-muted-foreground">건당 고정 금액:</span>
+                            <MoneyInput value={row.fixed_amount} onChange={(v) => updatePolicy(row.id, { fixed_amount: v })} className="h-7 text-xs w-32" />
+                          </div>
+                        )}
+                        {row.calc_method === "margin_100" && (
+                          <p className="text-[11px] text-muted-foreground bg-emerald-500/5 border border-emerald-500/20 rounded-lg px-3 py-2">
+                            매칭되는 각 건의 순수익(net_fee)을 100% 인센티브로 책정합니다.
+                          </p>
+                        )}
+                      </div>
+
+                      {/* 특정 모델 매칭 */}
+                      <div className="max-w-xs">
+                        <label className="text-[11px] text-muted-foreground mb-1 block">특정 모델 매칭 (선택사항)</label>
+                        <Input
+                          value={row.match_model ?? ""}
+                          onChange={(e) => updatePolicy(row.id, { match_model: e.target.value || null })}
+                          className="h-8 text-xs"
+                          placeholder="예: 아이폰15 (비워두면 전체)"
+                        />
+                      </div>
+
+                      {/* 구간 설정 - only for tiered */}
+                      {row.calc_method === "tiered" && <div>
                         <div className="flex items-center gap-2 mb-3">
                           <Layers className="size-3.5 text-primary" />
                           <span className="text-xs font-semibold">실적 구간별 단가 설정</span>
@@ -356,7 +415,7 @@ export function IncentiveRatesManager() {
                             </div>
                           ))}
                         </div>
-                      </div>
+                      </div>}
                     </div>
                   )}
                 </div>
