@@ -215,6 +215,7 @@ export function useModelAnalysis() {
       getTop5,
       totalCount,
       hasData: totalCount > 0,
+      matchModel,
     };
   }, [rows, loading, strategyModelNames, matchModel]);
 }
