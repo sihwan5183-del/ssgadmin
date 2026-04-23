@@ -863,6 +863,28 @@ const InputPage = () => {
                       !f.rate_plan || allowed.length === 0 || allowed.includes(f.rate_plan);
                     return { ...f, product: v, rate_plan: keepRate ? f.rate_plan : null };
                   });
+                  // Auto-fill defaults from product master
+                  const defaults = getDefaultsForProduct(v);
+                  if (defaults) {
+                    const filled = new Set<string>();
+                    setForm((f) => {
+                      const updates: Partial<SaleRow> = {};
+                      if (defaults.default_sale_type && !f.sale_type) {
+                        updates.sale_type = defaults.default_sale_type;
+                        filled.add("sale_type");
+                      }
+                      if (defaults.default_vas1 && !f.vas1) {
+                        updates.vas1 = defaults.default_vas1;
+                        filled.add("vas1");
+                      }
+                      if (defaults.default_vas2 && !f.vas2) {
+                        updates.vas2 = defaults.default_vas2;
+                        filled.add("vas2");
+                      }
+                      return { ...f, ...updates };
+                    });
+                    setAutoFilledFields(filled);
+                  }
                 }}
               >
                 <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
