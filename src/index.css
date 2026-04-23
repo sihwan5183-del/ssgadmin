@@ -185,6 +185,12 @@
       min-width: 1.25rem;
       min-height: 1.25rem;
     }
+    button, [role="button"], a[role="button"] {
+      min-height: 2.75rem;
+    }
+    select, .select-trigger, [data-radix-select-trigger] {
+      min-height: 2.75rem;
+    }
   }
 }
 

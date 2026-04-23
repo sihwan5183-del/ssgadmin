@@ -968,14 +968,14 @@ const InputPage = () => {
               <Input value={form.birth_date ?? ""} onChange={(e) => set("birth_date", e.target.value)} placeholder="900101" className="h-9 bg-input/60 text-xs" />
             </Field>
             <Field label="연락처">
-              <Input value={form.phone ?? ""} onChange={(e) => set("phone", e.target.value)} placeholder="010-0000-0000" className="h-9 bg-input/60 text-xs" />
+              <Input value={form.phone ?? ""} onChange={(e) => set("phone", e.target.value)} placeholder="010-0000-0000" className="h-9 bg-input/60 text-xs" inputMode="tel" />
             </Field>
             <Field label="가입 번호">
               <Input
                 value={customFields.subscription_no ?? ""}
                 onChange={(e) => setCustomFields((f) => ({ ...f, subscription_no: e.target.value }))}
                 placeholder="010-0000-0000"
-                className="h-9 bg-input/60 text-xs"
+                className="h-9 bg-input/60 text-xs" inputMode="tel"
                 maxLength={13}
               />
             </Field>
@@ -1307,7 +1307,7 @@ const InputPage = () => {
                       }}
                       placeholder="0000"
                       maxLength={4}
-                      className="h-9 bg-input/60 text-xs tabular-nums"
+                      className="h-9 bg-input/60 text-xs tabular-nums" inputMode="numeric"
                     />
                   </Field>
                   <Field label="카드 결제금액 (₩)">
