@@ -46,12 +46,12 @@ const Index = () => {
       <MyReviewAlerts />
 
       {/* 업무 바로가기 */}
-      <section className="mb-3">
+      <section className="mb-1.5">
         <QuickLinksWidget />
       </section>
 
       {excludedLabels.length > 0 && (
-        <div className="mb-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-2.5 flex items-center gap-2 text-sm">
+        <div className="mb-1.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 flex items-center gap-2 text-xs">
           <EyeOff className="size-4 text-destructive shrink-0" />
           <span className="text-muted-foreground">
             합산 제외 항목:{" "}
@@ -67,7 +67,7 @@ const Index = () => {
       )}
 
       {/* [1] 최상단 — 영업 성과 */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-2 mb-3">
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-1.5 mb-1.5">
         <RadialGoalGauge />
         <div className="lg:col-span-2">
           <HeroPerformance />
@@ -78,7 +78,7 @@ const Index = () => {
       <ActivationBreakdown />
 
       {/* [2] 중간 — 수익 및 효율 */}
-      <section className="grid grid-cols-2 lg:grid-cols-6 gap-2 mb-3">
+      <section className="grid grid-cols-2 lg:grid-cols-6 gap-1.5 mb-1.5">
         <StatCard
           label="당월 순이익"
           value={formatShortKRW(summaryStats.netProfit)}
@@ -114,42 +114,42 @@ const Index = () => {
         <PendingItemsCard />
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-2 mb-3">
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-1.5 mb-1.5">
         <div className="lg:col-span-2">
           <PerformanceChart />
         </div>
         <ChannelDonut />
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-2 mb-3">
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-1.5 mb-1.5">
         <StoreRevenueRanking />
         <StoreEfficiencyBubble />
       </section>
 
-      <section className="mb-3">
+      <section className="mb-1.5">
         <PerformanceLedger />
       </section>
 
-      <section className="mb-3">
+      <section className="mb-1.5">
         <OverallModelAnalysis />
       </section>
 
-      <section className="mb-3">
+      <section className="mb-1.5">
         <ChannelModelAnalysis />
       </section>
 
       {/* [3] 하단 — 라이브 활동 피드 + 사이드 위젯 (좌우 균형 배치) */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-2 mb-3">
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-1.5 mb-1.5">
         <LiveActivityFeed />
         <PlannerFeed />
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-2 mb-3">
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-1.5 mb-1.5">
         <InventoryWidget />
         <StrategyModelGauges />
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
         <AdScheduleWidget />
         <RankingPanel />
       </section>

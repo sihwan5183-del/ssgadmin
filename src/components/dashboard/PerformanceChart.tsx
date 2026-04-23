@@ -123,11 +123,11 @@ export const PerformanceChart = () => {
   }, [view, mode, startDate, endDate]);
 
   return (
-    <div className="glass rounded-2xl p-6 shadow-card-elevated h-full">
-      <div className="flex items-start justify-between mb-4 gap-3 flex-wrap">
+    <div className="glass rounded-xl p-4 shadow-card-elevated h-full">
+      <div className="flex items-start justify-between mb-2 gap-2 flex-wrap">
         <div>
-          <h3 className="text-lg font-semibold tracking-tight">실적 추이</h3>
-          <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+          <h3 className="text-sm font-semibold tracking-tight">실적 추이</h3>
+          <p className="text-[10px] text-muted-foreground mt-0.5">{subtitle}</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-0.5 bg-muted/40 rounded-lg p-0.5">
@@ -150,7 +150,7 @@ export const PerformanceChart = () => {
           </div>
         </div>
       </div>
-      <div className="h-72">
+      <div className="h-56">
         {loading ? (
           <div className="h-full grid place-items-center text-sm text-muted-foreground">불러오는 중…</div>
         ) : view === "daily" ? (

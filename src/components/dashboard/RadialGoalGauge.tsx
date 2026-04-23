@@ -48,15 +48,15 @@ export const RadialGoalGauge = () => {
   const offset = circumference * (1 - pct / 100);
 
   return (
-    <div className="glass rounded-2xl p-6 shadow-card-elevated relative overflow-hidden">
+    <div className="glass rounded-xl p-4 shadow-card-elevated relative overflow-hidden">
       <div className="absolute -right-10 -top-10 size-40 rounded-full opacity-20 blur-2xl" style={{ background: color }} />
 
-      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-        <Target className="size-4 text-primary" />
+      <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+        <Target className="size-3.5 text-primary" />
         {label} 목표 달성률
       </div>
 
-      <div className="relative mt-2 flex justify-center">
+      <div className="relative mt-1 flex justify-center">
         <svg width={size} height={size / 2 + 20} viewBox={`0 0 ${size} ${size / 2 + 20}`}>
           <defs>
             <linearGradient id="gauge-grad" x1="0" y1="0" x2="1" y2="0">
@@ -110,7 +110,7 @@ export const RadialGoalGauge = () => {
         </div>
       </div>
 
-      <div className="mt-2 flex items-center justify-between text-xs">
+      <div className="mt-1 flex items-center justify-between text-[11px]">
         <span className="text-muted-foreground">
           <span className="font-semibold text-foreground tabular-nums">{current.toLocaleString()}</span> / {monthlyTarget.toLocaleString()} 건
         </span>

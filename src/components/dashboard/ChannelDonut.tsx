@@ -4,11 +4,11 @@ import { channelShare } from "@/data/mockData";
 export const ChannelDonut = () => {
   const total = channelShare.reduce((s, c) => s + c.value, 0);
   return (
-    <div className="glass rounded-2xl p-6 shadow-card-elevated h-full">
-      <h3 className="text-lg font-semibold tracking-tight">인입 경로별 비중</h3>
-      <p className="text-xs text-muted-foreground mt-1">당월 신규 개통 기준</p>
+    <div className="glass rounded-xl p-4 shadow-card-elevated h-full">
+      <h3 className="text-sm font-semibold tracking-tight">인입 경로별 비중</h3>
+      <p className="text-[10px] text-muted-foreground mt-0.5">당월 신규 개통 기준</p>
 
-      <div className="relative h-52 mt-2">
+      <div className="relative h-44 mt-1">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -42,14 +42,14 @@ export const ChannelDonut = () => {
         </div>
       </div>
 
-      <div className="mt-4 space-y-2">
+      <div className="mt-2 space-y-1">
         {channelShare.map((c) => (
-          <div key={c.name} className="flex items-center justify-between text-sm">
+          <div key={c.name} className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
               <span className="size-2.5 rounded-full" style={{ background: c.color }} />
               <span className="text-foreground/90">{c.name}</span>
             </div>
-            <span className="text-muted-foreground tabular-nums">{c.value}%</span>
+            <span className="text-muted-foreground tabular-nums text-[11px]">{c.value}%</span>
           </div>
         ))}
       </div>

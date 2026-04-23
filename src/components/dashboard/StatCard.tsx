@@ -22,14 +22,14 @@ export const StatCard = ({ label, value, delta, icon: Icon, accent = "primary", 
   const positive = (delta ?? 0) >= 0;
   return (
     <div
-      className="group relative glass rounded-xl p-3 overflow-hidden shadow-card-elevated hover:shadow-elevated transition-all duration-300 hover:-translate-y-0.5"
+      className="group relative glass rounded-lg p-2.5 overflow-hidden shadow-card-elevated hover:shadow-elevated transition-all duration-300 hover:-translate-y-0.5"
       title={hint}
     >
-      <div className={cn("absolute -top-10 -right-10 size-32 rounded-full bg-gradient-to-br blur-2xl opacity-60 group-hover:opacity-100 transition-opacity", accentMap[accent])} />
+      <div className={cn("absolute -top-10 -right-10 size-28 rounded-full bg-gradient-to-br blur-2xl opacity-60 group-hover:opacity-100 transition-opacity", accentMap[accent])} />
       <div className="relative">
         <div className="flex items-center justify-between">
-          <div className={cn("size-8 rounded-lg grid place-items-center bg-gradient-to-br", accentMap[accent])}>
-            <Icon className="size-4" />
+          <div className={cn("size-6 rounded-md grid place-items-center bg-gradient-to-br", accentMap[accent])}>
+            <Icon className="size-3" />
           </div>
           {typeof delta === "number" && (
             <div className={cn(
@@ -41,8 +41,8 @@ export const StatCard = ({ label, value, delta, icon: Icon, accent = "primary", 
             </div>
           )}
         </div>
-        <div className="mt-2 text-[11px] text-muted-foreground truncate">{label}</div>
-        <div className="mt-0.5 text-lg md:text-xl font-bold tracking-tight tabular-nums">{value}</div>
+        <div className="mt-1 text-[10px] text-muted-foreground truncate">{label}</div>
+        <div className="text-base md:text-lg font-bold tracking-tight tabular-nums leading-tight">{value}</div>
       </div>
     </div>
   );
