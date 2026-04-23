@@ -1,5 +1,10 @@
-// 인센티브 계산 엔진
-// 각 sale 레코드에 대해 incentive_rates 마스터를 매칭하여 단가를 부여한다.
+// 인센티브 계산 엔진 v2
+// 계단식 단가, 정액/정률, 그레이드 보너스 지원
+
+export interface TieredStep {
+  min_qty: number;
+  amount: number;
+}
 
 export interface IncentiveRate {
   id: string;
@@ -14,6 +19,10 @@ export interface IncentiveRate {
   valid_from: string | null;
   valid_to: string | null;
   note: string | null;
+  pay_type: "fixed" | "percent";
+  pay_percent: number;
+  tiered_rates: TieredStep[];
+  grade_bonus: Record<string, number>;
 }
 
 export interface SaleForIncentive {
@@ -23,6 +32,7 @@ export interface SaleForIncentive {
   product: string | null;
   sale_type: string | null;
   customer_name?: string | null;
+  net_fee?: number | null;
 }
 
 export interface IncentiveBreakdown {
@@ -45,37 +55,113 @@ const matches = (rule: IncentiveRate, sale: SaleForIncentive) => {
   if (rule.match_sale_type && rule.match_sale_type !== (sale.sale_type ?? "")) return false;
   if (rule.match_product && rule.match_product !== (sale.product ?? "")) return false;
   if (rule.match_model && rule.match_model !== (sale.device_model ?? "")) return false;
-  // at least one criterion must be specified, otherwise it's an "all-match" base
   return true;
 };
 
 /**
- * Sums all matching rates for each sale (rates are additive, e.g. base + promotion bonus).
+ * 계단식 단가 적용: 해당 규칙에 매칭되는 총 건수(totalQty)를 기준으로
+ * 가장 높은 구간의 단가를 반환. 구간이 없으면 기본 amount 사용.
  */
-export function calcIncentiveForSale(sale: SaleForIncentive, rates: IncentiveRate[]): IncentiveBreakdown {
-  const matched = rates.filter((r) => matches(r, sale));
-  const amount = matched.reduce((s, r) => s + Number(r.amount || 0), 0);
-  return {
-    saleId: sale.id,
-    amount,
-    matched: matched.map((r) => ({ rateId: r.id, label: r.label, amount: Number(r.amount || 0) })),
-  };
-}
+function resolveTieredAmount(rate: IncentiveRate, totalQty: number): number {
+  const tiers = rate.tiered_rates;
+  if (!tiers || tiers.length === 0) return Number(rate.amount || 0);
 
-export function calcTotalIncentive(sales: SaleForIncentive[], rates: IncentiveRate[]) {
-  let total = 0;
-  const breakdowns: IncentiveBreakdown[] = [];
-  for (const s of sales) {
-    const b = calcIncentiveForSale(s, rates);
-    total += b.amount;
-    breakdowns.push(b);
+  // 내림차순 정렬 후 첫 번째 매칭
+  const sorted = [...tiers].sort((a, b) => b.min_qty - a.min_qty);
+  for (const t of sorted) {
+    if (totalQty >= t.min_qty) return Number(t.amount);
   }
-  return { total, breakdowns };
+  return Number(rate.amount || 0); // 최저 구간 미달 시 기본 단가
 }
 
 /**
- * Linear forecast based on elapsed days within the current period.
- * Returns projected month-end incentive given current pace.
+ * 단건 단가 계산 (정액 vs 정률)
+ */
+function resolvePerSaleAmount(rate: IncentiveRate, sale: SaleForIncentive, totalQty: number): number {
+  if (rate.pay_type === "percent") {
+    const base = Number(sale.net_fee || 0);
+    return Math.round(base * (Number(rate.pay_percent || 0) / 100));
+  }
+  // 계단식 적용
+  return resolveTieredAmount(rate, totalQty);
+}
+
+/**
+ * 전체 sales에서 각 규칙별 매칭 건수를 미리 집계 (계단식 단가용)
+ */
+function buildQtyMap(sales: SaleForIncentive[], rates: IncentiveRate[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const r of rates) {
+    let count = 0;
+    for (const s of sales) {
+      if (matches(r, s)) count++;
+    }
+    map.set(r.id, count);
+  }
+  return map;
+}
+
+/**
+ * 단건 인센티브 계산
+ */
+export function calcIncentiveForSale(
+  sale: SaleForIncentive,
+  rates: IncentiveRate[],
+  qtyMap?: Map<string, number>,
+): IncentiveBreakdown {
+  const matched = rates.filter((r) => matches(r, sale));
+  let amount = 0;
+  const details: IncentiveBreakdown["matched"] = [];
+
+  for (const r of matched) {
+    const qty = qtyMap?.get(r.id) ?? 1;
+    const perSale = resolvePerSaleAmount(r, sale, qty);
+    amount += perSale;
+    details.push({ rateId: r.id, label: r.label, amount: perSale });
+  }
+
+  return { saleId: sale.id, amount, matched: details };
+}
+
+/**
+ * 그레이드 보너스 계산: 해당 직급/등급에 맞는 추가 보너스 합산
+ */
+export function calcGradeBonus(rates: IncentiveRate[], grade?: string | null): number {
+  if (!grade) return 0;
+  let bonus = 0;
+  for (const r of rates) {
+    if (!r.active) continue;
+    const gb = r.grade_bonus;
+    if (gb && typeof gb === "object" && grade in gb) {
+      bonus += Number(gb[grade] || 0);
+    }
+  }
+  return bonus;
+}
+
+/**
+ * 전체 인센티브 집계 (계단식 + 정률 + 그레이드 보너스)
+ */
+export function calcTotalIncentive(
+  sales: SaleForIncentive[],
+  rates: IncentiveRate[],
+  grade?: string | null,
+) {
+  const qtyMap = buildQtyMap(sales, rates);
+  let total = 0;
+  const breakdowns: IncentiveBreakdown[] = [];
+  for (const s of sales) {
+    const b = calcIncentiveForSale(s, rates, qtyMap);
+    total += b.amount;
+    breakdowns.push(b);
+  }
+  const gradeBonus = calcGradeBonus(rates, grade);
+  total += gradeBonus;
+  return { total, breakdowns, gradeBonus };
+}
+
+/**
+ * Linear forecast
  */
 export function forecastIncentive(currentTotal: number, periodStart: string, periodEnd: string, today = new Date()) {
   const start = new Date(periodStart);
