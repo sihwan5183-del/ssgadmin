@@ -24,6 +24,7 @@ import { StrategyModelGauges } from "@/components/dashboard/StrategyModelGauges"
 import { PendingItemsCard } from "@/components/dashboard/PendingItemsCard";
 import { CashTodayCard } from "@/components/dashboard/CashTodayCard";
 import { MyReviewAlerts } from "@/components/dashboard/MyReviewAlerts";
+import { TodayScheduleWidget } from "@/components/dashboard/TodayScheduleWidget";
 import { summaryStats, formatShortKRW } from "@/data/mockData";
 import { TrendingUp, Wallet, Megaphone, Target, GripVertical, X, Plus, RotateCcw, Pencil, Save, EyeOff } from "lucide-react";
 import { useMarketingSpend } from "@/hooks/useMarketingSpend";
@@ -121,6 +122,9 @@ const Index = () => {
           </Link>
         </div>
       )}
+
+      {/* 오늘의 주요 업무 */}
+      <TodayScheduleWidget />
 
       {/* ── 편집 모드 컨트롤 ── */}
       <div className="flex items-center justify-end gap-2 mb-3">
