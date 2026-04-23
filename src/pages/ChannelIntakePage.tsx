@@ -347,7 +347,12 @@ const ChannelIntakePage = () => {
 
   const filtered = useMemo(() => {
     let list = rows;
-    if (statusFilter !== "전체") list = list.filter((r) => r.status === statusFilter);
+    // "미처리" 필터는 isNewLead 로직 적용
+    if (statusFilter === "미처리") {
+      list = list.filter(isNewLead);
+    } else if (statusFilter !== "전체") {
+      list = list.filter((r) => r.status === statusFilter);
+    }
     const q = search.trim().toLowerCase();
     if (q) {
       list = list.filter((r) =>
@@ -356,6 +361,12 @@ const ChannelIntakePage = () => {
           .some((v) => String(v).toLowerCase().includes(q))
       );
     }
+    // 미처리 항목 최상단 고정
+    list = [...list].sort((a, b) => {
+      const aNew = isNewLead(a) ? 0 : 1;
+      const bNew = isNewLead(b) ? 0 : 1;
+      return aNew - bNew;
+    });
     return list;
   }, [rows, statusFilter, search]);
 
@@ -383,7 +394,13 @@ const ChannelIntakePage = () => {
 
   const statusCounts = useMemo(() => {
     const map: Record<string, number> = { 전체: rows.length };
-    CRM_STATUSES.forEach((s) => { map[s] = rows.filter((r) => r.status === s).length; });
+    CRM_STATUSES.forEach((s) => {
+      if (s === "미처리") {
+        map[s] = rows.filter(isNewLead).length;
+      } else {
+        map[s] = rows.filter((r) => r.status === s && !isNewLead(r)).length;
+      }
+    });
     return map;
   }, [rows]);
 
