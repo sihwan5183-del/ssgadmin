@@ -553,6 +553,8 @@ const SalesLedgerPage = () => {
                 <th className="text-left px-3 py-2 font-medium">고객</th>
                 <th className="text-left px-3 py-2 font-medium">연락처</th>
                 <th className="text-left px-3 py-2 font-medium">단말</th>
+                <th className="text-center px-2 py-2 font-medium">동판</th>
+                <th className="text-center px-2 py-2 font-medium">오퍼</th>
                 <th className="text-right px-3 py-2 font-medium">리베이트 단가</th>
                 <th className="text-right px-3 py-2 font-medium">오퍼(지원금)</th>
                 <th className="text-right px-3 py-2 font-medium">최종 수익</th>
@@ -629,6 +631,14 @@ const SalesLedgerPage = () => {
                     </td>
                     <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{isAdmin ? (r.phone ?? "-") : maskPhone(r.phone) || "-"}</td>
                     <td className="px-3 py-2.5 text-muted-foreground">{r.device_model ?? "-"}</td>
+                    <td className="px-2 py-2.5 text-center">
+                      {r.bundle === "Y" ? <Badge variant="outline" className="text-[9px] border-primary/40 text-primary px-1.5 py-0">동판</Badge> : <span className="text-muted-foreground text-[10px]">-</span>}
+                    </td>
+                    <td className="px-2 py-2.5 text-center">
+                      {(r.custom_fields as any)?.has_offer === false
+                        ? <Badge variant="secondary" className="text-[9px] px-1.5 py-0">무오퍼</Badge>
+                        : <Badge variant="outline" className="text-[9px] px-1.5 py-0">오퍼</Badge>}
+                    </td>
                     <td className="px-3 py-2.5 text-right tabular-nums">{(r.unit_price ?? 0).toLocaleString("ko-KR")}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums text-warning">{offer.toLocaleString("ko-KR")}</td>
                     <td className={cn(
