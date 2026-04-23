@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { Header } from "@/components/layout/Header";
@@ -10,22 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Check, Upload, Zap, Trash2, Pencil, X, FileSpreadsheet, Download, Search, ShieldAlert, Hash, Wallet as WalletIcon, Gift, TrendingUp, Camera } from "lucide-react";
-import { maskPhone, maskName } from "@/lib/maskPii";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Check, Upload, Zap, Pencil, X, FileSpreadsheet, Download, Search, Camera } from "lucide-react";
 import { useRole } from "@/hooks/useRole";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { useProductRatePlans } from "@/hooks/useProductRatePlans";
 import { usePeriod } from "@/contexts/PeriodContext";
-import { PaginationBar } from "@/components/ui/pagination-bar";
-import { exportToExcel, SALES_COLUMNS, OFFER_COLUMNS } from "@/lib/excelExport";
 import { cn } from "@/lib/utils";
 import { useFieldDefinitions } from "@/hooks/useFieldDefinitions";
 import { useNetFeeFormula } from "@/hooks/useNetFeeFormula";
@@ -34,39 +25,13 @@ import { ExcelMappingDialog, type MappingTarget } from "@/components/admin/Excel
 import { ExcelTemplateEditor } from "@/components/admin/ExcelTemplateEditor";
 import { ExcelUploadWizard } from "@/components/admin/ExcelUploadWizard";
 import type { FieldRule } from "@/lib/excelValidation";
-import { useQuickExport, useLastUpdated } from "@/hooks/useQuickExport";
+import { useLastUpdated } from "@/hooks/useQuickExport";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ModelAutocomplete } from "@/components/ui/model-autocomplete";
 import { Sparkles, AlertTriangle, Wallet, Banknote, Building2 } from "lucide-react";
 import { CreditCard } from "lucide-react";
-
-const PAGE_SIZE = 25;
-
-/* ---------- animated counter hook ---------- */
-function useAnimatedNumber(target: number, duration = 400) {
-  const [display, setDisplay] = useState(target);
-  const rafRef = useRef<number>(0);
-  useEffect(() => {
-    const start = display;
-    const diff = target - start;
-    if (diff === 0) return;
-    const t0 = performance.now();
-    const tick = (now: number) => {
-      const elapsed = now - t0;
-      const progress = Math.min(elapsed / duration, 1);
-      // ease-out
-      const ease = 1 - Math.pow(1 - progress, 3);
-      setDisplay(Math.round(start + diff * ease));
-      if (progress < 1) rafRef.current = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target, duration]);
-  return display;
-}
 
 type SaleRow = {
   id: string;
@@ -1229,33 +1194,6 @@ const InputPage = () => {
         </Button>
       </section>
     </>
-  );
-};
-
-const SummaryCard = ({
-  icon: Icon, label, value, accent,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-  accent: "primary" | "secondary" | "success" | "warning" | "destructive";
-}) => {
-  const tone: Record<string, string> = {
-    primary: "from-primary/20 to-primary-glow/5 text-primary-glow border-primary/20",
-    secondary: "from-secondary/20 to-primary/5 text-secondary border-secondary/20",
-    success: "from-success/20 to-success/5 text-success border-success/20",
-    warning: "from-warning/20 to-warning/5 text-warning border-warning/20",
-    destructive: "from-destructive/25 to-destructive/5 text-destructive border-destructive/30",
-  };
-  return (
-    <div className={cn("rounded-2xl border bg-gradient-to-br p-4", tone[accent])}>
-      <div className="flex items-center gap-2 text-[11px] font-medium opacity-90 text-primary">
-        <Icon className="size-3.5" /> {label}
-      </div>
-      <div className="mt-1.5 text-lg md:text-xl font-bold tabular-nums tracking-tight text-foreground transition-all duration-300">
-        {value}
-      </div>
-    </div>
   );
 };
 
