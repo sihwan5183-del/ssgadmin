@@ -149,9 +149,9 @@ export const DeviceModelsManager = () => {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">불러오는 중…</td></tr>
+              <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">불러오는 중…</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">등록된 모델이 없습니다</td></tr>
+              <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">등록된 모델이 없습니다</td></tr>
             ) : (
               filtered.map((m) => (
                 <tr key={m.id} className="border-t border-border/30 hover:bg-muted/20">
