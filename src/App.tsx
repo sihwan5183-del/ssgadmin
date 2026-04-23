@@ -35,6 +35,7 @@ import NotFound from "./pages/NotFound.tsx";
 import ChannelIntakePage from "./pages/ChannelIntakePage.tsx";
 import BudgetCategoriesPage from "./pages/BudgetCategoriesPage.tsx";
 import MyPage from "./pages/MyPage.tsx";
+import CompanyCalendarPage from "./pages/CompanyCalendarPage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -81,6 +82,7 @@ const App = () => (
                         <Route path="/channel-intake" element={<ChannelIntakePage />} />
                         <Route path="/budget-categories" element={<BudgetCategoriesPage />} />
                         <Route path="/my" element={<MyPage />} />
+                        <Route path="/company-calendar" element={<CompanyCalendarPage />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </AppShell>
