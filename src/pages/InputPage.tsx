@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { Header } from "@/components/layout/Header";
 import { Input } from "@/components/ui/input";
@@ -122,6 +122,7 @@ const emptyForm: Partial<SaleRow> = {
 
 const InputPage = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { options: CHANNELS } = useFieldOptions("channel");
   const { options: PRODUCTS } = useFieldOptions("product");
   const { options: SALE_TYPES } = useFieldOptions("sale_type");
@@ -137,10 +138,7 @@ const InputPage = () => {
   const [pendingNote, setPendingNote] = useState<string>("");
   const [pendingResolved, setPendingResolved] = useState<boolean>(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [rows, setRows] = useState<SaleRow[]>([]);
   const [busy, setBusy] = useState(false);
-  const [page, setPage] = useState(0);
-  const [total, setTotal] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const mappingFileRef = useRef<HTMLInputElement>(null);
   const [mappingOpen, setMappingOpen] = useState(false);
@@ -155,11 +153,7 @@ const InputPage = () => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [searchParams, setSearchParams] = useSearchParams();
   const [linkedInquiryId, setLinkedInquiryId] = useState<string | null>(null);
-  const [dbSummary, setDbSummary] = useState({ count: 0, totalRebate: 0, totalOffer: 0, totalProfit: 0 });
-  const [unpaidCount, setUnpaidCount] = useState(0);
-  const [unreturnedCount, setUnreturnedCount] = useState(0);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [quickFilter, setQuickFilter] = useState<"unpaid" | "unreturned" | null>(null);
 
   // 인입 → 실적 자동 채움 (URL 파라미터)
   useEffect(() => {
@@ -190,105 +184,6 @@ const InputPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 리베이트(unit_price) - 오퍼(지원금 합) = 최종 수익
-  const offerOf = (r: SaleRow) =>
-    (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0);
-  const profitOf = (r: SaleRow) => (r.unit_price ?? 0) - offerOf(r);
-
-  const filteredRows = useMemo(() => {
-    const q = searchQ.trim().toLowerCase();
-    let result = rows;
-    if (quickFilter === "unpaid") {
-      result = result.filter((r) => (r.receivable_amount ?? 0) > 0 && r.receivable_paid !== "완료");
-    } else if (quickFilter === "unreturned") {
-      result = result.filter((r) => r.voucher && r.voucher.trim() !== "" && r.voucher_returned !== "유");
-    }
-    if (!q) return result;
-    return result.filter((r) => {
-      const name = (r.customer_name ?? "").toLowerCase();
-      const phone = (r.phone ?? "").replace(/[^0-9]/g, "");
-      return name.includes(q) || phone.includes(q.replace(/[^0-9]/g, ""));
-    });
-  }, [rows, searchQ, quickFilter]);
-
-  // Fetch full aggregates from DB (not limited by pagination)
-  const loadSummary = useCallback(async (sq?: string) => {
-    const q = (sq ?? searchQ).trim().toLowerCase();
-    // If searching, we need to fetch matching rows' aggregates
-    if (q) {
-      const like = `%${q}%`;
-      const { data, error } = await supabase
-        .from("sales")
-        .select("unit_price, distributor_amount, extra_subsidy, cash_support_amount")
-        .gte("open_date", startDate)
-        .lte("open_date", endDate)
-        .or(`customer_name.ilike.${like},phone.ilike.${like}`);
-      if (error) return;
-      const rows = data ?? [];
-      const totalRebate = rows.reduce((s, r) => s + (r.unit_price ?? 0), 0);
-      const totalOffer = rows.reduce((s, r) => s + (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0), 0);
-      setDbSummary({ count: rows.length, totalRebate, totalOffer, totalProfit: totalRebate - totalOffer });
-    } else {
-      // No search: aggregate all rows in the period
-      const { data, error } = await supabase
-        .from("sales")
-        .select("unit_price, distributor_amount, extra_subsidy, cash_support_amount")
-        .gte("open_date", startDate)
-        .lte("open_date", endDate);
-      if (error) return;
-      const rows = data ?? [];
-      const totalRebate = rows.reduce((s, r) => s + (r.unit_price ?? 0), 0);
-      const totalOffer = rows.reduce((s, r) => s + (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0), 0);
-      setDbSummary({ count: rows.length, totalRebate, totalOffer, totalProfit: totalRebate - totalOffer });
-    }
-    // Unpaid/unreturned counts
-    const { count: uc } = await supabase
-      .from("sales")
-      .select("id", { count: "exact", head: true })
-      .gte("open_date", startDate)
-      .lte("open_date", endDate)
-      .gt("receivable_amount", 0)
-      .neq("receivable_paid", "완료");
-    setUnpaidCount(uc ?? 0);
-    const { count: urc } = await supabase
-      .from("sales")
-      .select("id", { count: "exact", head: true })
-      .gte("open_date", startDate)
-      .lte("open_date", endDate)
-      .neq("voucher", "")
-      .not("voucher", "is", null)
-      .neq("voucher_returned", "유");
-    setUnreturnedCount(urc ?? 0);
-  }, [searchQ, startDate, endDate]);
-
-  const summary = dbSummary;
-
-  // Animated values for summary cards
-  const animCount = useAnimatedNumber(summary.count);
-  const animRebate = useAnimatedNumber(summary.totalRebate);
-  const animOffer = useAnimatedNumber(summary.totalOffer);
-  const animProfit = useAnimatedNumber(summary.totalProfit);
-
-  const allSelected = filteredRows.length > 0 && filteredRows.every((r) => selected.has(r.id));
-  const toggleAll = () => {
-    setSelected((prev) => {
-      if (allSelected) {
-        const n = new Set(prev);
-        filteredRows.forEach((r) => n.delete(r.id));
-        return n;
-      }
-      const n = new Set(prev);
-      filteredRows.forEach((r) => n.add(r.id));
-      return n;
-    });
-  };
-  const toggleOne = (id: string) =>
-    setSelected((prev) => {
-      const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
-      return n;
-    });
-
   // Track which fields were auto-filled from product defaults
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
 
@@ -308,44 +203,13 @@ const InputPage = () => {
   };
 
   const load = async () => {
-    const from = page * PAGE_SIZE;
-    const to = from + PAGE_SIZE - 1;
-    let query = supabase
-      .from("sales")
-      .select("*", { count: "exact" })
-      .gte("open_date", startDate)
-      .lte("open_date", endDate);
-    if (statusFilter) {
-      query = query.in("status", [statusFilter, ...(statusFilter === "개통대기" ? ["접수완료"] : [])]);
-    }
-    const { data, error, count } = await query
-      .order("open_date", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false })
-      .range(from, to);
-    if (error) {
-      toast.error("목록 불러오기 실패", { description: error.message });
-      return;
-    }
-    setRows((data ?? []) as SaleRow[]);
-    setTotal(count ?? 0);
+    // Reload is now only needed for edit mode — kept minimal
   };
 
   useEffect(() => {
     load();
-    loadSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, startDate, endDate, statusFilter]);
-
-  // Re-fetch summary when search changes (debounced)
-  useEffect(() => {
-    const t = setTimeout(() => loadSummary(searchQ), 300);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQ, startDate, endDate]);
-
-  useEffect(() => {
-    setPage(0);
-  }, [startDate, endDate]);
+  }, [startDate, endDate, statusFilter]);
 
   const handleExport = async () => {
     const { data, error } = await supabase
