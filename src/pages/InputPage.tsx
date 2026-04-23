@@ -1146,6 +1146,15 @@ const InputPage = () => {
 
         {/* 통합 검색 + 관리자 삭제 */}
         <div className="flex flex-wrap gap-2 mb-4">
+          {statusFilter && (
+            <Badge
+              variant="outline"
+              className="border-warning/40 text-warning bg-warning/10 gap-1 cursor-pointer hover:bg-warning/20"
+              onClick={() => setStatusFilter(null)}
+            >
+              필터: {statusFilter} ✕
+            </Badge>
+          )}
           <div className="relative flex-1 min-w-[260px] max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
