@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
+import { useBudgetCategories } from "./useBudgetCategories";
 
 /**
  * 지출/ROI 화면 전용 통합 집계 훅
@@ -62,6 +63,7 @@ export interface FinanceData {
   moyoAppliedCount: number;     // 모요 적용 건수
   moyoExcludedCount: number;    // 모요 미적용 건수
   moyoFee: number;              // 모요 수수료 (적용건 × 88,000)
+  excludedLabels: string[];     // 대시보드에서 제외된 항목들
   // 차트용
   channels: FinanceChannelRow[];
   mediaTotals: FinanceMediaTotal[];
@@ -100,6 +102,7 @@ const isoWeekKey = (iso: string) => {
 
 export function useFinanceData(): FinanceData {
   const { startDate, endDate } = usePeriod();
+  const { includedExpenseLabels, excludedLabels } = useBudgetCategories();
   const [salesRows, setSalesRows] = useState<any[]>([]);
   const [spendRows, setSpendRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -167,7 +170,14 @@ export function useFinanceData(): FinanceData {
       (s, r) => s + Number(r.amount ?? 0),
       0,
     );
-    const totalExpense = totalAdSpend + totalDistributor + totalCustomerDeposit + moyoFee;
+    // 동적 합산: budget_categories에서 On인 항목만 포함
+    const expenseSet = new Set(includedExpenseLabels);
+    let dynamicExpense = 0;
+    if (expenseSet.has("광고비")) dynamicExpense += totalAdSpend;
+    if (expenseSet.has("모요 수수료")) dynamicExpense += moyoFee;
+    // 유통망/고객입금은 판매원장에서 자동 집계되므로 항상 포함하되, 별도 항목 제어 가능
+    dynamicExpense += totalDistributor + totalCustomerDeposit;
+    const totalExpense = dynamicExpense;
     const netMargin = totalRevenue - totalExpense;
     const roi = totalExpense > 0 ? (netMargin / totalExpense) * 100 : 0;
     const cpaAvg = totalSuccess > 0 ? totalAdSpend / totalSuccess : 0;
@@ -289,6 +299,7 @@ export function useFinanceData(): FinanceData {
 
     return {
       loading,
+      excludedLabels,
       totalRevenue,
       totalAdSpend,
       totalDistributor,
@@ -314,5 +325,5 @@ export function useFinanceData(): FinanceData {
       hasSales: totalSuccess > 0,
       hasSpend: totalAdSpend > 0,
     };
-  }, [salesRows, spendRows, startDate, endDate, loading]);
+  }, [salesRows, spendRows, startDate, endDate, loading, includedExpenseLabels, excludedLabels]);
 }
