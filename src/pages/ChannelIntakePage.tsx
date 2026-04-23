@@ -25,7 +25,7 @@ import { StaffTimelinePanel } from "@/components/inquiries/StaffTimelinePanel";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const CRM_STATUSES = ["문의중", "부재", "재케어", "실패", "방문예약", "개통완료"] as const;
+const CRM_STATUSES = ["미처리", "문의중", "부재", "재케어", "실패", "방문예약", "개통완료"] as const;
 type CrmStatus = (typeof CRM_STATUSES)[number];
 
 const FAIL_REASONS = [
@@ -39,6 +39,7 @@ const FAIL_REASONS = [
 ] as const;
 
 const STATUS_CONFIG: Record<string, { icon: typeof PhoneOff; color: string; label: string }> = {
+  미처리: { icon: AlertTriangle, color: "hsl(25 95% 45%)", label: "미처리" },
   부재: { icon: PhoneOff, color: "hsl(35 90% 55%)", label: "부재" },
   재케어: { icon: RefreshCw, color: "hsl(200 80% 55%)", label: "재케어" },
   실패: { icon: XCircle, color: "hsl(0 70% 55%)", label: "실패" },
@@ -69,6 +70,14 @@ interface LogEntry {
   created_at: string;
 }
 
+// 미처리 판별: 상담 결과·메모·실적 연결 모두 없으면 미처리
+const isNewLead = (r: InquiryRow): boolean => {
+  if (r.status === "미처리") return true;
+  // 문의중이면서 아직 아무 상담 기록이 없는 경우
+  if (r.status === "문의중" && !r.last_action_at && !r.note && !r.content) return true;
+  return false;
+};
+
 // ── 방치 감지: 24시간 초과 ──
 const isAbandoned = (lastAction: string | null) => {
   if (!lastAction) return true;
@@ -85,6 +94,8 @@ const formatTime = (iso: string | null) => {
 function SummaryCards({ rows }: { rows: InquiryRow[] }) {
   const today = new Date().toISOString().slice(0, 10);
   const todayRows = rows.filter((r) => r.inquiry_date === today);
+  const untreated = rows.filter(isNewLead).length;
+  const todayUntreated = todayRows.filter(isNewLead).length;
   const absent = rows.filter((r) => r.status === "부재").length;
   const recare = rows.filter((r) => r.status === "재케어").length;
   const failed = rows.filter((r) => r.status === "실패").length;
@@ -93,9 +104,10 @@ function SummaryCards({ rows }: { rows: InquiryRow[] }) {
 
   const cards = [
     { label: "오늘 인입", value: todayRows.length, unit: "건", color: "text-foreground" },
+    { label: "미처리", value: untreated, unit: "건", color: "text-orange-600" },
+    { label: "오늘 신규 미처리", value: todayUntreated, unit: "건", color: "text-orange-600" },
     { label: "부재", value: absent, unit: "건", color: "text-amber-400" },
     { label: "재케어", value: recare, unit: "건", color: "text-blue-400" },
-    { label: "실패율", value: failRate, unit: "%", color: "text-destructive" },
   ];
 
   return (
