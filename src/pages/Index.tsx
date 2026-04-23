@@ -45,16 +45,15 @@ const Index = () => {
       <Header
         title="영업기획팀 전략 대시보드"
         subtitle="2025년 11월 · 영업 성과 → 수익 분석 → 현장 활동 순으로 한눈에"
-      >
-        {isAdmin && (
+        rightSlot={isAdmin ? (
           <DashboardLayoutManager
             widgets={widgets}
             toggle={toggle}
             move={move}
             resetToDefault={resetToDefault}
           />
-        )}
-      </Header>
+        ) : undefined}
+      />
 
       {/* === 본인 검수 피드백 (반려/수정요청) === */}
       {isVisible("review_alerts") && <MyReviewAlerts />}
