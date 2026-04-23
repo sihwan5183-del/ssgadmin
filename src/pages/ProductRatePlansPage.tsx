@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2, Plus, Link2, Package } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,6 +19,12 @@ interface Mapping {
   rate_plan: string;
   sort_order: number;
   active: boolean;
+  default_sale_type: string | null;
+  default_vas1: string | null;
+  default_vas2: string | null;
+  vas1_duration: number | null;
+  vas2_duration: number | null;
+  allowed_sale_types: string[];
 }
 
 export default function ProductRatePlansPage() {
@@ -25,6 +32,7 @@ export default function ProductRatePlansPage() {
   const { isAdmin, loading: roleLoading } = useRole();
   const { options: PRODUCTS } = useFieldOptions("product");
   const { options: RATE_PLANS } = useFieldOptions("rate_plan");
+  const { options: SALE_TYPES } = useFieldOptions("sale_type");
 
   const [mappings, setMappings] = useState<Mapping[]>([]);
   const [activeProduct, setActiveProduct] = useState<string>("");
@@ -116,6 +124,21 @@ export default function ProductRatePlansPage() {
     );
   }
 
+  // Save product-level defaults on the first mapping row
+  const saveDefaults = async (field: string, value: any) => {
+    if (!activeProduct || filtered.length === 0) return;
+    // Update all mappings for this product
+    const ids = filtered.map((m) => m.id);
+    const { error } = await supabase
+      .from("product_rate_plans")
+      .update({ [field]: value } as any)
+      .in("id", ids);
+    if (error) toast.error(error.message);
+    else load();
+  };
+
+  const firstRow = filtered[0] as Mapping | undefined;
+
   return (
     <div>
       <Header
@@ -167,6 +190,65 @@ export default function ProductRatePlansPage() {
 
         {/* 오른쪽: 매핑 편집 */}
         <Card className="p-6 glass">
+          {/* 상품 기본값 설정 */}
+          {activeProduct && filtered.length > 0 && (
+            <div className="mb-6 p-4 rounded-xl border border-border/40 bg-muted/20">
+              <h4 className="text-sm font-semibold mb-3">📋 {activeProduct} 기본 설정</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs">기본 판매유형</Label>
+                  <Select
+                    value={firstRow?.default_sale_type ?? ""}
+                    onValueChange={(v) => saveDefaults("default_sale_type", v || null)}
+                  >
+                    <SelectTrigger className="h-9"><SelectValue placeholder="미설정" /></SelectTrigger>
+                    <SelectContent>
+                      {SALE_TYPES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">기본 부가서비스 1</Label>
+                  <Input
+                    value={firstRow?.default_vas1 ?? ""}
+                    onChange={(e) => saveDefaults("default_vas1", e.target.value || null)}
+                    placeholder="예: 주셋톱"
+                    className="h-9"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">기본 부가서비스 2</Label>
+                  <Input
+                    value={firstRow?.default_vas2 ?? ""}
+                    onChange={(e) => saveDefaults("default_vas2", e.target.value || null)}
+                    placeholder="예: 부셋톱"
+                    className="h-9"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">VAS1 유지기간 (개월)</Label>
+                  <Input
+                    type="number"
+                    value={firstRow?.vas1_duration ?? ""}
+                    onChange={(e) => saveDefaults("vas1_duration", e.target.value ? Number(e.target.value) : null)}
+                    placeholder="예: 3"
+                    className="h-9"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">VAS2 유지기간 (개월)</Label>
+                  <Input
+                    type="number"
+                    value={firstRow?.vas2_duration ?? ""}
+                    onChange={(e) => saveDefaults("vas2_duration", e.target.value ? Number(e.target.value) : null)}
+                    placeholder="예: 3"
+                    className="h-9"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-semibold flex items-center gap-2">
