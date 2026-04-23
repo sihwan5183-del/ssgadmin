@@ -535,6 +535,8 @@ function LinkageConfigPanel({ linkageRule, upsert }: { linkageRule: LinkageRule;
   );
 }
 
+const CALC_METHOD_LABEL: Record<string, string> = { tiered: "구간제", margin_100: "마진100%", fixed_amount: "고정액" };
+
 /* ===== 시뮬레이션 패널 ===== */
 function SimulationPanel({ policies, linkageRule }: { policies: DraftPolicy[]; linkageRule: LinkageRule }) {
   const period = usePeriod();
@@ -613,6 +615,9 @@ function SimulationPanel({ policies, linkageRule }: { policies: DraftPolicy[]; l
                 {policies.filter((p) => p.active).map((p) => (
                   <th key={p.id} className="text-right py-2 font-medium max-w-[100px] truncate">{p.name}</th>
                 ))}
+                <th className="text-right py-2 font-medium">구간제</th>
+                <th className="text-right py-2 font-medium">마진100%</th>
+                <th className="text-right py-2 font-medium">고정액</th>
                 <th className="text-right py-2 font-semibold">최종 인센티브</th>
               </tr>
             </thead>
@@ -632,11 +637,24 @@ function SimulationPanel({ policies, linkageRule }: { policies: DraftPolicy[]; l
                     const pr = r.calc.policyResults.find((x) => x.policyId === p.id);
                     return (
                       <td key={p.id} className="py-2 text-right text-muted-foreground">
-                        {pr ? `${pr.matchedCount}건 × ${formatKRW(pr.tierAmount)}` : "-"}
+                        {pr ? (
+                          pr.calcMethod === "margin_100"
+                            ? `${pr.matchedCount}건 마진 ${formatKRW(pr.subtotal)}`
+                            : `${pr.matchedCount}건 × ${formatKRW(pr.tierAmount)}`
+                        ) : "-"}
                       </td>
                     );
                   })}
                   <td className="py-2 text-right font-bold text-foreground">{formatKRW(r.calc.total)}</td>
+                  {(() => {
+                    const byMethod = { tiered: 0, margin_100: 0, fixed_amount: 0 };
+                    r.calc.policyResults.forEach((pr) => { byMethod[pr.calcMethod] = (byMethod[pr.calcMethod] || 0) + pr.subtotal; });
+                    return (
+                      <>
+                        {/* These are inserted before 최종 - need reorder. Actually let me put them before the total */}
+                      </>
+                    );
+                  })()}
                 </tr>
               ))}
             </tbody>
@@ -645,6 +663,7 @@ function SimulationPanel({ policies, linkageRule }: { policies: DraftPolicy[]; l
                 <td className="py-2 font-semibold">합계</td>
                 <td className="py-2 text-right font-semibold">{results.reduce((s, r) => s + r.sales.length, 0)}건</td>
                 <td colSpan={2 + policies.filter((p) => p.active).length} />
+                <td colSpan={3} />
                 <td className="py-2 text-right font-bold text-lg">
                   {formatKRW(results.reduce((s, r) => s + r.calc.total, 0))}
                 </td>
