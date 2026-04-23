@@ -1032,6 +1032,7 @@ const InputPage = () => {
             </Field>
             <Field label="미수금 (₩)">
               <MoneyInput value={form.receivable_amount} onChange={(v) => set("receivable_amount", v)} />
+              <p className="text-[10px] text-muted-foreground mt-0.5">고객에게 아직 받지 못한 기기값/수납금 등 (수익에 포함)</p>
             </Field>
             <Field label="수급 상태">
               <div className="flex items-center gap-2 h-9">
@@ -1171,6 +1172,7 @@ const InputPage = () => {
                 }}
                 disabled={customFields.has_offer === false}
               />
+              <p className="text-[10px] text-muted-foreground mt-0.5">고객에게 지급(입금)하는 서비스 금액 (수익에서 차감)</p>
             </Field>
           </Grid>
           <Grid cols={3}>
