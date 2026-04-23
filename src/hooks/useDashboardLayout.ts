@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from "react";
-import type { Layout } from "react-grid-layout";
+import { useState, useCallback } from "react";
+import type { LayoutItem } from "react-grid-layout";
 
 /* ── widget registry ── */
 export interface WidgetDef {
@@ -33,7 +33,7 @@ export const WIDGET_DEFS: WidgetDef[] = [
 const STORAGE_KEY = "dashboard_layout_v2";
 const HIDDEN_KEY = "dashboard_hidden_v2";
 
-function buildDefaultLayout(): Layout[] {
+function buildDefaultLayout(): LayoutItem[] {
   return WIDGET_DEFS.map((w) => ({
     i: w.id,
     ...w.defaultLayout,
@@ -41,7 +41,7 @@ function buildDefaultLayout(): Layout[] {
 }
 
 export function useDashboardLayout() {
-  const [layout, setLayout] = useState<Layout[]>(() => {
+  const [layout, setLayout] = useState<LayoutItem[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) return JSON.parse(saved);
@@ -59,7 +59,7 @@ export function useDashboardLayout() {
 
   const [editing, setEditing] = useState(false);
 
-  const onLayoutChange = useCallback((newLayout: Layout[]) => {
+  const onLayoutChange = useCallback((newLayout: LayoutItem[]) => {
     setLayout(newLayout);
   }, []);
 
@@ -90,7 +90,7 @@ export function useDashboardLayout() {
     });
   }, []);
 
-  const visibleLayout = layout.filter((l) => !hiddenIds.has(l.i));
+  const visibleLayout = layout.filter((l: LayoutItem) => !hiddenIds.has(l.i));
 
   return {
     layout: visibleLayout,
