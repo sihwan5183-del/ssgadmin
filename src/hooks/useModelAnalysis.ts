@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
-import { useAppSettings } from "./useAppSettings";
 import { useDeviceModels } from "./useDeviceModels";
 
 /** Strip capacity / color suffixes to get the series name (e.g. "S942-256" → "S942") */
@@ -60,15 +59,16 @@ export interface PolicyShare {
 
 export function useModelAnalysis() {
   const { startDate, endDate } = usePeriod();
-  const { settings } = useAppSettings();
   const { matchModel } = useDeviceModels();
+  const { models: deviceModelsList } = useDeviceModels();
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const strategyModelNames: string[] = useMemo(() => {
-    const raw = settings["dashboard.strategy_models"];
-    return Array.isArray(raw) ? (raw as string[]) : [];
-  }, [settings]);
+    return deviceModelsList
+      .filter((m) => (m as any).is_strategy)
+      .map((m) => m.model_name);
+  }, [deviceModelsList]);
 
   useEffect(() => {
     let cancelled = false;
@@ -263,5 +263,5 @@ export function useModelAnalysis() {
       hasData: totalCount > 0,
       matchModel,
     };
-  }, [rows, loading, strategyModelNames, matchModel]);
+  }, [rows, loading, strategyModelNames, matchModel, deviceModelsList]);
 }

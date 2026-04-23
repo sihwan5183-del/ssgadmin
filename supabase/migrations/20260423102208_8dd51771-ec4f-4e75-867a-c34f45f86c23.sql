@@ -1,0 +1,1 @@
+ALTER TABLE public.device_models ADD COLUMN is_strategy boolean NOT NULL DEFAULT false;

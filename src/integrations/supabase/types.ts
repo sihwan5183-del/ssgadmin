@@ -302,6 +302,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          is_strategy: boolean
           manufacturer: string
           model_name: string
           official_name: string | null
@@ -315,6 +316,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_strategy?: boolean
           manufacturer?: string
           model_name: string
           official_name?: string | null
@@ -328,6 +330,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_strategy?: boolean
           manufacturer?: string
           model_name?: string
           official_name?: string | null
