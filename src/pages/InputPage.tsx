@@ -1511,6 +1511,16 @@ const InputPage = () => {
                             <AlertTriangle className="size-2.5" /> 미처리 {r.pending_items?.length}
                           </Badge>
                         )}
+                        {(r.receivable_amount ?? 0) > 0 && r.receivable_paid !== "완료" && (
+                          <Badge variant="outline" className="text-[9px] gap-0.5 border-destructive/40 text-destructive bg-destructive/10 px-1.5 py-0">
+                            💰 미수급
+                          </Badge>
+                        )}
+                        {r.voucher && r.voucher.trim() !== "" && r.voucher_returned !== "유" && (
+                          <Badge variant="outline" className="text-[9px] gap-0.5 border-destructive/40 text-destructive bg-destructive/10 px-1.5 py-0">
+                            🎫 미반납
+                          </Badge>
+                        )}
                       </div>
                     </td>
                     <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{r.phone ?? "-"}</td>
