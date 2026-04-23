@@ -63,7 +63,7 @@ export function IncentiveRatesManager() {
   const [showSim, setShowSim] = useState(false);
 
   const rows: DraftPolicy[] = [
-    ...policies.map((p) => drafts[p.id] ?? { ...p }),
+    ...policies.map((p) => drafts[p.id] ?? { ...p, bundle_only: (p as any).bundle_only ?? false, no_offer_only: (p as any).no_offer_only ?? false }),
     ...Object.values(drafts).filter((d) => d.isNew),
   ];
 
