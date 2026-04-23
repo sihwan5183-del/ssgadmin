@@ -174,7 +174,6 @@ export const InquiryDashboard = ({ rows }: Props) => {
     supabase.from("inquiry_logs").select("*").in("inquiry_id", ids).order("created_at", { ascending: false }).limit(200)
       .then(({ data }) => setDetailLogs(data ?? []));
   }, [detailManager, detailRows]);
-  }, [rows]);
 
   return (
     <div className="space-y-4">
