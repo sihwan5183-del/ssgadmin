@@ -1,6 +1,7 @@
 import { Sparkles } from "lucide-react";
 import { MobileSidebar } from "./MobileSidebar";
 import { NotificationBell } from "./NotificationBell";
+import { GlobalSearch } from "./GlobalSearch";
 
 /**
  * 모바일 전용 상단 바 — 햄버거 + 로고 + 알림.
@@ -20,6 +21,9 @@ export const MobileTopBar = () => {
         </div>
       </div>
       <NotificationBell />
+    </div>
+    <div className="lg:hidden px-3 pb-2">
+      <GlobalSearch className="w-full" />
     </div>
   );
 };
