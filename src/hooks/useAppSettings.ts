@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { DEFAULT_LINKAGE, type LinkageRule } from "@/lib/incentiveEngine";
 
 export type DashboardWidgets = {
   stat_cards: boolean;
@@ -49,11 +50,16 @@ export function useAppSettings() {
   const strategyTarget = Number(settings["targets.strategy_product_share"] ?? 40);
   const monthlyTarget = Number(settings["targets.monthly_activations"] ?? 500);
 
+  const linkageRule: LinkageRule = {
+    ...DEFAULT_LINKAGE,
+    ...(settings["incentive.linkage"] ?? {}),
+  };
+
   const upsert = async (key: string, value: any) => {
     const { error } = await supabase.from("app_settings").upsert({ key, value }, { onConflict: "key" });
     if (!error) await fetchAll();
     return { error };
   };
 
-  return { settings, widgets, strategyTarget, monthlyTarget, loading, refresh: fetchAll, upsert };
+  return { settings, widgets, strategyTarget, monthlyTarget, linkageRule, loading, refresh: fetchAll, upsert };
 }
