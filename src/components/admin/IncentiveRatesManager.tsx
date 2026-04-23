@@ -228,6 +228,7 @@ export function IncentiveRatesManager() {
                           <span className="font-semibold text-sm truncate">{row.name}</span>
                         )}
                         {!row.active && <Badge variant="secondary" className="text-[10px]">비활성</Badge>}
+                        <Badge variant="outline" className="text-[10px]">{CALC_METHOD_LABEL[row.calc_method] ?? "구간제"}</Badge>
                       </div>
                       {!isExpanded && (
                         <div className="flex flex-wrap gap-1 mt-1">
