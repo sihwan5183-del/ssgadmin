@@ -1361,6 +1361,10 @@ export type Database = {
           seq: number | null
           status: string | null
           tracking_no: string | null
+          trade_in_confirmed: number | null
+          trade_in_enabled: boolean
+          trade_in_estimate: number | null
+          trade_in_model: string | null
           unit_price: number | null
           updated_at: string
           usim_model: string | null
@@ -1419,6 +1423,10 @@ export type Database = {
           seq?: number | null
           status?: string | null
           tracking_no?: string | null
+          trade_in_confirmed?: number | null
+          trade_in_enabled?: boolean
+          trade_in_estimate?: number | null
+          trade_in_model?: string | null
           unit_price?: number | null
           updated_at?: string
           usim_model?: string | null
@@ -1477,6 +1485,10 @@ export type Database = {
           seq?: number | null
           status?: string | null
           tracking_no?: string | null
+          trade_in_confirmed?: number | null
+          trade_in_enabled?: boolean
+          trade_in_estimate?: number | null
+          trade_in_model?: string | null
           unit_price?: number | null
           updated_at?: string
           usim_model?: string | null
