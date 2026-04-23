@@ -1139,6 +1139,13 @@ const InputPage = () => {
                   if (!v) {
                     set("distributor_amount", 0);
                     set("extra_subsidy", 0);
+                    set("cash_support_amount", 0);
+                    set("cash_open", false);
+                    set("receivable_amount", 0);
+                    set("receivable_paid", null);
+                    set("cash_bank", null);
+                    set("cash_account", null);
+                    set("cash_holder", null);
                   }
                 }}
               />
@@ -1162,12 +1169,14 @@ const InputPage = () => {
                   set("cash_support_amount", v);
                   set("cash_open", v > 0);
                 }}
+                disabled={customFields.has_offer === false}
               />
             </Field>
             <Field label="③ 고객입금 금액 (₩)">
               <MoneyInput
                 value={form.receivable_amount}
                 onChange={(v) => set("receivable_amount", v)}
+                disabled={customFields.has_offer === false}
               />
             </Field>
           </Grid>
@@ -1178,6 +1187,7 @@ const InputPage = () => {
                 onChange={(e) => set("receivable_paid", e.target.value)}
                 placeholder="유 / 완료 / 2026-04-19"
                 className="h-9 bg-input/60 text-xs"
+                disabled={customFields.has_offer === false}
               />
             </Field>
             <Field label="추가지원금 (₩)">
@@ -1186,16 +1196,16 @@ const InputPage = () => {
           </Grid>
           <Grid cols={3}>
             <Field label="은행">
-              <Select value={form.cash_bank ?? ""} onValueChange={(v) => set("cash_bank", v)}>
+              <Select value={form.cash_bank ?? ""} onValueChange={(v) => set("cash_bank", v)} disabled={customFields.has_offer === false}>
                 <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
                 <SelectContent>{BANKS.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
             <Field label="입금계좌">
-              <Input value={form.cash_account ?? ""} onChange={(e) => set("cash_account", e.target.value)} className="h-9 bg-input/60 text-xs" />
+              <Input value={form.cash_account ?? ""} onChange={(e) => set("cash_account", e.target.value)} className="h-9 bg-input/60 text-xs" disabled={customFields.has_offer === false} />
             </Field>
             <Field label="예금주">
-              <Input value={form.cash_holder ?? ""} onChange={(e) => set("cash_holder", e.target.value)} className="h-9 bg-input/60 text-xs" />
+              <Input value={form.cash_holder ?? ""} onChange={(e) => set("cash_holder", e.target.value)} className="h-9 bg-input/60 text-xs" disabled={customFields.has_offer === false} />
             </Field>
           </Grid>
 
