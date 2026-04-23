@@ -39,6 +39,8 @@ interface DraftPolicy {
   match_model: string | null;
   isNew?: boolean;
   dirty?: boolean;
+  bundle_only: boolean;
+  no_offer_only: boolean;
 }
 
 function formatKRW(n: number) {
@@ -89,6 +91,8 @@ export function IncentiveRatesManager() {
         match_model: null,
         isNew: true,
         dirty: true,
+        bundle_only: false,
+        no_offer_only: false,
       },
     }));
   };
@@ -147,6 +151,8 @@ export function IncentiveRatesManager() {
       calc_method: row.calc_method,
       fixed_amount: row.fixed_amount,
       match_model: row.match_model,
+      bundle_only: row.bundle_only,
+      no_offer_only: row.no_offer_only,
     };
     if (row.isNew) {
       const { error } = await supabase.from("incentive_policies").insert({ ...payload, created_by: user?.id } as any);
@@ -229,6 +235,8 @@ export function IncentiveRatesManager() {
                         )}
                         {!row.active && <Badge variant="secondary" className="text-[10px]">비활성</Badge>}
                         <Badge variant="outline" className="text-[10px]">{CALC_METHOD_LABEL[row.calc_method] ?? "구간제"}</Badge>
+                        {row.bundle_only && <Badge className="text-[10px] bg-violet-500/20 text-violet-400 border-violet-500/30">동판전용</Badge>}
+                        {row.no_offer_only && <Badge className="text-[10px] bg-rose-500/20 text-rose-400 border-rose-500/30">무오퍼전용</Badge>}
                       </div>
                       {!isExpanded && (
                         <div className="flex flex-wrap gap-1 mt-1">
@@ -262,6 +270,23 @@ export function IncentiveRatesManager() {
                     <div className="border-t border-border/30 px-6 py-5 space-y-5">
                       {/* 유효기간 + 메모 */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {/* 조건부 필터 토글 */}
+                        <div className="md:col-span-3 flex flex-wrap gap-6 bg-muted/20 rounded-lg px-4 py-3 border border-border/30">
+                          <div className="flex items-center gap-2">
+                            <Switch checked={row.bundle_only} onCheckedChange={(v) => updatePolicy(row.id, { bundle_only: v })} />
+                            <div>
+                              <span className="text-xs font-medium">동판/번들 전용</span>
+                              <p className="text-[10px] text-muted-foreground">ON 시 동판/번들 건만 인센티브 계산</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Switch checked={row.no_offer_only} onCheckedChange={(v) => updatePolicy(row.id, { no_offer_only: v })} />
+                            <div>
+                              <span className="text-xs font-medium">무오퍼 전용</span>
+                              <p className="text-[10px] text-muted-foreground">ON 시 무오퍼 건만 인센티브 계산</p>
+                            </div>
+                          </div>
+                        </div>
                         <div>
                           <label className="text-[11px] text-muted-foreground mb-1 block">유효 시작일</label>
                           <Input type="date" value={row.valid_from ?? ""} onChange={(e) => updatePolicy(row.id, { valid_from: e.target.value || null })} className="h-8 text-xs" />
