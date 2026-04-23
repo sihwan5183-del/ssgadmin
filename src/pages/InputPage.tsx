@@ -39,6 +39,7 @@ import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ModelAutocomplete } from "@/components/ui/model-autocomplete";
 import { Sparkles, AlertTriangle, Wallet, Banknote, Building2 } from "lucide-react";
+import { CreditCard } from "lucide-react";
 
 const PAGE_SIZE = 25;
 
