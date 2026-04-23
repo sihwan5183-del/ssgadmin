@@ -1,6 +1,6 @@
 import { Sparkles } from "lucide-react";
 import { useDeviceModels } from "@/hooks/useDeviceModels";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { Link } from "react-router-dom";
@@ -14,7 +14,10 @@ export const StrategyModelGauges = () => {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
-  const strategyModels = deviceModels.filter((m) => (m as any).is_strategy);
+  const strategyModels = useMemo(
+    () => deviceModels.filter((m) => (m as any).is_strategy),
+    [deviceModels],
+  );
 
   useEffect(() => {
     if (modelsLoading || strategyModels.length === 0) { setLoading(false); return; }
