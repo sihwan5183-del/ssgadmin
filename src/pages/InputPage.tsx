@@ -970,6 +970,27 @@ const InputPage = () => {
               <Input value={form.phone ?? ""} onChange={(e) => set("phone", e.target.value)} placeholder="010-0000-0000" className="h-11 bg-input/60" />
             </Field>
           </Grid>
+          {/* 가입번호 + 간단 메모 */}
+          <Grid cols={2}>
+            <Field label="가입 번호">
+              <Input
+                value={form.phone ?? ""}
+                onChange={(e) => set("phone", e.target.value)}
+                placeholder="010-0000-0000"
+                className="h-11 bg-input/60"
+                maxLength={13}
+              />
+            </Field>
+            <Field label="간단 메모">
+              <Input
+                value={customFields.quick_memo ?? ""}
+                onChange={(e) => setCustomFields((f) => ({ ...f, quick_memo: e.target.value }))}
+                placeholder="메모 입력"
+                className="h-11 bg-input/60"
+                maxLength={100}
+              />
+            </Field>
+          </Grid>
           <Grid cols={2}>
             <Field label="단말기">
               <ModelAutocomplete
