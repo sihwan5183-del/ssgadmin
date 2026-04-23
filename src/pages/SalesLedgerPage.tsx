@@ -81,9 +81,17 @@ const SalesLedgerPage = () => {
   const navigate = useNavigate();
   const { startDate, endDate, label: periodLabel } = usePeriod();
   const quickExport = useQuickExport();
-  const { options: MANAGERS } = useFieldOptions("manager");
   const { options: STATUSES } = useFieldOptions("status");
   const { options: CHANNELS } = useFieldOptions("channel");
+
+  // Fetch distinct managers from sales
+  const [managers, setManagers] = useState<string[]>([]);
+  useEffect(() => {
+    supabase.from("sales").select("manager").gte("open_date", startDate).lte("open_date", endDate).then(({ data }) => {
+      const unique = [...new Set((data ?? []).map((r: any) => r.manager).filter(Boolean))].sort() as string[];
+      setManagers(unique);
+    });
+  }, [startDate, endDate]);
 
   const [rows, setRows] = useState<SaleRow[]>([]);
   const [page, setPage] = useState(0);
@@ -247,7 +255,7 @@ const SalesLedgerPage = () => {
           <SelectTrigger className="w-[130px] h-9 text-xs"><SelectValue placeholder="직원 전체" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__">직원 전체</SelectItem>
-            {MANAGERS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+            {managers.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={channelFilter ?? "__all__"} onValueChange={(v) => setChannelFilter(v === "__all__" ? null : v)}>
