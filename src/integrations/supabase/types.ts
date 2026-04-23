@@ -1007,8 +1007,11 @@ export type Database = {
           rate_plan: string
           sort_order: number
           updated_at: string
+          vas_required: boolean
           vas1_duration: number | null
+          vas1_locked: boolean
           vas2_duration: number | null
+          vas2_locked: boolean
         }
         Insert: {
           active?: boolean
@@ -1023,8 +1026,11 @@ export type Database = {
           rate_plan: string
           sort_order?: number
           updated_at?: string
+          vas_required?: boolean
           vas1_duration?: number | null
+          vas1_locked?: boolean
           vas2_duration?: number | null
+          vas2_locked?: boolean
         }
         Update: {
           active?: boolean
@@ -1039,8 +1045,11 @@ export type Database = {
           rate_plan?: string
           sort_order?: number
           updated_at?: string
+          vas_required?: boolean
           vas1_duration?: number | null
+          vas1_locked?: boolean
           vas2_duration?: number | null
+          vas2_locked?: boolean
         }
         Relationships: []
       }
