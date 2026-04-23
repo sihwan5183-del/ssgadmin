@@ -1103,7 +1103,7 @@ const InputPage = () => {
           })()}
         </FormSection>
 
-        <FormSection title="수익성 / 단가">
+        <FormSection title="수익 및 정산">
           <Grid cols={4}>
             <Field label="단가표 기준 (₩)">
               <MoneyInput value={form.unit_price} onChange={(v) => set("unit_price", v)} />
@@ -1115,7 +1115,7 @@ const InputPage = () => {
               <MoneyInput value={form.receivable_amount} onChange={(v) => set("receivable_amount", v)} />
             </Field>
             <Field label="수급 상태">
-              <div className="flex items-center gap-2 h-11">
+              <div className="flex items-center gap-2 h-9">
                 <Switch
                   checked={form.receivable_paid === "완료"}
                   onCheckedChange={(v) => set("receivable_paid", v ? "완료" : "미수급")}
@@ -1179,7 +1179,7 @@ const InputPage = () => {
           <Grid cols={4}>
             <Field label="상품권">
               <Select value={form.voucher ?? ""} onValueChange={(v) => set("voucher", v)}>
-                <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
                 <SelectContent>
                   {["신세계", "롯데", "모바일", "기타"].map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
                 </SelectContent>
@@ -1189,7 +1189,7 @@ const InputPage = () => {
               <MoneyInput value={form.extra_subsidy} onChange={(v) => set("extra_subsidy", v)} />
             </Field>
             <Field label="반납 상태">
-              <div className="flex items-center gap-2 h-11">
+              <div className="flex items-center gap-2 h-9">
                 <Switch
                   checked={form.voucher_returned === "유"}
                   onCheckedChange={(v) => set("voucher_returned", v ? "유" : "무")}
