@@ -33,6 +33,7 @@ import MenuManagerPage from "./pages/MenuManagerPage.tsx";
 import DownloadsPage from "./pages/DownloadsPage.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import ChannelIntakePage from "./pages/ChannelIntakePage.tsx";
+import BudgetCategoriesPage from "./pages/BudgetCategoriesPage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -77,6 +78,7 @@ const App = () => (
                         <Route path="/incentive-rates" element={<IncentiveRatesPage />} />
                         <Route path="/downloads" element={<DownloadsPage />} />
                         <Route path="/channel-intake" element={<ChannelIntakePage />} />
+                        <Route path="/budget-categories" element={<BudgetCategoriesPage />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </AppShell>
