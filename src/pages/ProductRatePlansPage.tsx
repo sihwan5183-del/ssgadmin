@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2, Plus, Link2, Package } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,6 +26,9 @@ interface Mapping {
   vas1_duration: number | null;
   vas2_duration: number | null;
   allowed_sale_types: string[];
+  vas_required: boolean;
+  vas1_locked: boolean;
+  vas2_locked: boolean;
 }
 
 export default function ProductRatePlansPage() {
@@ -245,6 +249,32 @@ export default function ProductRatePlansPage() {
                     className="h-9"
                   />
                 </div>
+              <div className="col-span-full border-t border-border/30 pt-3 mt-1">
+                <Label className="text-xs font-semibold mb-2 block">부가서비스 제어</Label>
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex items-center gap-2 text-xs cursor-pointer">
+                    <Switch
+                      checked={firstRow?.vas_required ?? true}
+                      onCheckedChange={(v) => saveDefaults("vas_required", v)}
+                    />
+                    <span>부가서비스 입력 노출</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs cursor-pointer">
+                    <Switch
+                      checked={firstRow?.vas1_locked ?? false}
+                      onCheckedChange={(v) => saveDefaults("vas1_locked", v)}
+                    />
+                    <span>VAS1 읽기 전용 (강제)</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs cursor-pointer">
+                    <Switch
+                      checked={firstRow?.vas2_locked ?? false}
+                      onCheckedChange={(v) => saveDefaults("vas2_locked", v)}
+                    />
+                    <span>VAS2 읽기 전용 (강제)</span>
+                  </label>
+                </div>
+              </div>
               </div>
             </div>
           )}
