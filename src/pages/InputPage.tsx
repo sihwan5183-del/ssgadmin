@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState, forwardRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { Header } from "@/components/layout/Header";
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Check, Upload, Zap, Trash2, Pencil, X, FileSpreadsheet, Download, Search, ShieldAlert, Hash, Wallet as WalletIcon, Gift, TrendingUp } from "lucide-react";
+import { Check, Upload, Zap, Trash2, Pencil, X, FileSpreadsheet, Download, Search, ShieldAlert, Hash, Wallet as WalletIcon, Gift, TrendingUp, Camera } from "lucide-react";
 import { maskPhone, maskName } from "@/lib/maskPii";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -968,14 +968,14 @@ const InputPage = () => {
               <Input value={form.birth_date ?? ""} onChange={(e) => set("birth_date", e.target.value)} placeholder="900101" className="h-9 bg-input/60 text-xs" />
             </Field>
             <Field label="연락처">
-              <Input value={form.phone ?? ""} onChange={(e) => set("phone", e.target.value)} placeholder="010-0000-0000" className="h-9 bg-input/60 text-xs" />
+              <Input value={form.phone ?? ""} onChange={(e) => set("phone", e.target.value)} placeholder="010-0000-0000" className="h-9 bg-input/60 text-xs" inputMode="tel" />
             </Field>
             <Field label="가입 번호">
               <Input
                 value={customFields.subscription_no ?? ""}
                 onChange={(e) => setCustomFields((f) => ({ ...f, subscription_no: e.target.value }))}
                 placeholder="010-0000-0000"
-                className="h-9 bg-input/60 text-xs"
+                className="h-9 bg-input/60 text-xs" inputMode="tel"
                 maxLength={13}
               />
             </Field>
@@ -1001,13 +1001,23 @@ const InputPage = () => {
               />
             </Field>
             <Field label="단말 일련번호">
-              <Input value={form.device_serial ?? ""} onChange={(e) => set("device_serial", e.target.value)} className="h-9 bg-input/60 text-xs" />
+              <div className="flex gap-1.5">
+                <Input value={form.device_serial ?? ""} onChange={(e) => set("device_serial", e.target.value)} className="h-9 bg-input/60 text-xs flex-1" inputMode="text" />
+                <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0 lg:hidden" onClick={() => toast.info("카메라 스캔은 네이티브 앱에서 지원됩니다")}>
+                  <Camera className="size-4" />
+                </Button>
+              </div>
             </Field>
             <Field label="USIM">
               <Input value={form.usim_model ?? ""} onChange={(e) => set("usim_model", e.target.value)} className="h-9 bg-input/60 text-xs" />
             </Field>
             <Field label="USIM 일련번호">
-              <Input value={form.usim_serial ?? ""} onChange={(e) => set("usim_serial", e.target.value)} className="h-9 bg-input/60 text-xs" />
+              <div className="flex gap-1.5">
+                <Input value={form.usim_serial ?? ""} onChange={(e) => set("usim_serial", e.target.value)} className="h-9 bg-input/60 text-xs flex-1" inputMode="text" />
+                <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0 lg:hidden" onClick={() => toast.info("카메라 스캔은 네이티브 앱에서 지원됩니다")}>
+                  <Camera className="size-4" />
+                </Button>
+              </div>
             </Field>
           </Grid>
           <Grid cols={3}>
@@ -1297,7 +1307,7 @@ const InputPage = () => {
                       }}
                       placeholder="0000"
                       maxLength={4}
-                      className="h-9 bg-input/60 text-xs tabular-nums"
+                      className="h-9 bg-input/60 text-xs tabular-nums" inputMode="numeric"
                     />
                   </Field>
                   <Field label="카드 결제금액 (₩)">
