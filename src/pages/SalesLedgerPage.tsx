@@ -105,6 +105,7 @@ type SaleRow = {
   trade_in_enabled?: boolean | null;
   trade_in_model?: string | null;
   trade_in_confirmed?: number | null;
+  custom_fields?: Record<string, any> | null;
 };
 
 const SalesLedgerPage = () => {
@@ -121,6 +122,8 @@ const SalesLedgerPage = () => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [quickFilter, setQuickFilter] = useState<"unpaid" | "unreturned" | null>(null);
+  const [bundleFilter, setBundleFilter] = useState(false);
+  const [noOfferFilter, setNoOfferFilter] = useState(false);
   const [managerFilter, setManagerFilter] = useState<string>("all");
   const [storeFilter, setStoreFilter] = useState<string>("all");
 
@@ -217,13 +220,15 @@ const SalesLedgerPage = () => {
     } else if (quickFilter === "unreturned") {
       result = result.filter((r) => r.voucher && r.voucher.trim() !== "" && r.voucher_returned !== "유");
     }
+    if (bundleFilter) result = result.filter((r) => r.bundle === "Y");
+    if (noOfferFilter) result = result.filter((r) => (r.custom_fields as any)?.has_offer === false);
     if (!q) return result;
     return result.filter((r) => {
       const name = (r.customer_name ?? "").toLowerCase();
       const phone = (r.phone ?? "").replace(/[^0-9]/g, "");
       return name.includes(q) || phone.includes(q.replace(/[^0-9]/g, ""));
     });
-  }, [rows, searchQ, quickFilter]);
+  }, [rows, searchQ, quickFilter, bundleFilter, noOfferFilter]);
 
   const allSelected = filteredRows.length > 0 && filteredRows.every((r) => selected.has(r.id));
   const toggleAll = () => {
