@@ -1088,6 +1088,14 @@ const InputPage = () => {
                   <span className="text-muted-foreground">- 추가보조금</span>
                   <span className="text-destructive">₩{(form.extra_subsidy ?? 0).toLocaleString()}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">- 고객지원금</span>
+                  <span className="text-destructive">₩{(form.customer_support_amount ?? 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">- 법인카드</span>
+                  <span className="text-destructive">₩{(form.corp_card_amount ?? 0).toLocaleString()}</span>
+                </div>
                 {form.trade_in_enabled && (form.trade_in_confirmed ?? 0) > 0 && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">+ 중고폰 반납</span>
@@ -1098,7 +1106,8 @@ const InputPage = () => {
                   <span className="font-semibold">최종 순이익</span>
                   {(() => {
                     const net = (form.unit_price ?? 0) + (form.vas_fee ?? 0) + (form.trade_in_enabled ? (form.trade_in_confirmed ?? 0) : 0) - (form.distributor_amount ?? 0) - (form.cash_support_amount ?? 0) - (form.extra_subsidy ?? 0);
-                    return <span className={`font-bold ${net >= 0 ? "text-primary" : "text-destructive"}`}>₩{net.toLocaleString()}</span>;
+                    const netFinal = net - (form.customer_support_amount ?? 0) - (form.corp_card_amount ?? 0);
+                    return <span className={`font-bold ${netFinal >= 0 ? "text-primary" : "text-destructive"}`}>₩{netFinal.toLocaleString()}</span>;
                   })()}
                 </div>
                 {(form.receivable_amount ?? 0) > 0 && (
