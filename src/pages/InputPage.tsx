@@ -155,6 +155,7 @@ const InputPage = () => {
   const [linkedInquiryId, setLinkedInquiryId] = useState<string | null>(null);
   const [dbSummary, setDbSummary] = useState({ count: 0, totalRebate: 0, totalOffer: 0, totalProfit: 0 });
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [quickFilter, setQuickFilter] = useState<"unpaid" | "unreturned" | null>(null);
 
   // 인입 → 실적 자동 채움 (URL 파라미터)
   useEffect(() => {
@@ -192,13 +193,19 @@ const InputPage = () => {
 
   const filteredRows = useMemo(() => {
     const q = searchQ.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) => {
+    let result = rows;
+    if (quickFilter === "unpaid") {
+      result = result.filter((r) => (r.receivable_amount ?? 0) > 0 && r.receivable_paid !== "완료");
+    } else if (quickFilter === "unreturned") {
+      result = result.filter((r) => r.voucher && r.voucher.trim() !== "" && r.voucher_returned !== "유");
+    }
+    if (!q) return result;
+    return result.filter((r) => {
       const name = (r.customer_name ?? "").toLowerCase();
       const phone = (r.phone ?? "").replace(/[^0-9]/g, "");
       return name.includes(q) || phone.includes(q.replace(/[^0-9]/g, ""));
     });
-  }, [rows, searchQ]);
+  }, [rows, searchQ, quickFilter]);
 
   // Fetch full aggregates from DB (not limited by pagination)
   const loadSummary = useCallback(async (sq?: string) => {
