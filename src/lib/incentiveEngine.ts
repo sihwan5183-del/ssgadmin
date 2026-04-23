@@ -27,6 +27,8 @@ export interface IncentivePolicy {
   calc_method: "tiered" | "margin_100" | "fixed_amount";
   fixed_amount: number;
   match_model: string | null;
+  bundle_only?: boolean;
+  no_offer_only?: boolean;
 }
 
 export interface LinkageRule {
@@ -70,7 +72,10 @@ function policyMatchesSale(policy: IncentivePolicy, sale: SaleForIncentive): boo
   const stMatch = policy.target_sale_types.length === 0 || policy.target_sale_types.includes(sale.sale_type ?? "");
   const pMatch = policy.target_products.length === 0 || policy.target_products.includes(sale.product ?? "");
   const mMatch = !policy.match_model || policy.match_model === (sale.device_model ?? "");
-  return stMatch && pMatch && mMatch;
+  if (!stMatch || !pMatch || !mMatch) return false;
+  if (policy.bundle_only && !(sale.bundle && sale.bundle.length > 0)) return false;
+  if (policy.no_offer_only && sale.has_offer !== false) return false;
+  return true;
 }
 
 function resolvePolicyTierAmount(tiers: PolicyTier[], qty: number): number {
@@ -196,6 +201,8 @@ export interface SaleForIncentive {
   sale_type: string | null;
   customer_name?: string | null;
   net_fee?: number | null;
+  bundle?: string | null;
+  has_offer?: boolean;
 }
 
 export interface IncentiveBreakdown {
