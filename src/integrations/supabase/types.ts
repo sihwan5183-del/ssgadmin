@@ -239,6 +239,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           dashboard_included: boolean
+          description: string | null
+          field_mapping: string | null
           id: string
           label: string
           sort_order: number
@@ -250,6 +252,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           dashboard_included?: boolean
+          description?: string | null
+          field_mapping?: string | null
           id?: string
           label: string
           sort_order?: number
@@ -261,6 +265,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           dashboard_included?: boolean
+          description?: string | null
+          field_mapping?: string | null
           id?: string
           label?: string
           sort_order?: number
