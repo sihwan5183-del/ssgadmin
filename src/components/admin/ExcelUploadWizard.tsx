@@ -257,7 +257,7 @@ export const ExcelUploadWizard = ({
                 </Badge>
               )}
               {missingRequired.length > 0 && (
-                <Badge variant="outline" className="bg-amber-500/10 text-amber-300 border-amber-500/40">
+                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-400">
                   필수 누락 {missingRequired.length}: {missingRequired.slice(0, 3).map((k) => rules.find((r) => r.field_key === k)?.label).join(", ")}
                 </Badge>
               )}

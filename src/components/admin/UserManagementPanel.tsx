@@ -58,7 +58,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 const STATUS_BADGE: Record<string, string> = {
   active: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-  leave: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  leave: "bg-amber-50 text-amber-400 border-amber-300",
   resigned: "bg-destructive/15 text-destructive border-destructive/30",
 };
 
@@ -376,7 +376,7 @@ export function UserManagementPanel() {
                 </td>
                 <td className="py-3 px-2">
                   {cleanSet.has(u.user_id) ? (
-                    <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full border bg-gradient-to-r from-amber-400/25 to-emerald-400/15 text-amber-300 border-amber-400/40 font-semibold animate-[pulse_3s_ease-in-out_infinite]">
+                    <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full border bg-gradient-to-r from-amber-100 to-emerald-400/15 text-amber-700 border-amber-400 font-semibold animate-[pulse_3s_ease-in-out_infinite]">
                       <CheckCircle2 className="size-2.5" />
                       <Sparkles className="size-2" />
                       클린

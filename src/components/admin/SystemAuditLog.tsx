@@ -34,7 +34,7 @@ const TABLE_LABEL: Record<string, string> = {
 
 const ACTION_META: Record<string, { className: string; icon: typeof Plus; label: string }> = {
   INSERT: { className: "bg-emerald-500/10 text-emerald-300 border-emerald-500/40", icon: Plus, label: "추가" },
-  UPDATE: { className: "bg-amber-500/10 text-amber-300 border-amber-500/40", icon: Pencil, label: "수정" },
+  UPDATE: { className: "bg-amber-50 text-amber-700 border-amber-400", icon: Pencil, label: "수정" },
   DELETE: { className: "bg-destructive/10 text-destructive border-destructive/40", icon: Trash2, label: "삭제" },
 };
 

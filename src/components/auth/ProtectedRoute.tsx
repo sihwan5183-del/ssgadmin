@@ -22,7 +22,7 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
     return (
       <div className="min-h-screen grid place-items-center bg-background p-6">
         <div className="text-center max-w-md space-y-4">
-          <div className="mx-auto size-16 rounded-full bg-amber-500/10 grid place-items-center">
+          <div className="mx-auto size-16 rounded-full bg-amber-50 grid place-items-center">
             <ShieldAlert className="size-8 text-amber-500" />
           </div>
           <h1 className="text-xl font-bold">승인 대기 중</h1>

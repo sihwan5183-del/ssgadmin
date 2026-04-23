@@ -46,7 +46,7 @@ function statusTone(s?: string | null) {
   switch (s) {
     case "확정": return "border-emerald-500/40 text-emerald-300 bg-emerald-500/10";
     case "반려": return "border-destructive/40 text-destructive bg-destructive/10";
-    case "수정요청": return "border-amber-500/40 text-amber-300 bg-amber-500/10";
+    case "수정요청": return "border-amber-400 text-amber-700 bg-amber-50";
     default: return "border-border/50 text-muted-foreground";
   }
 }
@@ -270,7 +270,7 @@ export function LiveFeedSection() {
                           </Badge>
                         )}
                         {hasPending && (
-                          <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-300 bg-amber-500/10">
+                          <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-700 bg-amber-50">
                             <ClipboardList className="size-2.5 mr-0.5" /> 미처리 {r.pending_items.length}
                           </Badge>
                         )}
@@ -283,7 +283,7 @@ export function LiveFeedSection() {
                       {hasPending && (
                         <div className="mt-1.5 flex flex-wrap gap-1">
                           {r.pending_items.slice(0, 4).map((p, i) => (
-                            <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                            <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-300">
                               {p}
                             </span>
                           ))}
@@ -354,13 +354,13 @@ export function LiveFeedSection() {
           </Card>
 
           {/* Pending items */}
-          <Card className="glass border-amber-500/30 overflow-hidden">
+          <Card className="glass border-amber-300 overflow-hidden">
             <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ClipboardList className="size-4 text-amber-400" />
                 <span className="text-sm font-medium">미처리 항목</span>
               </div>
-              <Badge variant="outline" className="border-amber-500/40 text-amber-300 bg-amber-500/10 text-[10px]">
+              <Badge variant="outline" className="border-amber-400 text-amber-700 bg-amber-50 text-[10px]">
                 {pendingItems.length}건
               </Badge>
             </div>
@@ -383,7 +383,7 @@ export function LiveFeedSection() {
                     </div>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {r.pending_items.slice(0, 3).map((p, i) => (
-                        <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                        <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-300">
                           {p}
                         </span>
                       ))}

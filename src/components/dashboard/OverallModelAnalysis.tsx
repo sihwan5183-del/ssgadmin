@@ -177,11 +177,11 @@ export const OverallModelAnalysis = () => {
                   className={cn(
                     "size-6 rounded-md grid place-items-center text-[11px] font-bold tabular-nums shrink-0",
                     i === 0
-                      ? "bg-gradient-to-br from-amber-400/40 to-orange-500/10 text-amber-300 ring-1 ring-amber-400/40"
+                      ? "bg-gradient-to-br from-amber-200 to-orange-100 text-amber-700 ring-1 ring-amber-400"
                       : i === 1
                       ? "bg-gradient-to-br from-slate-300/30 to-slate-500/10 text-slate-200 ring-1 ring-slate-300/30"
                       : i === 2
-                      ? "bg-gradient-to-br from-orange-400/30 to-amber-700/10 text-orange-300 ring-1 ring-orange-400/30"
+                      ? "bg-gradient-to-br from-orange-100 to-amber-100 text-orange-700 ring-1 ring-orange-300"
                       : "bg-muted/60 text-muted-foreground"
                   )}
                 >

@@ -93,11 +93,11 @@ const EDITABLE_FIELDS: Array<{ key: keyof SaleHit; label: string; type?: string 
 ];
 
 const APPROVAL_META: Record<ApprovalStatus, { className: string; icon: typeof CheckCircle2 }> = {
-  승인대기: { className: "border-amber-500/40 text-amber-300 bg-amber-500/10", icon: AlertCircle },
+  승인대기: { className: "border-amber-400 text-amber-700 bg-amber-50", icon: AlertCircle },
   확정: { className: "border-emerald-500/40 text-emerald-300 bg-emerald-500/10", icon: CheckCircle2 },
   반려: { className: "border-destructive/40 text-destructive bg-destructive/10", icon: XCircle },
-  수정요청: { className: "border-orange-500/40 text-orange-300 bg-orange-500/10", icon: Edit3 },
-  환수: { className: "border-orange-500/40 text-orange-300 bg-orange-500/10", icon: RotateCcw },
+  수정요청: { className: "border-orange-400 text-orange-700 bg-orange-50", icon: Edit3 },
+  환수: { className: "border-orange-400 text-orange-700 bg-orange-50", icon: RotateCcw },
   취소: { className: "border-destructive/40 text-destructive bg-destructive/10", icon: XCircle },
 };
 
@@ -349,10 +349,10 @@ export const SaleSearchPanel = () => {
           고객명 · 전화번호 · 단말기 일련번호(IMEI)
         </span>
         <div className="ml-auto flex items-center gap-2 flex-wrap">
-          <Badge variant="outline" className="border-amber-500/40 text-amber-300 bg-amber-500/10 gap-1">
+          <Badge variant="outline" className="border-amber-400 text-amber-700 bg-amber-50 gap-1">
             <AlertCircle className="size-3" /> 미승인 {pendingCount}건
           </Badge>
-          <Badge variant="outline" className="border-amber-500/40 text-amber-300 bg-amber-500/10 gap-1">
+          <Badge variant="outline" className="border-amber-400 text-amber-700 bg-amber-50 gap-1">
             <AlertTriangle className="size-3" /> 미처리 {unhandledCount}건
           </Badge>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/40 border border-border/40">
@@ -447,7 +447,7 @@ export const SaleSearchPanel = () => {
                           </Badge>
                         )}
                         {dailyPending > 0 && (
-                          <Badge variant="outline" className="border-amber-500/40 text-amber-300 bg-amber-500/10 text-[10px]">
+                          <Badge variant="outline" className="border-amber-400 text-amber-700 bg-amber-50 text-[10px]">
                             미처리 {dailyPending}
                           </Badge>
                         )}
@@ -466,7 +466,7 @@ export const SaleSearchPanel = () => {
                         return (
                           <div
                             key={r.id}
-                            className={`flex items-stretch ${sel ? "bg-primary/5" : ""} ${hasUnhandled ? "bg-amber-500/[0.07]" : ""}`}
+                            className={`flex items-stretch ${sel ? "bg-primary/5" : ""} ${hasUnhandled ? "bg-amber-50/70" : ""}`}
                           >
                             <div className="pl-3 pr-1 flex items-center" onClick={(e) => e.stopPropagation()}>
                               <Checkbox checked={sel} onCheckedChange={() => bulk.toggle(r.id)} />
@@ -483,7 +483,7 @@ export const SaleSearchPanel = () => {
                                   <Icon className="size-3" /> {ap}
                                 </Badge>
                                 {hasUnhandled && (
-                                  <Badge variant="outline" className="text-[10px] gap-1 border-amber-500/40 text-amber-300 bg-amber-500/10">
+                                  <Badge variant="outline" className="text-[10px] gap-1 border-amber-400 text-amber-700 bg-amber-50">
                                     <AlertTriangle className="size-3" /> 미처리 {r.pending_items?.length}
                                   </Badge>
                                 )}
@@ -544,7 +544,7 @@ export const SaleSearchPanel = () => {
                 </Badge>
               )}
               {(selected?.pending_items?.length ?? 0) > 0 && selected?.pending_resolved === false && (
-                <Badge variant="outline" className="text-[10px] gap-1 border-amber-500/40 text-amber-300 bg-amber-500/10">
+                <Badge variant="outline" className="text-[10px] gap-1 border-amber-400 text-amber-700 bg-amber-50">
                   <AlertTriangle className="size-3" /> 미처리 {selected?.pending_items?.length}
                 </Badge>
               )}
@@ -720,7 +720,7 @@ export const SaleSearchPanel = () => {
                 }}
               />
               {selected.approval_override_reason && (
-                <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-xs text-orange-200">
+                <div className="rounded-lg border border-orange-300 bg-orange-500/5 px-3 py-2 text-xs text-orange-200">
                   <b>강제 승인 사유:</b> {selected.approval_override_reason}
                 </div>
               )}

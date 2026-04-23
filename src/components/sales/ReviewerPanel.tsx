@@ -56,11 +56,11 @@ interface Props {
 }
 
 const STATUS_META: Record<string, { tone: string; icon: typeof CheckCircle2; label: string }> = {
-  승인대기: { tone: "border-amber-500/40 text-amber-300 bg-amber-500/10", icon: AlertCircle, label: "승인대기" },
+  승인대기: { tone: "border-amber-400 text-amber-700 bg-amber-50", icon: AlertCircle, label: "승인대기" },
   확정: { tone: "border-emerald-500/40 text-emerald-300 bg-emerald-500/10", icon: CheckCircle2, label: "확정" },
   반려: { tone: "border-destructive/40 text-destructive bg-destructive/10", icon: XCircle, label: "반려" },
-  수정요청: { tone: "border-orange-500/40 text-orange-300 bg-orange-500/10", icon: Edit3, label: "수정요청" },
-  환수: { tone: "border-orange-500/40 text-orange-300 bg-orange-500/10", icon: RotateCcw, label: "환수" },
+  수정요청: { tone: "border-orange-400 text-orange-700 bg-orange-50", icon: Edit3, label: "수정요청" },
+  환수: { tone: "border-orange-400 text-orange-700 bg-orange-50", icon: RotateCcw, label: "환수" },
   취소: { tone: "border-destructive/40 text-destructive bg-destructive/10", icon: XCircle, label: "취소" },
 };
 
@@ -179,7 +179,7 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
 
       {/* Revision context (visible to everyone if exists) */}
       {showRevisionContext && (
-        <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-3 space-y-2">
+        <div className="rounded-lg border border-orange-300 bg-orange-500/5 p-3 space-y-2">
           <div className="flex items-center gap-2 text-xs text-orange-200">
             <MessageSquare className="size-3.5" />
             <span className="font-semibold">
@@ -197,7 +197,7 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
             <div className="flex flex-wrap gap-1 pt-1">
               <span className="text-[11px] text-muted-foreground mr-1">수정 필요 항목:</span>
               {sale.revision_fields.map((f) => (
-                <Badge key={f} variant="outline" className="text-[10px] border-orange-500/40 text-orange-200">
+                <Badge key={f} variant="outline" className="text-[10px] border-orange-400 text-orange-200">
                   {f}
                 </Badge>
               ))}
@@ -229,7 +229,7 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
             <CheckCircle2 className="size-3.5 text-emerald-400" />
             검수 체크리스트
           </span>
-          <Badge variant="outline" className={`text-[10px] ${allChecked ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10" : "border-amber-500/40 text-amber-300 bg-amber-500/10"}`}>
+          <Badge variant="outline" className={`text-[10px] ${allChecked ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10" : "border-amber-400 text-amber-700 bg-amber-50"}`}>
             {checkedCount} / {checklistItems.length}
           </Badge>
         </div>
@@ -272,7 +272,7 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
                     key={f}
                     className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-xs cursor-pointer transition-colors ${
                       checked
-                        ? "border-orange-500/40 bg-orange-500/10 text-orange-200"
+                        ? "border-orange-400 bg-orange-50 text-orange-200"
                         : "border-border/40 hover:border-primary/30"
                     }`}
                   >
@@ -288,7 +288,7 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
             <Button onClick={() => submitDecision("확정")} disabled={submitting} variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-700">
               <CheckCircle2 className="size-3.5 mr-1" /> 승인
             </Button>
-            <Button onClick={() => submitDecision("수정요청")} disabled={submitting} variant="outline" size="sm" className="border-orange-500/40 text-orange-300 hover:bg-orange-500/10">
+            <Button onClick={() => submitDecision("수정요청")} disabled={submitting} variant="outline" size="sm" className="border-orange-400 text-orange-700 hover:bg-orange-50">
               <Edit3 className="size-3.5 mr-1" /> 수정요청
             </Button>
             <Button onClick={() => submitDecision("반려")} disabled={submitting} variant="outline" size="sm" className="border-destructive/40 text-destructive hover:bg-destructive/10">

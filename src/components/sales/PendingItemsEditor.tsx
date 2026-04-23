@@ -49,7 +49,7 @@ export const PendingItemsEditor = ({
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           {hasPending && !resolved ? (
-            <Badge variant="outline" className="border-amber-500/40 text-amber-300 bg-amber-500/10 gap-1">
+            <Badge variant="outline" className="border-amber-400 text-amber-700 bg-amber-50 gap-1">
               <AlertTriangle className="size-3" /> 미처리 {items.length}건
             </Badge>
           ) : (
@@ -84,7 +84,7 @@ export const PendingItemsEditor = ({
               key={opt}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs cursor-pointer transition-colors ${
                 checked
-                  ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
+                  ? "border-amber-400 bg-amber-50 text-amber-700"
                   : "border-border/40 hover:border-primary/30"
               } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
             >

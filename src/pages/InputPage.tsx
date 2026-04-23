@@ -846,7 +846,7 @@ const InputPage = () => {
             onClick={handleExportOffers}
             disabled={busy}
             variant="outline"
-            className="rounded-xl border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+            className="rounded-xl border-amber-400 text-amber-700 hover:bg-amber-50"
           >
             <Download className="size-4 mr-2" />
             오퍼(지원금) 다운로드
@@ -1139,7 +1139,7 @@ const InputPage = () => {
           </Grid>
           {/* 수익 중복 입력 경고 */}
           {(form.vas_fee ?? 0) > 0 && (form.unit_price ?? 0) > 0 && (form.vas_fee ?? 0) > (form.unit_price ?? 0) && (
-            <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 mt-2 mb-2 flex items-center gap-2 text-xs text-amber-600">
+            <div className="rounded-lg border border-amber-400 bg-amber-50/50 px-3 py-2 mt-2 mb-2 flex items-center gap-2 text-xs text-amber-600">
               <AlertTriangle className="size-3.5 shrink-0" />
               <span>부가서비스 수수료가 단가표 기준보다 높습니다. <strong>수익 중복 입력 여부를 확인하세요.</strong></span>
             </div>
@@ -1596,7 +1596,7 @@ const InputPage = () => {
                   <tr key={r.id} className={cn(
                     "border-b border-border/20 hover:bg-white/[0.03]",
                     mine && "bg-primary/[0.04]",
-                    hasPending && "bg-amber-500/[0.07] hover:bg-amber-500/[0.12]"
+                    hasPending && "bg-amber-50/70 hover:bg-amber-500/[0.12]"
                   )}>
                     {isAdmin && (
                       <td className="px-3 py-2.5">
@@ -1615,7 +1615,7 @@ const InputPage = () => {
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span>{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
                         {hasPending && (
-                          <Badge variant="outline" className="text-[9px] gap-0.5 border-amber-500/40 text-amber-300 bg-amber-500/10 px-1.5 py-0">
+                          <Badge variant="outline" className="text-[9px] gap-0.5 border-amber-400 text-amber-700 bg-amber-50 px-1.5 py-0">
                             <AlertTriangle className="size-2.5" /> 미처리 {r.pending_items?.length}
                           </Badge>
                         )}

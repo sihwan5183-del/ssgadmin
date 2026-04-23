@@ -312,9 +312,9 @@ function PendingItemsSection() {
 
   return (
     <div className="space-y-5">
-      <Card className="p-5 glass border-amber-500/30">
+      <Card className="p-5 glass border-amber-300">
         <div className="flex items-center gap-3">
-          <div className="size-10 rounded-xl bg-amber-500/15 grid place-items-center">
+          <div className="size-10 rounded-xl bg-amber-50 grid place-items-center">
             <ClipboardList className="size-5 text-amber-400" />
           </div>
           <div className="flex-1">
@@ -323,7 +323,7 @@ function PendingItemsSection() {
               결합·할부·약정·부가서비스·서류 보완 등 후속 처리가 필요한 실적입니다. 항목별로 사유를 남기고, 처리 완료 시 체크하여 정리하세요.
             </div>
           </div>
-          <Badge variant="outline" className="border-amber-500/40 text-amber-300 bg-amber-500/10">
+          <Badge variant="outline" className="border-amber-400 text-amber-700 bg-amber-50">
             {filtered.length}건 미처리
           </Badge>
         </div>
@@ -378,7 +378,7 @@ function PendingItemsSection() {
                     <td className="px-3 py-2.5">
                       <div className="flex flex-wrap gap-1 max-w-[260px]">
                         {r.pending_items.map((p, i) => (
-                          <Badge key={i} variant="outline" className="border-amber-500/40 text-amber-300 bg-amber-500/10 text-[10px]">
+                          <Badge key={i} variant="outline" className="border-amber-400 text-amber-700 bg-amber-50 text-[10px]">
                             {p}
                           </Badge>
                         ))}

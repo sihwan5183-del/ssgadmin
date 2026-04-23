@@ -72,7 +72,7 @@ const STATUS_COLOR: Record<string, string> = {
   이동중: "bg-secondary/15 text-secondary-foreground border-secondary/30",
   개통완료: "bg-muted/40 text-muted-foreground border-border",
   반품: "bg-destructive/15 text-destructive border-destructive/30",
-  반납: "bg-amber-500/15 text-amber-300 border-amber-500/40",
+  반납: "bg-amber-50 text-amber-700 border-amber-400",
   불량: "bg-destructive/20 text-destructive border-destructive/40",
 };
 
@@ -757,8 +757,8 @@ export default function DeviceInventoryPage() {
                     agingClass = "bg-warning/10 border-l-2 border-warning";
                     agingBadge = { label: `${days}일`, cls: "bg-warning text-warning-foreground" };
                   } else if (isOpen && days >= 30) {
-                    agingClass = "bg-amber-500/5 border-l-2 border-amber-500/60";
-                    agingBadge = { label: `${days}일`, cls: "bg-amber-500/20 text-amber-300 border border-amber-500/40" };
+                    agingClass = "bg-amber-50/50 border-l-2 border-amber-500/60";
+                    agingBadge = { label: `${days}일`, cls: "bg-amber-100 text-amber-700 border border-amber-400" };
                   }
                   return (
                     <tr key={r.id} className={`border-t border-border/30 hover:bg-muted/20 ${agingClass} ${bulk.isSelected(r.id) ? "bg-primary/5" : ""}`}>
