@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Settings2 } from "lucide-react";
+import { Trash2, Plus, Settings2, Pencil, Check, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -38,6 +38,8 @@ export default function FieldOptionsPage() {
   const [activeField, setActiveField] = useState<string>("channel");
   const [newValue, setNewValue] = useState("");
   const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -90,6 +92,38 @@ export default function FieldOptionsPage() {
       .eq("id", r.id);
     if (error) toast.error(error.message);
     else load();
+  };
+
+  const startEdit = (r: Row) => {
+    setEditingId(r.id);
+    setEditValue(r.value);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditValue("");
+  };
+
+  const saveEdit = async (r: Row) => {
+    const trimmed = editValue.trim();
+    if (!trimmed) {
+      toast.error("항목 이름은 빈칸일 수 없습니다");
+      return;
+    }
+    if (trimmed === r.value) { cancelEdit(); return; }
+    const dup = rows.find((x) => x.id !== r.id && x.value === trimmed);
+    if (dup) {
+      toast.error("이미 동일한 이름의 항목이 존재합니다");
+      return;
+    }
+    const { error } = await supabase
+      .from("field_options")
+      .update({ value: trimmed })
+      .eq("id", r.id);
+    if (error) { toast.error("수정 실패: " + error.message); return; }
+    toast.success(`'${r.value}' → '${trimmed}' 수정 완료`);
+    cancelEdit();
+    load();
   };
 
   return (
@@ -167,24 +201,42 @@ export default function FieldOptionsPage() {
                   }`}
                 >
                   <span className="text-xs text-muted-foreground w-6 text-right">{i + 1}</span>
-                  <span className="flex-1 font-medium text-sm">{r.value}</span>
+                  {editingId === r.id ? (
+                    <div className="flex-1 flex items-center gap-1.5">
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") saveEdit(r);
+                          if (e.key === "Escape") cancelEdit();
+                        }}
+                        className="h-8 text-sm"
+                        autoFocus
+                      />
+                      <Button variant="ghost" size="icon" className="size-7 shrink-0" onClick={() => saveEdit(r)} title="저장">
+                        <Check className="size-3.5 text-success" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="size-7 shrink-0" onClick={cancelEdit} title="취소">
+                        <X className="size-3.5 text-destructive" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <span className="flex-1 font-medium text-sm">{r.value}</span>
+                  )}
                   {!r.active && <Badge variant="outline" className="text-[10px]">비활성</Badge>}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggle(r)}
-                    className="text-xs"
-                  >
-                    {r.active ? "숨기기" : "사용"}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => remove(r.id)}
-                    className="size-8"
-                  >
-                    <Trash2 className="size-4 text-destructive" />
-                  </Button>
+                  {editingId !== r.id && (
+                    <>
+                      <Button variant="ghost" size="icon" onClick={() => startEdit(r)} className="size-8" title="항목 이름 수정">
+                        <Pencil className="size-3.5 text-muted-foreground" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => toggle(r)} className="text-xs">
+                        {r.active ? "숨기기" : "사용"}
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => remove(r.id)} className="size-8">
+                        <Trash2 className="size-4 text-destructive" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               ))
             )}
