@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, forwardRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { Header } from "@/components/layout/Header";
@@ -1689,18 +1689,19 @@ const SummaryCard = ({
   );
 };
 
-const FormSection = ({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) => (
-  <section className="glass rounded-2xl p-4 md:p-5 space-y-3 shadow-card-elevated">
+const FormSection = React.forwardRef<HTMLElement, { title: string; icon?: React.ReactNode; children: React.ReactNode }>(({ title, icon, children }, ref) => (
+  <section ref={ref} className="glass rounded-2xl p-4 md:p-5 space-y-3 shadow-card-elevated">
     <div className="flex items-center gap-2 pb-1 border-b border-border/30">
       {icon && <Badge className="bg-gradient-primary text-primary-foreground border-0">{icon}</Badge>}
       <h3 className="text-xs font-semibold tracking-tight">{title}</h3>
     </div>
     {children}
   </section>
-);
+));
+FormSection.displayName = "FormSection";
 
-const Grid = ({ cols, children }: { cols: 2 | 3 | 4 | 5 | 6; children: React.ReactNode }) => (
-  <div className={cn(
+const Grid = React.forwardRef<HTMLDivElement, { cols: 2 | 3 | 4 | 5 | 6; children: React.ReactNode }>(({ cols, children }, ref) => (
+  <div ref={ref} className={cn(
     "grid gap-x-3 gap-y-2",
     cols === 2 && "grid-cols-1 md:grid-cols-2",
     cols === 3 && "grid-cols-1 md:grid-cols-3",
@@ -1710,13 +1711,15 @@ const Grid = ({ cols, children }: { cols: 2 | 3 | 4 | 5 | 6; children: React.Rea
   )}>
     {children}
   </div>
-);
+));
+Grid.displayName = "Grid";
 
-const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div className="space-y-0.5">
+const Field = React.forwardRef<HTMLDivElement, { label: string; children: React.ReactNode }>(({ label, children }, ref) => (
+  <div ref={ref} className="space-y-0.5">
     <Label className="text-[11px] text-muted-foreground font-medium leading-none">{label}</Label>
     {children}
   </div>
-);
+));
+Field.displayName = "Field";
 
 export default InputPage;
