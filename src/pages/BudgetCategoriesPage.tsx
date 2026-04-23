@@ -108,6 +108,7 @@ export default function BudgetCategoriesPage() {
           <thead className="bg-muted/40 text-xs text-muted-foreground">
             <tr>
               <th className="text-left px-3 py-2">항목명</th>
+              <th className="text-left px-3 py-2">매핑 필드</th>
               <th className="text-center px-3 py-2">대시보드 합산</th>
               <th className="text-center px-3 py-2">순서</th>
               <th className="text-right px-3 py-2">관리</th>
@@ -115,21 +116,29 @@ export default function BudgetCategoriesPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={4} className="text-center py-8 text-muted-foreground">불러오는 중…</td></tr>
+              <tr><td colSpan={5} className="text-center py-8 text-muted-foreground">불러오는 중…</td></tr>
             ) : items.length === 0 ? (
-              <tr><td colSpan={4} className="text-center py-8 text-muted-foreground">등록된 항목이 없습니다</td></tr>
+              <tr><td colSpan={5} className="text-center py-8 text-muted-foreground">등록된 항목이 없습니다</td></tr>
             ) : (
               items.map((c) => (
                 <tr key={c.id} className="border-t border-border/30 hover:bg-muted/20">
                   <td className="px-3 py-2.5">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{c.label}</span>
+                      {c.field_mapping && (
+                        <Badge variant="secondary" className="text-[9px]">
+                          {c.field_mapping}
+                        </Badge>
+                      )}
                       {!c.dashboard_included && (
                         <Badge variant="outline" className="text-[9px] border-destructive/40 text-destructive">
                           <EyeOff className="size-2.5 mr-0.5" /> 제외
                         </Badge>
                       )}
                     </div>
+                  </td>
+                  <td className="px-3 py-2.5 text-xs text-muted-foreground max-w-[180px] truncate" title={c.description ?? ""}>
+                    {c.description ?? "-"}
                   </td>
                   <td className="px-3 py-2.5 text-center">
                     <Switch
