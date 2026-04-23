@@ -3,23 +3,20 @@ import {
   Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend,
 } from "recharts";
 import { Sparkles, Trophy, TrendingUp } from "lucide-react";
-import {
-  models,
-  stackedChannelData,
-  getChannelTop5,
-  getChannelPolicyShare,
-  channelModelData,
-} from "@/data/channelModelData";
+import { useModelAnalysis } from "@/hooks/useModelAnalysis";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const formatKRW = (n: number) => "₩" + n.toLocaleString("ko-KR");
 
 export const ChannelModelAnalysis = () => {
-  const [selectedChannel, setSelectedChannel] = useState<string>(channelModelData[0]?.channel ?? "");
-  const top5 = getChannelTop5(selectedChannel);
-  const policyShare = getChannelPolicyShare();
-  const selectedRow = channelModelData.find((r) => r.channel === selectedChannel);
+  const { channelData, stackedData, modelsInfo, policyShare, getTop5, hasData } = useModelAnalysis();
+  const [selectedChannel, setSelectedChannel] = useState<string>("");
+
+  // auto-select first channel when data arrives
+  const effectiveChannel = selectedChannel || (channelData[0]?.channel ?? "");
+  const top5 = getTop5(effectiveChannel);
+  const selectedRow = channelData.find((r) => r.channel === effectiveChannel);
   const channelTotal = selectedRow?.models.reduce((s, m) => s + m.count, 0) ?? 0;
   const channelAvgRebate = selectedRow && channelTotal > 0
     ? Math.round(selectedRow.models.reduce((s, m) => s + m.avgRebate * m.count, 0) / channelTotal)
@@ -42,7 +39,7 @@ export const ChannelModelAnalysis = () => {
         </div>
         <div className="text-xs text-muted-foreground">
           현재 선택 ·{" "}
-          <span className="text-gradient font-bold text-sm">{selectedChannel || "데이터 없음"}</span>
+          <span className="text-gradient font-bold text-sm">{effectiveChannel || "데이터 없음"}</span>
         </div>
       </div>
 
@@ -56,7 +53,7 @@ export const ChannelModelAnalysis = () => {
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={stackedChannelData}
+                data={stackedData}
                 margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
                 onClick={(e: any) => {
                   if (e?.activeLabel) setSelectedChannel(e.activeLabel as string);
@@ -79,13 +76,13 @@ export const ChannelModelAnalysis = () => {
                   wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
                   iconType="circle"
                 />
-                {models.map((m, i) => (
+                {modelsInfo.map((m, i) => (
                   <Bar
                     key={m.name}
                     dataKey={m.name}
                     stackId="a"
                     fill={m.color}
-                    radius={i === models.length - 1 ? [8, 8, 0, 0] : 0}
+                    radius={i === modelsInfo.length - 1 ? [8, 8, 0, 0] : 0}
                     cursor="pointer"
                   />
                 ))}
@@ -109,7 +106,7 @@ export const ChannelModelAnalysis = () => {
                   onClick={() => setSelectedChannel(p.channel)}
                   className={cn(
                     "w-full text-left rounded-xl p-3 border transition-all",
-                    active
+                    p.channel === effectiveChannel
                       ? "border-primary/40 bg-gradient-soft shadow-glow"
                       : "border-border/40 bg-card/30 hover:border-primary/30"
                   )}
@@ -151,7 +148,7 @@ export const ChannelModelAnalysis = () => {
       <div className="mt-4 grid grid-cols-1 lg:grid-cols-5 gap-4">
         <div className="lg:col-span-2 glass rounded-2xl p-5">
           <div className="text-xs text-muted-foreground">선택된 채널</div>
-          <div className="mt-1 text-2xl font-bold text-gradient">{selectedChannel || "데이터 없음"}</div>
+          <div className="mt-1 text-2xl font-bold text-gradient">{effectiveChannel || "데이터 없음"}</div>
 
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="rounded-xl bg-card/40 border border-border/40 p-3">
@@ -182,7 +179,7 @@ export const ChannelModelAnalysis = () => {
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-base font-semibold tracking-tight flex items-center gap-2">
               <Trophy className="size-4 text-primary-glow" />
-              {selectedChannel} · 판매 모델 TOP 5
+              {effectiveChannel} · 판매 모델 TOP 5
             </h4>
             <span className="text-[11px] text-muted-foreground">건수 기준</span>
           </div>

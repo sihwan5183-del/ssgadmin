@@ -2,7 +2,7 @@ import {
   Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell, Legend,
 } from "recharts";
 import { Sparkles, TrendingUp, Trophy } from "lucide-react";
-import { getOverallModelStats } from "@/data/channelModelData";
+import { useModelAnalysis } from "@/hooks/useModelAnalysis";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -14,8 +14,7 @@ const formatShortKRW = (n: number) => {
 };
 
 export const OverallModelAnalysis = () => {
-  const stats = getOverallModelStats();
-  const totalCount = stats.reduce((s, m) => s + m.count, 0);
+  const { overallStats: stats, totalCount, loading, hasData } = useModelAnalysis();
   const totalRevenue = stats.reduce((s, m) => s + m.revenue, 0);
   const strategyCount = stats.filter((m) => m.isStrategy).reduce((s, m) => s + m.count, 0);
   const strategyPct = totalCount > 0 ? Math.round((strategyCount / totalCount) * 100) : 0;
