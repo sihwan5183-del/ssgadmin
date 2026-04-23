@@ -1315,17 +1315,17 @@ const InputPage = () => {
           <Grid cols={3}>
             <Field label="발송유형">
               <Select value={form.delivery_type ?? ""} onValueChange={(v) => set("delivery_type", v)}>
-                <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
                 <SelectContent>{DELIVERY_TYPES.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
             <Field label="운송장">
-              <Input value={form.tracking_no ?? ""} onChange={(e) => set("tracking_no", e.target.value)} className="h-11 bg-input/60" />
+              <Input value={form.tracking_no ?? ""} onChange={(e) => set("tracking_no", e.target.value)} className="h-9 bg-input/60 text-xs" />
+            </Field>
+            <Field label="특이사항">
+              <Input value={form.note ?? ""} onChange={(e) => set("note", e.target.value)} className="h-9 bg-input/60 text-xs" placeholder="메모" />
             </Field>
           </Grid>
-          <Field label="특이사항">
-            <Textarea value={form.note ?? ""} onChange={(e) => set("note", e.target.value)} rows={2} className="bg-input/60" />
-          </Field>
         </FormSection>
 
         {/* 미처리 항목 */}
@@ -1371,18 +1371,18 @@ const InputPage = () => {
           </div>
         )}
 
-        <div className="text-[11px] text-muted-foreground text-right -mb-2">
+        <div className="text-[10px] text-muted-foreground text-right -mb-1">
           수익 자동계산 수식: <code className="font-mono text-primary/80">{netFeeFormula}</code>
         </div>
 
         <div className="flex gap-3">
           {editingId && (
-            <Button type="button" variant="outline" onClick={reset} className="h-12 rounded-2xl">
+            <Button type="button" variant="outline" onClick={reset} className="h-10 rounded-2xl text-sm">
               <X className="size-4 mr-2" /> 취소
             </Button>
           )}
-          <Button type="submit" disabled={busy} className="flex-1 h-12 bg-gradient-primary shadow-glow rounded-2xl text-base font-semibold">
-            <Check className="size-5 mr-2" /> {editingId ? "수정 저장" : "판매 1건 저장"}
+          <Button type="submit" disabled={busy} className="flex-1 h-10 bg-gradient-primary shadow-glow rounded-2xl text-sm font-semibold">
+            <Check className="size-4 mr-2" /> {editingId ? "수정 저장" : "판매 1건 저장"}
           </Button>
         </div>
       </form>
