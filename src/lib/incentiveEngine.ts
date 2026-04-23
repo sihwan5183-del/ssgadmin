@@ -24,6 +24,9 @@ export interface IncentivePolicy {
   valid_from: string | null;
   valid_to: string | null;
   note: string | null;
+  calc_method: "tiered" | "margin_100" | "fixed_amount";
+  fixed_amount: number;
+  match_model: string | null;
 }
 
 export interface LinkageRule {
@@ -56,6 +59,9 @@ export interface PolicyCalcResult {
   matchedCount: number;
   tierAmount: number;
   subtotal: number;
+  calcMethod: "tiered" | "margin_100" | "fixed_amount";
+  /** Per-sale breakdown for detailed view */
+  saleDetails?: { saleId: string; amount: number; label: string }[];
 }
 
 function policyMatchesSale(policy: IncentivePolicy, sale: SaleForIncentive): boolean {
@@ -63,7 +69,8 @@ function policyMatchesSale(policy: IncentivePolicy, sale: SaleForIncentive): boo
   if (!inDateRange(sale.open_date, policy.valid_from, policy.valid_to)) return false;
   const stMatch = policy.target_sale_types.length === 0 || policy.target_sale_types.includes(sale.sale_type ?? "");
   const pMatch = policy.target_products.length === 0 || policy.target_products.includes(sale.product ?? "");
-  return stMatch && pMatch;
+  const mMatch = !policy.match_model || policy.match_model === (sale.device_model ?? "");
+  return stMatch && pMatch && mMatch;
 }
 
 function resolvePolicyTierAmount(tiers: PolicyTier[], qty: number): number {
@@ -93,14 +100,28 @@ export function calcPolicyIncentives(
     if (!p.active) continue;
     const matched = sales.filter((s) => policyMatchesSale(p, s));
     const count = matched.length;
-    const tierAmount = resolvePolicyTierAmount(p.tiers, count);
-    results.push({
-      policyId: p.id,
-      policyName: p.name,
-      matchedCount: count,
-      tierAmount,
-      subtotal: tierAmount * count,
-    });
+    const method = p.calc_method ?? "tiered";
+
+    if (method === "margin_100") {
+      // 순마진 100% — 각 건의 net_fee 합산
+      let subtotal = 0;
+      const saleDetails = matched.map((s) => {
+        const amt = Number(s.net_fee ?? 0);
+        subtotal += amt;
+        return { saleId: s.id, amount: amt, label: "순마진100%" };
+      });
+      results.push({ policyId: p.id, policyName: p.name, matchedCount: count, tierAmount: 0, subtotal, calcMethod: method, saleDetails });
+    } else if (method === "fixed_amount") {
+      // 고정 금액 지급
+      const perSale = Number(p.fixed_amount ?? 0);
+      const saleDetails = matched.map((s) => ({ saleId: s.id, amount: perSale, label: `고정 ${perSale.toLocaleString()}원` }));
+      results.push({ policyId: p.id, policyName: p.name, matchedCount: count, tierAmount: perSale, subtotal: perSale * count, calcMethod: method, saleDetails });
+    } else {
+      // 구간제 (tiered)
+      const tierAmount = resolvePolicyTierAmount(p.tiers, count);
+      const saleDetails = matched.map((s) => ({ saleId: s.id, amount: tierAmount, label: `구간 ${tierAmount.toLocaleString()}원` }));
+      results.push({ policyId: p.id, policyName: p.name, matchedCount: count, tierAmount, subtotal: tierAmount * count, calcMethod: method, saleDetails });
+    }
   }
   return results;
 }
