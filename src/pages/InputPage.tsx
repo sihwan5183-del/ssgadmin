@@ -984,39 +984,74 @@ const InputPage = () => {
                 );
               })()}
             </Field>
-            <Field label="부가서비스 1 (주셋톱)">
-              {(() => {
-                const defaults = getDefaultsForProduct(form.product);
-                const mismatch = defaults?.default_vas1 && form.vas1 && form.vas1 !== defaults.default_vas1 && !autoFilledFields.has("vas1");
-                return (
-                  <div>
-                    <Input value={form.vas1 ?? ""} onChange={(e) => set("vas1", e.target.value)} className="h-11 bg-input/60" />
-                    {mismatch && (
-                      <p className="text-[10px] text-amber-500 mt-1 flex items-center gap-1">
-                        <AlertTriangle className="size-3" /> 기본 설정({defaults.default_vas1})과 다릅니다
-                      </p>
-                    )}
-                  </div>
-                );
-              })()}
-            </Field>
-            <Field label="부가서비스 2 (부셋톱)">
-              {(() => {
-                const defaults = getDefaultsForProduct(form.product);
-                const mismatch = defaults?.default_vas2 && form.vas2 && form.vas2 !== defaults.default_vas2 && !autoFilledFields.has("vas2");
-                return (
-                  <div>
-                    <Input value={form.vas2 ?? ""} onChange={(e) => set("vas2", e.target.value)} className="h-11 bg-input/60" />
-                    {mismatch && (
-                      <p className="text-[10px] text-amber-500 mt-1 flex items-center gap-1">
-                        <AlertTriangle className="size-3" /> 기본 설정({defaults.default_vas2})과 다릅니다
-                      </p>
-                    )}
-                  </div>
-                );
-              })()}
-            </Field>
           </Grid>
+          {/* 부가서비스 - 조건부 렌더링 */}
+          {(() => {
+            const defaults = getDefaultsForProduct(form.product);
+            const vasRequired = defaults?.vas_required ?? true;
+            if (!vasRequired && form.product) return (
+              <div className="text-xs text-muted-foreground italic px-1 py-2">
+                이 상품은 부가서비스 입력이 필요하지 않습니다
+              </div>
+            );
+            return (
+              <div className={cn(
+                "transition-all duration-300 ease-out overflow-hidden",
+                form.product && vasRequired ? "max-h-[200px] opacity-100" : !form.product ? "max-h-[200px] opacity-100" : "max-h-0 opacity-0"
+              )}>
+                <Grid cols={2}>
+                  <Field label="부가서비스 1 (주셋톱)">
+                    {(() => {
+                      const mismatch = defaults?.default_vas1 && form.vas1 && form.vas1 !== defaults.default_vas1 && !autoFilledFields.has("vas1");
+                      const locked = defaults?.vas1_locked && defaults?.default_vas1;
+                      return (
+                        <div>
+                          <Input
+                            value={form.vas1 ?? ""}
+                            onChange={(e) => set("vas1", e.target.value)}
+                            className={cn("h-11 bg-input/60", locked && "opacity-70 cursor-not-allowed")}
+                            readOnly={!!locked}
+                          />
+                          {locked && (
+                            <p className="text-[10px] text-muted-foreground mt-1">🔒 자동 설정됨 (수정 불가)</p>
+                          )}
+                          {!locked && mismatch && (
+                            <p className="text-[10px] text-amber-500 mt-1 flex items-center gap-1">
+                              <AlertTriangle className="size-3" /> 기본 설정({defaults?.default_vas1})과 다릅니다
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </Field>
+                  <Field label="부가서비스 2 (부셋톱)">
+                    {(() => {
+                      const mismatch = defaults?.default_vas2 && form.vas2 && form.vas2 !== defaults.default_vas2 && !autoFilledFields.has("vas2");
+                      const locked = defaults?.vas2_locked && defaults?.default_vas2;
+                      return (
+                        <div>
+                          <Input
+                            value={form.vas2 ?? ""}
+                            onChange={(e) => set("vas2", e.target.value)}
+                            className={cn("h-11 bg-input/60", locked && "opacity-70 cursor-not-allowed")}
+                            readOnly={!!locked}
+                          />
+                          {locked && (
+                            <p className="text-[10px] text-muted-foreground mt-1">🔒 자동 설정됨 (수정 불가)</p>
+                          )}
+                          {!locked && mismatch && (
+                            <p className="text-[10px] text-amber-500 mt-1 flex items-center gap-1">
+                              <AlertTriangle className="size-3" /> 기본 설정({defaults?.default_vas2})과 다릅니다
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </Field>
+                </Grid>
+              </div>
+            );
+          })()}
         </FormSection>
 
         <FormSection title="수익성 / 단가">
