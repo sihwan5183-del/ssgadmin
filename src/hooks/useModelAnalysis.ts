@@ -52,6 +52,7 @@ export interface PolicyShare {
 export function useModelAnalysis() {
   const { startDate, endDate } = usePeriod();
   const { settings } = useAppSettings();
+  const { matchModel } = useDeviceModels();
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -66,7 +67,7 @@ export function useModelAnalysis() {
       setLoading(true);
       const { data } = await supabase
         .from("sales")
-        .select("device_model, channel, unit_price")
+        .select("device_model, channel, unit_price, product")
         .gte("open_date", startDate)
         .lte("open_date", endDate)
         .limit(10000);
@@ -84,6 +85,10 @@ export function useModelAnalysis() {
     const channelModelMap = new Map<string, Map<string, { count: number; rebateSum: number }>>();
 
     for (const r of rows) {
+      // 모바일 상품만 집계
+      const product = (r.product ?? "").toString().trim();
+      if (product && product !== "모바일") continue;
+
       const model = (r.device_model ?? "기타").toString().trim() || "기타";
       const channel = (r.channel ?? "기타").toString().trim() || "기타";
       const price = Number(r.unit_price ?? 0);
