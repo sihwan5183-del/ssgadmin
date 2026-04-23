@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState, forwardRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { Header } from "@/components/layout/Header";
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Check, Upload, Zap, Trash2, Pencil, X, FileSpreadsheet, Download, Search, ShieldAlert, Hash, Wallet as WalletIcon, Gift, TrendingUp } from "lucide-react";
+import { Check, Upload, Zap, Trash2, Pencil, X, FileSpreadsheet, Download, Search, ShieldAlert, Hash, Wallet as WalletIcon, Gift, TrendingUp, Camera } from "lucide-react";
 import { maskPhone, maskName } from "@/lib/maskPii";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -1001,13 +1001,23 @@ const InputPage = () => {
               />
             </Field>
             <Field label="단말 일련번호">
-              <Input value={form.device_serial ?? ""} onChange={(e) => set("device_serial", e.target.value)} className="h-9 bg-input/60 text-xs" />
+              <div className="flex gap-1.5">
+                <Input value={form.device_serial ?? ""} onChange={(e) => set("device_serial", e.target.value)} className="h-9 bg-input/60 text-xs flex-1" inputMode="text" />
+                <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0 lg:hidden" onClick={() => toast.info("카메라 스캔은 네이티브 앱에서 지원됩니다")}>
+                  <Camera className="size-4" />
+                </Button>
+              </div>
             </Field>
             <Field label="USIM">
               <Input value={form.usim_model ?? ""} onChange={(e) => set("usim_model", e.target.value)} className="h-9 bg-input/60 text-xs" />
             </Field>
             <Field label="USIM 일련번호">
-              <Input value={form.usim_serial ?? ""} onChange={(e) => set("usim_serial", e.target.value)} className="h-9 bg-input/60 text-xs" />
+              <div className="flex gap-1.5">
+                <Input value={form.usim_serial ?? ""} onChange={(e) => set("usim_serial", e.target.value)} className="h-9 bg-input/60 text-xs flex-1" inputMode="text" />
+                <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0 lg:hidden" onClick={() => toast.info("카메라 스캔은 네이티브 앱에서 지원됩니다")}>
+                  <Camera className="size-4" />
+                </Button>
+              </div>
             </Field>
           </Grid>
           <Grid cols={3}>
