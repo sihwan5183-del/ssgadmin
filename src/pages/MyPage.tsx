@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 
 const MyPage = () => {
   const { user } = useAuth();
-  const { role, isAdmin } = useRole();
+  const { primaryRole, isAdmin } = useRole();
   const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
@@ -39,7 +39,7 @@ const MyPage = () => {
           <div className="space-y-2 text-sm">
             <div className="flex items-center justify-between py-2 border-b border-border/30">
               <span className="text-muted-foreground flex items-center gap-2"><Shield className="size-3.5" /> 권한</span>
-              <Badge variant="outline">{role ?? "user"}</Badge>
+              <Badge variant="outline">{primaryRole ?? "user"}</Badge>
             </div>
             {profile?.store && (
               <div className="flex items-center justify-between py-2 border-b border-border/30">
