@@ -125,11 +125,13 @@ export const StoreEfficiencyBubble = () => {
               <Tooltip
                 cursor={{ strokeDasharray: "3 3" }}
                 contentStyle={{
-                  background: "hsl(var(--popover))",
-                  border: "1px solid hsl(var(--border))",
+                  background: "hsl(0 0% 100% / 0.96)",
+                  color: "#374151",
+                  border: "1px solid hsl(0 0% 88%)",
                   borderRadius: 12,
                   fontSize: 12,
-                  boxShadow: "0 8px 24px hsl(330 30% 30% / 0.15)",
+                  boxShadow: "0 4px 20px hsl(0 0% 0% / 0.10)",
+                  padding: "8px 12px",
                 }}
                 formatter={(value: any, name: string) => {
                   if (name === "건당 마진" || name === "총수익") return [Number(value).toLocaleString() + "원", name];
