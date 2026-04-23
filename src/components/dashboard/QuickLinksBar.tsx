@@ -66,7 +66,7 @@ export const QuickLinksBar = () => {
   };
 
   const updateLink = async (id: string, field: string, value: string) => {
-    await supabase.from("quick_links").update({ [field]: value }).eq("id", id);
+    await supabase.from("quick_links").update({ [field]: value } as any).eq("id", id);
   };
 
   if (links.length === 0 && !isAdmin) return null;
