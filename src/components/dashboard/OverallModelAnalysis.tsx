@@ -181,7 +181,7 @@ export const OverallModelAnalysis = () => {
                       : i === 1
                       ? "bg-gradient-to-br from-slate-300/30 to-slate-500/10 text-slate-200 ring-1 ring-slate-300/30"
                       : i === 2
-                      ? "bg-gradient-to-br from-orange-400/30 to-amber-700/10 text-orange-300 ring-1 ring-orange-400/30"
+                      ? "bg-gradient-to-br from-orange-100 to-amber-100 text-orange-700 ring-1 ring-orange-300"
                       : "bg-muted/60 text-muted-foreground"
                   )}
                 >

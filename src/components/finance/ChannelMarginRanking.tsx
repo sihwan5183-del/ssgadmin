@@ -16,7 +16,7 @@ export const ChannelMarginRanking = () => {
   const podium = [
     { wrap: "from-amber-100 to-orange-100 ring-amber-400 text-amber-700", Icon: Crown },
     { wrap: "from-slate-300/25 to-slate-500/5 ring-slate-300/40 text-slate-200", Icon: Trophy },
-    { wrap: "from-orange-700/30 to-amber-800/10 ring-orange-600/40 text-orange-300", Icon: Medal },
+    { wrap: "from-orange-100 to-amber-100 ring-orange-400 text-orange-700", Icon: Medal },
   ];
 
   return (

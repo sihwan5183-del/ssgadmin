@@ -75,7 +75,7 @@ export function MyReviewAlerts() {
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            아래 실적은 <b className="text-orange-300">수정요청</b> 또는 <b className="text-destructive">반려</b> 상태입니다. 클릭해서 수정 후 '재검수 요청' 버튼을 눌러주세요.
+            아래 실적은 <b className="text-orange-700">수정요청</b> 또는 <b className="text-destructive">반려</b> 상태입니다. 클릭해서 수정 후 '재검수 요청' 버튼을 눌러주세요.
           </p>
 
           <ul className="mt-3 space-y-2">
@@ -84,7 +84,7 @@ export function MyReviewAlerts() {
               const Icon = isRejected ? XCircle : Edit3;
               const tone = isRejected
                 ? "border-destructive/40 text-destructive bg-destructive/10"
-                : "border-orange-500/40 text-orange-300 bg-orange-500/10";
+                : "border-orange-400 text-orange-700 bg-orange-50";
               return (
                 <li key={it.id}>
                   <Link
@@ -107,7 +107,7 @@ export function MyReviewAlerts() {
                       {it.revision_fields && it.revision_fields.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                           {it.revision_fields.slice(0, 4).map((f) => (
-                            <span key={f} className="text-[10px] px-1.5 py-0.5 rounded border border-orange-500/30 text-orange-300">
+                            <span key={f} className="text-[10px] px-1.5 py-0.5 rounded border border-orange-300 text-orange-700">
                               {f}
                             </span>
                           ))}

@@ -96,8 +96,8 @@ const APPROVAL_META: Record<ApprovalStatus, { className: string; icon: typeof Ch
   승인대기: { className: "border-amber-400 text-amber-700 bg-amber-50", icon: AlertCircle },
   확정: { className: "border-emerald-500/40 text-emerald-300 bg-emerald-500/10", icon: CheckCircle2 },
   반려: { className: "border-destructive/40 text-destructive bg-destructive/10", icon: XCircle },
-  수정요청: { className: "border-orange-500/40 text-orange-300 bg-orange-500/10", icon: Edit3 },
-  환수: { className: "border-orange-500/40 text-orange-300 bg-orange-500/10", icon: RotateCcw },
+  수정요청: { className: "border-orange-400 text-orange-700 bg-orange-50", icon: Edit3 },
+  환수: { className: "border-orange-400 text-orange-700 bg-orange-50", icon: RotateCcw },
   취소: { className: "border-destructive/40 text-destructive bg-destructive/10", icon: XCircle },
 };
 
@@ -720,7 +720,7 @@ export const SaleSearchPanel = () => {
                 }}
               />
               {selected.approval_override_reason && (
-                <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-xs text-orange-200">
+                <div className="rounded-lg border border-orange-300 bg-orange-500/5 px-3 py-2 text-xs text-orange-200">
                   <b>강제 승인 사유:</b> {selected.approval_override_reason}
                 </div>
               )}

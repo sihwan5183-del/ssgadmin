@@ -71,8 +71,8 @@ const STATUS_BADGE: Record<string, { label: string; className: string; icon: typ
   확정: { label: "승인", className: "border-emerald-500/40 text-emerald-300 bg-emerald-500/10", icon: CheckCircle2 },
   승인대기: { label: "대기", className: "border-amber-400 text-amber-700 bg-amber-50", icon: Clock },
   반려: { label: "반려", className: "border-destructive/40 text-destructive bg-destructive/10", icon: XCircle },
-  수정요청: { label: "수정요청", className: "border-orange-500/40 text-orange-300 bg-orange-500/10", icon: XCircle },
-  환수: { label: "환수", className: "border-orange-500/40 text-orange-300 bg-orange-500/10", icon: XCircle },
+  수정요청: { label: "수정요청", className: "border-orange-400 text-orange-700 bg-orange-50", icon: XCircle },
+  환수: { label: "환수", className: "border-orange-400 text-orange-700 bg-orange-50", icon: XCircle },
   취소: { label: "취소", className: "border-destructive/40 text-destructive bg-destructive/10", icon: XCircle },
 };
 
@@ -329,7 +329,7 @@ export default function StaffStatusPage() {
                           <div className={`size-7 rounded-lg grid place-items-center text-[11px] font-bold shrink-0 ${
                             rank === 1 ? "bg-amber-100 text-amber-700" :
                             rank === 2 ? "bg-slate-400/20 text-slate-200" :
-                            rank === 3 ? "bg-orange-500/20 text-orange-300" :
+                            rank === 3 ? "bg-orange-100 text-orange-700" :
                             "bg-card/60 text-muted-foreground"
                           }`}>
                             #{rank}

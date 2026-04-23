@@ -231,7 +231,7 @@ const RegularsPage = () => {
           label="최다 채널"
           value={top?.channel ?? "—"}
           icon={TrendingUp}
-          color="from-orange-400/30 to-amber-500/10 text-orange-300"
+          color="from-orange-100 to-amber-500/10 text-orange-700"
           hint={top ? `${top.count}명 등록` : ""}
         />
         <KpiCard label="쿠폰 발송" value={totalCoupon} icon={Send} color="from-blue-400/30 to-cyan-500/10 text-blue-300" suffix="건" />

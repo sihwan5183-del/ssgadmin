@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 const rankStyles = [
   { wrap: "bg-gradient-to-br from-amber-100 to-orange-100 ring-amber-400", icon: Crown, color: "text-amber-700" },
   { wrap: "bg-gradient-to-br from-slate-300/25 to-slate-500/5 ring-slate-300/40", icon: Trophy, color: "text-slate-200" },
-  { wrap: "bg-gradient-to-br from-orange-700/30 to-amber-800/10 ring-orange-600/40", icon: Medal, color: "text-orange-300" },
+  { wrap: "bg-gradient-to-br from-orange-100 to-amber-100 ring-orange-400", icon: Medal, color: "text-orange-700" },
 ];
 
 export const RankingPanel = () => {
