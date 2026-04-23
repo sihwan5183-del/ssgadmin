@@ -195,6 +195,7 @@ export function useFinanceData(): FinanceData {
       type: c.category_type,
       amount: c.field_mapping ? (fieldAmountMap[c.field_mapping] ?? 0) : 0,
       included: c.dashboard_included,
+      isIncludedInBase: (c as any).is_included_in_base ?? false,
     }));
 
     // 동적 합산: field_mapping 기반으로 On 항목만 합산
@@ -203,6 +204,8 @@ export function useFinanceData(): FinanceData {
     for (const c of categories) {
       const amt = c.field_mapping ? (fieldAmountMap[c.field_mapping] ?? 0) : 0;
       if (!c.dashboard_included) continue;
+      // is_included_in_base가 true이면 상위 항목에 이미 포함 → 합산에서 제외
+      if ((c as any).is_included_in_base) continue;
       if (c.category_type === "지출") dynamicExpense += amt;
       if (c.category_type === "수익") dynamicRevenue += amt;
     }
