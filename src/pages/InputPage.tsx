@@ -1129,10 +1129,26 @@ const InputPage = () => {
           )}
           <Grid cols={4}>
             <Field label="상품권">
-              <Input value={form.voucher ?? ""} onChange={(e) => set("voucher", e.target.value)} className="h-11 bg-input/60" />
+              <Select value={form.voucher ?? ""} onValueChange={(v) => set("voucher", v)}>
+                <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectContent>
+                  {["신세계", "롯데", "모바일", "기타"].map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </Field>
-            <Field label="반납 유/무">
-              <Input value={form.voucher_returned ?? ""} onChange={(e) => set("voucher_returned", e.target.value)} placeholder="유 / 무" className="h-11 bg-input/60" />
+            <Field label="상품권 금액 (₩)">
+              <MoneyInput value={form.extra_subsidy} onChange={(v) => set("extra_subsidy", v)} />
+            </Field>
+            <Field label="반납 상태">
+              <div className="flex items-center gap-2 h-11">
+                <Switch
+                  checked={form.voucher_returned === "유"}
+                  onCheckedChange={(v) => set("voucher_returned", v ? "유" : "무")}
+                />
+                <span className={cn("text-sm font-medium", form.voucher_returned === "유" ? "text-primary" : "text-destructive")}>
+                  {form.voucher_returned === "유" ? "반납 완료" : "미반납"}
+                </span>
+              </div>
             </Field>
           </Grid>
         </FormSection>
