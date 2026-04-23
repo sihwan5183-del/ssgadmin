@@ -304,9 +304,9 @@ const InputPage = () => {
           setLinkedInquiryId(null);
         }
         toast.success("판매 실적 저장 완료", { description: "대시보드에 즉시 반영됩니다." });
+        navigate("/sales-ledger");
       }
       reset();
-      load();
     } catch (err) {
       toast.error("저장 실패", { description: err instanceof Error ? err.message : String(err) });
     } finally {
