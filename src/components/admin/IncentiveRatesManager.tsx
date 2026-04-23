@@ -53,8 +53,8 @@ export function IncentiveRatesManager() {
   const { options: productOpts } = useFieldOptions("product");
   const { linkageRule, upsert } = useAppSettings();
 
-  const saleTypes = (saleTypeOpts as any[]).filter((o) => o.active).map((o) => o.value);
-  const products = (productOpts as any[]).filter((o) => o.active).map((o) => o.value);
+  const saleTypes = saleTypeOpts as string[];
+  const products = productOpts as string[];
 
   const [drafts, setDrafts] = useState<Record<string, DraftPolicy>>({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
