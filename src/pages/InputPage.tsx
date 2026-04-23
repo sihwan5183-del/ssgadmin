@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { Header } from "@/components/layout/Header";
@@ -41,6 +41,30 @@ import { ModelAutocomplete } from "@/components/ui/model-autocomplete";
 import { Sparkles, AlertTriangle, Wallet, Banknote, Building2 } from "lucide-react";
 
 const PAGE_SIZE = 25;
+
+/* ---------- animated counter hook ---------- */
+function useAnimatedNumber(target: number, duration = 400) {
+  const [display, setDisplay] = useState(target);
+  const rafRef = useRef<number>(0);
+  useEffect(() => {
+    const start = display;
+    const diff = target - start;
+    if (diff === 0) return;
+    const t0 = performance.now();
+    const tick = (now: number) => {
+      const elapsed = now - t0;
+      const progress = Math.min(elapsed / duration, 1);
+      // ease-out
+      const ease = 1 - Math.pow(1 - progress, 3);
+      setDisplay(Math.round(start + diff * ease));
+      if (progress < 1) rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target, duration]);
+  return display;
+}
 
 type SaleRow = {
   id: string;
@@ -129,6 +153,7 @@ const InputPage = () => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [searchParams, setSearchParams] = useSearchParams();
   const [linkedInquiryId, setLinkedInquiryId] = useState<string | null>(null);
+  const [dbSummary, setDbSummary] = useState({ count: 0, totalRebate: 0, totalOffer: 0, totalProfit: 0 });
 
   // 인입 → 실적 자동 채움 (URL 파라미터)
   useEffect(() => {
@@ -168,12 +193,45 @@ const InputPage = () => {
     });
   }, [rows, searchQ]);
 
-  const summary = useMemo(() => {
-    const totalRebate = filteredRows.reduce((s, r) => s + (r.unit_price ?? 0), 0);
-    const totalOffer = filteredRows.reduce((s, r) => s + offerOf(r), 0);
-    const totalProfit = totalRebate - totalOffer;
-    return { count: filteredRows.length, totalRebate, totalOffer, totalProfit };
-  }, [filteredRows]);
+  // Fetch full aggregates from DB (not limited by pagination)
+  const loadSummary = useCallback(async (sq?: string) => {
+    const q = (sq ?? searchQ).trim().toLowerCase();
+    // If searching, we need to fetch matching rows' aggregates
+    if (q) {
+      const like = `%${q}%`;
+      const { data, error } = await supabase
+        .from("sales")
+        .select("unit_price, distributor_amount, extra_subsidy, cash_support_amount")
+        .gte("open_date", startDate)
+        .lte("open_date", endDate)
+        .or(`customer_name.ilike.${like},phone.ilike.${like}`);
+      if (error) return;
+      const rows = data ?? [];
+      const totalRebate = rows.reduce((s, r) => s + (r.unit_price ?? 0), 0);
+      const totalOffer = rows.reduce((s, r) => s + (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0), 0);
+      setDbSummary({ count: rows.length, totalRebate, totalOffer, totalProfit: totalRebate - totalOffer });
+    } else {
+      // No search: aggregate all rows in the period
+      const { data, error } = await supabase
+        .from("sales")
+        .select("unit_price, distributor_amount, extra_subsidy, cash_support_amount")
+        .gte("open_date", startDate)
+        .lte("open_date", endDate);
+      if (error) return;
+      const rows = data ?? [];
+      const totalRebate = rows.reduce((s, r) => s + (r.unit_price ?? 0), 0);
+      const totalOffer = rows.reduce((s, r) => s + (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0), 0);
+      setDbSummary({ count: rows.length, totalRebate, totalOffer, totalProfit: totalRebate - totalOffer });
+    }
+  }, [searchQ, startDate, endDate]);
+
+  const summary = dbSummary;
+
+  // Animated values for summary cards
+  const animCount = useAnimatedNumber(summary.count);
+  const animRebate = useAnimatedNumber(summary.totalRebate);
+  const animOffer = useAnimatedNumber(summary.totalOffer);
+  const animProfit = useAnimatedNumber(summary.totalProfit);
 
   const allSelected = filteredRows.length > 0 && filteredRows.every((r) => selected.has(r.id));
   const toggleAll = () => {
@@ -225,8 +283,16 @@ const InputPage = () => {
 
   useEffect(() => {
     load();
+    loadSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, startDate, endDate]);
+
+  // Re-fetch summary when search changes (debounced)
+  useEffect(() => {
+    const t = setTimeout(() => loadSummary(searchQ), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQ, startDate, endDate]);
 
   useEffect(() => {
     setPage(0);
@@ -1063,7 +1129,7 @@ const InputPage = () => {
             <Button variant="outline" size="sm" onClick={handleExport} className="rounded-xl gap-2">
               <Download className="size-4" /> 엑셀로 내보내기
             </Button>
-            <Badge className="bg-primary/15 text-primary-glow border-primary/30">총 {total.toLocaleString()}건</Badge>
+            <Badge className="bg-primary/15 text-primary-glow border-primary/30">총 {summary.count.toLocaleString()}건</Badge>
           </div>
         </div>
 
@@ -1138,14 +1204,14 @@ const InputPage = () => {
 
         {/* 요약 카드 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-          <SummaryCard icon={Hash} label="총 판매 건수" value={`${summary.count.toLocaleString()}건`} accent="primary" />
-          <SummaryCard icon={WalletIcon} label="총 리베이트" value={`${summary.totalRebate.toLocaleString("ko-KR")}원`} accent="secondary" />
-          <SummaryCard icon={Gift} label="총 오퍼(지원금)" value={`${summary.totalOffer.toLocaleString("ko-KR")}원`} accent="warning" />
+          <SummaryCard icon={Hash} label="총 판매 건수" value={`${animCount.toLocaleString()}건`} accent="primary" />
+          <SummaryCard icon={WalletIcon} label="총 리베이트" value={`${animRebate.toLocaleString("ko-KR")}원`} accent="secondary" />
+          <SummaryCard icon={Gift} label="총 오퍼(지원금)" value={`${animOffer.toLocaleString("ko-KR")}원`} accent="warning" />
           <SummaryCard
             icon={TrendingUp}
             label="총 최종 수익"
-            value={`${summary.totalProfit.toLocaleString("ko-KR")}원`}
-            accent={summary.totalProfit >= 0 ? "success" : "destructive"}
+            value={`${animProfit.toLocaleString("ko-KR")}원`}
+            accent={animProfit >= 0 ? "success" : "destructive"}
           />
         </div>
 
@@ -1268,7 +1334,7 @@ const SummaryCard = ({
       <div className="flex items-center gap-2 text-[11px] font-medium opacity-90 text-primary">
         <Icon className="size-3.5" /> {label}
       </div>
-      <div className="mt-1.5 text-lg md:text-xl font-bold tabular-nums tracking-tight text-foreground">
+      <div className="mt-1.5 text-lg md:text-xl font-bold tabular-nums tracking-tight text-foreground transition-all duration-300">
         {value}
       </div>
     </div>
