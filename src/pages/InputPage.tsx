@@ -10,22 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Check, Upload, Zap, Trash2, Pencil, X, FileSpreadsheet, Download, Search, ShieldAlert, Hash, Wallet as WalletIcon, Gift, TrendingUp, Camera } from "lucide-react";
-import { maskPhone, maskName } from "@/lib/maskPii";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Check, Upload, Zap, Pencil, X, FileSpreadsheet, Download, Search, Camera } from "lucide-react";
 import { useRole } from "@/hooks/useRole";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { useProductRatePlans } from "@/hooks/useProductRatePlans";
 import { usePeriod } from "@/contexts/PeriodContext";
-import { PaginationBar } from "@/components/ui/pagination-bar";
-import { exportToExcel, SALES_COLUMNS, OFFER_COLUMNS } from "@/lib/excelExport";
 import { cn } from "@/lib/utils";
 import { useFieldDefinitions } from "@/hooks/useFieldDefinitions";
 import { useNetFeeFormula } from "@/hooks/useNetFeeFormula";
@@ -39,8 +30,7 @@ import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ModelAutocomplete } from "@/components/ui/model-autocomplete";
-import { Sparkles, AlertTriangle, Wallet, Banknote, Building2 } from "lucide-react";
-import { CreditCard } from "lucide-react";
+import { Sparkles, AlertTriangle, Wallet, CreditCard } from "lucide-react";
 
 const PAGE_SIZE = 25;
 
