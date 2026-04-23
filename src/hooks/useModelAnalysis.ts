@@ -200,6 +200,16 @@ export function useModelAnalysis() {
       return flat;
     });
 
+    const modelsInfo = [
+      ...globalTop5Series.map((s) => ({
+        name: s,
+        petName: s,
+        isStrategy: false,
+        color: seriesColorMap.get(s)!,
+      })),
+      { name: "기타", petName: "기타", isStrategy: false, color: seriesColorMap.get("기타")! },
+    ];
+
     const stackedSegmentsByChannel = new Map<string, ChannelStackSegment[]>();
     stackedData.forEach((row) => {
       const segments = modelsInfo
@@ -212,17 +222,6 @@ export function useModelAnalysis() {
         .filter((segment) => segment.value > 0);
       stackedSegmentsByChannel.set(String(row.channel), segments);
     });
-
-    // modelsInfo — only top 5 + 기타 (max 6 entries for the chart)
-    const modelsInfo = [
-      ...globalTop5Series.map((s) => ({
-        name: s,
-        petName: s,
-        isStrategy: false,
-        color: seriesColorMap.get(s)!,
-      })),
-      { name: "기타", petName: "기타", isStrategy: false, color: seriesColorMap.get("기타")! },
-    ];
 
     // helpers
     const getTop5 = (channel: string) => {
