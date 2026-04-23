@@ -154,7 +154,10 @@ const InputPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [linkedInquiryId, setLinkedInquiryId] = useState<string | null>(null);
   const [dbSummary, setDbSummary] = useState({ count: 0, totalRebate: 0, totalOffer: 0, totalProfit: 0 });
+  const [unpaidCount, setUnpaidCount] = useState(0);
+  const [unreturnedCount, setUnreturnedCount] = useState(0);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [quickFilter, setQuickFilter] = useState<"unpaid" | "unreturned" | null>(null);
 
   // 인입 → 실적 자동 채움 (URL 파라미터)
   useEffect(() => {
@@ -192,13 +195,19 @@ const InputPage = () => {
 
   const filteredRows = useMemo(() => {
     const q = searchQ.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) => {
+    let result = rows;
+    if (quickFilter === "unpaid") {
+      result = result.filter((r) => (r.receivable_amount ?? 0) > 0 && r.receivable_paid !== "완료");
+    } else if (quickFilter === "unreturned") {
+      result = result.filter((r) => r.voucher && r.voucher.trim() !== "" && r.voucher_returned !== "유");
+    }
+    if (!q) return result;
+    return result.filter((r) => {
       const name = (r.customer_name ?? "").toLowerCase();
       const phone = (r.phone ?? "").replace(/[^0-9]/g, "");
       return name.includes(q) || phone.includes(q.replace(/[^0-9]/g, ""));
     });
-  }, [rows, searchQ]);
+  }, [rows, searchQ, quickFilter]);
 
   // Fetch full aggregates from DB (not limited by pagination)
   const loadSummary = useCallback(async (sq?: string) => {
@@ -230,6 +239,24 @@ const InputPage = () => {
       const totalOffer = rows.reduce((s, r) => s + (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0), 0);
       setDbSummary({ count: rows.length, totalRebate, totalOffer, totalProfit: totalRebate - totalOffer });
     }
+    // Unpaid/unreturned counts
+    const { count: uc } = await supabase
+      .from("sales")
+      .select("id", { count: "exact", head: true })
+      .gte("open_date", startDate)
+      .lte("open_date", endDate)
+      .gt("receivable_amount", 0)
+      .neq("receivable_paid", "완료");
+    setUnpaidCount(uc ?? 0);
+    const { count: urc } = await supabase
+      .from("sales")
+      .select("id", { count: "exact", head: true })
+      .gte("open_date", startDate)
+      .lte("open_date", endDate)
+      .neq("voucher", "")
+      .not("voucher", "is", null)
+      .neq("voucher_returned", "유");
+    setUnreturnedCount(urc ?? 0);
   }, [searchQ, startDate, endDate]);
 
   const summary = dbSummary;
@@ -1062,6 +1089,20 @@ const InputPage = () => {
             <Field label="부가서비스 수수료 (₩)">
               <MoneyInput value={form.vas_fee} onChange={(v) => set("vas_fee", v)} />
             </Field>
+            <Field label="미수금 (₩)">
+              <MoneyInput value={form.receivable_amount} onChange={(v) => set("receivable_amount", v)} />
+            </Field>
+            <Field label="수급 상태">
+              <div className="flex items-center gap-2 h-11">
+                <Switch
+                  checked={form.receivable_paid === "완료"}
+                  onCheckedChange={(v) => set("receivable_paid", v ? "완료" : "미수급")}
+                />
+                <span className={cn("text-sm font-medium", form.receivable_paid === "완료" ? "text-primary" : "text-destructive")}>
+                  {form.receivable_paid === "완료" ? "수급 완료" : "미수급"}
+                </span>
+              </div>
+            </Field>
           </Grid>
           {/* 수익 중복 입력 경고 */}
           {(form.vas_fee ?? 0) > 0 && (form.unit_price ?? 0) > 0 && (form.vas_fee ?? 0) > (form.unit_price ?? 0) && (
@@ -1115,10 +1156,26 @@ const InputPage = () => {
           )}
           <Grid cols={4}>
             <Field label="상품권">
-              <Input value={form.voucher ?? ""} onChange={(e) => set("voucher", e.target.value)} className="h-11 bg-input/60" />
+              <Select value={form.voucher ?? ""} onValueChange={(v) => set("voucher", v)}>
+                <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectContent>
+                  {["신세계", "롯데", "모바일", "기타"].map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </Field>
-            <Field label="반납 유/무">
-              <Input value={form.voucher_returned ?? ""} onChange={(e) => set("voucher_returned", e.target.value)} placeholder="유 / 무" className="h-11 bg-input/60" />
+            <Field label="상품권 금액 (₩)">
+              <MoneyInput value={form.extra_subsidy} onChange={(v) => set("extra_subsidy", v)} />
+            </Field>
+            <Field label="반납 상태">
+              <div className="flex items-center gap-2 h-11">
+                <Switch
+                  checked={form.voucher_returned === "유"}
+                  onCheckedChange={(v) => set("voucher_returned", v ? "유" : "무")}
+                />
+                <span className={cn("text-sm font-medium", form.voucher_returned === "유" ? "text-primary" : "text-destructive")}>
+                  {form.voucher_returned === "유" ? "반납 완료" : "미반납"}
+                </span>
+              </div>
             </Field>
           </Grid>
         </FormSection>
@@ -1314,6 +1371,30 @@ const InputPage = () => {
               필터: {statusFilter} ✕
             </Badge>
           )}
+          <Badge
+            variant="outline"
+            className={cn(
+              "gap-1 cursor-pointer transition-colors",
+              quickFilter === "unpaid"
+                ? "border-destructive/60 text-destructive bg-destructive/15"
+                : "border-border/40 text-muted-foreground hover:bg-muted/40"
+            )}
+            onClick={() => setQuickFilter(quickFilter === "unpaid" ? null : "unpaid")}
+          >
+            💰 미수금 건
+          </Badge>
+          <Badge
+            variant="outline"
+            className={cn(
+              "gap-1 cursor-pointer transition-colors",
+              quickFilter === "unreturned"
+                ? "border-destructive/60 text-destructive bg-destructive/15"
+                : "border-border/40 text-muted-foreground hover:bg-muted/40"
+            )}
+            onClick={() => setQuickFilter(quickFilter === "unreturned" ? null : "unreturned")}
+          >
+            🎫 상품권 미반납
+          </Badge>
           <div className="relative flex-1 min-w-[260px] max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
@@ -1382,7 +1463,7 @@ const InputPage = () => {
         </div>
 
         {/* 요약 카드 */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
           <SummaryCard icon={Hash} label="총 판매 건수" value={`${animCount.toLocaleString()}건`} accent="primary" />
           <SummaryCard icon={WalletIcon} label="총 리베이트" value={`${animRebate.toLocaleString("ko-KR")}원`} accent="secondary" />
           <SummaryCard icon={Gift} label="총 오퍼(지원금)" value={`${animOffer.toLocaleString("ko-KR")}원`} accent="warning" />
@@ -1391,6 +1472,18 @@ const InputPage = () => {
             label="총 최종 수익"
             value={`${animProfit.toLocaleString("ko-KR")}원`}
             accent={animProfit >= 0 ? "success" : "destructive"}
+          />
+          <SummaryCard
+            icon={Banknote}
+            label="미수금 건"
+            value={`${unpaidCount}건`}
+            accent={unpaidCount > 0 ? "destructive" : "primary"}
+          />
+          <SummaryCard
+            icon={Gift}
+            label="상품권 미반납"
+            value={`${unreturnedCount}건`}
+            accent={unreturnedCount > 0 ? "destructive" : "primary"}
           />
         </div>
 
@@ -1448,6 +1541,16 @@ const InputPage = () => {
                         {hasPending && (
                           <Badge variant="outline" className="text-[9px] gap-0.5 border-amber-500/40 text-amber-300 bg-amber-500/10 px-1.5 py-0">
                             <AlertTriangle className="size-2.5" /> 미처리 {r.pending_items?.length}
+                          </Badge>
+                        )}
+                        {(r.receivable_amount ?? 0) > 0 && r.receivable_paid !== "완료" && (
+                          <Badge variant="outline" className="text-[9px] gap-0.5 border-destructive/40 text-destructive bg-destructive/10 px-1.5 py-0">
+                            💰 미수급
+                          </Badge>
+                        )}
+                        {r.voucher && r.voucher.trim() !== "" && r.voucher_returned !== "유" && (
+                          <Badge variant="outline" className="text-[9px] gap-0.5 border-destructive/40 text-destructive bg-destructive/10 px-1.5 py-0">
+                            🎫 미반납
                           </Badge>
                         )}
                       </div>
