@@ -32,7 +32,7 @@ import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ModelAutocomplete } from "@/components/ui/model-autocomplete";
 import { Sparkles, AlertTriangle, Wallet, Banknote, Building2 } from "lucide-react";
-import { CreditCard } from "lucide-react";
+import { CreditCard, Smartphone } from "lucide-react";
 
 type SaleRow = {
   id: string;
@@ -78,12 +78,17 @@ type SaleRow = {
   pending_items?: string[] | null;
   pending_note?: string | null;
   pending_resolved?: boolean | null;
+  trade_in_enabled?: boolean | null;
+  trade_in_model?: string | null;
+  trade_in_estimate?: number | null;
+  trade_in_confirmed?: number | null;
 };
 
 const emptyForm: Partial<SaleRow> = {
   status: "개통완료",
   moyo_excluded: false,
   cash_open: false,
+  trade_in_enabled: false,
 };
 
 const InputPage = () => {
@@ -220,6 +225,8 @@ const InputPage = () => {
       distributor_amount: num(form.distributor_amount),
       extra_subsidy: num(form.extra_subsidy),
       cash_support_amount: num(form.cash_support_amount),
+      trade_in_estimate: num(form.trade_in_estimate),
+      trade_in_confirmed: num(form.trade_in_confirmed),
     };
     const payload = {
       ...form,
@@ -233,6 +240,8 @@ const InputPage = () => {
       pending_items: pendingItems,
       pending_note: pendingNote || null,
       pending_resolved: pendingItems.length === 0 ? true : pendingResolved,
+      trade_in_enabled: !!form.trade_in_enabled,
+      trade_in_model: form.trade_in_enabled ? (form.trade_in_model || null) : null,
     };
     try {
       if (editingId) {
@@ -650,7 +659,7 @@ const InputPage = () => {
           </Grid>
         </FormSection>
 
-        <FormSection title="가입 정보">
+        <FormSection title="가입 및 기기 정보">
           <Grid cols={6}>
             <Field label="가입상품 *">
               <Select
@@ -758,9 +767,7 @@ const InputPage = () => {
               />
             </Field>
           </Grid>
-        </FormSection>
-
-        <FormSection title="기기 정보">
+          <div className="border-t border-border/30 pt-3 mt-1" />
           <Grid cols={4}>
             <Field label="단말기">
               <ModelAutocomplete
@@ -884,6 +891,48 @@ const InputPage = () => {
         </FormSection>
 
         <FormSection title="수익 및 정산">
+          {/* 중고폰 반납 */}
+          <div className="border border-border/30 rounded-xl p-3 mb-2">
+            <div className="flex items-center gap-2 mb-2">
+              <Smartphone className="size-3.5 text-primary" />
+              <span className="text-xs font-semibold">중고폰 반납</span>
+              <Switch
+                checked={!!form.trade_in_enabled}
+                onCheckedChange={(v) => {
+                  set("trade_in_enabled", v);
+                  if (!v) {
+                    set("trade_in_model", null);
+                    set("trade_in_estimate", 0);
+                    set("trade_in_confirmed", 0);
+                  }
+                }}
+              />
+              <span className={cn("text-[11px] font-medium", form.trade_in_enabled ? "text-primary" : "text-muted-foreground")}>
+                {form.trade_in_enabled ? "반납 있음" : "해당 없음"}
+              </span>
+            </div>
+            {form.trade_in_enabled && (
+              <div className="animate-fade-in">
+                <Grid cols={3}>
+                  <Field label="중고폰 모델명">
+                    <Input
+                      value={form.trade_in_model ?? ""}
+                      onChange={(e) => set("trade_in_model", e.target.value)}
+                      placeholder="예: iPhone 14, Galaxy S23"
+                      className="h-9 bg-input/60 text-xs"
+                    />
+                  </Field>
+                  <Field label="예상 반납 금액 (₩)">
+                    <MoneyInput value={form.trade_in_estimate} onChange={(v) => set("trade_in_estimate", v)} />
+                  </Field>
+                  <Field label="확정 반납 금액 (₩)">
+                    <MoneyInput value={form.trade_in_confirmed} onChange={(v) => set("trade_in_confirmed", v)} />
+                  </Field>
+                </Grid>
+              </div>
+            )}
+          </div>
+
           <Grid cols={4}>
             <Field label="단가표 기준 (₩)">
               <MoneyInput value={form.unit_price} onChange={(v) => set("unit_price", v)} />
@@ -946,10 +995,16 @@ const InputPage = () => {
                   <span className="text-muted-foreground">- 고객입금(반환)</span>
                   <span className="text-destructive">₩{(form.receivable_amount ?? 0).toLocaleString()}</span>
                 </div>
+                {form.trade_in_enabled && (form.trade_in_confirmed ?? 0) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">+ 중고폰 반납</span>
+                    <span className="text-primary">₩{(form.trade_in_confirmed ?? 0).toLocaleString()}</span>
+                  </div>
+                )}
                 <div className="flex justify-between border-t border-border/30 pt-1 mt-1">
                   <span className="font-semibold">최종 순이익</span>
                   {(() => {
-                    const net = (form.unit_price ?? 0) + (form.vas_fee ?? 0) - (form.distributor_amount ?? 0) - (form.cash_support_amount ?? 0) - (form.extra_subsidy ?? 0) - (form.receivable_amount ?? 0);
+                    const net = (form.unit_price ?? 0) + (form.vas_fee ?? 0) + (form.trade_in_enabled ? (form.trade_in_confirmed ?? 0) : 0) - (form.distributor_amount ?? 0) - (form.cash_support_amount ?? 0) - (form.extra_subsidy ?? 0) - (form.receivable_amount ?? 0);
                     return <span className={`font-bold ${net >= 0 ? "text-primary" : "text-destructive"}`}>₩{net.toLocaleString()}</span>;
                   })()}
                 </div>
