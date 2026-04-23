@@ -425,7 +425,7 @@ const InputPage = () => {
           }
         }
         // 숫자 컬럼 변환
-        ["unit_price", "vas_fee", "receivable_amount", "distributor_amount", "extra_subsidy", "cash_support_amount", "net_fee"].forEach((k) => {
+        ["unit_price", "vas_fee", "receivable_amount", "distributor_amount", "extra_subsidy", "cash_support_amount", "net_fee", "customer_support_amount", "corp_card_amount"].forEach((k) => {
           if (base[k] != null) base[k] = num(base[k]);
         });
         if (base.net_fee == null || base.net_fee === 0) base.net_fee = calcNetFee(base);
@@ -1149,6 +1149,8 @@ const InputPage = () => {
                     set("distributor_amount", 0);
                     set("extra_subsidy", 0);
                     set("cash_support_amount", 0);
+                    set("customer_support_amount", 0);
+                    set("corp_card_amount", 0);
                     set("cash_open", false);
                     set("cash_bank", null);
                     set("cash_account", null);
