@@ -856,26 +856,28 @@ const InputPage = () => {
       {/* 입력 폼 */}
       <form onSubmit={onSubmit} className="space-y-5 pb-10">
         <FormSection title="기본 정보" icon={<Zap className="size-3" />}>
-          <Grid cols={3}>
+          <Grid cols={4}>
             <Field label="인입경로 *">
               <Select value={form.channel ?? ""} onValueChange={(v) => set("channel", v)}>
-                <SelectTrigger className="h-11 bg-input/60"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
                 <SelectContent>
                   {CHANNELS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                 </SelectContent>
               </Select>
             </Field>
             <Field label="담당자 *">
-              <Input value={form.manager ?? ""} onChange={(e) => set("manager", e.target.value)} className="h-11 bg-input/60" required />
+              <Input value={form.manager ?? ""} onChange={(e) => set("manager", e.target.value)} className="h-9 bg-input/60 text-xs" required />
             </Field>
             <Field label="개통년월">
-              <Input value={form.open_month ?? ""} onChange={(e) => set("open_month", e.target.value)} placeholder="2026. 4. 10" className="h-11 bg-input/60" />
+              <Input value={form.open_month ?? ""} onChange={(e) => set("open_month", e.target.value)} placeholder="2026. 4. 10" className="h-9 bg-input/60 text-xs" />
+            </Field>
+            <Field label="옵션">
+              <div className="flex items-center gap-2 h-9">
+                <Switch checked={!!form.moyo_excluded} onCheckedChange={(v) => set("moyo_excluded", v)} />
+                <span className="text-[11px] text-muted-foreground">모요 미적용</span>
+              </div>
             </Field>
           </Grid>
-          <div className="flex items-center gap-3 pt-2">
-            <Switch checked={!!form.moyo_excluded} onCheckedChange={(v) => set("moyo_excluded", v)} />
-            <Label className="text-xs">모요 미적용</Label>
-          </div>
         </FormSection>
 
         <FormSection title="가입 정보">
