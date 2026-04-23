@@ -854,7 +854,7 @@ const InputPage = () => {
       </section>
 
       {/* 입력 폼 */}
-      <form onSubmit={onSubmit} className="space-y-5 pb-10">
+      <form onSubmit={onSubmit} className="space-y-3 pb-8">
         <FormSection title="기본 정보" icon={<Zap className="size-3" />}>
           <Grid cols={4}>
             <Field label="인입경로 *">
