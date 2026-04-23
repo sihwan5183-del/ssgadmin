@@ -1,0 +1,28 @@
+{
+  "name": "영업기획팀 전략 대시보드",
+  "short_name": "영업대시보드",
+  "description": "통신사 영업기획팀을 위한 실시간 실적·마케팅 효율 분석 대시보드",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#d6006e",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/pwa-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/pwa-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/pwa-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
