@@ -72,6 +72,8 @@ type SaleRow = {
   cash_holder: string | null;
   net_fee: number | null;
   delivery_type: string | null;
+  customer_support_amount: number | null;
+  corp_card_amount: number | null;
   tracking_no: string | null;
   note: string | null;
   bundle: string | null;
@@ -204,6 +206,8 @@ const InputPage = () => {
         trade_in_model: s.trade_in_model,
         trade_in_estimate: s.trade_in_estimate ?? 0,
         trade_in_confirmed: s.trade_in_confirmed ?? 0,
+        customer_support_amount: (s as any).customer_support_amount ?? 0,
+        corp_card_amount: (s as any).corp_card_amount ?? 0,
       });
       setCustomFields(s.custom_fields ?? {});
       setPendingItems(Array.isArray(s.pending_items) ? s.pending_items : []);
@@ -298,6 +302,8 @@ const InputPage = () => {
       cash_support_amount: num(form.cash_support_amount),
       trade_in_estimate: num(form.trade_in_estimate),
       trade_in_confirmed: num(form.trade_in_confirmed),
+      customer_support_amount: num(form.customer_support_amount),
+      corp_card_amount: num(form.corp_card_amount),
     };
     const payload = {
       ...form,
