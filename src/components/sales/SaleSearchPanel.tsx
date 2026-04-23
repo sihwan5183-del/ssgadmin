@@ -498,9 +498,6 @@ export const SaleSearchPanel = () => {
                                 <span className="flex items-center gap-1"><Phone className="size-3" />{r.phone ?? "-"}</span>
                                 <span className="flex items-center gap-1"><Smartphone className="size-3" />{r.device_serial ?? "-"}</span>
                                 <span>{r.channel ?? "-"} / {r.product ?? "-"}</span>
-                                {r.net_fee != null && (
-                                  <span className="text-foreground/80 tabular-nums">순수익 ₩{Number(r.net_fee).toLocaleString("ko-KR")}</span>
-                                )}
                               </div>
                             </div>
                             <Edit3 className="size-3.5 text-muted-foreground self-center mr-3" />
