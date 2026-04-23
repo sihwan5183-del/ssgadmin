@@ -111,23 +111,23 @@ export const HeroPerformance = () => {
   const hasPending = pending > 0;
 
   return (
-    <section className="grid grid-cols-1 md:grid-cols-3 gap-3 h-full">
+    <section className="grid grid-cols-1 md:grid-cols-3 gap-1.5 h-full">
       {/* 오늘의 개통 */}
-      <Card className="p-5 glass relative overflow-hidden">
-        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-          <Sun className="size-4 text-warning" />
+      <Card className="p-3 glass relative overflow-hidden">
+        <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+          <Sun className="size-3.5 text-warning" />
           오늘의 개통
         </div>
-        <div className="mt-3 flex items-baseline gap-3">
-          <span className="text-5xl font-bold text-foreground tabular-nums leading-none">
+        <div className="mt-1.5 flex items-baseline gap-2">
+          <span className="text-4xl font-bold text-foreground tabular-nums leading-none">
             {today}
           </span>
-          <span className="text-xl text-muted-foreground">건</span>
+          <span className="text-base text-muted-foreground">건</span>
         </div>
-        <div className="mt-4">
+        <div className="mt-2">
           <Delta value={todayDelta} label="전일 대비" />
         </div>
-        <div className="mt-2 text-xs text-muted-foreground">
+        <div className="mt-1 text-[10px] text-muted-foreground">
           {loading ? "불러오는 중…" : "실시간 동기화 중"}
         </div>
       </Card>
@@ -135,25 +135,25 @@ export const HeroPerformance = () => {
       {/* 개통 대기 */}
       <Card
         className={cn(
-          "p-5 glass relative overflow-hidden cursor-pointer transition-all hover:shadow-glow",
+          "p-3 glass relative overflow-hidden cursor-pointer transition-all hover:shadow-glow",
           hasPending && "border-warning/40"
         )}
         onClick={() => navigate("/input?status=개통대기")}
       >
-        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-          <Clock className={cn("size-4", hasPending ? "text-warning" : "text-muted-foreground")} />
+        <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+          <Clock className={cn("size-3.5", hasPending ? "text-warning" : "text-muted-foreground")} />
           개통 대기
         </div>
-        <div className="mt-3 flex items-baseline gap-3">
+        <div className="mt-1.5 flex items-baseline gap-2">
           <span className={cn(
-            "text-5xl font-bold tabular-nums leading-none",
+            "text-4xl font-bold tabular-nums leading-none",
             hasPending ? "text-warning" : "text-muted-foreground"
           )}>
             {pending}
           </span>
-          <span className="text-xl text-muted-foreground">건</span>
+          <span className="text-base text-muted-foreground">건</span>
         </div>
-        <div className="mt-4">
+        <div className="mt-2">
           {urgentPending > 0 ? (
             <span className="inline-flex items-center gap-1 text-xs font-semibold px-1.5 py-0.5 rounded-md text-destructive bg-destructive/10 border border-destructive/20">
               <AlertTriangle className="size-3" />
@@ -163,27 +163,27 @@ export const HeroPerformance = () => {
             <span className="text-xs text-muted-foreground">긴급 대기 없음</span>
           )}
         </div>
-        <div className="mt-2 text-xs text-muted-foreground">
+        <div className="mt-1 text-[10px] text-muted-foreground">
           클릭하여 대기 목록 보기
         </div>
       </Card>
 
       {/* 누적 개통 */}
-      <Card className="p-5 glass relative overflow-hidden">
-        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-          <TrendingUp className="size-4 text-success" />
+      <Card className="p-3 glass relative overflow-hidden">
+        <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+          <TrendingUp className="size-3.5 text-success" />
           누적 개통 ({label})
         </div>
-        <div className="mt-3 flex items-baseline gap-3">
-          <span className="text-5xl font-bold text-foreground tabular-nums leading-none">
+        <div className="mt-1.5 flex items-baseline gap-2">
+          <span className="text-4xl font-bold text-foreground tabular-nums leading-none">
             {current}
           </span>
-          <span className="text-xl text-muted-foreground">건</span>
+          <span className="text-base text-muted-foreground">건</span>
         </div>
-        <div className="mt-4">
+        <div className="mt-2">
           <Delta value={periodDelta} label={prevLabel} />
         </div>
-        <div className="mt-2 text-xs text-muted-foreground">
+        <div className="mt-1 text-[10px] text-muted-foreground">
           이전 동기간 {previous.toLocaleString()}건
         </div>
       </Card>
