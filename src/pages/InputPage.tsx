@@ -11,7 +11,6 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Check, Upload, Zap, Trash2, Pencil, X, FileSpreadsheet, Download, Search, ShieldAlert, Hash, Wallet as WalletIcon, Gift, TrendingUp } from "lucide-react";
-import { useRole } from "@/hooks/useRole";
 import { maskPhone, maskName } from "@/lib/maskPii";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
