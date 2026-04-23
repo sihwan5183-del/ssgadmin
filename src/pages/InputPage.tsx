@@ -974,8 +974,8 @@ const InputPage = () => {
           <Grid cols={2}>
             <Field label="가입 번호">
               <Input
-                value={form.phone ?? ""}
-                onChange={(e) => set("phone", e.target.value)}
+                value={customFields.subscription_no ?? ""}
+                onChange={(e) => setCustomFields((f) => ({ ...f, subscription_no: e.target.value }))}
                 placeholder="010-0000-0000"
                 className="h-11 bg-input/60"
                 maxLength={13}
