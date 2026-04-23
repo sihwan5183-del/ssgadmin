@@ -629,7 +629,7 @@ const InputPage = () => {
 
   return (
     <>
-      <Header title="실적 입력 / 원장" subtitle="엑셀 '실적장표' 시트와 동일한 모든 항목을 1건 단위로 저장합니다" showScopeToggle={false} showPeriodFilter />
+      <Header title="실적 입력" subtitle="1건 단위로 실적을 등록합니다. 목록은 판매원장 관리에서 확인하세요." showScopeToggle={false} showPeriodFilter />
 
       {/* 엑셀 업로드 */}
       <section className="glass rounded-2xl p-5 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-card-elevated">
