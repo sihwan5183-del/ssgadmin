@@ -63,7 +63,6 @@ export const ChannelActivationBreakdown = () => {
   const { isAdmin } = useRole();
   const [raw, setRaw] = useState<{ channel: string; product: string | null; open_date: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
-  const [productFilter, setProductFilter] = useState<ProductFilter>("전체");
   const [channelConfig, setChannelConfig] = useState<ChannelConfig[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [newChannel, setNewChannel] = useState("");
@@ -168,7 +167,6 @@ export const ChannelActivationBreakdown = () => {
     const todayISO = new Date().toISOString().slice(0, 10);
     const map = new Map<string, { monthly: number; today: number }>();
     raw.forEach((r) => {
-      if (!matchesProduct(r.product, productFilter)) return;
       const ch = r.channel || "기타";
       if (hiddenChannels.has(ch)) return;
       // Apply product filter
