@@ -147,6 +147,19 @@ export default function BudgetCategoriesPage() {
                       onCheckedChange={() => handleToggle(c)}
                     />
                   </td>
+                  <td className="px-3 py-2.5 text-center">
+                    <Switch
+                      checked={c.is_included_in_base}
+                      onCheckedChange={async () => {
+                        const { error } = await supabase
+                          .from("budget_categories")
+                          .update({ is_included_in_base: !c.is_included_in_base } as any)
+                          .eq("id", c.id);
+                        if (error) toast.error(error.message);
+                        else { toast.success(`${c.label}: ${c.is_included_in_base ? "별도 항목" : "기본가 포함"}`); reload(); }
+                      }}
+                    />
+                  </td>
                   <td className="px-3 py-2.5 text-center tabular-nums text-muted-foreground text-xs">
                     {c.sort_order}
                   </td>
