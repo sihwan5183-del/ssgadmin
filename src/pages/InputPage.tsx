@@ -1463,7 +1463,7 @@ const InputPage = () => {
         </div>
 
         {/* 요약 카드 */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
           <SummaryCard icon={Hash} label="총 판매 건수" value={`${animCount.toLocaleString()}건`} accent="primary" />
           <SummaryCard icon={WalletIcon} label="총 리베이트" value={`${animRebate.toLocaleString("ko-KR")}원`} accent="secondary" />
           <SummaryCard icon={Gift} label="총 오퍼(지원금)" value={`${animOffer.toLocaleString("ko-KR")}원`} accent="warning" />
@@ -1472,6 +1472,18 @@ const InputPage = () => {
             label="총 최종 수익"
             value={`${animProfit.toLocaleString("ko-KR")}원`}
             accent={animProfit >= 0 ? "success" : "destructive"}
+          />
+          <SummaryCard
+            icon={Banknote}
+            label="미수금 건"
+            value={`${unpaidCount}건`}
+            accent={unpaidCount > 0 ? "destructive" : "primary"}
+          />
+          <SummaryCard
+            icon={Gift}
+            label="상품권 미반납"
+            value={`${unreturnedCount}건`}
+            accent={unreturnedCount > 0 ? "destructive" : "primary"}
           />
         </div>
 
