@@ -23,9 +23,13 @@ import { MyReviewAlerts } from "@/components/dashboard/MyReviewAlerts";
 import { summaryStats, formatShortKRW } from "@/data/mockData";
 import { TrendingUp, Wallet, Megaphone, Target } from "lucide-react";
 import { useMarketingSpend } from "@/hooks/useMarketingSpend";
+import { useBudgetCategories } from "@/hooks/useBudgetCategories";
+import { EyeOff } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Index = () => {
   const marketing = useMarketingSpend();
+  const { excludedLabels } = useBudgetCategories();
   const liveRoi =
     marketing.current > 0
       ? Math.round((summaryStats.netProfit / marketing.current) * 100)
@@ -39,6 +43,22 @@ const Index = () => {
 
       {/* === 본인 검수 피드백 (반려/수정요청) === */}
       <MyReviewAlerts />
+
+      {excludedLabels.length > 0 && (
+        <div className="mb-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-2.5 flex items-center gap-2 text-sm">
+          <EyeOff className="size-4 text-destructive shrink-0" />
+          <span className="text-muted-foreground">
+            합산 제외 항목:{" "}
+            <span className="font-semibold text-foreground">
+              {excludedLabels.slice(0, 3).join(", ")}
+              {excludedLabels.length > 3 && ` 외 ${excludedLabels.length - 3}건`}
+            </span>
+          </span>
+          <Link to="/budget-categories" className="ml-auto text-xs text-primary hover:underline shrink-0">
+            항목 관리 →
+          </Link>
+        </div>
+      )}
 
       {/* [1] 최상단 — 영업 성과 */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-2 mb-3">
