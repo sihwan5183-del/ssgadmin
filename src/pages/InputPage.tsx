@@ -11,6 +11,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Check, Upload, Zap, Trash2, Pencil, X, FileSpreadsheet, Download, Search, ShieldAlert, Hash, Wallet as WalletIcon, Gift, TrendingUp } from "lucide-react";
+import { useRole } from "@/hooks/useRole";
+import { maskPhone, maskName } from "@/lib/maskPii";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -1602,7 +1604,7 @@ const InputPage = () => {
                     <td className="px-3 py-2.5">{r.product ?? "-"}</td>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span>{r.customer_name ?? "-"}</span>
+                        <span>{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
                         {hasPending && (
                           <Badge variant="outline" className="text-[9px] gap-0.5 border-amber-500/40 text-amber-300 bg-amber-500/10 px-1.5 py-0">
                             <AlertTriangle className="size-2.5" /> 미처리 {r.pending_items?.length}
@@ -1620,7 +1622,7 @@ const InputPage = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{r.phone ?? "-"}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{isAdmin ? (r.phone ?? "-") : maskPhone(r.phone) || "-"}</td>
                     <td className="px-3 py-2.5 text-muted-foreground">{r.device_model ?? "-"}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums">{(r.unit_price ?? 0).toLocaleString("ko-KR")}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums text-warning">{offer.toLocaleString("ko-KR")}</td>
