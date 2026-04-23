@@ -4,6 +4,15 @@ import { usePeriod } from "@/contexts/PeriodContext";
 import { useAppSettings } from "./useAppSettings";
 import { useDeviceModels } from "./useDeviceModels";
 
+/** Strip capacity / color suffixes to get the series name (e.g. "S942-256" → "S942") */
+export function seriesName(pet: string): string {
+  // Remove trailing -NNN (capacity like 256, 512, 1T, 1TB) and colour words
+  return pet
+    .replace(/[-\s]+([\d]+G?B?|1T[B]?|[A-Z]+\d+[A-Z]*)?$/i, "")
+    .replace(/[-\s]+(블랙|화이트|블루|그린|핑크|크림|옐로우|실버|그레이|퍼플|레드|골드)$/i, "")
+    .trim() || pet;
+}
+
 /** device_models DB 기반 펫네임 해석 — matchModel 함수를 받아서 사용 */
 export function resolvePetName(raw: string, matchModel?: (s: string) => any): { pet: string; maker: string } {
   if (matchModel) {
@@ -149,43 +158,80 @@ export function useModelAnalysis() {
         return tb - ta;
       });
 
-    // stacked chart data
+    // ---- Group by SERIES name (strip capacity/colour) ----
+    // Build global series totals for ranking
+    const seriesTotals = new Map<string, number>();
+    for (const [name, stat] of modelMap.entries()) {
+      const { pet } = resolvePetName(name, matchModel);
+      const series = seriesName(pet);
+      seriesTotals.set(series, (seriesTotals.get(series) ?? 0) + stat.count);
+    }
+    const globalTop5Series = [...seriesTotals.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([s]) => s);
+    const top5Set = new Set(globalTop5Series);
+
+    // Assign stable colours to top 5 series + "기타"
+    const SERIES_PALETTE = [
+      "hsl(152 76% 50%)", "hsl(195 75% 55%)", "hsl(270 70% 60%)",
+      "hsl(35 90% 55%)", "hsl(320 80% 60%)",
+    ];
+    const seriesColorMap = new Map<string, string>();
+    globalTop5Series.forEach((s, i) => seriesColorMap.set(s, SERIES_PALETTE[i]));
+    seriesColorMap.set("기타", "hsl(220 10% 45%)");
+
+    // stacked chart data — Top 5 series + 기타
     const stackedData = channelData.map((row) => {
       const flat: Record<string, number | string> = { channel: row.channel };
       row.models.forEach((m) => {
         const { pet } = resolvePetName(m.name, matchModel);
-        flat[pet] = ((flat[pet] as number) || 0) + m.count;
+        const series = seriesName(pet);
+        const key = top5Set.has(series) ? series : "기타";
+        flat[key] = ((flat[key] as number) || 0) + m.count;
       });
       return flat;
     });
 
-    // models info for stacked bar keys
-    // Deduplicate by petName (multiple raw models can map to same pet)
-    const petSeen = new Set<string>();
-    const modelsInfo: { name: string; petName: string; isStrategy: boolean; color: string }[] = [];
-    for (const name of allModels) {
-      const { pet } = resolvePetName(name, matchModel);
-      if (petSeen.has(pet)) continue;
-      petSeen.add(pet);
-      modelsInfo.push({
-        name: pet,
-        petName: pet,
-        isStrategy: strategySet.has(name.toLowerCase()),
-        color: colorMap.get(name)!,
-      });
-    }
+    // modelsInfo — only top 5 + 기타 (max 6 entries for the chart)
+    const modelsInfo = [
+      ...globalTop5Series.map((s) => ({
+        name: s,
+        petName: s,
+        isStrategy: false,
+        color: seriesColorMap.get(s)!,
+      })),
+      { name: "기타", petName: "기타", isStrategy: false, color: seriesColorMap.get("기타")! },
+    ];
 
     // helpers
     const getTop5 = (channel: string) => {
       const row = channelData.find((r) => r.channel === channel);
       if (!row) return [];
-      return [...row.models]
+      // Group by series within this channel
+      const seriesMap = new Map<string, { count: number; rebateSum: number; rawModels: string[] }>();
+      for (const m of row.models) {
+        const { pet } = resolvePetName(m.name, matchModel);
+        const series = seriesName(pet);
+        const cur = seriesMap.get(series) ?? { count: 0, rebateSum: 0, rawModels: [] };
+        cur.count += m.count;
+        cur.rebateSum += m.avgRebate * m.count;
+        cur.rawModels.push(m.name);
+        seriesMap.set(series, cur);
+      }
+      return [...seriesMap.entries()]
+        .map(([name, v]) => ({
+          name,
+          count: v.count,
+          avgRebate: v.count > 0 ? Math.round(v.rebateSum / v.count) : 0,
+          rawModels: v.rawModels,
+        }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 5)
         .map((m) => ({
           ...m,
-          isStrategy: strategySet.has(m.name.toLowerCase()),
-          color: colorMap.get(m.name) ?? "hsl(220 10% 50%)",
+          isStrategy: strategySet.has(m.name.toLowerCase()) || m.rawModels?.some(r => strategySet.has(r.toLowerCase())),
+          color: seriesColorMap.get(m.name) ?? colorMap.get(m.name) ?? "hsl(220 10% 50%)",
         }));
     };
 
