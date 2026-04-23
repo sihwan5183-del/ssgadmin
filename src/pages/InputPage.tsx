@@ -1128,12 +1128,31 @@ const InputPage = () => {
         </FormSection>
 
         <FormSection title="오퍼 및 카드결제" icon={<Wallet className="size-3" />}>
-          <p className="text-[10px] text-muted-foreground -mt-1 mb-2">지출 대시보드에 자동 집계 · 숫자만 입력 · 천 단위 콤마 자동 표시</p>
+          <div className="flex items-center justify-between -mt-1 mb-2">
+            <p className="text-[10px] text-muted-foreground">지출 대시보드에 자동 집계 · 숫자만 입력 · 천 단위 콤마 자동 표시</p>
+            <div className="flex items-center gap-2">
+              <span className={cn("text-xs font-medium", customFields.has_offer === false ? "text-muted-foreground" : "text-foreground")}>오퍼</span>
+              <Switch
+                checked={customFields.has_offer !== false}
+                onCheckedChange={(v) => {
+                  setCustomFields((f) => ({ ...f, has_offer: v }));
+                  if (!v) {
+                    set("distributor_amount", 0);
+                    set("extra_subsidy", 0);
+                  }
+                }}
+              />
+              <Badge variant={customFields.has_offer === false ? "secondary" : "default"} className="text-[10px]">
+                {customFields.has_offer === false ? "무오퍼" : "오퍼"}
+              </Badge>
+            </div>
+          </div>
           <Grid cols={3}>
             <Field label="① 유통망 지원금 (₩)">
               <MoneyInput
                 value={form.distributor_amount}
                 onChange={(v) => set("distributor_amount", v)}
+                disabled={customFields.has_offer === false}
               />
             </Field>
             <Field label="② 현금개통 금액 (₩)">
@@ -1162,7 +1181,7 @@ const InputPage = () => {
               />
             </Field>
             <Field label="추가지원금 (₩)">
-              <MoneyInput value={form.extra_subsidy} onChange={(v) => set("extra_subsidy", v)} />
+              <MoneyInput value={form.extra_subsidy} onChange={(v) => set("extra_subsidy", v)} disabled={customFields.has_offer === false} />
             </Field>
           </Grid>
           <Grid cols={3}>
