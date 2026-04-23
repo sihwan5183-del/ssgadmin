@@ -110,6 +110,7 @@ export default function BudgetCategoriesPage() {
               <th className="text-left px-3 py-2">항목명</th>
               <th className="text-left px-3 py-2">매핑 필드</th>
               <th className="text-center px-3 py-2">대시보드 합산</th>
+              <th className="text-center px-3 py-2">기본가 포함</th>
               <th className="text-center px-3 py-2">순서</th>
               <th className="text-right px-3 py-2">관리</th>
             </tr>
