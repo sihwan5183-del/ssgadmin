@@ -816,17 +816,6 @@ const InputPage = () => {
             <Field label="개통일자">
               <Input type="date" value={form.open_date ?? ""} onChange={(e) => set("open_date", e.target.value)} className="h-9 bg-input/60 text-xs" />
             </Field>
-            <Field label="동판/번들 여부">
-              <div className="flex items-center gap-2 h-9">
-                <Switch
-                  checked={form.bundle === "Y"}
-                  onCheckedChange={(v) => set("bundle", v ? "Y" : null)}
-                />
-                <span className={cn("text-xs font-medium", form.bundle === "Y" ? "text-primary" : "text-muted-foreground")}>
-                  {form.bundle === "Y" ? "동판/번들" : "해당없음"}
-                </span>
-              </div>
-            </Field>
           </Grid>
           <Grid cols={5}>
             <Field label="고객명 *">
