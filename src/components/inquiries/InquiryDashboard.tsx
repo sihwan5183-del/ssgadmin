@@ -1,10 +1,17 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell, Pie, PieChart } from "recharts";
+import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell, Pie, PieChart, Legend } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, Crown, Medal, TrendingUp } from "lucide-react";
+import { AlertTriangle, Crown, Medal, TrendingUp, XCircle, User } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
 import { Inquiry } from "@/hooks/useInquiries";
+
+const FAIL_REASONS = ["가격(지원금) 불만", "결합/위약금 문제", "기기 재고 없음", "타사 유지", "단순 변심", "연락 두절", "기타"] as const;
+export { FAIL_REASONS };
+
+const FAIL_COLORS = ["hsl(0 70% 55%)", "hsl(25 80% 55%)", "hsl(45 90% 50%)", "hsl(200 70% 55%)", "hsl(270 60% 55%)", "hsl(320 60% 55%)", "hsl(var(--muted-foreground))"];
 
 interface Props {
   rows: Inquiry[];
@@ -121,6 +128,54 @@ export const InquiryDashboard = ({ rows }: Props) => {
       .slice(0, 5);
   }, [rows]);
 
+  // 실패 사유 TOP 분석
+  const failReasonData = useMemo(() => {
+    const map = new Map<string, number>();
+    filteredRows.forEach((r) => {
+      if (r.status === "실패(종결)" && (r as any).fail_reason) {
+        const reason = (r as any).fail_reason as string;
+        map.set(reason, (map.get(reason) ?? 0) + 1);
+      }
+    });
+    return Array.from(map.entries())
+      .map(([reason, count], i) => ({ reason, count, fill: FAIL_COLORS[i % FAIL_COLORS.length] }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [filteredRows]);
+
+  // 채널별 효율 비교 (성공률 순)
+  const channelEfficiency = useMemo(() => {
+    const map = new Map<string, { channel: string; total: number; success: number; failed: number }>();
+    rows.forEach((r) => {
+      const ch = r.channel || "기타";
+      const cur = map.get(ch) ?? { channel: ch, total: 0, success: 0, failed: 0 };
+      cur.total += 1;
+      if (r.status === "성공(개통)") cur.success += 1;
+      if (r.status === "실패(종결)") cur.failed += 1;
+      map.set(ch, cur);
+    });
+    return Array.from(map.values())
+      .map((c) => ({ ...c, rate: c.total > 0 ? Math.round((c.success / c.total) * 100) : 0 }))
+      .sort((a, b) => b.rate - a.rate);
+  }, [rows]);
+
+  // 개인 상세 보기
+  const [detailManager, setDetailManager] = useState<string | null>(null);
+  const [detailLogs, setDetailLogs] = useState<any[]>([]);
+
+  const detailRows = useMemo(() => {
+    if (!detailManager) return [];
+    return rows.filter((r) => r.manager === detailManager).sort((a, b) => b.inquiry_date.localeCompare(a.inquiry_date));
+  }, [rows, detailManager]);
+
+  useEffect(() => {
+    if (!detailManager || detailRows.length === 0) { setDetailLogs([]); return; }
+    const ids = detailRows.slice(0, 50).map((r) => r.id);
+    supabase.from("inquiry_logs").select("*").in("inquiry_id", ids).order("created_at", { ascending: false }).limit(200)
+      .then(({ data }) => setDetailLogs(data ?? []));
+  }, [detailManager, detailRows]);
+  }, [rows]);
+
   return (
     <div className="space-y-4">
       {/* 담당자 필터 */}
@@ -146,6 +201,8 @@ export const InquiryDashboard = ({ rows }: Props) => {
           <TabsTrigger value="channel">채널별 분석</TabsTrigger>
           <TabsTrigger value="status">상태 비중</TabsTrigger>
           <TabsTrigger value="ranking">전환율 랭킹</TabsTrigger>
+          <TabsTrigger value="failReason">실패 사유</TabsTrigger>
+          <TabsTrigger value="efficiency">채널 효율</TabsTrigger>
         </TabsList>
 
         <TabsContent value="channel" className="space-y-3">
@@ -295,7 +352,7 @@ export const InquiryDashboard = ({ rows }: Props) => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">{m.manager}</span>
+                        <button className="font-medium text-sm hover:text-primary hover:underline text-left" onClick={() => setDetailManager(m.manager)}>{m.manager}</button>
                         {rank <= 3 && <Badge variant="default" className="text-[10px] h-4">TOP {rank}</Badge>}
                       </div>
                       <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
@@ -322,7 +379,168 @@ export const InquiryDashboard = ({ rows }: Props) => {
             </div>
           </Card>
         </TabsContent>
+
+        {/* 실패 사유 TOP 5 */}
+        <TabsContent value="failReason">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <Card className="p-4">
+              <div className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <XCircle className="size-4 text-destructive" /> 실패 사유 TOP 5
+              </div>
+              {failReasonData.length === 0 ? (
+                <div className="text-sm text-muted-foreground text-center py-8">실패 사유 데이터 없음</div>
+              ) : (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={failReasonData} layout="vertical" margin={{ left: 100, right: 10, top: 5, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                      <XAxis type="number" fontSize={10} tickLine={false} axisLine={false} />
+                      <YAxis type="category" dataKey="reason" fontSize={11} tickLine={false} axisLine={false} width={95} />
+                      <Tooltip contentStyle={{ background: "hsl(240 18% 8% / 0.95)", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+                      <Bar dataKey="count" name="건수" radius={[0, 6, 6, 0]}>
+                        {failReasonData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </Card>
+            <Card className="p-4">
+              <div className="text-sm font-semibold mb-3">실패 사유 상세</div>
+              <div className="space-y-2">
+                {failReasonData.map((d) => {
+                  const totalFailed = filteredRows.filter((r) => r.status === "실패(종결)").length;
+                  const pct = totalFailed > 0 ? Math.round((d.count / totalFailed) * 100) : 0;
+                  return (
+                    <div key={d.reason} className="flex items-center gap-3">
+                      <span className="size-2.5 rounded-full shrink-0" style={{ background: d.fill }} />
+                      <span className="text-sm flex-1">{d.reason}</span>
+                      <span className="text-xs text-muted-foreground">{d.count}건</span>
+                      <div className="w-20 h-1.5 rounded-full bg-muted overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: d.fill }} />
+                      </div>
+                      <span className="text-xs font-medium w-10 text-right">{pct}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* 채널 효율 비교 */}
+        <TabsContent value="efficiency">
+          <Card className="p-4">
+            <div className="text-sm font-semibold mb-4">인입 경로별 전환 효율</div>
+            {channelEfficiency.length === 0 ? (
+              <div className="text-sm text-muted-foreground text-center py-8">데이터 없음</div>
+            ) : (
+              <>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={channelEfficiency} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                      <XAxis dataKey="channel" stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                      <Tooltip contentStyle={{ background: "hsl(240 18% 8% / 0.95)", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+                      <Bar dataKey="success" name="성공" fill="hsl(152 76% 50%)" stackId="a" />
+                      <Bar dataKey="failed" name="실패" fill="hsl(0 70% 55%)" stackId="a" radius={[4, 4, 0, 0]} />
+                      <Legend />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-4 space-y-2">
+                  {channelEfficiency.map((c, i) => (
+                    <div key={c.channel} className="flex items-center gap-3 text-xs">
+                      <span className="font-medium w-20 truncate">{c.channel}</span>
+                      <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                        <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${c.rate}%` }} />
+                      </div>
+                      <span className="tabular-nums w-24 text-right text-muted-foreground">
+                        {c.success}/{c.total}건 · <span className="text-foreground font-semibold">{c.rate}%</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {/* 개인 상세 리포트 Dialog */}
+      <Dialog open={!!detailManager} onOpenChange={(v) => !v && setDetailManager(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="size-4" /> {detailManager} — 상세 리포트
+            </DialogTitle>
+          </DialogHeader>
+          {detailManager && (
+            <div className="space-y-4">
+              {/* 요약 */}
+              {(() => {
+                const total = detailRows.length;
+                const success = detailRows.filter((r) => r.status === "성공(개통)").length;
+                const failed = detailRows.filter((r) => r.status === "실패(종결)").length;
+                const absent = detailRows.filter((r) => r.status === "부재").length;
+                const rate = total > 0 ? Math.round((success / total) * 100) : 0;
+                return (
+                  <div className="grid grid-cols-4 gap-2">
+                    <Card className="p-2 text-center"><div className="text-[10px] text-muted-foreground">총 인입</div><div className="text-lg font-bold">{total}</div></Card>
+                    <Card className="p-2 text-center"><div className="text-[10px] text-muted-foreground">성공</div><div className="text-lg font-bold text-primary">{success}</div></Card>
+                    <Card className="p-2 text-center"><div className="text-[10px] text-muted-foreground">실패</div><div className="text-lg font-bold text-destructive">{failed}</div></Card>
+                    <Card className="p-2 text-center"><div className="text-[10px] text-muted-foreground">전환율</div><div className="text-lg font-bold">{rate}%</div></Card>
+                  </div>
+                );
+              })()}
+
+              {/* 타임라인 */}
+              <div className="text-sm font-semibold">처리 타임라인</div>
+              <div className="space-y-0">
+                {detailRows.slice(0, 30).map((r, i) => {
+                  const inquiryLogs = detailLogs.filter((l) => l.inquiry_id === r.id);
+                  return (
+                    <div key={r.id} className="flex gap-3 py-3 border-b border-border/30 last:border-0">
+                      <div className="flex flex-col items-center">
+                        <div className="size-2.5 rounded-full mt-1" style={{ background: STATUS_COLORS[r.status] ?? "hsl(var(--muted))" }} />
+                        {i < Math.min(detailRows.length, 30) - 1 && <div className="w-px flex-1 bg-border/40" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs tabular-nums text-muted-foreground">{r.inquiry_date}</span>
+                          <Badge variant="outline" className="text-[10px]">{r.channel}</Badge>
+                          <Badge className="text-[10px]" style={{ background: STATUS_COLORS[r.status] ?? undefined }}>{r.status}</Badge>
+                        </div>
+                        <div className="text-sm mt-0.5">
+                          {r.customer_name ?? "고객"} {r.phone && <span className="text-muted-foreground">· {r.phone}</span>}
+                        </div>
+                        {(r as any).fail_reason && (
+                          <div className="text-xs text-destructive mt-0.5">사유: {(r as any).fail_reason}</div>
+                        )}
+                        {r.content && <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{r.content}</div>}
+                        {/* 상담 로그 */}
+                        {inquiryLogs.length > 0 && (
+                          <div className="mt-1.5 pl-3 border-l-2 border-border/30 space-y-1">
+                            {inquiryLogs.slice(0, 3).map((log) => (
+                              <div key={log.id} className="text-[10px] text-muted-foreground">
+                                <Badge variant="outline" className="text-[9px] h-3.5 mr-1">{log.action}</Badge>
+                                {log.content && <span>{log.content}</span>}
+                              </div>
+                            ))}
+                            {inquiryLogs.length > 3 && <div className="text-[10px] text-muted-foreground">+{inquiryLogs.length - 3}건 더…</div>}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                {detailRows.length === 0 && <div className="text-sm text-muted-foreground text-center py-6">데이터 없음</div>}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
