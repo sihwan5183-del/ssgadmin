@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
-import { useBudgetCategories } from "./useBudgetCategories";
+import { useBudgetCategories, type BudgetCategory } from "./useBudgetCategories";
 
 /**
  * 지출/ROI 화면 전용 통합 집계 훅
@@ -64,6 +64,8 @@ export interface FinanceData {
   moyoExcludedCount: number;    // 모요 미적용 건수
   moyoFee: number;              // 모요 수수료 (적용건 × 88,000)
   excludedLabels: string[];     // 대시보드에서 제외된 항목들
+  // 항목별 세부 금액
+  categoryBreakdown: { label: string; type: string; amount: number; included: boolean }[];
   // 차트용
   channels: FinanceChannelRow[];
   mediaTotals: FinanceMediaTotal[];
@@ -102,7 +104,7 @@ const isoWeekKey = (iso: string) => {
 
 export function useFinanceData(): FinanceData {
   const { startDate, endDate } = usePeriod();
-  const { includedExpenseLabels, excludedLabels } = useBudgetCategories();
+  const { categories, includedExpenseLabels, excludedLabels } = useBudgetCategories();
   const [salesRows, setSalesRows] = useState<any[]>([]);
   const [spendRows, setSpendRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,7 +117,7 @@ export function useFinanceData(): FinanceData {
         supabase
           .from("sales")
           .select(
-            "channel, product, open_date, unit_price, distributor_amount, cash_support_amount, extra_subsidy, receivable_amount, moyo_excluded",
+            "channel, product, open_date, unit_price, distributor_amount, cash_support_amount, extra_subsidy, receivable_amount, moyo_excluded, vas_fee, net_fee",
           )
           .gte("open_date", startDate)
           .lte("open_date", endDate)
@@ -170,18 +172,46 @@ export function useFinanceData(): FinanceData {
       (s, r) => s + Number(r.amount ?? 0),
       0,
     );
-    // 동적 합산: budget_categories에서 On인 항목만 포함
-    const expenseSet = new Set(includedExpenseLabels);
+
+    // --- 항목별 세부 금액 (field_mapping 기반) ---
+    const totalVasFee = salesRows.reduce((s, r) => s + Number(r.vas_fee ?? 0), 0);
+    const totalNetFee = salesRows.reduce((s, r) => s + Number(r.net_fee ?? 0), 0);
+    const totalExtraSubsidy = salesRows.reduce((s, r) => s + Number(r.extra_subsidy ?? 0), 0);
+
+    const fieldAmountMap: Record<string, number> = {
+      unit_price: totalRevenue,
+      vas_fee: totalVasFee,
+      net_fee: totalNetFee,
+      distributor_amount: totalDistributor,
+      cash_support_amount: totalCashOpen,
+      extra_subsidy: totalExtraSubsidy,
+      receivable_amount: totalCustomerDeposit,
+      moyo_fee: moyoFee,
+      ad_spend: totalAdSpend,
+    };
+
+    const categoryBreakdown = categories.map((c) => ({
+      label: c.label,
+      type: c.category_type,
+      amount: c.field_mapping ? (fieldAmountMap[c.field_mapping] ?? 0) : 0,
+      included: c.dashboard_included,
+    }));
+
+    // 동적 합산: field_mapping 기반으로 On 항목만 합산
     let dynamicExpense = 0;
-    if (expenseSet.has("광고비")) dynamicExpense += totalAdSpend;
-    if (expenseSet.has("모요 수수료")) dynamicExpense += moyoFee;
-    // 유통망/고객입금은 판매원장에서 자동 집계되므로 항상 포함하되, 별도 항목 제어 가능
-    dynamicExpense += totalDistributor + totalCustomerDeposit;
+    let dynamicRevenue = 0;
+    for (const c of categories) {
+      const amt = c.field_mapping ? (fieldAmountMap[c.field_mapping] ?? 0) : 0;
+      if (!c.dashboard_included) continue;
+      if (c.category_type === "지출") dynamicExpense += amt;
+      if (c.category_type === "수익") dynamicRevenue += amt;
+    }
     const totalExpense = dynamicExpense;
-    const netMargin = totalRevenue - totalExpense;
-    const roi = totalExpense > 0 ? (netMargin / totalExpense) * 100 : 0;
+    const computedRevenue = dynamicRevenue > 0 ? dynamicRevenue : totalRevenue;
+    const netMargin = computedRevenue - totalExpense;
+    const roi = totalExpense > 0 ? (netMargin / totalExpense) * 100 : 0;    
     const cpaAvg = totalSuccess > 0 ? totalAdSpend / totalSuccess : 0;
-    const marginRate = totalRevenue > 0 ? (netMargin / totalRevenue) * 100 : 0;
+    const marginRate = computedRevenue > 0 ? (netMargin / computedRevenue) * 100 : 0;
 
     // ---------- 채널별 ----------
     const channelMap = new Map<
@@ -300,7 +330,7 @@ export function useFinanceData(): FinanceData {
     return {
       loading,
       excludedLabels,
-      totalRevenue,
+      totalRevenue: computedRevenue,
       totalAdSpend,
       totalDistributor,
       totalCustomerDeposit,
@@ -322,8 +352,9 @@ export function useFinanceData(): FinanceData {
       products,
       offerWeekly,
       channelNames,
+      categoryBreakdown,
       hasSales: totalSuccess > 0,
       hasSpend: totalAdSpend > 0,
     };
-  }, [salesRows, spendRows, startDate, endDate, loading, includedExpenseLabels, excludedLabels]);
+  }, [salesRows, spendRows, startDate, endDate, loading, categories, includedExpenseLabels, excludedLabels]);
 }

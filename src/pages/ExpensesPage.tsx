@@ -7,6 +7,7 @@ import { OfferTrendChart } from "@/components/finance/OfferTrendChart";
 import { ChannelMarginRanking } from "@/components/finance/ChannelMarginRanking";
 import { SettlementGap } from "@/components/finance/SettlementGap";
 import { EmptyHint } from "@/components/finance/EmptyHint";
+import { CategoryBreakdownChart } from "@/components/finance/CategoryBreakdownChart";
 import { TrendingUp, TrendingDown, Sparkles, Target, Banknote, Wallet, HandCoins, Store, EyeOff } from "lucide-react";
 import { Link } from "react-router-dom";
 import { usePeriod } from "@/contexts/PeriodContext";
@@ -98,6 +99,12 @@ const ExpensesPage = () => {
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         <ChannelMarginRanking />
         <SettlementGap />
+      </section>
+
+      <SectionTitle index={4} title="항목별 구성 분석" subtitle="세부 항목별 비중 (항목 관리 기반)" />
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <CategoryBreakdownChart type="수익" />
+        <CategoryBreakdownChart type="지출" />
       </section>
     </>
   );

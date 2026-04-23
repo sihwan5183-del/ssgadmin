@@ -5,6 +5,8 @@ export interface BudgetCategory {
   id: string;
   category_type: "지출" | "수익";
   label: string;
+  field_mapping: string | null;
+  description: string | null;
   dashboard_included: boolean;
   sort_order: number;
   active: boolean;
