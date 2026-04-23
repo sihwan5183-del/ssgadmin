@@ -1062,6 +1062,20 @@ const InputPage = () => {
             <Field label="부가서비스 수수료 (₩)">
               <MoneyInput value={form.vas_fee} onChange={(v) => set("vas_fee", v)} />
             </Field>
+            <Field label="미수금 (₩)">
+              <MoneyInput value={form.receivable_amount} onChange={(v) => set("receivable_amount", v)} />
+            </Field>
+            <Field label="수급 상태">
+              <div className="flex items-center gap-2 h-11">
+                <Switch
+                  checked={form.receivable_paid === "완료"}
+                  onCheckedChange={(v) => set("receivable_paid", v ? "완료" : "미수급")}
+                />
+                <span className={cn("text-sm font-medium", form.receivable_paid === "완료" ? "text-primary" : "text-destructive")}>
+                  {form.receivable_paid === "완료" ? "수급 완료" : "미수급"}
+                </span>
+              </div>
+            </Field>
           </Grid>
           {/* 수익 중복 입력 경고 */}
           {(form.vas_fee ?? 0) > 0 && (form.unit_price ?? 0) > 0 && (form.vas_fee ?? 0) > (form.unit_price ?? 0) && (
