@@ -3,11 +3,13 @@ import { Sidebar } from "./Sidebar";
 import { MobileNav } from "./MobileNav";
 import { MobileTopBar } from "./MobileTopBar";
 import { ImpersonationBar } from "./ImpersonationBar";
+import { SecurityWatermark } from "./SecurityWatermark";
 
 export const AppShell = ({ children }: { children: ReactNode }) => {
   return (
     <div className="min-h-screen">
       <ImpersonationBar />
+      <SecurityWatermark />
       <Sidebar />
       <MobileTopBar />
       <main className="lg:pl-[13.5rem] pb-24 lg:pb-6">
