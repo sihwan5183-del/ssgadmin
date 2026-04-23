@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { KeyRound, UserX, UserCheck, Pencil, Search, Smartphone, Copy, UserMinus, UserCog } from "lucide-react";
+import { KeyRound, UserX, UserCheck, Pencil, Search, Smartphone, Copy, UserMinus, UserCog, CheckCircle2, Sparkles, Filter } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { BulkActionBar } from "@/components/common/BulkActionBar";
@@ -47,6 +47,7 @@ interface UserRow {
   team: string | null;
   status: string;
   role: AppRole | null;
+  isClean?: boolean;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -81,6 +82,8 @@ export function UserManagementPanel() {
   const [resetting, setResetting] = useState<UserRow | null>(null);
   const [tempPwd, setTempPwd] = useState("");
   const [override, setOverride] = useState<{ user: UserRow; link: string; expires: string } | null>(null);
+  const [cleanFilter, setCleanFilter] = useState<"all" | "clean" | "dirty">("all");
+  const [cleanSet, setCleanSet] = useState<Set<string>>(new Set());
 
   const issueOverride = async (u: UserRow) => {
     const { data, error } = await supabase.functions.invoke("admin-user-management", {
@@ -113,8 +116,32 @@ export function UserManagementPanel() {
   };
 
   useEffect(() => {
-    if (isAdmin) fetchAll();
+    if (isAdmin) {
+      fetchAll();
+      fetchCleanStatus();
+    }
   }, [isAdmin]);
+
+  const fetchCleanStatus = async () => {
+    const now = new Date();
+    const start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+    const end = now.toISOString().slice(0, 10);
+    const [{ data: sales }, { data: docs }] = await Promise.all([
+      supabase.from("sales").select("id, created_by, pending_resolved").gte("open_date", start).lte("open_date", end),
+      supabase.from("sale_documents").select("sale_id"),
+    ]);
+    const docSet = new Set((docs ?? []).map((d) => d.sale_id));
+    const userIssues = new Map<string, { missingDocs: number; pending: number }>();
+    (sales ?? []).forEach((s) => {
+      if (!userIssues.has(s.created_by)) userIssues.set(s.created_by, { missingDocs: 0, pending: 0 });
+      const u = userIssues.get(s.created_by)!;
+      if (!docSet.has(s.id)) u.missingDocs++;
+      if (!s.pending_resolved) u.pending++;
+    });
+    const clean = new Set<string>();
+    userIssues.forEach((v, uid) => { if (v.missingDocs === 0 && v.pending === 0) clean.add(uid); });
+    setCleanSet(clean);
+  };
 
   const filtered = rows.filter((r) => {
     if (!search.trim()) return true;
@@ -126,6 +153,10 @@ export function UserManagementPanel() {
       r.team?.toLowerCase().includes(q) ||
       r.position?.toLowerCase().includes(q)
     );
+  }).filter((r) => {
+    if (cleanFilter === "all") return true;
+    if (cleanFilter === "clean") return cleanSet.has(r.user_id);
+    return !cleanSet.has(r.user_id);
   });
 
   const ids = filtered.map((r) => r.user_id);
@@ -262,6 +293,17 @@ export function UserManagementPanel() {
             className="pl-9 h-10"
           />
         </div>
+        <Select value={cleanFilter} onValueChange={(v) => setCleanFilter(v as any)}>
+          <SelectTrigger className="w-[140px] h-10 text-xs">
+            <Filter className="size-3.5 mr-1" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">전체</SelectItem>
+            <SelectItem value="clean">✅ 클린 상태만</SelectItem>
+            <SelectItem value="dirty">⚠️ 미처리 있음</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="overflow-x-auto -mx-2">
@@ -280,6 +322,7 @@ export function UserManagementPanel() {
               <th className="text-left py-2 px-2">직책</th>
               <th className="text-left py-2 px-2">권한</th>
               <th className="text-left py-2 px-2">상태</th>
+              <th className="text-left py-2 px-2">클린</th>
               <th className="text-right py-2 px-2">액션</th>
             </tr>
           </thead>
@@ -325,6 +368,17 @@ export function UserManagementPanel() {
                   <span className={`text-[10px] px-2 py-0.5 rounded-md border ${STATUS_BADGE[u.status] ?? ""}`}>
                     {STATUS_LABELS[u.status] ?? u.status}
                   </span>
+                </td>
+                <td className="py-3 px-2">
+                  {cleanSet.has(u.user_id) ? (
+                    <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full border bg-gradient-to-r from-amber-400/25 to-emerald-400/15 text-amber-300 border-amber-400/40 font-semibold animate-[pulse_3s_ease-in-out_infinite]">
+                      <CheckCircle2 className="size-2.5" />
+                      <Sparkles className="size-2" />
+                      클린
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">—</span>
+                  )}
                 </td>
                 <td className="py-3 px-2">
                   <div className="flex justify-end gap-1">

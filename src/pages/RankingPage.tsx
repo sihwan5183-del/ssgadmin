@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Header } from "@/components/layout/Header";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,11 +6,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import {
   Crown, Medal, Trophy, Star, TrendingUp, Flame, Zap,
-  Award, BarChart3, Smartphone, Gift, ChevronDown,
+  Award, BarChart3, Smartphone, Gift, ChevronDown, CheckCircle2, Sparkles,
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import confetti from "canvas-confetti";
 
 /* ─── types ─── */
 type ProfileMap = Record<string, { display_name: string; store: string | null }>;
@@ -24,8 +25,24 @@ type RankedUser = {
   voucherReturned: number;
   streak: number;
   yesterdayDelta: number;
+  isClean: boolean;
+  cleanDays: number;
 };
 type ModelRank = { model: string; count: number; isStrategy: boolean };
+
+/* ─── Clean Master Badge ─── */
+const CleanBadge = ({ size = "sm" }: { size?: "sm" | "lg" }) => (
+  <span className={cn(
+    "inline-flex items-center gap-0.5 font-semibold rounded-full border",
+    "bg-gradient-to-r from-amber-400/25 to-emerald-400/15 text-amber-300 border-amber-400/40",
+    "animate-[pulse_3s_ease-in-out_infinite]",
+    size === "lg" ? "text-[10px] px-2 py-0.5 gap-1" : "text-[8px] px-1.5 py-0"
+  )}>
+    <CheckCircle2 className={size === "lg" ? "size-3" : "size-2.5"} />
+    <Sparkles className={size === "lg" ? "size-2.5" : "size-2"} />
+    클린 마스터
+  </span>
+);
 
 /* ─── helpers ─── */
 const fmt = (n: number) => n.toLocaleString("ko-KR");
@@ -94,6 +111,7 @@ const PODIUM_STYLES = [
 /* ─── Component ─── */
 const RankingPage = () => {
   const { user } = useAuth();
+  const confettiFired = useRef(false);
   const [period, setPeriod] = useState("month");
   const [storeFilter, setStoreFilter] = useState("all");
   const [tab, setTab] = useState<TabKey>("sales");
@@ -101,6 +119,7 @@ const RankingPage = () => {
   const [modelRanks, setModelRanks] = useState<ModelRank[]>([]);
   const [profiles, setProfiles] = useState<ProfileMap>({});
   const [stores, setStores] = useState<string[]>([]);
+  const [cleanMap, setCleanMap] = useState<Map<string, { isClean: boolean; cleanDays: number }>>(new Map());
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -177,10 +196,36 @@ const RankingPage = () => {
       return streak;
     };
 
+    // Clean status: missing docs & unresolved pending items
+    const { data: allSalesClean } = await supabase
+      .from("sales")
+      .select("id, created_by, pending_resolved")
+      .gte("open_date", start)
+      .lte("open_date", end);
+    const { data: allDocs } = await supabase
+      .from("sale_documents")
+      .select("sale_id");
+    const docSet = new Set((allDocs ?? []).map((d) => d.sale_id));
+    const cleanCalc = new Map<string, { missingDocs: number; pendingItems: number }>();
+    (allSalesClean ?? []).forEach((s) => {
+      if (!cleanCalc.has(s.created_by)) cleanCalc.set(s.created_by, { missingDocs: 0, pendingItems: 0 });
+      const c = cleanCalc.get(s.created_by)!;
+      if (!docSet.has(s.id)) c.missingDocs++;
+      if (!s.pending_resolved) c.pendingItems++;
+    });
+    const cMap = new Map<string, { isClean: boolean; cleanDays: number }>();
+    cleanCalc.forEach((v, uid) => {
+      const isClean = v.missingDocs === 0 && v.pendingItems === 0;
+      const days = isClean ? Math.max(1, calcStreak(uMap.get(uid)?.dateCounts ?? new Map())) : 0;
+      cMap.set(uid, { isClean, cleanDays: days });
+    });
+    setCleanMap(cMap);
+
     const ranked: RankedUser[] = [];
     uMap.forEach((v, uid) => {
       const p = pMap[uid];
       if (!p) return;
+      const clean = cMap.get(uid);
       ranked.push({
         user_id: uid,
         name: p.display_name,
@@ -191,6 +236,8 @@ const RankingPage = () => {
         voucherReturned: v.voucherReturned,
         streak: calcStreak(v.dateCounts),
         yesterdayDelta: v.count - (yMap.get(uid) ?? 0),
+        isClean: clean?.isClean ?? false,
+        cleanDays: clean?.cleanDays ?? 0,
       });
     });
 
@@ -211,7 +258,7 @@ const RankingPage = () => {
     let list = [...users];
     if (storeFilter !== "all") list = list.filter((u) => u.store === storeFilter);
     return list.sort(activeTab.sortFn);
-  }, [users, storeFilter, activeTab]);
+  }, [users, storeFilter, activeTab, cleanMap]);
 
   const top10 = sorted.slice(0, 10);
   const podium = top10.slice(0, 3);
@@ -231,6 +278,18 @@ const RankingPage = () => {
     if (idx < 0) return null;
     return { rank: idx + 1, data: sorted[idx] };
   }, [sorted, user]);
+
+  // Confetti when user achieves clean status
+  useEffect(() => {
+    if (!user || confettiFired.current) return;
+    const myClean = cleanMap.get(user.id);
+    if (myClean?.isClean && myClean.cleanDays <= 1) {
+      confettiFired.current = true;
+      setTimeout(() => {
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ["#FFD700", "#FFA500", "#10B981", "#3B82F6"] });
+      }, 500);
+    }
+  }, [cleanMap, user]);
 
   const getValue = (u: RankedUser) => {
     switch (tab) {
@@ -268,11 +327,14 @@ const RankingPage = () => {
                 </p>
               </div>
             </div>
-            {myRank.data.streak >= 3 && (
-              <Badge className="bg-gradient-to-r from-orange-500/20 to-red-500/20 text-orange-300 border-orange-500/30 gap-1">
-                <Flame className="size-3" /> {myRank.data.streak}일 연속 열일 중! 🔥
-              </Badge>
-            )}
+            <div className="flex items-center gap-2 flex-wrap">
+              {myRank.data.isClean && <CleanBadge size="lg" />}
+              {myRank.data.streak >= 3 && (
+                <Badge className="bg-gradient-to-r from-orange-500/20 to-red-500/20 text-orange-300 border-orange-500/30 gap-1">
+                  <Flame className="size-3" /> {myRank.data.streak}일 연속 열일 중! 🔥
+                </Badge>
+              )}
+            </div>
           </div>
         </section>
       )}
@@ -370,6 +432,9 @@ const RankingPage = () => {
                         <span className="text-[10px]">{tier.icon}</span>
                         <span className="text-[10px] text-muted-foreground">{tier.label}</span>
                       </div>
+                      {u.isClean && (
+                        <div className="mt-1"><CleanBadge /></div>
+                      )}
                       {u.streak >= 3 && (
                         <Badge className="absolute top-2 right-2 text-[9px] bg-orange-500/20 text-orange-300 border-orange-500/30 px-1 py-0">
                           <Flame className="size-2.5" /> {u.streak}일
@@ -395,6 +460,7 @@ const RankingPage = () => {
                         <span className="text-[10px]">{tier.icon}</span>
                         <span className="text-sm font-medium">{u.name}</span>
                         {u.store && <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded bg-muted/60">{u.store}</span>}
+                        {u.isClean && <CleanBadge />}
                         {u.streak >= 3 && (
                           <span className="text-[10px] text-orange-400 flex items-center gap-0.5"><Flame className="size-2.5" />{u.streak}일</span>
                         )}
