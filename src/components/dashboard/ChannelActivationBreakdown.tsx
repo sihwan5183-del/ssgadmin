@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Radio, Flame, Filter, Settings2, Plus, Eye, EyeOff, GripVertical, X, Check } from "lucide-react";
+import { Radio, Flame, Filter, Settings2, Plus, Eye, EyeOff, X, Check, Package } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { cn } from "@/lib/utils";
@@ -8,26 +8,29 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRole } from "@/hooks/useRole";
+import { Badge } from "@/components/ui/badge";
 
-type ProductFilter = "전체" | "모바일" | "홈" | "업셀" | "IoT";
+/* ── 가입상품 카테고리 설정 ── */
+type ProductCategoryConfig = {
+  label: string;          // 필터 버튼에 표시될 이름
+  keywords: string[];     // sales.product 값과 매칭할 키워드 목록
+  visible: boolean;
+  order: number;
+};
 
-const PRODUCT_FILTERS: ProductFilter[] = ["전체", "모바일", "홈", "업셀", "IoT"];
+const DEFAULT_PRODUCT_CATEGORIES: ProductCategoryConfig[] = [
+  { label: "모바일", keywords: ["모바일", "USIM MNP", "세컨"], visible: true, order: 0 },
+  { label: "홈", keywords: ["인터넷", "TV프리", "홈"], visible: true, order: 1 },
+  { label: "업셀", keywords: ["대명"], visible: true, order: 2 },
+  { label: "IoT", keywords: ["IOT", "iot"], visible: true, order: 3 },
+];
 
-const matchesProduct = (product: string | null | undefined, filter: ProductFilter): boolean => {
-  if (filter === "전체") return true;
-  const p = (product ?? "").trim();
-  switch (filter) {
-    case "모바일":
-      return p === "모바일" || p === "USIM MNP" || p === "세컨";
-    case "홈":
-      return p === "인터넷" || p === "TV프리" || p === "홈";
-    case "업셀":
-      return p === "대명";
-    case "IoT":
-      return p === "IOT" || p.toLowerCase() === "iot";
-    default:
-      return false;
-  }
+const matchesProductDynamic = (
+  product: string | null | undefined,
+  category: ProductCategoryConfig
+): boolean => {
+  const p = (product ?? "").trim().toLowerCase();
+  return category.keywords.some((kw) => kw.toLowerCase() === p);
 };
 
 const DEFAULT_CHANNEL_COLORS: Record<string, string> = {
@@ -53,29 +56,46 @@ const colorFor = (name: string, idx: number) =>
 type ChannelConfig = { name: string; visible: boolean; order: number };
 
 const SETTINGS_KEY = "channel_activation_config";
+const PRODUCT_SETTINGS_KEY = "channel_product_categories";
 
 export const ChannelActivationBreakdown = () => {
   const { startDate, endDate } = usePeriod();
   const { isAdmin } = useRole();
   const [raw, setRaw] = useState<{ channel: string; product: string | null; open_date: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
-  const [productFilter, setProductFilter] = useState<ProductFilter>("전체");
   const [channelConfig, setChannelConfig] = useState<ChannelConfig[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [newChannel, setNewChannel] = useState("");
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
+  const [productCategories, setProductCategories] = useState<ProductCategoryConfig[]>(DEFAULT_PRODUCT_CATEGORIES);
+  const [settingsTab, setSettingsTab] = useState<"channel" | "product">("channel");
+  const [newProduct, setNewProduct] = useState("");
+  const [editProductIdx, setEditProductIdx] = useState<number | null>(null);
+  const [editProductLabel, setEditProductLabel] = useState("");
+  const [newKeyword, setNewKeyword] = useState("");
+  const [selectedProductFilter, setSelectedProductFilter] = useState("전체");
 
   // Load channel config from app_settings
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
+      const [chRes, prRes] = await Promise.all([
+        supabase
         .from("app_settings")
         .select("value")
         .eq("key", SETTINGS_KEY)
-        .maybeSingle();
-      if (data?.value && Array.isArray(data.value)) {
-        setChannelConfig(data.value as ChannelConfig[]);
+        .maybeSingle(),
+        supabase
+          .from("app_settings")
+          .select("value")
+          .eq("key", PRODUCT_SETTINGS_KEY)
+          .maybeSingle(),
+      ]);
+      if (chRes.data?.value && Array.isArray(chRes.data.value)) {
+        setChannelConfig(chRes.data.value as ChannelConfig[]);
+      }
+      if (prRes.data?.value && Array.isArray(prRes.data.value)) {
+        setProductCategories(prRes.data.value as ProductCategoryConfig[]);
       }
     })();
   }, []);
@@ -87,6 +107,20 @@ export const ChannelActivationBreakdown = () => {
       { onConflict: "key" }
     );
   }, []);
+
+  const saveProductConfig = useCallback(async (cfg: ProductCategoryConfig[]) => {
+    setProductCategories(cfg);
+    await supabase.from("app_settings").upsert(
+      { key: PRODUCT_SETTINGS_KEY, value: cfg as any },
+      { onConflict: "key" }
+    );
+  }, []);
+
+  // Visible product filters
+  const visibleProducts = useMemo(
+    () => productCategories.filter((c) => c.visible).sort((a, b) => a.order - b.order),
+    [productCategories]
+  );
 
   useEffect(() => {
     let alive = true;
@@ -133,9 +167,13 @@ export const ChannelActivationBreakdown = () => {
     const todayISO = new Date().toISOString().slice(0, 10);
     const map = new Map<string, { monthly: number; today: number }>();
     raw.forEach((r) => {
-      if (!matchesProduct(r.product, productFilter)) return;
       const ch = r.channel || "기타";
       if (hiddenChannels.has(ch)) return;
+      // Apply product filter
+      if (selectedProductFilter !== "전체") {
+        const cat = productCategories.find((c) => c.label === selectedProductFilter);
+        if (cat && !matchesProductDynamic(r.product, cat)) return;
+      }
       const cur = map.get(ch) ?? { monthly: 0, today: 0 };
       cur.monthly += 1;
       if (r.open_date === todayISO) cur.today += 1;
@@ -146,13 +184,13 @@ export const ChannelActivationBreakdown = () => {
     return Array.from(map.entries())
       .map(([channel, v]) => ({ channel, ...v }))
       .sort((a, b) => (orderMap.get(a.channel) ?? 999) - (orderMap.get(b.channel) ?? 999));
-  }, [raw, productFilter, hiddenChannels, mergedConfig]);
+  }, [raw, selectedProductFilter, hiddenChannels, mergedConfig, productCategories]);
 
   const totalMonthly = useMemo(() => rows.reduce((s, r) => s + r.monthly, 0), [rows]);
   const totalToday = useMemo(() => rows.reduce((s, r) => s + r.today, 0), [rows]);
   const maxMonthly = Math.max(1, ...rows.map((r) => r.monthly));
   const topToday = [...rows].sort((a, b) => b.today - a.today)[0];
-  const filterLabel = productFilter === "전체" ? "전체" : productFilter;
+  const filterLabel = selectedProductFilter === "전체" ? "전체" : selectedProductFilter;
 
   const toggleVisibility = (name: string) => {
     const next = mergedConfig.map((c) =>
@@ -193,6 +231,64 @@ export const ChannelActivationBreakdown = () => {
     setEditIdx(null);
   };
 
+  /* ── 가입상품 관리 함수 ── */
+  const addProductCategory = () => {
+    const n = newProduct.trim();
+    if (!n || productCategories.some((c) => c.label === n)) return;
+    saveProductConfig([...productCategories, { label: n, keywords: [n], visible: true, order: productCategories.length }]);
+    setNewProduct("");
+  };
+
+  const removeProductCategory = (label: string) => {
+    saveProductConfig(productCategories.filter((c) => c.label !== label).map((c, i) => ({ ...c, order: i })));
+    if (selectedProductFilter === label) setSelectedProductFilter("전체");
+  };
+
+  const toggleProductVisibility = (label: string) => {
+    saveProductConfig(productCategories.map((c) => c.label === label ? { ...c, visible: !c.visible } : c));
+    if (selectedProductFilter === label) setSelectedProductFilter("전체");
+  };
+
+  const moveProduct = (idx: number, dir: -1 | 1) => {
+    const arr = [...productCategories];
+    const target = idx + dir;
+    if (target < 0 || target >= arr.length) return;
+    [arr[idx], arr[target]] = [arr[target], arr[idx]];
+    saveProductConfig(arr.map((c, i) => ({ ...c, order: i })));
+  };
+
+  const startProductRename = (idx: number) => {
+    setEditProductIdx(idx);
+    setEditProductLabel(productCategories[idx].label);
+  };
+
+  const confirmProductRename = () => {
+    if (editProductIdx === null) return;
+    const n = editProductLabel.trim();
+    if (!n) { setEditProductIdx(null); return; }
+    const old = productCategories[editProductIdx].label;
+    saveProductConfig(productCategories.map((c, i) => i === editProductIdx ? { ...c, label: n } : c));
+    if (selectedProductFilter === old) setSelectedProductFilter(n);
+    setEditProductIdx(null);
+  };
+
+  const addKeyword = (catIdx: number) => {
+    const kw = newKeyword.trim();
+    if (!kw) return;
+    saveProductConfig(productCategories.map((c, i) =>
+      i === catIdx && !c.keywords.includes(kw)
+        ? { ...c, keywords: [...c.keywords, kw] }
+        : c
+    ));
+    setNewKeyword("");
+  };
+
+  const removeKeyword = (catIdx: number, kw: string) => {
+    saveProductConfig(productCategories.map((c, i) =>
+      i === catIdx ? { ...c, keywords: c.keywords.filter((k) => k !== kw) } : c
+    ));
+  };
+
   return (
     <section className="mb-1.5">
       <Card className="p-5 glass">
@@ -210,20 +306,30 @@ export const ChannelActivationBreakdown = () => {
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
-            <div className="inline-flex items-center gap-0.5 p-0.5 rounded-full bg-muted/60 border border-border/50">
-              {PRODUCT_FILTERS.map((p) => (
+            <div className="inline-flex items-center gap-0.5 p-0.5 rounded-full bg-muted/60 border border-border/50 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setSelectedProductFilter("전체")}
+                className={cn(
+                  "px-2.5 py-1 text-xs font-semibold rounded-full transition-all tabular-nums",
+                  selectedProductFilter === "전체"
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >전체</button>
+              {visibleProducts.map((p) => (
                 <button
-                  key={p}
+                  key={p.label}
                   type="button"
-                  onClick={() => setProductFilter(p)}
+                  onClick={() => setSelectedProductFilter(p.label)}
                   className={cn(
                     "px-2.5 py-1 text-xs font-semibold rounded-full transition-all tabular-nums",
-                    productFilter === p
+                    selectedProductFilter === p.label
                       ? "bg-background shadow-sm text-foreground"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {p}
+                  {p.label}
                 </button>
               ))}
             </div>
@@ -266,81 +372,128 @@ export const ChannelActivationBreakdown = () => {
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-80 p-0" align="end">
-                  <div className="p-3 border-b border-border/50">
-                    <h4 className="text-sm font-bold">채널 관리</h4>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">표시할 채널을 관리합니다</p>
+                  {/* Tab header */}
+                  <div className="flex border-b border-border/50">
+                    <button
+                      type="button"
+                      onClick={() => setSettingsTab("channel")}
+                      className={cn(
+                        "flex-1 px-3 py-2.5 text-xs font-bold transition-colors",
+                        settingsTab === "channel"
+                          ? "text-primary border-b-2 border-primary"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <Radio className="size-3 inline mr-1 -mt-0.5" />채널 관리
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSettingsTab("product")}
+                      className={cn(
+                        "flex-1 px-3 py-2.5 text-xs font-bold transition-colors",
+                        settingsTab === "product"
+                          ? "text-primary border-b-2 border-primary"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <Package className="size-3 inline mr-1 -mt-0.5" />가입상품 관리
+                    </button>
                   </div>
-                  <div className="max-h-64 overflow-y-auto p-2 space-y-0.5">
-                    {mergedConfig.map((ch, idx) => (
-                      <div
-                        key={ch.name + idx}
-                        className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-muted/50 group"
-                      >
-                        <div className="flex flex-col gap-0.5 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => moveChannel(idx, -1)}
-                            disabled={idx === 0}
-                            className="text-muted-foreground hover:text-foreground disabled:opacity-30 text-[10px] leading-none"
-                          >▲</button>
-                          <button
-                            type="button"
-                            onClick={() => moveChannel(idx, 1)}
-                            disabled={idx === mergedConfig.length - 1}
-                            className="text-muted-foreground hover:text-foreground disabled:opacity-30 text-[10px] leading-none"
-                          >▼</button>
-                        </div>
-                        <span className="size-2.5 rounded-full shrink-0" style={{ background: colorFor(ch.name, idx) }} />
-                        {editIdx === idx ? (
-                          <div className="flex items-center gap-1 flex-1 min-w-0">
-                            <Input
-                              value={editName}
-                              onChange={(e) => setEditName(e.target.value)}
-                              className="h-6 text-xs px-1.5"
-                              onKeyDown={(e) => e.key === "Enter" && confirmRename()}
-                              autoFocus
-                            />
-                            <button type="button" onClick={confirmRename} className="text-primary"><Check className="size-3.5" /></button>
-                            <button type="button" onClick={() => setEditIdx(null)} className="text-muted-foreground"><X className="size-3.5" /></button>
+
+                  {/* Channel tab */}
+                  {settingsTab === "channel" && (
+                    <>
+                      <div className="max-h-64 overflow-y-auto p-2 space-y-0.5">
+                        {mergedConfig.map((ch, idx) => (
+                          <div
+                            key={ch.name + idx}
+                            className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-muted/50 group"
+                          >
+                            <div className="flex flex-col gap-0.5 shrink-0">
+                              <button type="button" onClick={() => moveChannel(idx, -1)} disabled={idx === 0} className="text-muted-foreground hover:text-foreground disabled:opacity-30 text-[10px] leading-none">▲</button>
+                              <button type="button" onClick={() => moveChannel(idx, 1)} disabled={idx === mergedConfig.length - 1} className="text-muted-foreground hover:text-foreground disabled:opacity-30 text-[10px] leading-none">▼</button>
+                            </div>
+                            <span className="size-2.5 rounded-full shrink-0" style={{ background: colorFor(ch.name, idx) }} />
+                            {editIdx === idx ? (
+                              <div className="flex items-center gap-1 flex-1 min-w-0">
+                                <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-6 text-xs px-1.5" onKeyDown={(e) => e.key === "Enter" && confirmRename()} autoFocus />
+                                <button type="button" onClick={confirmRename} className="text-primary"><Check className="size-3.5" /></button>
+                                <button type="button" onClick={() => setEditIdx(null)} className="text-muted-foreground"><X className="size-3.5" /></button>
+                              </div>
+                            ) : (
+                              <span className="text-xs font-semibold flex-1 truncate cursor-pointer" onDoubleClick={() => startRename(idx)} title="더블클릭으로 이름 수정">{ch.name}</span>
+                            )}
+                            <button type="button" onClick={() => toggleVisibility(ch.name)} className="shrink-0 text-muted-foreground hover:text-foreground" title={ch.visible ? "숨기기" : "표시"}>
+                              {ch.visible ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
+                            </button>
+                            <button type="button" onClick={() => removeChannel(ch.name)} className="shrink-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity" title="삭제">
+                              <X className="size-3.5" />
+                            </button>
                           </div>
-                        ) : (
-                          <span
-                            className="text-xs font-semibold flex-1 truncate cursor-pointer"
-                            onDoubleClick={() => startRename(idx)}
-                            title="더블클릭으로 이름 수정"
-                          >{ch.name}</span>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => toggleVisibility(ch.name)}
-                          className="shrink-0 text-muted-foreground hover:text-foreground"
-                          title={ch.visible ? "숨기기" : "표시"}
-                        >
-                          {ch.visible ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => removeChannel(ch.name)}
-                          className="shrink-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                          title="삭제"
-                        >
-                          <X className="size-3.5" />
-                        </button>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                  <div className="p-2 border-t border-border/50 flex items-center gap-1.5">
-                    <Input
-                      value={newChannel}
-                      onChange={(e) => setNewChannel(e.target.value)}
-                      placeholder="새 채널 추가…"
-                      className="h-7 text-xs flex-1"
-                      onKeyDown={(e) => e.key === "Enter" && addChannel()}
-                    />
-                    <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={addChannel}>
-                      <Plus className="size-3 mr-1" /> 추가
-                    </Button>
-                  </div>
+                      <div className="p-2 border-t border-border/50 flex items-center gap-1.5">
+                        <Input value={newChannel} onChange={(e) => setNewChannel(e.target.value)} placeholder="새 채널 추가…" className="h-7 text-xs flex-1" onKeyDown={(e) => e.key === "Enter" && addChannel()} />
+                        <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={addChannel}><Plus className="size-3 mr-1" /> 추가</Button>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Product tab */}
+                  {settingsTab === "product" && (
+                    <>
+                      <div className="max-h-72 overflow-y-auto p-2 space-y-1">
+                        {productCategories.map((cat, idx) => (
+                          <div key={cat.label + idx} className="rounded-lg border border-border/50 p-2 group">
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <div className="flex flex-col gap-0.5 shrink-0">
+                                <button type="button" onClick={() => moveProduct(idx, -1)} disabled={idx === 0} className="text-muted-foreground hover:text-foreground disabled:opacity-30 text-[10px] leading-none">▲</button>
+                                <button type="button" onClick={() => moveProduct(idx, 1)} disabled={idx === productCategories.length - 1} className="text-muted-foreground hover:text-foreground disabled:opacity-30 text-[10px] leading-none">▼</button>
+                              </div>
+                              {editProductIdx === idx ? (
+                                <div className="flex items-center gap-1 flex-1 min-w-0">
+                                  <Input value={editProductLabel} onChange={(e) => setEditProductLabel(e.target.value)} className="h-6 text-xs px-1.5" onKeyDown={(e) => e.key === "Enter" && confirmProductRename()} autoFocus />
+                                  <button type="button" onClick={confirmProductRename} className="text-primary"><Check className="size-3.5" /></button>
+                                  <button type="button" onClick={() => setEditProductIdx(null)} className="text-muted-foreground"><X className="size-3.5" /></button>
+                                </div>
+                              ) : (
+                                <span className="text-xs font-bold flex-1 truncate cursor-pointer" onDoubleClick={() => startProductRename(idx)} title="더블클릭으로 이름 수정">{cat.label}</span>
+                              )}
+                              <button type="button" onClick={() => toggleProductVisibility(cat.label)} className="shrink-0 text-muted-foreground hover:text-foreground" title={cat.visible ? "숨기기" : "표시"}>
+                                {cat.visible ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
+                              </button>
+                              <button type="button" onClick={() => removeProductCategory(cat.label)} className="shrink-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity" title="삭제">
+                                <X className="size-3.5" />
+                              </button>
+                            </div>
+                            {/* Keywords */}
+                            <div className="flex flex-wrap gap-1 ml-5">
+                              {cat.keywords.map((kw) => (
+                                <Badge key={kw} variant="secondary" className="text-[10px] px-1.5 py-0 h-5 gap-0.5 font-medium">
+                                  {kw}
+                                  <button type="button" onClick={() => removeKeyword(idx, kw)} className="hover:text-destructive ml-0.5"><X className="size-2.5" /></button>
+                                </Badge>
+                              ))}
+                              <div className="inline-flex items-center">
+                                <Input
+                                  value={editProductIdx === idx ? "" : newKeyword}
+                                  onChange={(e) => setNewKeyword(e.target.value)}
+                                  onFocus={() => setNewKeyword("")}
+                                  placeholder="+ 키워드"
+                                  className="h-5 text-[10px] px-1 w-16 border-dashed"
+                                  onKeyDown={(e) => { if (e.key === "Enter") { addKeyword(idx); e.preventDefault(); } }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="p-2 border-t border-border/50 flex items-center gap-1.5">
+                        <Input value={newProduct} onChange={(e) => setNewProduct(e.target.value)} placeholder="새 상품 카테고리 추가…" className="h-7 text-xs flex-1" onKeyDown={(e) => e.key === "Enter" && addProductCategory()} />
+                        <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={addProductCategory}><Plus className="size-3 mr-1" /> 추가</Button>
+                      </div>
+                    </>
+                  )}
                 </PopoverContent>
               </Popover>
             )}
@@ -372,10 +525,10 @@ export const ChannelActivationBreakdown = () => {
                       <span className="size-2.5 rounded-full shrink-0 ring-1 ring-white/20" style={{ background: color }} />
                       <span className="text-xs font-bold truncate leading-tight">{row.channel}</span>
                     </div>
-                    {productFilter !== "전체" && (
+                    {selectedProductFilter !== "전체" && (
                       <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[9px] font-semibold shrink-0">
                         <Filter className="size-2.5" />
-                        {productFilter}
+                        {selectedProductFilter}
                       </span>
                     )}
                   </div>
