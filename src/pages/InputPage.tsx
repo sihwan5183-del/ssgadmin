@@ -154,6 +154,8 @@ const InputPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [linkedInquiryId, setLinkedInquiryId] = useState<string | null>(null);
   const [dbSummary, setDbSummary] = useState({ count: 0, totalRebate: 0, totalOffer: 0, totalProfit: 0 });
+  const [unpaidCount, setUnpaidCount] = useState(0);
+  const [unreturnedCount, setUnreturnedCount] = useState(0);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [quickFilter, setQuickFilter] = useState<"unpaid" | "unreturned" | null>(null);
 
@@ -237,6 +239,24 @@ const InputPage = () => {
       const totalOffer = rows.reduce((s, r) => s + (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0), 0);
       setDbSummary({ count: rows.length, totalRebate, totalOffer, totalProfit: totalRebate - totalOffer });
     }
+    // Unpaid/unreturned counts
+    const { count: uc } = await supabase
+      .from("sales")
+      .select("id", { count: "exact", head: true })
+      .gte("open_date", startDate)
+      .lte("open_date", endDate)
+      .gt("receivable_amount", 0)
+      .neq("receivable_paid", "완료");
+    setUnpaidCount(uc ?? 0);
+    const { count: urc } = await supabase
+      .from("sales")
+      .select("id", { count: "exact", head: true })
+      .gte("open_date", startDate)
+      .lte("open_date", endDate)
+      .neq("voucher", "")
+      .not("voucher", "is", null)
+      .neq("voucher_returned", "유");
+    setUnreturnedCount(urc ?? 0);
   }, [searchQ, startDate, endDate]);
 
   const summary = dbSummary;
