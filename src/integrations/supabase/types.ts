@@ -232,6 +232,42 @@ export type Database = {
         }
         Relationships: []
       }
+      budget_categories: {
+        Row: {
+          active: boolean
+          category_type: string
+          created_at: string
+          created_by: string | null
+          dashboard_included: boolean
+          id: string
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category_type?: string
+          created_at?: string
+          created_by?: string | null
+          dashboard_included?: boolean
+          id?: string
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category_type?: string
+          created_at?: string
+          created_by?: string | null
+          dashboard_included?: boolean
+          id?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       device_inventory: {
         Row: {
           activated_at: string | null
