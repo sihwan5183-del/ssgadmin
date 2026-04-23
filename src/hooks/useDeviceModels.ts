@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface DeviceModel {
@@ -31,8 +31,9 @@ export const useDeviceModels = (activeOnly = true) => {
 
   useEffect(() => {
     load();
+    const channelName = `device-models-rt-${Math.random().toString(36).slice(2, 8)}`;
     const ch = supabase
-      .channel("device-models-rt")
+      .channel(channelName)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "device_models" },
