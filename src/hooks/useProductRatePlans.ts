@@ -7,6 +7,12 @@ export interface ProductRatePlan {
   rate_plan: string;
   sort_order: number;
   active: boolean;
+  default_sale_type: string | null;
+  default_vas1: string | null;
+  default_vas2: string | null;
+  vas1_duration: number | null;
+  vas2_duration: number | null;
+  allowed_sale_types: string[];
 }
 
 /**
@@ -43,5 +49,24 @@ export const useProductRatePlans = () => {
     [mappings]
   );
 
-  return { mappings, loading, refresh, getPlansForProduct };
+  /** Get the first mapping row for a product to read defaults */
+  const getDefaultsForProduct = useCallback(
+    (product: string | null | undefined) => {
+      if (!product) return null;
+      return mappings.find((m) => m.active && m.product === product) ?? null;
+    },
+    [mappings]
+  );
+
+  /** Get allowed sale types for a product (empty = all allowed) */
+  const getAllowedSaleTypes = useCallback(
+    (product: string | null | undefined): string[] => {
+      if (!product) return [];
+      const row = mappings.find((m) => m.active && m.product === product);
+      return row?.allowed_sale_types ?? [];
+    },
+    [mappings]
+  );
+
+  return { mappings, loading, refresh, getPlansForProduct, getDefaultsForProduct, getAllowedSaleTypes };
 };
