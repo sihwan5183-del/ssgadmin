@@ -65,14 +65,14 @@ const AuthPage = () => {
 
   return (
     <div className="min-h-screen grid place-items-center px-5">
-      <div className="w-full max-w-md glass-strong rounded-3xl p-8 shadow-card-elevated">
+      <div className="w-full max-w-md glass-strong rounded-3xl p-8 shadow-card-elevated relative">
         <div className="flex items-center gap-3 mb-7">
           <div className="size-11 rounded-xl bg-gradient-primary grid place-items-center shadow-glow">
             <Sparkles className="size-5 text-primary-foreground" />
           </div>
           <div>
-            <div className="text-xs text-muted-foreground">신세계정보통신</div>
-            <div className="text-lg font-bold tracking-tight">실적 원장 시스템</div>
+            <div className="text-xs text-muted-foreground font-medium tracking-wide">연합통신</div>
+            <div className="text-lg font-bold tracking-tight">영업관리 시스템</div>
           </div>
         </div>
 
@@ -161,6 +161,10 @@ const AuthPage = () => {
             {busy ? "처리 중…" : mode === "login" ? "로그인" : "가입하기"}
           </Button>
         </form>
+
+        <p className="text-center text-[10px] text-muted-foreground mt-6">
+          © {new Date().getFullYear()} 연합통신. All rights reserved.
+        </p>
       </div>
     </div>
   );
