@@ -19,7 +19,7 @@ export function MyIncentiveWidget() {
   const { user } = useAuth();
   const { rates } = useIncentiveRates();
   const { linkageRule } = useAppSettings();
-  const { range } = usePeriod();
+  const period = usePeriod();
   const [sales, setSales] = useState<SaleForIncentive[]>([]);
   const [profile, setProfile] = useState<{ position?: string | null }>({});
 
@@ -31,14 +31,14 @@ export function MyIncentiveWidget() {
           .from("sales")
           .select("id, open_date, device_model, product, sale_type, net_fee, customer_name")
           .eq("created_by", user.id)
-          .gte("open_date", range.from)
-          .lte("open_date", range.to),
+          .gte("open_date", period.startDate)
+          .lte("open_date", period.endDate),
         supabase.from("profiles").select("position").eq("user_id", user.id).maybeSingle(),
       ]);
       setSales((sData ?? []) as SaleForIncentive[]);
       setProfile(pData ?? {});
     })();
-  }, [user, range.from, range.to]);
+  }, [user, period.startDate, period.endDate]);
 
   const result = useMemo(() => {
     if (!sales.length) return null;
