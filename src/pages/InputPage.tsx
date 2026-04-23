@@ -145,6 +145,77 @@ const InputPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 수정 모드: URL ?edit=<id> 로 진입 시 기존 데이터 로드
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (!editId) return;
+    (async () => {
+      const { data, error } = await supabase
+        .from("sales")
+        .select("*")
+        .eq("id", editId)
+        .maybeSingle();
+      if (error || !data) {
+        toast.error("실적 데이터를 불러올 수 없습니다");
+        return;
+      }
+      const s = data as any;
+      setEditingId(s.id);
+      setForm({
+        seq: s.seq,
+        channel: s.channel,
+        moyo_excluded: s.moyo_excluded ?? false,
+        manager: s.manager,
+        open_month: s.open_month,
+        product: s.product,
+        sale_type: s.sale_type,
+        open_method: s.open_method,
+        status: s.status,
+        open_date: s.open_date,
+        customer_name: s.customer_name,
+        birth_date: s.birth_date,
+        phone: s.phone,
+        device_model: s.device_model,
+        device_serial: s.device_serial,
+        usim_model: s.usim_model,
+        usim_serial: s.usim_serial,
+        rate_plan: s.rate_plan,
+        vas1: s.vas1,
+        vas2: s.vas2,
+        unit_price: s.unit_price ?? 0,
+        vas_fee: s.vas_fee ?? 0,
+        voucher: s.voucher,
+        voucher_returned: s.voucher_returned,
+        receivable_amount: s.receivable_amount ?? 0,
+        receivable_paid: s.receivable_paid,
+        cash_open: s.cash_open ?? false,
+        distributor_amount: s.distributor_amount ?? 0,
+        extra_subsidy: s.extra_subsidy ?? 0,
+        cash_support_amount: s.cash_support_amount ?? 0,
+        cash_bank: s.cash_bank,
+        cash_account: s.cash_account,
+        cash_holder: s.cash_holder,
+        net_fee: s.net_fee ?? 0,
+        delivery_type: s.delivery_type,
+        tracking_no: s.tracking_no,
+        note: s.note,
+        bundle: s.bundle,
+        trade_in_enabled: s.trade_in_enabled ?? false,
+        trade_in_model: s.trade_in_model,
+        trade_in_estimate: s.trade_in_estimate ?? 0,
+        trade_in_confirmed: s.trade_in_confirmed ?? 0,
+      });
+      setCustomFields(s.custom_fields ?? {});
+      setPendingItems(Array.isArray(s.pending_items) ? s.pending_items : []);
+      setPendingNote(s.pending_note ?? "");
+      setPendingResolved(s.pending_resolved ?? true);
+      // URL 정리 (edit 파라미터 제거하되 상태 유지)
+      setSearchParams({}, { replace: true });
+      toast.info("실적 수정 모드", { description: `${s.customer_name ?? "고객"} — 기존 데이터를 불러왔습니다.` });
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Track which fields were auto-filled from product defaults
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
 
@@ -543,7 +614,18 @@ const InputPage = () => {
 
   return (
     <>
-      <Header title="실적 입력 / 원장" subtitle="엑셀 '실적장표' 시트와 동일한 모든 항목을 1건 단위로 저장합니다" showScopeToggle={false} showPeriodFilter />
+      <Header title={editingId ? "실적 수정" : "실적 입력 / 원장"} subtitle={editingId ? "기존 데이터를 수정하고 있습니다. 완료 후 '수정 저장'을 눌러주세요." : "엑셀 '실적장표' 시트와 동일한 모든 항목을 1건 단위로 저장합니다"} showScopeToggle={false} showPeriodFilter />
+
+      {editingId && (
+        <div className="mb-4 rounded-xl border border-warning/40 bg-warning/10 px-4 py-2.5 flex items-center gap-2 text-sm">
+          <Pencil className="size-4 text-warning shrink-0" />
+          <span className="font-semibold text-warning">실적 수정 중</span>
+          <span className="text-muted-foreground">— 변경 후 하단의 '수정 저장' 버튼을 눌러 반영하세요.</span>
+          <Button size="sm" variant="ghost" className="ml-auto text-xs" onClick={() => { reset(); navigate("/sales-ledger"); }}>
+            <X className="size-3.5 mr-1" /> 수정 취소
+          </Button>
+        </div>
+      )}
 
       {/* 엑셀 업로드 */}
       <section className="glass rounded-2xl p-5 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-card-elevated">
