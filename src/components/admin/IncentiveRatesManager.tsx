@@ -118,14 +118,14 @@ export function IncentiveRatesManager() {
       note: row.note,
       pay_type: row.pay_type,
       pay_percent: row.pay_percent,
-      tiered_rates: row.tiered_rates as unknown as Record<string, unknown>[],
-      grade_bonus: row.grade_bonus as unknown as Record<string, unknown>,
+      tiered_rates: JSON.parse(JSON.stringify(row.tiered_rates)),
+      grade_bonus: JSON.parse(JSON.stringify(row.grade_bonus)),
     };
     if (row.isNew) {
-      const { error } = await supabase.from("incentive_rates").insert({ ...payload, created_by: user?.id });
+      const { error } = await supabase.from("incentive_rates").insert({ ...payload, created_by: user?.id } as any);
       if (error) return toast.error("저장 실패: " + error.message);
     } else if (row.id) {
-      const { error } = await supabase.from("incentive_rates").update(payload).eq("id", row.id);
+      const { error } = await supabase.from("incentive_rates").update(payload as any).eq("id", row.id);
       if (error) return toast.error("저장 실패: " + error.message);
     }
     toast.success("저장되었습니다");
