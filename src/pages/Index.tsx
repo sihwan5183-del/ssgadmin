@@ -1,7 +1,6 @@
-import { useMemo, type ReactNode } from "react";
-import { Responsive, WidthProvider } from "react-grid-layout";
+import { useMemo, useRef, type ReactNode } from "react";
+import { GridLayout, useContainerWidth } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
-import "react-resizable/css/styles.css";
 
 import { Header } from "@/components/layout/Header";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -39,8 +38,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-
-const ResponsiveGrid = WidthProvider(Responsive);
 
 /* ── widget content map ── */
 function StatCardsBlock() {
@@ -160,47 +157,69 @@ const Index = () => {
       </div>
 
       {/* ── 그리드 ── */}
-      <ResponsiveGrid
-        className="dashboard-grid"
-        layouts={{ lg: layout }}
-        breakpoints={{ lg: 1024, md: 768, sm: 0 }}
-        cols={{ lg: 12, md: 6, sm: 1 }}
-        rowHeight={60}
-        isDraggable={editing}
-        isResizable={editing}
-        draggableHandle=".widget-drag-handle"
-        onLayoutChange={(currentLayout) => onLayoutChange(currentLayout)}
-        compactType="vertical"
-        margin={[8, 8]}
-      >
-        {layout.map((item) => {
-          const def = WIDGET_DEFS.find((w) => w.id === item.i);
-          const content = WIDGET_COMPONENTS[item.i];
-          if (!def || !content) return null;
-          return (
-            <div key={item.i} className="relative group">
-              {editing && (
-                <>
-                  <div className="widget-drag-handle absolute top-1 left-1 z-20 cursor-grab active:cursor-grabbing p-1 rounded-md bg-muted/80 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <GripVertical className="size-4 text-muted-foreground" />
-                  </div>
-                  <button
-                    onClick={() => hideWidget(item.i)}
-                    className="absolute top-1 right-1 z-20 p-1 rounded-md bg-muted/80 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/20"
-                  >
-                    <X className="size-3.5 text-muted-foreground hover:text-destructive" />
-                  </button>
-                </>
-              )}
-              <div className={`h-full overflow-auto ${editing ? "ring-1 ring-primary/20 rounded-xl" : ""}`}>
-                {content}
-              </div>
-            </div>
-          );
-        })}
-      </ResponsiveGrid>
+      <DashboardGrid
+        layout={layout}
+        editing={editing}
+        onLayoutChange={onLayoutChange}
+        hideWidget={hideWidget}
+      />
     </>
   );
 };
 
 export default Index;
+
+/* ── Grid wrapper using hooks API ── */
+function DashboardGrid({
+  layout,
+  editing,
+  onLayoutChange,
+  hideWidget,
+}: {
+  layout: import("react-grid-layout").LayoutItem[];
+  editing: boolean;
+  onLayoutChange: (l: import("react-grid-layout").LayoutItem[]) => void;
+  hideWidget: (id: string) => void;
+}) {
+  const { width, containerRef, mounted } = useContainerWidth();
+
+  return (
+    <div ref={containerRef}>
+      {mounted && (
+        <GridLayout
+          width={width}
+          layout={layout}
+          gridConfig={{ cols: 12, rowHeight: 60, margin: [8, 8] as [number, number] }}
+          dragConfig={{ isDraggable: editing, draggableHandle: ".widget-drag-handle" }}
+          resizeConfig={{ isResizable: editing }}
+          onLayoutChange={(newLayout) => onLayoutChange([...newLayout])}
+        >
+          {layout.map((item) => {
+            const content = WIDGET_COMPONENTS[item.i];
+            if (!content) return null;
+            return (
+              <div key={item.i} className="relative group">
+                {editing && (
+                  <>
+                    <div className="widget-drag-handle absolute top-1 left-1 z-20 cursor-grab active:cursor-grabbing p-1 rounded-md bg-muted/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <GripVertical className="size-4 text-muted-foreground" />
+                    </div>
+                    <button
+                      onClick={() => hideWidget(item.i)}
+                      className="absolute top-1 right-1 z-20 p-1 rounded-md bg-muted/80 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/20"
+                    >
+                      <X className="size-3.5 text-muted-foreground hover:text-destructive" />
+                    </button>
+                  </>
+                )}
+                <div className={`h-full overflow-auto ${editing ? "ring-1 ring-primary/20 rounded-xl" : ""}`}>
+                  {content}
+                </div>
+              </div>
+            );
+          })}
+        </GridLayout>
+      )}
+    </div>
+  );
+}
