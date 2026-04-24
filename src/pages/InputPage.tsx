@@ -1255,11 +1255,11 @@ const InputPage = () => {
                   <span className="text-destructive">₩{(form.distributor_amount ?? 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">- 현금지원금</span>
+                  <span className="text-muted-foreground">- 현금개통</span>
                   <span className="text-destructive">₩{(form.cash_support_amount ?? 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">- 추가보조금</span>
+                  <span className="text-muted-foreground">- 추가지원금</span>
                   <span className="text-destructive">₩{(form.extra_subsidy ?? 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
@@ -1267,8 +1267,20 @@ const InputPage = () => {
                   <span className="text-destructive">₩{(form.customer_support_amount ?? 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">- 법인카드</span>
+                  <span className="text-muted-foreground">- 법인카드 결제</span>
                   <span className="text-destructive">₩{(form.corp_card_amount ?? 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between border-t border-dashed border-destructive/30 pt-1 mt-1">
+                  <span className="text-muted-foreground font-medium">총 오퍼(지출) 합계</span>
+                  <span className="text-destructive font-semibold">
+                    ₩{(
+                      (form.distributor_amount ?? 0) +
+                      (form.cash_support_amount ?? 0) +
+                      (form.extra_subsidy ?? 0) +
+                      (form.customer_support_amount ?? 0) +
+                      (form.corp_card_amount ?? 0)
+                    ).toLocaleString()}
+                  </span>
                 </div>
                 {form.trade_in_enabled && (form.trade_in_confirmed ?? 0) > 0 && (
                   <div className="flex justify-between">
@@ -1277,10 +1289,19 @@ const InputPage = () => {
                   </div>
                 )}
                 <div className="flex justify-between border-t border-border/30 pt-1 mt-1">
-                  <span className="font-semibold">최종 순이익</span>
+                  <span className="font-semibold">최종 수익 (5대 수익 − 총 오퍼)</span>
                   {(() => {
-                    const net = (form.unit_price ?? 0) + (form.vas_fee ?? 0) + (form.trade_in_enabled ? (form.trade_in_confirmed ?? 0) : 0) - (form.distributor_amount ?? 0) - (form.cash_support_amount ?? 0) - (form.extra_subsidy ?? 0);
-                    const netFinal = net - (form.customer_support_amount ?? 0) - (form.corp_card_amount ?? 0);
+                    const revenue =
+                      (form.unit_price ?? 0) +
+                      (form.vas_fee ?? 0) +
+                      (form.trade_in_enabled ? (form.trade_in_confirmed ?? 0) : 0);
+                    const offerTotal =
+                      (form.distributor_amount ?? 0) +
+                      (form.cash_support_amount ?? 0) +
+                      (form.extra_subsidy ?? 0) +
+                      (form.customer_support_amount ?? 0) +
+                      (form.corp_card_amount ?? 0);
+                    const netFinal = revenue - offerTotal;
                     return <span className={`font-bold ${netFinal >= 0 ? "text-primary" : "text-destructive"}`}>₩{netFinal.toLocaleString()}</span>;
                   })()}
                 </div>
