@@ -289,7 +289,8 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
         </Button>
       )}
 
-      {/* 검수 체크리스트 (어드민만 토글 가능, 모두에게 표시) */}
+      {/* === 그룹 A: 체크리스트 + 미처리 항목 (2단 그리드) === */}
+      <div className={`grid grid-cols-1 ${isAdmin ? "xl:grid-cols-2" : ""} gap-3`}>
       <div className="rounded-lg border border-border/40 p-3 space-y-2">
         <div className="flex items-center justify-between text-xs">
           <span className="font-semibold flex items-center gap-1.5">
@@ -314,7 +315,7 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
           ))}
         </div>
         {!allChecked && (
-          <p className="text-[10px] text-muted-foreground">모든 항목 체크 시 '검수 완료(확정)' 버튼이 활성화됩니다.</p>
+          <p className="text-[10px] text-muted-foreground">모든 항목 체크 시 '검수 완료' 버튼이 활성화됩니다.</p>
         )}
       </div>
 
@@ -339,9 +340,12 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
           />
         </div>
       )}
+      </div>
 
-      {/* 이상영업 감시 — admin/planner */}
+      {/* === 그룹 B: 이상영업 + 고객소통 + 최종판정 (2단 그리드) === */}
       {isAdmin && (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+        {/* 이상영업 감시 */}
         <div className={`rounded-lg border p-3 space-y-2 ${fraudSuspect ? "border-destructive/60 bg-destructive/10" : "border-border/40"}`}>
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold flex items-center gap-1.5">
@@ -376,30 +380,24 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
             </>
           )}
         </div>
-      )}
 
-      {/* 고객 소통 / 설치 관리 / 최종 판정 — 2단 그리드 */}
-      {isAdmin && (
-        <div className="space-y-3">
-          {/* 그룹 1: 고객 소통 & 최종 판정 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {/* SMS */}
-            <div className="flex items-center justify-between rounded-lg border border-border/40 p-3">
-              <span className="text-xs font-semibold flex items-center gap-1.5">
-                <MessageCircle className="size-3.5 text-sky-400" />
-                고객 문자발송
-              </span>
-              <Switch
-                checked={smsSent}
-                onCheckedChange={(v) => {
-                  setSmsSent(v);
-                  patchCustom({ sms_sent: v, sms_sent_at: v ? new Date().toISOString() : null });
-                }}
-              />
-            </div>
+        {/* SMS 발송 */}
+        <div className="flex items-center justify-between rounded-lg border border-border/40 p-3">
+          <span className="text-xs font-semibold flex items-center gap-1.5">
+            <MessageCircle className="size-3.5 text-sky-400" />
+            고객 문자발송
+          </span>
+          <Switch
+            checked={smsSent}
+            onCheckedChange={(v) => {
+              setSmsSent(v);
+              patchCustom({ sms_sent: v, sms_sent_at: v ? new Date().toISOString() : null });
+            }}
+          />
+        </div>
 
-            {/* 최종 판정 (정상/비정상만) */}
-            <div className={`rounded-lg border p-3 flex items-center justify-between ${
+        {/* 최종 판정 (정상/비정상) */}
+        <div className={`rounded-lg border p-3 flex items-center justify-between ${
               finalVerdict === "비정상" ? "border-destructive/60 bg-destructive/10"
               : finalVerdict === "정상" ? "border-emerald-500/40 bg-emerald-500/10"
               : "border-border/40"
@@ -428,10 +426,10 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
                 >비정상</button>
               </div>
             </div>
-          </div>
 
-          {/* 비정상 사유 (전폭) */}
-          {finalVerdict === "비정상" && (
+        {/* 비정상 사유 (전폭) */}
+        {finalVerdict === "비정상" && (
+          <div className="xl:col-span-2">
             <Textarea
               rows={2}
               value={verdictReason}
@@ -440,11 +438,12 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
               placeholder="비정상 사유 (예: 단가 불일치, 서류 위조 의심 등) — 사유만 기록되며 확정은 차단되지 않습니다"
               className="bg-input/60 text-sm border-destructive/40"
             />
-          )}
+          </div>
+        )}
 
-          {/* 그룹 2: 홈(인터넷/TV) 설치 — 해당 상품일 때만 */}
-          {isHomeProduct && (
-            <div className="rounded-lg border border-border/40 p-3">
+        {/* 홈 설치 관리 — 전폭 */}
+        {isHomeProduct && (
+          <div className="xl:col-span-2 rounded-lg border border-border/40 p-3">
               <div className="flex items-center gap-1.5 mb-2">
                 <Home className="size-3.5 text-violet-400" />
                 <span className="text-xs font-semibold">홈(인터넷/TV) 설치 관리</span>
@@ -473,8 +472,8 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
                   />
                 </div>
               </div>
-            </div>
-          )}
+          </div>
+        )}
         </div>
       )}
 
