@@ -23,6 +23,7 @@ import {
 import {
   Search, Edit3, FileText, History, Save, Phone, User, Smartphone, Lock,
   ShieldCheck, AlertCircle, CheckCircle2, XCircle, RotateCcw, AlertTriangle,
+  Bell, CalendarX2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { SaleDocuments } from "./SaleDocuments";
