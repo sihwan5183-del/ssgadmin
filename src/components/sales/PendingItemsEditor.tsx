@@ -47,32 +47,29 @@ export const PendingItemsEditor = ({
   const hasPending = items.length > 0;
 
   return (
-    <div className="rounded-xl border border-border/40 bg-card/40 p-4 space-y-4">
+    <div className="rounded-xl border border-border/40 bg-card/40 p-3 space-y-3">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           {hasPending && !resolved ? (
-            <Badge variant="outline" className="border-amber-400 text-amber-700 bg-amber-50 gap-1">
-              <AlertTriangle className="size-3" /> 미처리 {items.length}건
+            <Badge variant="outline" className="border-amber-400 text-amber-700 bg-amber-50 gap-1 text-[10px] px-1.5 py-0 h-5 shrink-0">
+              <AlertTriangle className="size-3" /> 미처리 {items.length}
             </Badge>
           ) : (
-            <Badge variant="outline" className="border-emerald-500/40 text-emerald-300 bg-emerald-500/10 gap-1">
-              <CheckCircle2 className="size-3" /> 처리 완료
+            <Badge variant="outline" className="border-emerald-500/40 text-emerald-300 bg-emerald-500/10 gap-1 text-[10px] px-1.5 py-0 h-5 shrink-0">
+              <CheckCircle2 className="size-3" /> 완료
             </Badge>
           )}
-          <span className="text-xs text-muted-foreground">
-            완료 전 항목을 체크하고, 사유를 남기면 행이 강조됩니다.
-          </span>
         </div>
         {showResolvedToggle && hasPending && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             <Switch
               id="pending-resolved"
               checked={resolved}
               onCheckedChange={(v) => onResolvedChange?.(v)}
               disabled={disabled}
             />
-            <Label htmlFor="pending-resolved" className="text-xs cursor-pointer">
-              모두 해결됨으로 표시
+            <Label htmlFor="pending-resolved" className="text-[10px] cursor-pointer whitespace-nowrap">
+              모두 해결
             </Label>
           </div>
         )}
