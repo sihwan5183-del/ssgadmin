@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 /* ================================================
-   UDak (유닥) — 디자인 시스템
-   화이트 캔버스 / 인디고-바이올렛 그라데이션 액센트
+   U+다이렉트 (UDak) — 디자인 시스템
+   화이트 캔버스 / U+ 마젠타-오렌지 그라데이션 액센트
    모든 색상은 HSL
    ================================================ */
 
@@ -20,20 +20,20 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 12%;
 
-    /* UDak 시그니처 인디고 — 메인 액센트 */
-    --primary: 243 75% 59%;
+    /* U+ 시그니처 마젠타 핑크 — 메인 액센트 */
+    --primary: 325 85% 52%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 262 83% 65%;
+    --primary-glow: 22 95% 55%;
 
-    /* 라이트 라벤더 — 보조 */
-    --secondary: 250 40% 96%;
-    --secondary-foreground: 248 60% 25%;
+    /* 라이트 핑크 — 보조 */
+    --secondary: 340 50% 96%;
+    --secondary-foreground: 325 70% 28%;
 
-    --muted: 240 8% 95%;
-    --muted-foreground: 240 6% 38%;
+    --muted: 340 8% 95%;
+    --muted-foreground: 325 6% 38%;
 
-    --accent: 258 70% 95%;
-    --accent-foreground: 250 70% 28%;
+    --accent: 22 90% 95%;
+    --accent-foreground: 22 80% 32%;
 
     --destructive: 0 75% 55%;
     --destructive-foreground: 0 0% 100%;
@@ -52,42 +52,42 @@
     --gradient-revenue: linear-gradient(135deg, hsl(158 70% 48%), hsl(168 65% 42%));
     --gradient-expense: linear-gradient(135deg, hsl(0 80% 60%), hsl(345 75% 55%));
 
-    --border: 248 25% 92%;
-    --input: 248 25% 94%;
-    --ring: 243 75% 59%;
+    --border: 330 25% 92%;
+    --input: 330 25% 94%;
+    --ring: 325 85% 52%;
 
     --radius: 1rem;
 
-    /* 그라데이션 — UDak 인디고-바이올렛 */
-    --gradient-primary: linear-gradient(135deg, hsl(243 75% 59%), hsl(272 80% 62%));
-    --gradient-soft: linear-gradient(135deg, hsl(243 75% 59% / 0.08), hsl(272 80% 62% / 0.04));
+    /* 그라데이션 — U+ 마젠타-오렌지 */
+    --gradient-primary: linear-gradient(135deg, hsl(325 85% 52%), hsl(22 95% 55%));
+    --gradient-soft: linear-gradient(135deg, hsl(325 85% 52% / 0.08), hsl(22 95% 55% / 0.04));
     --gradient-mesh:
-      radial-gradient(at 20% 10%, hsl(243 80% 65% / 0.10) 0px, transparent 50%),
-      radial-gradient(at 80% 0%, hsl(272 85% 68% / 0.08) 0px, transparent 50%),
-      radial-gradient(at 90% 90%, hsl(220 85% 65% / 0.06) 0px, transparent 50%),
-      radial-gradient(at 10% 90%, hsl(258 80% 68% / 0.06) 0px, transparent 50%);
+      radial-gradient(at 20% 10%, hsl(325 90% 60% / 0.10) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, hsl(22 95% 60% / 0.08) 0px, transparent 50%),
+      radial-gradient(at 90% 90%, hsl(345 85% 62% / 0.06) 0px, transparent 50%),
+      radial-gradient(at 10% 90%, hsl(15 90% 62% / 0.06) 0px, transparent 50%);
     --gradient-rank-gold: linear-gradient(135deg, hsl(45 95% 55%), hsl(38 92% 50%));
     --gradient-rank-silver: linear-gradient(135deg, hsl(220 15% 75%), hsl(220 12% 60%));
     --gradient-rank-bronze: linear-gradient(135deg, hsl(25 60% 55%), hsl(20 55% 42%));
 
-    /* 그림자 / 글로우 — 인디고 글로우 */
-    --shadow-glow: 0 0 40px hsl(252 85% 60% / 0.28);
-    --shadow-card: 0 4px 24px hsl(248 30% 40% / 0.08);
-    --shadow-elevated: 0 20px 60px -10px hsl(248 50% 35% / 0.18);
+    /* 그림자 / 글로우 — U+ 마젠타 글로우 */
+    --shadow-glow: 0 0 40px hsl(325 90% 55% / 0.28);
+    --shadow-card: 0 4px 24px hsl(325 30% 40% / 0.08);
+    --shadow-elevated: 0 20px 60px -10px hsl(325 50% 35% / 0.18);
 
     /* Glassmorphism — 화이트 글래스 */
     --glass-bg: 0 0% 100% / 0.72;
-    --glass-border: 248 30% 90% / 0.6;
+    --glass-border: 330 30% 90% / 0.6;
 
     /* Sidebar */
     --sidebar-background: 0 0% 99%;
-    --sidebar-foreground: 248 20% 25%;
-    --sidebar-primary: 243 75% 59%;
+    --sidebar-foreground: 325 20% 25%;
+    --sidebar-primary: 325 85% 52%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 258 70% 96%;
-    --sidebar-accent-foreground: 250 70% 30%;
-    --sidebar-border: 248 25% 92%;
-    --sidebar-ring: 243 75% 59%;
+    --sidebar-accent: 22 80% 96%;
+    --sidebar-accent-foreground: 22 75% 32%;
+    --sidebar-border: 330 25% 92%;
+    --sidebar-ring: 325 85% 52%;
 
     --transition-smooth: cubic-bezier(0.22, 1, 0.36, 1);
   }
