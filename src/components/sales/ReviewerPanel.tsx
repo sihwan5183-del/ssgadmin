@@ -181,6 +181,14 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
       toast.error("수정이 필요한 항목을 1개 이상 선택해주세요");
       return;
     }
+    if (next === "확정" && !allChecked) {
+      toast.error("모든 검수 체크리스트 항목을 완료해야 확정할 수 있습니다");
+      return;
+    }
+    if (next === "확정" && finalVerdict === "비정상") {
+      toast.error("최종 판정이 '비정상'인 건은 확정할 수 없습니다");
+      return;
+    }
     setSubmitting(true);
     const payload: Record<string, unknown> = { approval_status: next };
     if (needsReason) {
