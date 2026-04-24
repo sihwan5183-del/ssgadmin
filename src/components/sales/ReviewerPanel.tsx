@@ -515,8 +515,8 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
           </div>
 
           <div className="grid grid-cols-3 gap-2 pt-1">
-            <Button onClick={() => submitDecision("확정")} disabled={submitting} variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-700">
-              <CheckCircle2 className="size-3.5 mr-1" /> 승인
+            <Button onClick={() => submitDecision("검수완료")} disabled={submitting} variant="default" size="sm" className="bg-sky-600 hover:bg-sky-700">
+              <ShieldCheck className="size-3.5 mr-1" /> 검수 완료
             </Button>
             <Button onClick={() => submitDecision("수정요청")} disabled={submitting} variant="outline" size="sm" className="border-orange-400 text-orange-700 hover:bg-orange-50">
               <Edit3 className="size-3.5 mr-1" /> 수정요청
@@ -526,7 +526,7 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
             </Button>
           </div>
           <p className="text-[10px] text-muted-foreground">
-            승인 = 잠금·확정 · 수정요청 = 항목 체크 + 사유 필수 · 반려 = 사유 필수
+            검수 완료 = 기획팀 검토 종료(잠금 없음, 정산 확정 전 단계) · 수정요청/반려 = 사유 필수
           </p>
         </div>
       ) : !isOwner ? (
