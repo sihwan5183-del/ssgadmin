@@ -110,9 +110,13 @@ export const useNetFeeFormula = () => {
     };
   }, []);
 
+  // 산식 고정: 5대 수익 - 5대 오퍼. 관리자가 app_settings 로 덮어쓰면 그쪽 우선.
   const calc = (row: Record<string, any>): number => {
-    const r = evaluateFormula(formula, row);
-    return r.ok ? Math.round(r.value!) : 0;
+    if (formula && formula !== DEFAULT_FORMULA) {
+      const r = evaluateFormula(formula, row);
+      if (r.ok) return Math.round(r.value!);
+    }
+    return calcNetProfit(row);
   };
 
   return { formula, variables, calc, loading };
