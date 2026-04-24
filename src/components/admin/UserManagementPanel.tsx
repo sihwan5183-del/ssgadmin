@@ -301,7 +301,7 @@ export function UserManagementPanel() {
               });
               if (error || (data as any)?.error) throw new Error((data as any)?.error ?? error?.message);
               toast.success("슈퍼관리자 준비 완료", { description: `이메일: UDak@daum.net · 비밀번호: 123456` });
-              load();
+              fetchAll();
             } catch (e) { toast.error("실패", { description: (e as Error).message }); }
           }}
         >
