@@ -289,8 +289,8 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
         </Button>
       )}
 
-      {/* === 그룹 A: 체크리스트 + 미처리 항목 (2단 그리드) === */}
-      <div className={`grid grid-cols-1 ${isAdmin ? "md:grid-cols-2" : ""} gap-3`}>
+      {/* === 그룹 A: 체크리스트 + 미처리 항목 (2단 그리드 - 항상) === */}
+      <div className={`grid ${isAdmin ? "grid-cols-2" : "grid-cols-1"} gap-3`}>
       <div className="rounded-lg border border-border/40 p-3 space-y-2">
         <div className="flex items-center justify-between text-xs">
           <span className="font-semibold flex items-center gap-1.5">
@@ -342,9 +342,9 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
       )}
       </div>
 
-      {/* === 그룹 B: 이상영업 + 고객소통 + 최종판정 (2단 그리드) === */}
+      {/* === 그룹 B: 이상영업 + 고객소통 + 최종판정 (2단 그리드 - 항상) === */}
       {isAdmin && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3">
         {/* 이상영업 감시 */}
         <div className={`rounded-lg border p-3 space-y-2 ${fraudSuspect ? "border-destructive/60 bg-destructive/10" : "border-border/40"}`}>
           <div className="flex items-center justify-between">
