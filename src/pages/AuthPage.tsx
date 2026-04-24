@@ -86,12 +86,12 @@ const AuthPage = () => {
         <div className="flex items-center gap-3 mb-7">
           <img
             src={udakLogo}
-            alt="U+다이렉트 로고"
+            alt="UDak 로고"
             className="size-12 rounded-xl object-contain bg-white shadow-glow"
           />
           <div>
-            <div className="text-xs text-muted-foreground font-medium tracking-wide">U+다이렉트</div>
-            <div className="text-lg font-bold tracking-tight">U+다이렉트 영업관리 시스템</div>
+            <div className="text-xs text-muted-foreground font-medium tracking-wide">UDak</div>
+            <div className="text-lg font-bold tracking-tight">UDak 영업관리 시스템</div>
           </div>
         </div>
 
@@ -182,7 +182,7 @@ const AuthPage = () => {
         </form>
 
         <p className="text-center text-[10px] text-muted-foreground mt-6">
-          © {new Date().getFullYear()} U+다이렉트. All rights reserved.
+          © {new Date().getFullYear()} UDak. All rights reserved.
         </p>
       </div>
     </div>
