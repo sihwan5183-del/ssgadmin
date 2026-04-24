@@ -40,7 +40,7 @@ import { BulkActionBar } from "@/components/common/BulkActionBar";
 import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
 import { PurgeByFilterDialog, type PurgeFilter } from "@/components/common/PurgeByFilterDialog";
 
-type ApprovalStatus = "승인대기" | "확정" | "반려" | "수정요청" | "환수" | "취소";
+type ApprovalStatus = "승인대기" | "검수완료" | "확정" | "반려" | "수정요청" | "환수" | "취소";
 
 interface SaleHit {
   id: string;
@@ -93,6 +93,7 @@ const EDITABLE_FIELDS: Array<{ key: keyof SaleHit; label: string; type?: string 
 
 const APPROVAL_META: Record<ApprovalStatus, { className: string; icon: typeof CheckCircle2 }> = {
   승인대기: { className: "border-amber-400 text-amber-700 bg-amber-50", icon: AlertCircle },
+  검수완료: { className: "border-sky-500/50 text-sky-300 bg-sky-500/10", icon: ShieldCheck },
   확정: { className: "border-emerald-500/40 text-emerald-300 bg-emerald-500/10", icon: CheckCircle2 },
   반려: { className: "border-destructive/40 text-destructive bg-destructive/10", icon: XCircle },
   수정요청: { className: "border-orange-400 text-orange-700 bg-orange-50", icon: Edit3 },
