@@ -134,6 +134,17 @@ const SalesLedgerPage = () => {
   const [unpaidCount, setUnpaidCount] = useState(0);
   const [unreturnedCount, setUnreturnedCount] = useState(0);
 
+  // 최고관리자 전용: 확정된 실적 강제 잠금 해제 토글 (localStorage 저장)
+  const [forceUnlock, setForceUnlock] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("admin_force_unlock_sales") === "1";
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (forceUnlock) localStorage.setItem("admin_force_unlock_sales", "1");
+    else localStorage.removeItem("admin_force_unlock_sales");
+  }, [forceUnlock]);
+
   const offerOf = (r: SaleRow) =>
     (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0) + (r.customer_support_amount ?? 0) + (r.corp_card_amount ?? 0);
   const profitOf = (r: SaleRow) =>
