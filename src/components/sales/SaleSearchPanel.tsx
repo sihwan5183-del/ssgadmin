@@ -492,6 +492,16 @@ export const SaleSearchPanel = () => {
                                   </Badge>
                                 )}
                                 {r.status && <Badge variant="outline" className="text-[10px]">{r.status}</Badge>}
+                                {(r as any).custom_fields?.fraud_suspect && (
+                                  <Badge variant="outline" className="text-[10px] gap-1 border-destructive/60 text-destructive bg-destructive/10 animate-pulse">
+                                    <AlertTriangle className="size-3" /> 이상영업
+                                  </Badge>
+                                )}
+                                {(r as any).custom_fields?.final_verdict === "비정상" && (
+                                  <Badge variant="outline" className="text-[10px] gap-1 border-destructive/60 text-destructive bg-destructive/10">
+                                    비정상
+                                  </Badge>
+                                )}
                               </div>
                               <div className="text-xs text-muted-foreground flex items-center gap-3 mt-1 flex-wrap">
                                 <span className="flex items-center gap-1"><Phone className="size-3" />{r.phone ?? "-"}</span>
