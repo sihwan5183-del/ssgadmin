@@ -89,15 +89,71 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
   const [fields, setFields] = useState<string[]>(sale.revision_fields ?? []);
   const [checks, setChecks] = useState<Record<string, boolean>>(savedChecks);
   const [submitting, setSubmitting] = useState(false);
+  // 미처리 항목 인라인 편집
+  const [pendingItems, setPendingItems] = useState<string[]>(sale.pending_items ?? []);
+  const [pendingNote, setPendingNote] = useState<string>(sale.pending_note ?? "");
+  const [pendingResolved, setPendingResolved] = useState<boolean>(!!sale.pending_resolved);
+  // 신규 검수 메타
+  const cf = (sale.custom_fields ?? {}) as Record<string, any>;
+  const [fraudSuspect, setFraudSuspect] = useState<boolean>(!!cf.fraud_suspect);
+  const [fraudReason, setFraudReason] = useState<string>(cf.fraud_reason ?? "");
+  const [smsSent, setSmsSent] = useState<boolean>(!!cf.sms_sent);
+  const [installDate, setInstallDate] = useState<string>(cf.install_date ?? "");
+  const [installDone, setInstallDone] = useState<boolean>(!!cf.install_done);
+  const [finalVerdict, setFinalVerdict] = useState<"" | "정상" | "비정상">(
+    (cf.final_verdict as "" | "정상" | "비정상") ?? "",
+  );
+  const [verdictReason, setVerdictReason] = useState<string>(cf.verdict_reason ?? "");
 
   useEffect(() => {
     setReason("");
     setFields(sale.revision_fields ?? []);
     setChecks((sale.custom_fields?.review_checklist ?? {}) as Record<string, boolean>);
-  }, [sale.id, sale.revision_fields, sale.custom_fields]);
+    setPendingItems(sale.pending_items ?? []);
+    setPendingNote(sale.pending_note ?? "");
+    setPendingResolved(!!sale.pending_resolved);
+    const c = (sale.custom_fields ?? {}) as Record<string, any>;
+    setFraudSuspect(!!c.fraud_suspect);
+    setFraudReason(c.fraud_reason ?? "");
+    setSmsSent(!!c.sms_sent);
+    setInstallDate(c.install_date ?? "");
+    setInstallDone(!!c.install_done);
+    setFinalVerdict((c.final_verdict as "" | "정상" | "비정상") ?? "");
+    setVerdictReason(c.verdict_reason ?? "");
+  }, [sale.id, sale.revision_fields, sale.custom_fields, sale.pending_items, sale.pending_note, sale.pending_resolved]);
 
   const checkedCount = checklistItems.filter((i) => checks[i.key]).length;
   const allChecked = checkedCount === checklistItems.length;
+  const isHomeProduct = (sale.product ?? "").includes("인터넷")
+    || (sale.product ?? "").includes("TV")
+    || (sale.product ?? "").includes("홈");
+
+  // 신규 메타 저장 helpers
+  const patchCustom = async (patch: Record<string, any>) => {
+    const next = { ...(sale.custom_fields ?? {}), ...patch };
+    const { error } = await supabase
+      .from("sales")
+      .update({ custom_fields: next } as never)
+      .eq("id", sale.id);
+    if (error) toast.error(error.message);
+    else onChanged();
+  };
+
+  const savePendingInline = async () => {
+    setSubmitting(true);
+    const { error } = await supabase
+      .from("sales")
+      .update({
+        pending_items: pendingItems as any,
+        pending_note: pendingNote || null,
+        pending_resolved: pendingResolved || pendingItems.length === 0,
+      } as never)
+      .eq("id", sale.id);
+    setSubmitting(false);
+    if (error) return toast.error(error.message);
+    toast.success("미처리 항목이 저장되었습니다");
+    onChanged();
+  };
 
   const toggleCheck = async (key: string) => {
     if (!isAdmin) return;
