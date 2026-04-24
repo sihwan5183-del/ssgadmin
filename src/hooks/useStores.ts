@@ -28,13 +28,13 @@ export const useStores = () => {
   useEffect(() => {
     load();
     const ch = supabase
-      .channel("stores-rt")
+      .channel(`stores-rt-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "stores" },
         () => load(),
-      )
-      .subscribe();
+      );
+    ch.subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
