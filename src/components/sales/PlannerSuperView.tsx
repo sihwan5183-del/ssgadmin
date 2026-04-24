@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useViewScope } from "@/contexts/ViewScopeContext";
+import { sumRevenue, sumOffer } from "@/hooks/useNetFeeFormula";
 
 type Tab = "submitted" | "revision" | "approved";
 
@@ -28,6 +29,16 @@ interface Row {
   open_date: string | null;
   net_fee: number | null;
   distributor_amount: number | null;
+  extra_subsidy: number | null;
+  cash_support_amount: number | null;
+  customer_support_amount: number | null;
+  corp_card_amount: number | null;
+  unit_price: number | null;
+  vas_fee: number | null;
+  receivable_amount: number | null;
+  trade_in_enabled: boolean | null;
+  trade_in_confirmed: number | null;
+  custom_fields: Record<string, any> | null;
   approval_status: string | null;
   locked: boolean | null;
   pending_resolved: boolean | null;
@@ -48,7 +59,11 @@ const TAB_META: Record<Tab, { label: string; Icon: any; color: string }> = {
 };
 
 const fmt = (n: number | null) => (n ?? 0).toLocaleString("ko-KR");
-const profit = (r: Row) => (Number(r.net_fee) || 0) - (Number(r.distributor_amount) || 0);
+const rebateOf = (r: Row) => sumRevenue(r as any);
+const offerOf = (r: Row) => sumOffer(r as any);
+const profit = (r: Row) => rebateOf(r) - offerOf(r);
+
+type SortKey = "updated" | "rebate" | "profit";
 
 const csvEscape = (v: any) => {
   if (v == null) return "";
@@ -66,6 +81,7 @@ const csvEscape = (v: any) => {
 export const PlannerSuperView = () => {
   const { isAdmin, roles } = useRole();
   const isCEO = roles.includes("ceo") || roles.includes("admin");
+  const isPlanner = roles.includes("planner") || isCEO;
   const { startImpersonation } = useViewScope();
 
   const [tab, setTab] = useState<Tab>("submitted");
@@ -74,13 +90,14 @@ export const PlannerSuperView = () => {
   const [search, setSearch] = useState("");
   const [storeFilter, setStoreFilter] = useState<string>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sortKey, setSortKey] = useState<SortKey>("updated");
 
   const load = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("sales")
       .select(
-        "id, customer_name, device_model, manager, channel, open_date, net_fee, distributor_amount, approval_status, locked, pending_resolved, created_by, updated_at"
+        "id, customer_name, device_model, manager, channel, open_date, net_fee, distributor_amount, extra_subsidy, cash_support_amount, customer_support_amount, corp_card_amount, unit_price, vas_fee, receivable_amount, trade_in_enabled, trade_in_confirmed, custom_fields, approval_status, locked, pending_resolved, created_by, updated_at"
       )
       .in("approval_status", TAB_FILTER[tab])
       .order("updated_at", { ascending: false })
@@ -116,14 +133,20 @@ export const PlannerSuperView = () => {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return rows.filter((r) => {
+    const result = rows.filter((r) => {
       if (storeFilter !== "all" && r.manager !== storeFilter) return false;
       if (!q) return true;
       return [r.customer_name, r.device_model, r.manager, r.channel]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
     });
-  }, [rows, search, storeFilter]);
+    if (sortKey === "rebate") {
+      result.sort((a, b) => rebateOf(b) - rebateOf(a));
+    } else if (sortKey === "profit") {
+      result.sort((a, b) => profit(b) - profit(a));
+    }
+    return result;
+  }, [rows, search, storeFilter, sortKey]);
 
   const counts = useMemo(() => ({
     submitted: rows.filter((r) => TAB_FILTER.submitted.includes(r.approval_status ?? "")).length,
@@ -133,9 +156,13 @@ export const PlannerSuperView = () => {
 
   const summary = useMemo(() => {
     const total = filtered.length;
-    const totalNet = filtered.reduce((s, r) => s + (Number(r.net_fee) || 0), 0);
+    const totalNet = filtered.reduce((s, r) => s + rebateOf(r), 0);
     const totalProfit = filtered.reduce((s, r) => s + profit(r), 0);
-    return { total, totalNet, totalProfit };
+    const today = new Date().toISOString().slice(0, 10);
+    const todayRows = filtered.filter((r) => r.open_date === today);
+    const todayRebate = todayRows.reduce((s, r) => s + rebateOf(r), 0);
+    const todayProfit = todayRows.reduce((s, r) => s + profit(r), 0);
+    return { total, totalNet, totalProfit, todayRebate, todayProfit, todayCount: todayRows.length };
   }, [filtered]);
 
   const toggleAll = () => {
@@ -186,8 +213,8 @@ export const PlannerSuperView = () => {
           r.manager,
           r.channel,
           r.open_date,
-          r.net_fee,
-          r.distributor_amount,
+          rebateOf(r),
+          offerOf(r),
           profit(r),
           r.approval_status,
           r.locked ? "LOCKED" : "",
@@ -226,10 +253,31 @@ export const PlannerSuperView = () => {
               30개 매장 전체 실적을 워크큐로 정리 · 일괄 확정/Lock · 매장별 임퍼소네이션
             </div>
           </div>
-          <div className="flex items-center gap-3 text-xs">
-            <span className="text-muted-foreground">총 {summary.total}건 ·</span>
-            <span className="font-bold text-foreground tabular-nums">리베이트 {fmt(summary.totalNet)}원</span>
-            <span className="font-bold text-success tabular-nums">수익 {fmt(summary.totalProfit)}원</span>
+          <div className="flex items-center gap-4 text-xs">
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] text-muted-foreground">총 {summary.total}건</span>
+              {isPlanner && (
+                <span className="font-bold text-foreground tabular-nums">
+                  리베이트 {fmt(summary.totalNet)}원
+                </span>
+              )}
+              {isPlanner && (
+                <span className={"font-bold tabular-nums " + (summary.totalProfit < 0 ? "text-destructive" : "text-success")}>
+                  순수익 {fmt(summary.totalProfit)}원
+                </span>
+              )}
+            </div>
+            {isPlanner && (
+              <div className="flex flex-col items-end pl-3 border-l border-border/40">
+                <span className="text-[10px] text-muted-foreground">오늘 {summary.todayCount}건</span>
+                <span className="font-bold text-primary tabular-nums">
+                  리베이트 {fmt(summary.todayRebate)}원
+                </span>
+                <span className={"font-bold tabular-nums " + (summary.todayProfit < 0 ? "text-destructive" : "text-success")}>
+                  순수익 {fmt(summary.todayProfit)}원
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </Card>
@@ -278,6 +326,16 @@ export const PlannerSuperView = () => {
               ))}
             </SelectContent>
           </Select>
+          <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+            <SelectTrigger className="h-9 w-[150px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="updated">최신순</SelectItem>
+              <SelectItem value="rebate">리베이트 높은순</SelectItem>
+              <SelectItem value="profit">순수익 높은순</SelectItem>
+            </SelectContent>
+          </Select>
           <Button size="sm" variant="outline" onClick={exportCSV} className="gap-1.5">
             <Download className="size-3.5" /> CSV 추출
           </Button>
@@ -315,23 +373,25 @@ export const PlannerSuperView = () => {
                 <th className="px-3 py-2.5 text-left">고객</th>
                 <th className="px-3 py-2.5 text-left">단말기</th>
                 <th className="px-3 py-2.5 text-left">매장 / 채널</th>
-                <th className="px-3 py-2.5 text-right">리베이트</th>
-                <th className="px-3 py-2.5 text-right">오퍼</th>
-                <th className="px-3 py-2.5 text-right">최종 수익</th>
+                {isPlanner && <th className="px-3 py-2.5 text-right">리베이트</th>}
+                {isPlanner && <th className="px-3 py-2.5 text-right">오퍼</th>}
+                {isPlanner && <th className="px-3 py-2.5 text-right">최종 순수익</th>}
                 <th className="px-3 py-2.5 text-left">상태</th>
                 <th className="px-3 py-2.5 text-right">조치</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="text-center py-10 text-muted-foreground">불러오는 중…</td></tr>
+                <tr><td colSpan={isPlanner ? 9 : 6} className="text-center py-10 text-muted-foreground">불러오는 중…</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={9} className="text-center py-10 text-muted-foreground">
+                <tr><td colSpan={isPlanner ? 9 : 6} className="text-center py-10 text-muted-foreground">
                   {tab === "submitted" ? "✨ 검수 대기 중인 실적이 없습니다" : tab === "revision" ? "수정요청 항목이 없습니다" : "확정된 실적이 없습니다"}
                 </td></tr>
               ) : (
                 filtered.map((r) => {
                   const p = profit(r);
+                  const reb = rebateOf(r);
+                  const off = offerOf(r);
                   return (
                     <tr key={r.id} className="border-t border-border/30 hover:bg-muted/20">
                       <td className="px-3 py-2.5">
@@ -360,13 +420,21 @@ export const PlannerSuperView = () => {
                         ) : "-"}
                         <div className="text-[10px] text-muted-foreground">{r.channel ?? "-"}</div>
                       </td>
-                      <td className="px-3 py-2.5 text-right font-mono text-xs tabular-nums">{fmt(r.net_fee)}</td>
-                      <td className="px-3 py-2.5 text-right font-mono text-xs tabular-nums text-muted-foreground">
-                        {fmt(r.distributor_amount)}
-                      </td>
-                      <td className={"px-3 py-2.5 text-right font-mono font-bold text-xs tabular-nums " + (p < 0 ? "text-destructive" : "")}>
-                        {fmt(p)}
-                      </td>
+                      {isPlanner && (
+                        <td className="px-3 py-2.5 text-right font-mono text-xs tabular-nums text-emerald-600 dark:text-emerald-400">
+                          +{fmt(reb)}
+                        </td>
+                      )}
+                      {isPlanner && (
+                        <td className="px-3 py-2.5 text-right font-mono text-xs tabular-nums text-muted-foreground">
+                          -{fmt(off)}
+                        </td>
+                      )}
+                      {isPlanner && (
+                        <td className={"px-3 py-2.5 text-right font-mono font-bold text-xs tabular-nums " + (p < 0 ? "text-destructive" : "text-primary")}>
+                          {fmt(p)}
+                        </td>
+                      )}
                       <td className="px-3 py-2.5 text-xs">
                         <Badge
                           variant="outline"
