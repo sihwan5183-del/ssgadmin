@@ -754,7 +754,15 @@ export const SaleSearchPanel = () => {
               </TabsContent>
 
               <TabsContent value="audit" className="mt-4">
-                <SaleAuditLog saleId={selected.id} />
+                <SaleAuditLog
+                  saleId={selected.id}
+                  onRestored={async () => {
+                    const { data } = await supabase.from("sales").select(SELECT_COLS).eq("id", selected.id).maybeSingle();
+                    if (data) openDetail(data as SaleHit);
+                    refreshCounts();
+                    search();
+                  }}
+                />
               </TabsContent>
             </Tabs>
 
