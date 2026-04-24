@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { KeyRound, UserX, UserCheck, Pencil, Search, Smartphone, Copy, UserMinus, UserCog, CheckCircle2, Sparkles, Filter } from "lucide-react";
+import { KeyRound, UserX, UserCheck, Pencil, Search, Smartphone, Copy, UserMinus, UserCog, CheckCircle2, Sparkles, Filter, ShieldPlus } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { BulkActionBar } from "@/components/common/BulkActionBar";
@@ -289,6 +289,24 @@ export function UserManagementPanel() {
             정보·권한·재직상태·비밀번호를 한 곳에서 관리합니다 ({rows.length}명)
           </p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-10"
+          onClick={async () => {
+            if (!confirm("슈퍼관리자 계정 'UDak@daum.net' 을 생성하거나 동기화합니다.\n비밀번호는 123456 으로 설정되며 admin 권한이 부여됩니다. 진행하시겠습니까?")) return;
+            try {
+              const { data, error } = await supabase.functions.invoke("admin-user-management", {
+                body: { action: "ensure_super_admin" },
+              });
+              if (error || (data as any)?.error) throw new Error((data as any)?.error ?? error?.message);
+              toast.success("슈퍼관리자 준비 완료", { description: `이메일: UDak@daum.net · 비밀번호: 123456` });
+              load();
+            } catch (e) { toast.error("실패", { description: (e as Error).message }); }
+          }}
+        >
+          <ShieldPlus className="size-4 mr-1.5" /> 슈퍼관리자 보장
+        </Button>
         <div className="relative w-72">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
