@@ -58,9 +58,23 @@ const AuthPage = () => {
         toast.success("로그인 완료");
       }
     } catch (err) {
-      toast.error(mode === "signup" ? "가입 실패" : "로그인 실패", {
-        description: err instanceof Error ? err.message : String(err),
-      });
+      const raw = err instanceof Error ? err.message : String(err);
+      let desc = raw;
+      const lower = raw.toLowerCase();
+      if (lower.includes("email not confirmed") || lower.includes("email_not_confirmed")) {
+        desc = "이메일 인증이 완료되지 않았습니다. 받은 편지함의 인증 메일을 확인해주세요.";
+      } else if (lower.includes("invalid login credentials") || lower.includes("invalid_credentials")) {
+        desc = "이메일 또는 비밀번호가 올바르지 않습니다.";
+      } else if (lower.includes("user not found")) {
+        desc = "등록되지 않은 계정입니다. 먼저 회원가입을 진행해주세요.";
+      } else if (lower.includes("over_email_send_rate_limit") || lower.includes("rate limit")) {
+        desc = "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.";
+      } else if (lower.includes("user already registered") || lower.includes("already registered")) {
+        desc = "이미 가입된 이메일입니다. 로그인해주세요.";
+      } else if (lower.includes("password")) {
+        desc = "비밀번호 형식이 올바르지 않습니다(최소 6자).";
+      }
+      toast.error(mode === "signup" ? "가입 실패" : "로그인 실패", { description: desc });
     } finally {
       setBusy(false);
     }
