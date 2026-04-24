@@ -78,13 +78,13 @@ export const PendingItemsEditor = ({
         )}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+      <div className="grid grid-cols-2 gap-1.5">
         {PENDING_ITEM_OPTIONS.map((opt) => {
           const checked = items.includes(opt);
           return (
             <label
               key={opt}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs cursor-pointer transition-colors ${
+              className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md border text-[11px] whitespace-nowrap cursor-pointer transition-colors ${
                 checked
                   ? "border-amber-400 bg-amber-50 text-amber-700"
                   : "border-border/40 hover:border-primary/30"
@@ -95,7 +95,7 @@ export const PendingItemsEditor = ({
                 onCheckedChange={() => toggle(opt)}
                 disabled={disabled}
               />
-              <span>{opt}</span>
+              <span className="truncate">{opt}</span>
             </label>
           );
         })}
