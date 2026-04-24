@@ -53,13 +53,13 @@ export function useRole() {
     load();
     // 실시간 권한 변경 반영
     const ch = supabase
-      .channel(`user-roles-${user.id}`)
+      .channel(`user-roles-${user.id}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "user_roles", filter: `user_id=eq.${user.id}` },
         () => load(),
-      )
-      .subscribe();
+      );
+    ch.subscribe();
     return () => {
       cancelled = true;
       supabase.removeChannel(ch);
