@@ -40,6 +40,8 @@ import AccountManagementPage from "./pages/AccountManagementPage.tsx";
 import AccountPendingPage from "./pages/AccountPendingPage.tsx";
 import AccountStaffPage from "./pages/AccountStaffPage.tsx";
 import AccountRolesPage from "./pages/AccountRolesPage.tsx";
+import SegPartnersPage from "./pages/SegPartnersPage.tsx";
+import SegCalendarPage from "./pages/SegCalendarPage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -92,6 +94,8 @@ const App = () => (
                         <Route path="/budget-categories" element={<BudgetCategoriesPage />} />
                         <Route path="/my" element={<MyPage />} />
                         <Route path="/sales-ledger" element={<SalesLedgerPage />} />
+                        <Route path="/seg-partners" element={<SegPartnersPage />} />
+                        <Route path="/seg-calendar" element={<SegCalendarPage />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </AppShell>
