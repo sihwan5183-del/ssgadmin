@@ -496,10 +496,20 @@ export const SaleSearchPanel = () => {
                         const Icon = meta.icon;
                         const hasUnhandled = (r.pending_items?.length ?? 0) > 0 && r.pending_resolved === false;
                         const sel = bulk.isSelected(r.id);
+                        const cf = (r as any).custom_fields ?? {};
+                        const isAbnormal = cf.final_verdict === "비정상" || !!cf.fraud_suspect;
+                        const installOverdue = cf.install_date
+                          && !cf.install_done
+                          && cf.install_date < new Date().toISOString().slice(0, 10);
+                        const needsAttention = hasUnhandled || isAbnormal || installOverdue;
                         return (
                           <div
                             key={r.id}
-                            className={`flex items-stretch ${sel ? "bg-primary/5" : ""} ${hasUnhandled ? "bg-amber-50/70" : ""}`}
+                            className={`flex items-stretch ${sel ? "bg-primary/5" : ""} ${
+                              isAbnormal ? "bg-destructive/5"
+                              : installOverdue ? "bg-orange-50/80"
+                              : hasUnhandled ? "bg-amber-50/70" : ""
+                            }`}
                           >
                             <div className="pl-3 pr-1 flex items-center" onClick={(e) => e.stopPropagation()}>
                               <Checkbox checked={sel} onCheckedChange={() => bulk.toggle(r.id)} />
@@ -518,6 +528,11 @@ export const SaleSearchPanel = () => {
                                 {hasUnhandled && (
                                   <Badge variant="outline" className="text-[10px] gap-1 border-amber-400 text-amber-700 bg-amber-50">
                                     <AlertTriangle className="size-3" /> 미처리 {r.pending_items?.length}
+                                  </Badge>
+                                )}
+                                {installOverdue && (
+                                  <Badge variant="outline" className="text-[10px] gap-1 border-orange-500 text-orange-700 bg-orange-50">
+                                    <CalendarX2 className="size-3" /> 설치 지연
                                   </Badge>
                                 )}
                                 {r.locked && (
@@ -543,6 +558,14 @@ export const SaleSearchPanel = () => {
                                 <span>{r.channel ?? "-"} / {r.product ?? "-"}</span>
                               </div>
                             </div>
+                            {needsAttention && (
+                              <span
+                                title="CS 확인 필요"
+                                className="self-center mr-2 flex items-center gap-1 text-[10px] font-semibold text-destructive animate-pulse"
+                              >
+                                <Bell className="size-3.5" /> 확인 필요
+                              </span>
+                            )}
                             <Edit3 className="size-3.5 text-muted-foreground self-center mr-3" />
                             </button>
                           </div>
