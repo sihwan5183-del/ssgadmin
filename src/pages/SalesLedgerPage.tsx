@@ -606,14 +606,21 @@ const SalesLedgerPage = () => {
             <tbody>
               {filteredRows.map((r) => {
                 const mine = r.created_by === user?.id;
-                const canEdit = mine || isAdmin;
                 const isLocked = r.approval_status === "확정";
+                const adminOverride = isAdmin && forceUnlock;
+                const canEdit = adminOverride || (mine && !isLocked) || (isAdmin && !isLocked);
                 const hasPending = (r.pending_items?.length ?? 0) > 0 && r.pending_resolved === false;
                 const offer = offerOf(r);
                 const profit = profitOf(r);
                 const negative = profit < 0;
                 const handleRowClick = () => {
-                  if (isLocked) {
+                  if (isLocked && !adminOverride) {
+                    if (isAdmin) {
+                      toast.info("확정된 실적입니다", {
+                        description: "상단의 [수정 잠금 강제 해제] 토글을 켠 뒤 다시 시도하세요.",
+                      });
+                      return;
+                    }
                     toast.info("확정된 실적은 수정할 수 없습니다", { description: "관리자에게 잠금 해제를 요청하세요." });
                     return;
                   }
