@@ -508,7 +508,7 @@ export const SaleSearchPanel = () => {
                             className={`flex items-stretch ${sel ? "bg-primary/5" : ""} ${
                               isAbnormal ? "bg-destructive/5"
                               : installOverdue ? "bg-orange-50/80"
-                              : hasUnhandled ? "bg-amber-50/70" : ""
+                              : hasUnhandled ? "bg-yellow-100/80" : ""
                             }`}
                           >
                             <div className="pl-3 pr-1 flex items-center" onClick={(e) => e.stopPropagation()}>
@@ -521,18 +521,36 @@ export const SaleSearchPanel = () => {
                             <div className="flex-1 min-w-0">
                               <div className="text-sm font-medium flex items-center gap-2 flex-wrap">
                                 <User className="size-3 text-muted-foreground" />
-                                {r.customer_name ?? "(이름없음)"}
+                                <span className="truncate">{r.customer_name ?? "(이름없음)"}</span>
+                              </div>
+                              <div className="text-xs text-muted-foreground flex items-center gap-3 mt-1 flex-wrap">
+                                <span className="flex items-center gap-1"><Phone className="size-3" />{r.phone ?? "-"}</span>
+                                <span className="flex items-center gap-1"><Smartphone className="size-3" />{r.device_serial ?? "-"}</span>
+                                <span>{r.channel ?? "-"} / {r.product ?? "-"}</span>
+                              </div>
+                            </div>
+                            {/* === 우측 고정 배지 영역: [검수/확정] → [개통상태] → [미처리] === */}
+                            <div className="self-center flex flex-col items-end gap-1 mr-3 shrink-0 min-w-[160px]">
+                              <div className="flex items-center gap-1 flex-wrap justify-end">
+                                {/* 1. 검수/확정 상태 */}
                                 <Badge variant="outline" className={`text-[10px] gap-1 ${meta.className}`}>
                                   <Icon className="size-3" /> {ap}
                                 </Badge>
+                                {/* 2. 개통 상태 */}
+                                {r.status && (
+                                  <Badge variant="outline" className="text-[10px]">{r.status}</Badge>
+                                )}
+                                {/* 3. 미처리 */}
                                 {hasUnhandled && (
-                                  <Badge variant="outline" className="text-[10px] gap-1 border-amber-400 text-amber-700 bg-amber-50">
+                                  <Badge variant="outline" className="text-[10px] gap-1 border-amber-500 text-amber-700 bg-amber-50">
                                     <AlertTriangle className="size-3" /> 미처리 {r.pending_items?.length}
                                   </Badge>
                                 )}
+                              </div>
+                              <div className="flex items-center gap-1 flex-wrap justify-end">
                                 {installOverdue && (
                                   <Badge variant="outline" className="text-[10px] gap-1 border-orange-500 text-orange-700 bg-orange-50">
-                                    <CalendarX2 className="size-3" /> 설치 지연
+                                    <CalendarX2 className="size-3" /> 설치지연
                                   </Badge>
                                 )}
                                 {r.locked && (
@@ -540,7 +558,6 @@ export const SaleSearchPanel = () => {
                                     <Lock className="size-3" /> 잠금
                                   </Badge>
                                 )}
-                                {r.status && <Badge variant="outline" className="text-[10px]">{r.status}</Badge>}
                                 {(r as any).custom_fields?.fraud_suspect && (
                                   <Badge variant="outline" className="text-[10px] gap-1 border-destructive/60 text-destructive bg-destructive/10 animate-pulse">
                                     <AlertTriangle className="size-3" /> 이상영업
@@ -551,22 +568,16 @@ export const SaleSearchPanel = () => {
                                     비정상
                                   </Badge>
                                 )}
-                              </div>
-                              <div className="text-xs text-muted-foreground flex items-center gap-3 mt-1 flex-wrap">
-                                <span className="flex items-center gap-1"><Phone className="size-3" />{r.phone ?? "-"}</span>
-                                <span className="flex items-center gap-1"><Smartphone className="size-3" />{r.device_serial ?? "-"}</span>
-                                <span>{r.channel ?? "-"} / {r.product ?? "-"}</span>
+                                {needsAttention && (
+                                  <span
+                                    title="CS 확인 필요"
+                                    className="flex items-center gap-1 text-[10px] font-semibold text-destructive animate-pulse"
+                                  >
+                                    <Bell className="size-3" /> 확인 필요
+                                  </span>
+                                )}
                               </div>
                             </div>
-                            {needsAttention && (
-                              <span
-                                title="CS 확인 필요"
-                                className="self-center mr-2 flex items-center gap-1 text-[10px] font-semibold text-destructive animate-pulse"
-                              >
-                                <Bell className="size-3.5" /> 확인 필요
-                              </span>
-                            )}
-                            <Edit3 className="size-3.5 text-muted-foreground self-center mr-3" />
                             </button>
                           </div>
                         );

@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { evaluateFormula } from "@/lib/formulaEngine";
 
 const DEFAULT_FORMULA =
-  "unit_price + vas_fee - distributor_amount - extra_subsidy - cash_support_amount - customer_support_amount - corp_card_amount";
+  "unit_price + vas_fee - distributor_amount - extra_subsidy - cash_support_amount - customer_support_amount - corp_card_amount - receivable_amount";
 const DEFAULT_VARS = [
   "unit_price",
   "vas_fee",
