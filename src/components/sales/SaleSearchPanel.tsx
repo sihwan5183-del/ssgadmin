@@ -626,7 +626,7 @@ export const SaleSearchPanel = () => {
           </DialogHeader>
 
           {selected && (
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(460px,520px)] gap-5">
             <Tabs defaultValue="edit">
               <TabsList>
                 <TabsTrigger value="edit">
