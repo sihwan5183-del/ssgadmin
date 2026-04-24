@@ -290,14 +290,14 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
       )}
 
       {/* === 그룹 A: 체크리스트 + 미처리 항목 (2단 그리드 - 항상) === */}
-      <div className={`grid ${isAdmin ? "grid-cols-2" : "grid-cols-1"} gap-3`}>
-      <div className="rounded-lg border border-border/40 p-3 space-y-2">
-        <div className="flex items-center justify-between text-xs">
-          <span className="font-semibold flex items-center gap-1.5">
-            <CheckCircle2 className="size-3.5 text-emerald-400" />
-            검수 체크리스트
+      <div className={`grid ${isAdmin ? "grid-cols-2" : "grid-cols-1"} gap-3 items-start`}>
+      <div className="rounded-lg border border-border/40 p-3 space-y-2 min-w-0">
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <span className="font-semibold flex items-center gap-1.5 truncate">
+            <CheckCircle2 className="size-3.5 text-emerald-400 shrink-0" />
+            <span className="truncate">검수 체크리스트</span>
           </span>
-          <Badge variant="outline" className={`text-[10px] ${allChecked ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10" : "border-amber-400 text-amber-700 bg-amber-50"}`}>
+          <Badge variant="outline" className={`text-[10px] shrink-0 ${allChecked ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10" : "border-amber-400 text-amber-700 bg-amber-50"}`}>
             {checkedCount} / {checklistItems.length}
           </Badge>
         </div>
@@ -305,29 +305,29 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
           {checklistItems.map((item) => (
             <label
               key={item.key}
-              className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-xs transition-colors ${
+              className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md border text-[12px] whitespace-nowrap transition-colors ${
                 isAdmin ? "cursor-pointer hover:border-primary/30" : "cursor-default opacity-90"
               } ${checks[item.key] ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200" : "border-border/40"}`}
             >
-              <Checkbox checked={!!checks[item.key]} onCheckedChange={() => toggleCheck(item.key)} disabled={!isAdmin} />
-              <span>{item.label}</span>
+              <Checkbox checked={!!checks[item.key]} onCheckedChange={() => toggleCheck(item.key)} disabled={!isAdmin} className="shrink-0" />
+              <span className="truncate">{item.label}</span>
             </label>
           ))}
         </div>
         {!allChecked && (
-          <p className="text-[10px] text-muted-foreground">모든 항목 체크 시 '검수 완료' 버튼이 활성화됩니다.</p>
+          <p className="text-[10px] text-muted-foreground leading-tight">모든 항목 체크 시 '검수 완료' 활성화</p>
         )}
       </div>
 
       {/* 미처리 항목 인라인 편집 (검수자도 즉시 수정/저장) */}
       {isAdmin && (
-        <div className="rounded-lg border border-border/40 p-3 space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold flex items-center gap-1.5">
-              <AlertCircle className="size-3.5 text-amber-400" />
-              미처리 항목 즉시 편집
+        <div className="rounded-lg border border-border/40 p-3 space-y-2 min-w-0">
+          <div className="flex items-center justify-between gap-2 text-xs">
+            <span className="font-semibold flex items-center gap-1.5 min-w-0 truncate">
+              <AlertCircle className="size-3.5 text-amber-400 shrink-0" />
+              <span className="truncate">미처리 항목</span>
             </span>
-            <Button size="sm" variant="outline" disabled={submitting} onClick={savePendingInline}>저장</Button>
+            <Button size="sm" variant="outline" disabled={submitting} onClick={savePendingInline} className="h-7 px-2.5 text-xs shrink-0">저장</Button>
           </div>
           <PendingItemsEditor
             items={pendingItems}

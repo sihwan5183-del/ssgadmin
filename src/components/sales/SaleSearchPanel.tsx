@@ -593,7 +593,7 @@ export const SaleSearchPanel = () => {
 
       {/* 상세/수정 다이얼로그 */}
       <Dialog open={!!selected} onOpenChange={(v) => !v && setSelected(null)}>
-        <DialogContent className="max-w-6xl max-h-[88vh] overflow-y-auto pb-20">
+        <DialogContent className="max-w-[1400px] w-[95vw] max-h-[88vh] overflow-y-auto pb-20">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 flex-wrap">
               실적 상세
@@ -626,7 +626,7 @@ export const SaleSearchPanel = () => {
           </DialogHeader>
 
           {selected && (
-            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(460px,520px)] gap-5">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_560px] gap-5">
             <Tabs defaultValue="edit">
               <TabsList>
                 <TabsTrigger value="edit">
