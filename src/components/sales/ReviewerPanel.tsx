@@ -316,7 +316,178 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
             </label>
           ))}
         </div>
+        {!allChecked && (
+          <p className="text-[10px] text-muted-foreground">모든 항목 체크 시 '검수 완료(확정)' 버튼이 활성화됩니다.</p>
+        )}
       </div>
+
+      {/* 미처리 항목 인라인 편집 (검수자도 즉시 수정/저장) */}
+      {isAdmin && (
+        <div className="rounded-lg border border-border/40 p-3 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-semibold flex items-center gap-1.5">
+              <AlertCircle className="size-3.5 text-amber-400" />
+              미처리 항목 즉시 편집
+            </span>
+            <Button size="sm" variant="outline" disabled={submitting} onClick={savePendingInline}>저장</Button>
+          </div>
+          <PendingItemsEditor
+            items={pendingItems}
+            note={pendingNote}
+            resolved={pendingResolved}
+            onItemsChange={setPendingItems}
+            onNoteChange={setPendingNote}
+            onResolvedChange={setPendingResolved}
+            showResolvedToggle
+          />
+        </div>
+      )}
+
+      {/* 이상영업 감시 — admin/planner */}
+      {isAdmin && (
+        <div className={`rounded-lg border p-3 space-y-2 ${fraudSuspect ? "border-destructive/60 bg-destructive/10" : "border-border/40"}`}>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold flex items-center gap-1.5">
+              <ShieldAlert className={`size-3.5 ${fraudSuspect ? "text-destructive" : "text-muted-foreground"}`} />
+              이상영업 예상 표기
+            </span>
+            <Switch
+              checked={fraudSuspect}
+              onCheckedChange={async (v) => {
+                setFraudSuspect(v);
+                await patchCustom({
+                  fraud_suspect: v,
+                  fraud_marked_at: v ? new Date().toISOString() : null,
+                  fraud_marked_by: v ? user?.id ?? null : null,
+                  ...(v ? {} : { fraud_reason: "" }),
+                });
+                if (v) toast.warning("이상영업으로 표기되었습니다 — 정산이 일시 중지됩니다");
+              }}
+            />
+          </div>
+          {fraudSuspect && (
+            <>
+              <Textarea
+                rows={2}
+                value={fraudReason}
+                onChange={(e) => setFraudReason(e.target.value)}
+                onBlur={() => patchCustom({ fraud_reason: fraudReason })}
+                placeholder="의심 사유 (예: 동일 명의 단기 재가입, 지원금 과다 등)"
+                className="bg-input/60 text-sm border-destructive/40"
+              />
+              <p className="text-[10px] text-destructive">⚠ 정산 일시중지 · 본사 검토 대상</p>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* 고객 SMS 발송 / 홈 설치 / 최종 판정 — 검수자 전용 */}
+      {isAdmin && (
+        <div className="grid gap-2">
+          {/* SMS */}
+          <div className="flex items-center justify-between rounded-lg border border-border/40 p-3">
+            <span className="text-xs font-semibold flex items-center gap-1.5">
+              <MessageCircle className="size-3.5 text-sky-400" />
+              개통고객 문자발송 완료
+            </span>
+            <Switch
+              checked={smsSent}
+              onCheckedChange={(v) => {
+                setSmsSent(v);
+                patchCustom({ sms_sent: v, sms_sent_at: v ? new Date().toISOString() : null });
+              }}
+            />
+          </div>
+
+          {/* 홈 설치 */}
+          {isHomeProduct && (
+            <div className="rounded-lg border border-border/40 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold flex items-center gap-1.5">
+                  <Home className="size-3.5 text-violet-400" />
+                  홈(인터넷/TV) 설치 관리
+                </span>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="install-done" className="text-[11px] cursor-pointer">설치완료</Label>
+                  <Switch
+                    id="install-done"
+                    checked={installDone}
+                    onCheckedChange={(v) => {
+                      setInstallDone(v);
+                      patchCustom({ install_done: v, install_done_at: v ? new Date().toISOString() : null });
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <CalendarClock className="size-3.5 text-muted-foreground" />
+                <Label className="text-[11px] text-muted-foreground">설치 예정일</Label>
+                <Input
+                  type="date"
+                  value={installDate}
+                  onChange={(e) => setInstallDate(e.target.value)}
+                  onBlur={() => patchCustom({ install_date: installDate || null })}
+                  className="h-8 text-xs bg-input/60 max-w-[180px]"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* 최종 판정 (F10) */}
+          <div className={`rounded-lg border p-3 space-y-2 ${
+            finalVerdict === "비정상" ? "border-destructive/60 bg-destructive/10"
+            : finalVerdict === "정상" ? "border-emerald-500/40 bg-emerald-500/10"
+            : "border-border/40"
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold flex items-center gap-1.5">
+                <Gavel className="size-3.5 text-primary-glow" />
+                검수 최종 판정 (F10)
+              </span>
+              <div className="flex rounded-md border border-border/40 overflow-hidden text-[11px]">
+                <button
+                  type="button"
+                  className={`px-3 py-1 ${finalVerdict === "정상" ? "bg-emerald-500/20 text-emerald-200" : "hover:bg-muted/40"}`}
+                  onClick={() => {
+                    setFinalVerdict("정상");
+                    setVerdictReason("");
+                    patchCustom({ final_verdict: "정상", verdict_reason: "", verdict_at: new Date().toISOString(), verdict_by: user?.id ?? null });
+                  }}
+                >정상</button>
+                <button
+                  type="button"
+                  className={`px-3 py-1 border-l border-border/40 ${finalVerdict === "비정상" ? "bg-destructive/20 text-destructive" : "hover:bg-muted/40"}`}
+                  onClick={() => {
+                    setFinalVerdict("비정상");
+                    patchCustom({ final_verdict: "비정상", verdict_at: new Date().toISOString(), verdict_by: user?.id ?? null });
+                  }}
+                >비정상</button>
+                {finalVerdict !== "" && (
+                  <button
+                    type="button"
+                    className="px-2 py-1 border-l border-border/40 text-muted-foreground hover:bg-muted/40"
+                    onClick={() => {
+                      setFinalVerdict("");
+                      setVerdictReason("");
+                      patchCustom({ final_verdict: null, verdict_reason: null });
+                    }}
+                  >해제</button>
+                )}
+              </div>
+            </div>
+            {finalVerdict === "비정상" && (
+              <Textarea
+                rows={2}
+                value={verdictReason}
+                onChange={(e) => setVerdictReason(e.target.value)}
+                onBlur={() => patchCustom({ verdict_reason: verdictReason })}
+                placeholder="비정상 사유 (예: 단가 불일치, 서류 위조 의심 등)"
+                className="bg-input/60 text-sm border-destructive/40"
+              />
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Admin actions */}
       {isAdmin ? (
