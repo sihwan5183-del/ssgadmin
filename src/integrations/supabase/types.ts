@@ -1157,6 +1157,36 @@ export type Database = {
         }
         Relationships: []
       }
+      positions: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_rate_plans: {
         Row: {
           active: boolean
@@ -1221,6 +1251,7 @@ export type Database = {
         Row: {
           created_at: string
           display_name: string
+          hire_date: string | null
           id: string
           phone: string | null
           position: string | null
@@ -1233,6 +1264,7 @@ export type Database = {
         Insert: {
           created_at?: string
           display_name: string
+          hire_date?: string | null
           id?: string
           phone?: string | null
           position?: string | null
@@ -1245,6 +1277,7 @@ export type Database = {
         Update: {
           created_at?: string
           display_name?: string
+          hire_date?: string | null
           id?: string
           phone?: string | null
           position?: string | null
