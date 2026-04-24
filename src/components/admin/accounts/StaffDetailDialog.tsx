@@ -101,6 +101,16 @@ export function StaffDetailDialog({ userId, email, open, onOpenChange, onChanged
     } catch (e) { toast.error("메일 발송 실패", { description: (e as Error).message }); }
   };
 
+  const resetToDefault = async () => {
+    if (!confirm(`${profile.display_name} 님의 비밀번호를 기본값 "123456"으로 초기화하시겠습니까?\n\n사용자에게 즉시 비밀번호 변경을 안내하세요.`)) return;
+    try {
+      await call("reset_password_default");
+      toast.success("비밀번호가 123456으로 초기화되었습니다", {
+        description: "사용자에게 즉시 변경하도록 안내해주세요.",
+      });
+    } catch (e) { toast.error("초기화 실패", { description: (e as Error).message }); }
+  };
+
   const toggleRole = async (role: AppRole) => {
     const has = roles.includes(role);
     setBusy(true);
@@ -196,9 +206,12 @@ export function StaffDetailDialog({ userId, email, open, onOpenChange, onChanged
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 pt-2">
+          <div className="grid grid-cols-3 gap-2 pt-2">
             <Button variant="outline" onClick={sendReset} disabled={busy}>
-              <Mail className="size-4 mr-1.5" /> 비밀번호 재설정 메일
+              <Mail className="size-4 mr-1.5" /> 재설정 메일
+            </Button>
+            <Button variant="secondary" onClick={resetToDefault} disabled={busy}>
+              <KeyRound className="size-4 mr-1.5" /> 비밀번호 123456
             </Button>
             <Button
               variant={profile.status === "suspended" ? "default" : "destructive"}
