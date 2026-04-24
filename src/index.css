@@ -119,6 +119,46 @@
     background-attachment: fixed;
   }
 
+  /* === 가독성 강화: 폼 라벨 굵게 / 입력 테두리 진하게 / 포커스 강조 === */
+  label {
+    font-weight: 600;
+    color: hsl(var(--foreground));
+  }
+
+  input,
+  textarea,
+  select,
+  [data-radix-select-trigger] {
+    border-color: hsl(var(--input));
+  }
+
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  [data-radix-select-trigger]:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 1px;
+    border-color: hsl(var(--ring)) !important;
+  }
+
+  /* placeholder 도 너무 흐리지 않게 */
+  ::placeholder {
+    color: hsl(0 0% 45%);
+    opacity: 1;
+  }
+
+  /* === 테이블 행 가독성: 충분한 높이 + 부드러운 hover === */
+  table tbody tr {
+    transition: background-color 0.15s ease;
+  }
+  table tbody tr:hover {
+    background-color: hsl(325 40% 97%);
+  }
+  table th {
+    color: hsl(var(--foreground));
+    font-weight: 700;
+  }
+
   /* 스크롤바 */
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: hsl(var(--background)); }
