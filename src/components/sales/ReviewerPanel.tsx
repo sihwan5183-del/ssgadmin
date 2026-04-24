@@ -290,7 +290,7 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
       )}
 
       {/* === 그룹 A: 체크리스트 + 미처리 항목 (2단 그리드) === */}
-      <div className={`grid grid-cols-1 ${isAdmin ? "xl:grid-cols-2" : ""} gap-3`}>
+      <div className={`grid grid-cols-1 ${isAdmin ? "md:grid-cols-2" : ""} gap-3`}>
       <div className="rounded-lg border border-border/40 p-3 space-y-2">
         <div className="flex items-center justify-between text-xs">
           <span className="font-semibold flex items-center gap-1.5">
@@ -344,7 +344,7 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
 
       {/* === 그룹 B: 이상영업 + 고객소통 + 최종판정 (2단 그리드) === */}
       {isAdmin && (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* 이상영업 감시 */}
         <div className={`rounded-lg border p-3 space-y-2 ${fraudSuspect ? "border-destructive/60 bg-destructive/10" : "border-border/40"}`}>
           <div className="flex items-center justify-between">
@@ -429,7 +429,7 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
 
         {/* 비정상 사유 (전폭) */}
         {finalVerdict === "비정상" && (
-          <div className="xl:col-span-2">
+          <div className="md:col-span-2">
             <Textarea
               rows={2}
               value={verdictReason}
@@ -443,7 +443,7 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
 
         {/* 홈 설치 관리 — 전폭 */}
         {isHomeProduct && (
-          <div className="xl:col-span-2 rounded-lg border border-border/40 p-3">
+          <div className="md:col-span-2 rounded-lg border border-border/40 p-3">
               <div className="flex items-center gap-1.5 mb-2">
                 <Home className="size-3.5 text-violet-400" />
                 <span className="text-xs font-semibold">홈(인터넷/TV) 설치 관리</span>
