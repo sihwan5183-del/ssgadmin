@@ -11,6 +11,8 @@ export const PENDING_ITEM_OPTIONS = [
   "결합 할인",
   "부가서비스 가입",
   "서류 보완",
+  "청구계정통합",
+  "2ND쉐어링결합",
 ] as const;
 export type PendingItem = (typeof PENDING_ITEM_OPTIONS)[number] | string;
 
