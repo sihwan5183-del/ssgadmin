@@ -1647,6 +1647,194 @@ export type Database = {
           },
         ]
       }
+      seg_activities: {
+        Row: {
+          activity_date: string
+          activity_time: string | null
+          activity_type: string
+          assignee: string | null
+          assignee_name: string | null
+          completed_at: string | null
+          content: string | null
+          created_at: string
+          created_by: string
+          custom_fields: Json
+          id: string
+          is_completed: boolean
+          location: string | null
+          next_action_date: string | null
+          next_action_note: string | null
+          partner_id: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          activity_date?: string
+          activity_time?: string | null
+          activity_type?: string
+          assignee?: string | null
+          assignee_name?: string | null
+          completed_at?: string | null
+          content?: string | null
+          created_at?: string
+          created_by: string
+          custom_fields?: Json
+          id?: string
+          is_completed?: boolean
+          location?: string | null
+          next_action_date?: string | null
+          next_action_note?: string | null
+          partner_id: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activity_date?: string
+          activity_time?: string | null
+          activity_type?: string
+          assignee?: string | null
+          assignee_name?: string | null
+          completed_at?: string | null
+          content?: string | null
+          created_at?: string
+          created_by?: string
+          custom_fields?: Json
+          id?: string
+          is_completed?: boolean
+          location?: string | null
+          next_action_date?: string | null
+          next_action_note?: string | null
+          partner_id?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seg_activities_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "seg_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seg_attachments: {
+        Row: {
+          activity_id: string | null
+          created_at: string
+          doc_type: string | null
+          file_name: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          partner_id: string | null
+          storage_path: string
+          uploaded_by: string
+        }
+        Insert: {
+          activity_id?: string | null
+          created_at?: string
+          doc_type?: string | null
+          file_name: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          partner_id?: string | null
+          storage_path: string
+          uploaded_by: string
+        }
+        Update: {
+          activity_id?: string | null
+          created_at?: string
+          doc_type?: string | null
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          partner_id?: string | null
+          storage_path?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seg_attachments_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "seg_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seg_attachments_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "seg_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seg_partners: {
+        Row: {
+          address: string | null
+          assignee: string | null
+          assignee_name: string | null
+          business_type: string
+          company_name: string
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          contract_date: string | null
+          contract_detail: string | null
+          contract_type: string | null
+          created_at: string
+          created_by: string
+          custom_fields: Json
+          id: string
+          note: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          assignee?: string | null
+          assignee_name?: string | null
+          business_type?: string
+          company_name: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          contract_date?: string | null
+          contract_detail?: string | null
+          contract_type?: string | null
+          created_at?: string
+          created_by: string
+          custom_fields?: Json
+          id?: string
+          note?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          assignee?: string | null
+          assignee_name?: string | null
+          business_type?: string
+          company_name?: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          contract_date?: string | null
+          contract_detail?: string | null
+          contract_type?: string | null
+          created_at?: string
+          created_by?: string
+          custom_fields?: Json
+          id?: string
+          note?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       stores: {
         Row: {
           active: boolean
