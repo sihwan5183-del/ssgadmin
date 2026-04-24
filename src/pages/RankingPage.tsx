@@ -53,11 +53,11 @@ const fmtKRW = (n: number) => {
 };
 
 const TIERS = [
-  { min: 0, label: "브론즈", color: "from-orange-200 to-orange-100 text-orange-700 border-orange-400", icon: "🥉" },
-  { min: 10, label: "실버", color: "from-slate-400/30 to-slate-600/10 text-slate-200 border-slate-400/40", icon: "🥈" },
-  { min: 25, label: "골드", color: "from-amber-100 to-amber-100 text-amber-700 border-amber-400", icon: "🥇" },
-  { min: 50, label: "플래티넘", color: "from-cyan-400/30 to-cyan-600/10 text-cyan-200 border-cyan-400/40", icon: "💎" },
-  { min: 100, label: "다이아몬드", color: "from-violet-400/40 to-violet-600/15 text-violet-200 border-violet-400/50", icon: "👑" },
+  { min: 0,   label: "브론즈",     color: "from-orange-200 to-orange-100 text-orange-900 border-orange-500", sub: "text-orange-900/80",  icon: "🥉" },
+  { min: 10,  label: "실버",       color: "from-slate-300  to-slate-200  text-slate-900  border-slate-500",  sub: "text-slate-900/80",   icon: "🥈" },
+  { min: 25,  label: "골드",       color: "from-amber-200  to-amber-100  text-amber-900  border-amber-500",  sub: "text-amber-900/80",   icon: "🥇" },
+  { min: 50,  label: "플래티넘",   color: "from-cyan-200   to-cyan-100   text-cyan-900   border-cyan-500",   sub: "text-cyan-900/80",    icon: "💎" },
+  { min: 100, label: "다이아몬드", color: "from-violet-200 to-violet-100 text-violet-900 border-violet-500", sub: "text-violet-900/80",  icon: "👑" },
 ];
 const getTier = (count: number) => {
   for (let i = TIERS.length - 1; i >= 0; i--) if (count >= TIERS[i].min) return TIERS[i];
