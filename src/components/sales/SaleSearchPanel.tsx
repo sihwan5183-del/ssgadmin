@@ -200,10 +200,11 @@ export const SaleSearchPanel = () => {
     refreshCounts();
   }, []);
 
-  const search = async (override?: string, pendingOverride?: boolean, unhandledOverride?: boolean) => {
+  const search = async (override?: string, pendingOverride?: boolean, unhandledOverride?: boolean, abnormalOverride?: boolean) => {
     const term = (override ?? q).trim();
     const onlyPending = pendingOverride ?? pendingOnly;
     const onlyUnhandled = unhandledOverride ?? unhandledOnly;
+    const onlyAbnormal = abnormalOverride ?? abnormalOnly;
 
     setSearching(true);
     let query = supabase.from("sales").select(SELECT_COLS);
@@ -216,6 +217,7 @@ export const SaleSearchPanel = () => {
     }
     if (onlyPending) query = query.eq("approval_status", "승인대기");
     if (onlyUnhandled) query = query.eq("pending_resolved", false);
+    if (onlyAbnormal) query = query.contains("custom_fields", { final_verdict: "비정상" });
     // 기간 필터 적용 (검색어 없이 기간만으로도 조회 가능)
     query = query.gte("open_date", startDate).lte("open_date", endDate);
 
