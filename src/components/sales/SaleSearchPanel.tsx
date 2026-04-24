@@ -705,7 +705,9 @@ export const SaleSearchPanel = () => {
                   re_review_requested_at: selected.re_review_requested_at,
                   approved_at: selected.approved_at,
                   pending_items: selected.pending_items,
+                  pending_note: (selected as any).pending_note ?? null,
                   pending_resolved: selected.pending_resolved,
+                  product: (selected as any).product ?? null,
                   custom_fields: (selected as any).custom_fields ?? null,
                 }}
                 onChanged={async () => {
