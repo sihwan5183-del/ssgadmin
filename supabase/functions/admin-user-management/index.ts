@@ -10,6 +10,10 @@ const corsHeaders = {
 interface Body {
   action:
     | "reset_password"
+    | "send_password_reset_email"
+    | "set_status"
+    | "approve_user"
+    | "update_profile"
     | "set_active"
     | "delete_user"
     | "request_magic_link"
@@ -27,6 +31,16 @@ interface Body {
   token?: string; // raw magic link token / device token
   device_label?: string;
   device_id?: string;
+  status?: "active" | "pending" | "suspended" | "leave" | "resigned";
+  profile?: {
+    display_name?: string;
+    phone?: string | null;
+    team?: string | null;
+    store?: string | null;
+    position?: string | null;
+    hire_date?: string | null;
+  };
+  redirect_to?: string;
 }
 
 // Web Crypto SHA-256 -> hex
@@ -305,6 +319,54 @@ Deno.serve(async (req) => {
       const { error } = await admin.auth.admin.deleteUser(body.user_id);
       if (error) return json({ error: error.message }, 400);
       return json({ ok: true });
+    }
+
+    // 승인 (pending -> active)
+    if (body.action === "approve_user") {
+      if (!body.user_id) return json({ error: "user_id 필요" }, 400);
+      await admin.auth.admin.updateUserById(body.user_id, { ban_duration: "none" });
+      const { error } = await admin.from("profiles").update({ status: "active" })
+        .eq("user_id", body.user_id);
+      if (error) return json({ error: error.message }, 400);
+      return json({ ok: true });
+    }
+
+    // 임의 상태 변경 (active / suspended / leave / resigned / pending)
+    if (body.action === "set_status") {
+      if (!body.user_id || !body.status) return json({ error: "user_id/status 필요" }, 400);
+      const ban = body.status === "active" || body.status === "pending"
+        ? "none"
+        : "876000h";
+      await admin.auth.admin.updateUserById(body.user_id, { ban_duration: ban });
+      const { error } = await admin.from("profiles").update({ status: body.status })
+        .eq("user_id", body.user_id);
+      if (error) return json({ error: error.message }, 400);
+      return json({ ok: true });
+    }
+
+    // 프로필 갱신 (display_name / phone / team / store / position / hire_date)
+    if (body.action === "update_profile") {
+      if (!body.user_id || !body.profile) return json({ error: "user_id/profile 필요" }, 400);
+      const p = body.profile;
+      const patch: Record<string, unknown> = {};
+      for (const k of ["display_name","phone","team","store","position","hire_date"] as const) {
+        if (k in p) patch[k] = (p as any)[k];
+      }
+      const { error } = await admin.from("profiles").update(patch).eq("user_id", body.user_id);
+      if (error) return json({ error: error.message }, 400);
+      return json({ ok: true });
+    }
+
+    // 비밀번호 재설정 메일 발송 (Supabase Auth 기본 메일러 사용)
+    if (body.action === "send_password_reset_email") {
+      if (!body.email) return json({ error: "email 필요" }, 400);
+      const { data: link, error } = await admin.auth.admin.generateLink({
+        type: "recovery",
+        email: body.email,
+        options: body.redirect_to ? { redirectTo: body.redirect_to } : undefined,
+      });
+      if (error) return json({ error: error.message }, 400);
+      return json({ ok: true, action_link: link.properties.action_link });
     }
 
     return json({ error: "unknown action" }, 400);
