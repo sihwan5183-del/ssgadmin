@@ -25,10 +25,10 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
           <div className="mx-auto size-16 rounded-full bg-amber-50 grid place-items-center">
             <ShieldAlert className="size-8 text-amber-500" />
           </div>
-          <h1 className="text-xl font-bold">승인 대기 중</h1>
-          <p className="text-sm text-muted-foreground">
-            관리자의 승인을 기다리고 있습니다.<br />
-            승인이 완료되면 시스템을 이용하실 수 있습니다.
+          <h1 className="text-xl font-bold text-foreground">승인 대기 중</h1>
+          <p className="text-sm text-foreground/80 leading-relaxed">
+            관리자의 승인이 필요합니다.<br />
+            본사 기획팀에 문의하세요.
           </p>
           <button onClick={() => window.location.reload()} className="text-xs text-primary underline">새로고침</button>
         </div>
