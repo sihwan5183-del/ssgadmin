@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sparkles, LogIn, UserPlus } from "lucide-react";
 import { toast } from "sonner";
+import udakLogo from "@/assets/udak-logo.png";
 
 const AuthPage = () => {
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -67,12 +68,14 @@ const AuthPage = () => {
     <div className="min-h-screen grid place-items-center px-5">
       <div className="w-full max-w-md glass-strong rounded-3xl p-8 shadow-card-elevated relative">
         <div className="flex items-center gap-3 mb-7">
-          <div className="size-11 rounded-xl bg-gradient-primary grid place-items-center shadow-glow">
-            <Sparkles className="size-5 text-primary-foreground" />
-          </div>
+          <img
+            src={udakLogo}
+            alt="U+다이렉트 로고"
+            className="size-12 rounded-xl object-contain bg-white shadow-glow"
+          />
           <div>
-            <div className="text-xs text-muted-foreground font-medium tracking-wide">UDak</div>
-            <div className="text-lg font-bold tracking-tight">유닥 영업관리 시스템</div>
+            <div className="text-xs text-muted-foreground font-medium tracking-wide">U+다이렉트</div>
+            <div className="text-lg font-bold tracking-tight">U+다이렉트 영업관리 시스템</div>
           </div>
         </div>
 
@@ -163,7 +166,7 @@ const AuthPage = () => {
         </form>
 
         <p className="text-center text-[10px] text-muted-foreground mt-6">
-          © {new Date().getFullYear()} UDak. All rights reserved.
+          © {new Date().getFullYear()} U+다이렉트. All rights reserved.
         </p>
       </div>
     </div>
