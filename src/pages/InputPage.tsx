@@ -852,6 +852,36 @@ const InputPage = () => {
               />
             </Field>
           </Grid>
+          {/* 분류 토큰 — 기변타겟C / 청소년 */}
+          <div className="flex flex-wrap items-center gap-2 px-1">
+            <span className="text-[11px] text-muted-foreground font-medium mr-1">분류:</span>
+            <button
+              type="button"
+              onClick={() => setCustomFields((f) => ({ ...f, target_c: !f.target_c }))}
+              className={cn(
+                "px-3 py-1.5 rounded-full border text-[11px] font-medium transition-all",
+                customFields.target_c
+                  ? "border-primary bg-primary/15 text-primary shadow-sm"
+                  : "border-border/40 text-muted-foreground hover:border-primary/40",
+              )}
+              aria-pressed={!!customFields.target_c}
+            >
+              {customFields.target_c ? "✓ " : ""}기변타겟C
+            </button>
+            <button
+              type="button"
+              onClick={() => setCustomFields((f) => ({ ...f, is_youth: !f.is_youth }))}
+              className={cn(
+                "px-3 py-1.5 rounded-full border text-[11px] font-medium transition-all",
+                customFields.is_youth
+                  ? "border-amber-400 bg-amber-50 text-amber-700 shadow-sm"
+                  : "border-border/40 text-muted-foreground hover:border-amber-400/60",
+              )}
+              aria-pressed={!!customFields.is_youth}
+            >
+              {customFields.is_youth ? "✓ " : ""}청소년
+            </button>
+          </div>
           <div className="border-t border-border/30 pt-3 mt-1" />
           <Grid cols={4}>
             <Field label="단말기">
@@ -984,6 +1014,150 @@ const InputPage = () => {
               </div>
             );
           })()}
+
+          {/* 자동이체 정보 */}
+          <div className="border border-border/30 rounded-xl p-3 mt-2 bg-muted/10">
+            <div className="flex items-center gap-2 mb-2">
+              <Banknote className="size-3.5 text-primary" />
+              <span className="text-xs font-semibold">자동이체 정보</span>
+              <span className="text-[10px] text-muted-foreground">월 요금 자동 출금 계좌</span>
+            </div>
+            <Grid cols={3}>
+              <Field label="은행명">
+                <Select
+                  value={customFields.autopay_bank ?? ""}
+                  onValueChange={(v) => setCustomFields((f) => ({ ...f, autopay_bank: v }))}
+                >
+                  <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="은행 선택" /></SelectTrigger>
+                  <SelectContent>{BANKS.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                </Select>
+              </Field>
+              <Field label="계좌번호">
+                <Input
+                  value={customFields.autopay_account ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/[^\d-]/g, "").slice(0, 20);
+                    setCustomFields((f) => ({ ...f, autopay_account: v }));
+                  }}
+                  placeholder="000-0000-0000"
+                  className="h-9 bg-input/60 text-xs tabular-nums"
+                  inputMode="numeric"
+                />
+              </Field>
+              <Field label="예금주">
+                <Input
+                  value={customFields.autopay_holder ?? ""}
+                  onChange={(e) => setCustomFields((f) => ({ ...f, autopay_holder: e.target.value }))}
+                  placeholder="홍길동"
+                  className="h-9 bg-input/60 text-xs"
+                  maxLength={30}
+                />
+              </Field>
+            </Grid>
+          </div>
+
+          {/* 제휴카드 */}
+          <div className="border border-border/30 rounded-xl p-3 mt-2 bg-muted/10">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <CreditCard className="size-3.5 text-primary" />
+              <span className="text-xs font-semibold">제휴카드</span>
+              <button
+                type="button"
+                onClick={() => setCustomFields((f) => ({
+                  ...f,
+                  partner_card_enabled: !f.partner_card_enabled,
+                  ...(f.partner_card_enabled ? {
+                    partner_card_company: "",
+                    partner_card_number: "",
+                    partner_card_expiry: "",
+                    partner_card_discount_type: "",
+                  } : {}),
+                }))}
+                className={cn(
+                  "px-3 py-1 rounded-full border text-[11px] font-medium transition-all",
+                  customFields.partner_card_enabled
+                    ? "border-primary bg-primary/15 text-primary"
+                    : "border-border/40 text-muted-foreground hover:border-primary/40",
+                )}
+                aria-pressed={!!customFields.partner_card_enabled}
+              >
+                {customFields.partner_card_enabled ? "✓ 사용함" : "사용 안 함"}
+              </button>
+            </div>
+            {customFields.partner_card_enabled && (
+              <div className="animate-fade-in space-y-2">
+                <Grid cols={3}>
+                  <Field label="제휴카드사 명">
+                    <Input
+                      value={customFields.partner_card_company ?? ""}
+                      onChange={(e) => setCustomFields((f) => ({ ...f, partner_card_company: e.target.value }))}
+                      placeholder="예: KB국민, 현대카드"
+                      className="h-9 bg-input/60 text-xs"
+                    />
+                  </Field>
+                  <Field label="카드번호">
+                    <Input
+                      value={customFields.partner_card_number ?? ""}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\D/g, "").slice(0, 16);
+                        const formatted = raw.replace(/(.{4})/g, "$1-").replace(/-$/, "");
+                        setCustomFields((f) => ({ ...f, partner_card_number: formatted }));
+                      }}
+                      placeholder="0000-0000-0000-0000"
+                      className="h-9 bg-input/60 text-xs tabular-nums"
+                      inputMode="numeric"
+                    />
+                  </Field>
+                  <Field label="유효기간 (MM/YY)">
+                    <Input
+                      value={customFields.partner_card_expiry ?? ""}
+                      onChange={(e) => {
+                        let v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                        if (v.length >= 3) v = `${v.slice(0, 2)}/${v.slice(2)}`;
+                        setCustomFields((f) => ({ ...f, partner_card_expiry: v }));
+                      }}
+                      placeholder="MM/YY"
+                      className="h-9 bg-input/60 text-xs tabular-nums"
+                      inputMode="numeric"
+                      maxLength={5}
+                    />
+                  </Field>
+                </Grid>
+                <div className="px-1">
+                  <Label className="text-[11px] text-muted-foreground font-medium">할인 방식</Label>
+                  <div className="flex gap-2 mt-1.5">
+                    {[
+                      { v: "device", label: "단말할인" },
+                      { v: "billing", label: "청구할인" },
+                    ].map((opt) => {
+                      const checked = customFields.partner_card_discount_type === opt.v;
+                      return (
+                        <label
+                          key={opt.v}
+                          className={cn(
+                            "flex items-center gap-2 px-3 py-2 rounded-lg border text-xs cursor-pointer transition-colors flex-1",
+                            checked
+                              ? "border-primary bg-primary/10 text-primary font-semibold"
+                              : "border-border/40 hover:border-primary/30",
+                          )}
+                        >
+                          <input
+                            type="radio"
+                            name="partner_card_discount_type"
+                            value={opt.v}
+                            checked={checked}
+                            onChange={() => setCustomFields((f) => ({ ...f, partner_card_discount_type: opt.v }))}
+                            className="accent-primary"
+                          />
+                          <span>{opt.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </FormSection>
 
         <FormSection title="수익 및 정산">
