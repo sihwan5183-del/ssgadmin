@@ -26,7 +26,7 @@ const DEFAULT_CHECKLIST: ChecklistItem[] = [
   { key: "bundle_match", label: "결합 확인" },
 ];
 
-export type ApprovalStatus = "승인대기" | "확정" | "반려" | "수정요청" | "환수" | "취소";
+export type ApprovalStatus = "승인대기" | "검수완료" | "확정" | "반려" | "수정요청" | "환수" | "취소";
 
 export const REVISION_FIELD_OPTIONS = [
   "고객 정보",
@@ -63,6 +63,7 @@ interface Props {
 
 const STATUS_META: Record<string, { tone: string; icon: typeof CheckCircle2; label: string }> = {
   승인대기: { tone: "border-amber-400 text-amber-700 bg-amber-50", icon: AlertCircle, label: "승인대기" },
+  검수완료: { tone: "border-sky-500/50 text-sky-300 bg-sky-500/10", icon: ShieldCheck, label: "검수 완료" },
   확정: { tone: "border-emerald-500/40 text-emerald-300 bg-emerald-500/10", icon: CheckCircle2, label: "확정" },
   반려: { tone: "border-destructive/40 text-destructive bg-destructive/10", icon: XCircle, label: "반려" },
   수정요청: { tone: "border-orange-400 text-orange-700 bg-orange-50", icon: Edit3, label: "수정요청" },
@@ -181,12 +182,8 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
       toast.error("수정이 필요한 항목을 1개 이상 선택해주세요");
       return;
     }
-    if (next === "확정" && !allChecked) {
-      toast.error("모든 검수 체크리스트 항목을 완료해야 확정할 수 있습니다");
-      return;
-    }
-    if (next === "확정" && finalVerdict === "비정상") {
-      toast.error("최종 판정이 '비정상'인 건은 확정할 수 없습니다");
+    if (next === "검수완료" && !allChecked) {
+      toast.error("모든 검수 체크리스트 항목을 완료해야 검수 완료 처리가 가능합니다");
       return;
     }
     setSubmitting(true);
@@ -381,68 +378,35 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
         </div>
       )}
 
-      {/* 고객 SMS 발송 / 홈 설치 / 최종 판정 — 검수자 전용 */}
+      {/* 고객 소통 / 설치 관리 / 최종 판정 — 2단 그리드 */}
       {isAdmin && (
-        <div className="grid gap-2">
-          {/* SMS */}
-          <div className="flex items-center justify-between rounded-lg border border-border/40 p-3">
-            <span className="text-xs font-semibold flex items-center gap-1.5">
-              <MessageCircle className="size-3.5 text-sky-400" />
-              개통고객 문자발송 완료
-            </span>
-            <Switch
-              checked={smsSent}
-              onCheckedChange={(v) => {
-                setSmsSent(v);
-                patchCustom({ sms_sent: v, sms_sent_at: v ? new Date().toISOString() : null });
-              }}
-            />
-          </div>
-
-          {/* 홈 설치 */}
-          {isHomeProduct && (
-            <div className="rounded-lg border border-border/40 p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold flex items-center gap-1.5">
-                  <Home className="size-3.5 text-violet-400" />
-                  홈(인터넷/TV) 설치 관리
-                </span>
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="install-done" className="text-[11px] cursor-pointer">설치완료</Label>
-                  <Switch
-                    id="install-done"
-                    checked={installDone}
-                    onCheckedChange={(v) => {
-                      setInstallDone(v);
-                      patchCustom({ install_done: v, install_done_at: v ? new Date().toISOString() : null });
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <CalendarClock className="size-3.5 text-muted-foreground" />
-                <Label className="text-[11px] text-muted-foreground">설치 예정일</Label>
-                <Input
-                  type="date"
-                  value={installDate}
-                  onChange={(e) => setInstallDate(e.target.value)}
-                  onBlur={() => patchCustom({ install_date: installDate || null })}
-                  className="h-8 text-xs bg-input/60 max-w-[180px]"
-                />
-              </div>
+        <div className="space-y-3">
+          {/* 그룹 1: 고객 소통 & 최종 판정 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {/* SMS */}
+            <div className="flex items-center justify-between rounded-lg border border-border/40 p-3">
+              <span className="text-xs font-semibold flex items-center gap-1.5">
+                <MessageCircle className="size-3.5 text-sky-400" />
+                고객 문자발송
+              </span>
+              <Switch
+                checked={smsSent}
+                onCheckedChange={(v) => {
+                  setSmsSent(v);
+                  patchCustom({ sms_sent: v, sms_sent_at: v ? new Date().toISOString() : null });
+                }}
+              />
             </div>
-          )}
 
-          {/* 최종 판정 (F10) */}
-          <div className={`rounded-lg border p-3 space-y-2 ${
-            finalVerdict === "비정상" ? "border-destructive/60 bg-destructive/10"
-            : finalVerdict === "정상" ? "border-emerald-500/40 bg-emerald-500/10"
-            : "border-border/40"
-          }`}>
-            <div className="flex items-center justify-between">
+            {/* 최종 판정 (정상/비정상만) */}
+            <div className={`rounded-lg border p-3 flex items-center justify-between ${
+              finalVerdict === "비정상" ? "border-destructive/60 bg-destructive/10"
+              : finalVerdict === "정상" ? "border-emerald-500/40 bg-emerald-500/10"
+              : "border-border/40"
+            }`}>
               <span className="text-xs font-semibold flex items-center gap-1.5">
                 <Gavel className="size-3.5 text-primary-glow" />
-                검수 최종 판정 (F10)
+                최종 판정
               </span>
               <div className="flex rounded-md border border-border/40 overflow-hidden text-[11px]">
                 <button
@@ -462,30 +426,55 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
                     patchCustom({ final_verdict: "비정상", verdict_at: new Date().toISOString(), verdict_by: user?.id ?? null });
                   }}
                 >비정상</button>
-                {finalVerdict !== "" && (
-                  <button
-                    type="button"
-                    className="px-2 py-1 border-l border-border/40 text-muted-foreground hover:bg-muted/40"
-                    onClick={() => {
-                      setFinalVerdict("");
-                      setVerdictReason("");
-                      patchCustom({ final_verdict: null, verdict_reason: null });
-                    }}
-                  >해제</button>
-                )}
               </div>
             </div>
-            {finalVerdict === "비정상" && (
-              <Textarea
-                rows={2}
-                value={verdictReason}
-                onChange={(e) => setVerdictReason(e.target.value)}
-                onBlur={() => patchCustom({ verdict_reason: verdictReason })}
-                placeholder="비정상 사유 (예: 단가 불일치, 서류 위조 의심 등)"
-                className="bg-input/60 text-sm border-destructive/40"
-              />
-            )}
           </div>
+
+          {/* 비정상 사유 (전폭) */}
+          {finalVerdict === "비정상" && (
+            <Textarea
+              rows={2}
+              value={verdictReason}
+              onChange={(e) => setVerdictReason(e.target.value)}
+              onBlur={() => patchCustom({ verdict_reason: verdictReason })}
+              placeholder="비정상 사유 (예: 단가 불일치, 서류 위조 의심 등) — 사유만 기록되며 확정은 차단되지 않습니다"
+              className="bg-input/60 text-sm border-destructive/40"
+            />
+          )}
+
+          {/* 그룹 2: 홈(인터넷/TV) 설치 — 해당 상품일 때만 */}
+          {isHomeProduct && (
+            <div className="rounded-lg border border-border/40 p-3">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Home className="size-3.5 text-violet-400" />
+                <span className="text-xs font-semibold">홈(인터넷/TV) 설치 관리</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div className="flex items-center gap-2 rounded-md border border-border/40 px-2.5 py-1.5">
+                  <CalendarClock className="size-3.5 text-muted-foreground" />
+                  <Label className="text-[11px] text-muted-foreground whitespace-nowrap">설치 예정일</Label>
+                  <Input
+                    type="date"
+                    value={installDate}
+                    onChange={(e) => setInstallDate(e.target.value)}
+                    onBlur={() => patchCustom({ install_date: installDate || null })}
+                    className="h-7 text-xs bg-input/60"
+                  />
+                </div>
+                <div className="flex items-center justify-between rounded-md border border-border/40 px-2.5 py-1.5">
+                  <Label htmlFor="install-done" className="text-[11px] cursor-pointer">설치 완료</Label>
+                  <Switch
+                    id="install-done"
+                    checked={installDone}
+                    onCheckedChange={(v) => {
+                      setInstallDone(v);
+                      patchCustom({ install_done: v, install_done_at: v ? new Date().toISOString() : null });
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -526,8 +515,8 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
           </div>
 
           <div className="grid grid-cols-3 gap-2 pt-1">
-            <Button onClick={() => submitDecision("확정")} disabled={submitting} variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-700">
-              <CheckCircle2 className="size-3.5 mr-1" /> 승인
+            <Button onClick={() => submitDecision("검수완료")} disabled={submitting} variant="default" size="sm" className="bg-sky-600 hover:bg-sky-700">
+              <ShieldCheck className="size-3.5 mr-1" /> 검수 완료
             </Button>
             <Button onClick={() => submitDecision("수정요청")} disabled={submitting} variant="outline" size="sm" className="border-orange-400 text-orange-700 hover:bg-orange-50">
               <Edit3 className="size-3.5 mr-1" /> 수정요청
@@ -537,7 +526,7 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
             </Button>
           </div>
           <p className="text-[10px] text-muted-foreground">
-            승인 = 잠금·확정 · 수정요청 = 항목 체크 + 사유 필수 · 반려 = 사유 필수
+            검수 완료 = 기획팀 검토 종료(잠금 없음, 정산 확정 전 단계) · 수정요청/반려 = 사유 필수
           </p>
         </div>
       ) : !isOwner ? (
