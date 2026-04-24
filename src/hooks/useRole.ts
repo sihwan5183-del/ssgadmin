@@ -39,17 +39,30 @@ export function useRole() {
       return;
     }
     setLoading(true);
-    supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .then(({ data }) => {
-        if (cancelled) return;
-        setRoles(((data ?? []) as { role: AppRole }[]).map((r) => r.role));
-        setLoading(false);
-      });
+    const load = () => {
+      supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .then(({ data }) => {
+          if (cancelled) return;
+          setRoles(((data ?? []) as { role: AppRole }[]).map((r) => r.role));
+          setLoading(false);
+        });
+    };
+    load();
+    // 실시간 권한 변경 반영
+    const ch = supabase
+      .channel(`user-roles-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_roles", filter: `user_id=eq.${user.id}` },
+        () => load(),
+      )
+      .subscribe();
     return () => {
       cancelled = true;
+      supabase.removeChannel(ch);
     };
   }, [user]);
 

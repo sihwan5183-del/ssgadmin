@@ -38,6 +38,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         );
         await supabase.auth.signOut();
       }
+      if (data.status === "suspended") {
+        toast.error("정지된 계정입니다. 관리자에게 문의하세요.");
+        await supabase.auth.signOut();
+      }
       // pending status is handled in ProtectedRoute
     }
   };

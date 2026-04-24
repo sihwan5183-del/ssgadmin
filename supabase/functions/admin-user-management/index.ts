@@ -16,6 +16,7 @@ interface Body {
     | "update_profile"
     | "set_active"
     | "delete_user"
+    | "list_user_emails"
     | "request_magic_link"
     | "consume_magic_link"
     | "admin_issue_magic_link"
@@ -271,6 +272,23 @@ Deno.serve(async (req) => {
     // ---------- ADMIN-ONLY actions ----------
     const { data: isAdmin } = await admin.rpc("is_admin", { _user_id: callerId });
     if (!isAdmin) return json({ error: "Forbidden: admin only" }, 403);
+
+    // 전체 사용자 이메일 매핑 (관리 페이지 표시용)
+    if (body.action === "list_user_emails") {
+      const result: Record<string, string> = {};
+      let page = 1;
+      // page through up to 10 pages * 200 = 2000 users
+      for (let i = 0; i < 10; i++) {
+        const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+        if (error) return json({ error: error.message }, 400);
+        for (const u of data.users) {
+          if (u.email) result[u.id] = u.email;
+        }
+        if (data.users.length < 200) break;
+        page++;
+      }
+      return json({ ok: true, emails: result });
+    }
 
     if (body.action === "admin_issue_magic_link") {
       if (!body.user_id) return json({ error: "user_id 필요" }, 400);
