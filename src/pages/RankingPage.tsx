@@ -529,11 +529,20 @@ const RankingPage = () => {
             </h4>
             <ul className="space-y-2">
               {TIERS.map((t) => (
-                <li key={t.label} className={cn("flex items-center justify-between px-3 py-2 rounded-lg ring-1 bg-gradient-to-br", t.color)}>
-                  <span className="flex items-center gap-2 text-xs font-medium">
-                    <span>{t.icon}</span> {t.label}
+                <li
+                  key={t.label}
+                  className={cn(
+                    "flex items-center justify-between px-3 py-2.5 rounded-lg ring-1 bg-gradient-to-br",
+                    t.color
+                  )}
+                >
+                  <span className="flex items-center gap-2 text-sm font-bold">
+                    <span className="text-base leading-none">{t.icon}</span>
+                    {t.label}
                   </span>
-                  <span className="text-[10px] text-muted-foreground">{t.min}건 이상</span>
+                  <span className={cn("text-xs font-semibold tabular-nums", t.sub)}>
+                    {t.min}건 이상
+                  </span>
                 </li>
               ))}
             </ul>
