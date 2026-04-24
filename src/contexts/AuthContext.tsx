@@ -14,6 +14,51 @@ interface AuthCtx {
 
 const Ctx = createContext<AuthCtx | null>(null);
 
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30분
+const KNOWN_DEVICES_KEY = "udak_known_devices";
+
+function getDeviceFingerprint(): string {
+  // 가벼운 디바이스 핑거프린트 (UA + 화면 해상도 + 타임존)
+  const ua = navigator.userAgent;
+  const screen = `${window.screen.width}x${window.screen.height}`;
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return btoa(unescape(encodeURIComponent(`${ua}|${screen}|${tz}`))).slice(0, 32);
+}
+
+async function recordLoginAttempt(userId: string, email: string | undefined) {
+  try {
+    const fp = getDeviceFingerprint();
+    const known: string[] = JSON.parse(localStorage.getItem(KNOWN_DEVICES_KEY) || "[]");
+    const isNewDevice = !known.includes(fp);
+
+    // auth_attempts 에 기록 (RLS: insert는 막혀있지만 시도. 실패 시 무시)
+    let ip: string | null = null;
+    try {
+      const r = await fetch("https://api.ipify.org?format=json");
+      const d = await r.json();
+      ip = d.ip;
+    } catch {
+      /* ignore */
+    }
+
+    if (isNewDevice) {
+      known.push(fp);
+      localStorage.setItem(KNOWN_DEVICES_KEY, JSON.stringify(known.slice(-20)));
+
+      // 본인 알림 (recipient_id = self 는 RLS 통과)
+      await supabase.from("notifications").insert({
+        recipient_id: userId,
+        kind: "new_device_login",
+        title: "새 기기/위치에서 로그인",
+        message: `IP: ${ip ?? "알 수 없음"} · ${navigator.userAgent.slice(0, 80)}`,
+        metadata: { ip, fingerprint: fp, ua: navigator.userAgent },
+      });
+    }
+  } catch (e) {
+    console.warn("[auth] device check failed", e);
+  }
+}
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,6 +99,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // 다음 tick에서 실행 (deadlock 방지)
         setTimeout(() => enforceActive(s), 0);
       }
+      if (event === "SIGNED_IN" && s?.user) {
+        setTimeout(() => recordLoginAttempt(s.user.id, s.user.email), 0);
+      }
     });
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
@@ -62,6 +110,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // 30분 무활동 자동 로그아웃
+  useEffect(() => {
+    if (!session?.user) return;
+    let timerId: number | undefined;
+    const reset = () => {
+      if (timerId) window.clearTimeout(timerId);
+      timerId = window.setTimeout(async () => {
+        toast.info("30분간 활동이 없어 자동 로그아웃되었습니다");
+        await supabase.auth.signOut();
+      }, IDLE_TIMEOUT_MS);
+    };
+    const events = ["mousemove", "mousedown", "keydown", "touchstart", "scroll", "click"];
+    events.forEach((e) => window.addEventListener(e, reset, { passive: true }));
+    reset();
+    return () => {
+      if (timerId) window.clearTimeout(timerId);
+      events.forEach((e) => window.removeEventListener(e, reset));
+    };
+  }, [session?.user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const signOut = async () => {
     await supabase.auth.signOut();
