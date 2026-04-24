@@ -53,8 +53,25 @@ const AuthPage = () => {
         });
         setMode("login");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error, data } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        if (data.user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("status")
+            .eq("user_id", data.user.id)
+            .maybeSingle();
+          if (profile?.status && profile.status !== "active") {
+            await supabase.auth.signOut();
+            const map: Record<string, string> = {
+              pending: "관리자의 승인을 기다리고 있는 계정입니다.",
+              suspended: "정지된 계정입니다. 관리자에게 문의해주세요.",
+              leave: "휴직 상태의 계정입니다.",
+              resigned: "퇴사 처리된 계정입니다.",
+            };
+            throw new Error(map[profile.status] ?? `계정 상태(${profile.status})로 인해 로그인할 수 없습니다.`);
+          }
+        }
         toast.success("로그인 완료");
       }
     } catch (err) {
