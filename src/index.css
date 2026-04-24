@@ -12,13 +12,14 @@
   :root {
     /* 베이스 — 클린 화이트 캔버스 */
     --background: 0 0% 100%;
-    --foreground: 240 10% 12%;
+    /* 본문 텍스트: 거의 순수 검정에 가까운 진한 톤으로 강화 (#1A1A1A) */
+    --foreground: 0 0% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 12%;
+    --card-foreground: 0 0% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 12%;
+    --popover-foreground: 0 0% 10%;
 
     /* U+ 시그니처 마젠타 핑크 — 메인 액센트 */
     --primary: 325 85% 52%;
@@ -30,7 +31,8 @@
     --secondary-foreground: 325 70% 28%;
 
     --muted: 340 8% 95%;
-    --muted-foreground: 325 6% 38%;
+    /* 보조/설명 텍스트도 흐리지 않게 — 최소 #5A5A5A 수준 */
+    --muted-foreground: 0 0% 30%;
 
     --accent: 22 90% 95%;
     --accent-foreground: 22 80% 32%;
@@ -52,8 +54,9 @@
     --gradient-revenue: linear-gradient(135deg, hsl(158 70% 48%), hsl(168 65% 42%));
     --gradient-expense: linear-gradient(135deg, hsl(0 80% 60%), hsl(345 75% 55%));
 
-    --border: 330 25% 92%;
-    --input: 330 25% 94%;
+    /* 테두리: 더 진하게 (#9CA3AF ≈ HSL 220 9% 65%) */
+    --border: 220 9% 78%;
+    --input: 220 9% 65%;
     --ring: 325 85% 52%;
 
     --radius: 1rem;
@@ -81,12 +84,12 @@
 
     /* Sidebar */
     --sidebar-background: 0 0% 99%;
-    --sidebar-foreground: 325 20% 25%;
+    --sidebar-foreground: 0 0% 12%;
     --sidebar-primary: 325 85% 52%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 22 80% 96%;
     --sidebar-accent-foreground: 22 75% 32%;
-    --sidebar-border: 330 25% 92%;
+    --sidebar-border: 220 9% 80%;
     --sidebar-ring: 325 85% 52%;
 
     --transition-smooth: cubic-bezier(0.22, 1, 0.36, 1);
