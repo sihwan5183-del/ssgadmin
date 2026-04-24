@@ -4,15 +4,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import {
   CheckCircle2, XCircle, Edit3, RotateCcw, AlertCircle,
-  MessageSquare, Send, ShieldCheck, Clock,
+  MessageSquare, Send, ShieldCheck, Clock, ShieldAlert, MessageCircle,
+  Home, CalendarClock, Gavel,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
+import { PendingItemsEditor } from "./PendingItemsEditor";
 
 interface ChecklistItem { key: string; label: string }
 const DEFAULT_CHECKLIST: ChecklistItem[] = [
@@ -46,7 +50,9 @@ interface SaleSnapshot {
   re_review_requested_at: string | null;
   approved_at: string | null;
   pending_items: string[] | null;
+  pending_note?: string | null;
   pending_resolved: boolean | null;
+  product?: string | null;
   custom_fields?: Record<string, any> | null;
 }
 
@@ -83,15 +89,71 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
   const [fields, setFields] = useState<string[]>(sale.revision_fields ?? []);
   const [checks, setChecks] = useState<Record<string, boolean>>(savedChecks);
   const [submitting, setSubmitting] = useState(false);
+  // 미처리 항목 인라인 편집
+  const [pendingItems, setPendingItems] = useState<string[]>(sale.pending_items ?? []);
+  const [pendingNote, setPendingNote] = useState<string>(sale.pending_note ?? "");
+  const [pendingResolved, setPendingResolved] = useState<boolean>(!!sale.pending_resolved);
+  // 신규 검수 메타
+  const cf = (sale.custom_fields ?? {}) as Record<string, any>;
+  const [fraudSuspect, setFraudSuspect] = useState<boolean>(!!cf.fraud_suspect);
+  const [fraudReason, setFraudReason] = useState<string>(cf.fraud_reason ?? "");
+  const [smsSent, setSmsSent] = useState<boolean>(!!cf.sms_sent);
+  const [installDate, setInstallDate] = useState<string>(cf.install_date ?? "");
+  const [installDone, setInstallDone] = useState<boolean>(!!cf.install_done);
+  const [finalVerdict, setFinalVerdict] = useState<"" | "정상" | "비정상">(
+    (cf.final_verdict as "" | "정상" | "비정상") ?? "",
+  );
+  const [verdictReason, setVerdictReason] = useState<string>(cf.verdict_reason ?? "");
 
   useEffect(() => {
     setReason("");
     setFields(sale.revision_fields ?? []);
     setChecks((sale.custom_fields?.review_checklist ?? {}) as Record<string, boolean>);
-  }, [sale.id, sale.revision_fields, sale.custom_fields]);
+    setPendingItems(sale.pending_items ?? []);
+    setPendingNote(sale.pending_note ?? "");
+    setPendingResolved(!!sale.pending_resolved);
+    const c = (sale.custom_fields ?? {}) as Record<string, any>;
+    setFraudSuspect(!!c.fraud_suspect);
+    setFraudReason(c.fraud_reason ?? "");
+    setSmsSent(!!c.sms_sent);
+    setInstallDate(c.install_date ?? "");
+    setInstallDone(!!c.install_done);
+    setFinalVerdict((c.final_verdict as "" | "정상" | "비정상") ?? "");
+    setVerdictReason(c.verdict_reason ?? "");
+  }, [sale.id, sale.revision_fields, sale.custom_fields, sale.pending_items, sale.pending_note, sale.pending_resolved]);
 
   const checkedCount = checklistItems.filter((i) => checks[i.key]).length;
   const allChecked = checkedCount === checklistItems.length;
+  const isHomeProduct = (sale.product ?? "").includes("인터넷")
+    || (sale.product ?? "").includes("TV")
+    || (sale.product ?? "").includes("홈");
+
+  // 신규 메타 저장 helpers
+  const patchCustom = async (patch: Record<string, any>) => {
+    const next = { ...(sale.custom_fields ?? {}), ...patch };
+    const { error } = await supabase
+      .from("sales")
+      .update({ custom_fields: next } as never)
+      .eq("id", sale.id);
+    if (error) toast.error(error.message);
+    else onChanged();
+  };
+
+  const savePendingInline = async () => {
+    setSubmitting(true);
+    const { error } = await supabase
+      .from("sales")
+      .update({
+        pending_items: pendingItems as any,
+        pending_note: pendingNote || null,
+        pending_resolved: pendingResolved || pendingItems.length === 0,
+      } as never)
+      .eq("id", sale.id);
+    setSubmitting(false);
+    if (error) return toast.error(error.message);
+    toast.success("미처리 항목이 저장되었습니다");
+    onChanged();
+  };
 
   const toggleCheck = async (key: string) => {
     if (!isAdmin) return;
@@ -117,6 +179,14 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
     }
     if (next === "수정요청" && fields.length === 0) {
       toast.error("수정이 필요한 항목을 1개 이상 선택해주세요");
+      return;
+    }
+    if (next === "확정" && !allChecked) {
+      toast.error("모든 검수 체크리스트 항목을 완료해야 확정할 수 있습니다");
+      return;
+    }
+    if (next === "확정" && finalVerdict === "비정상") {
+      toast.error("최종 판정이 '비정상'인 건은 확정할 수 없습니다");
       return;
     }
     setSubmitting(true);
@@ -246,7 +316,178 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
             </label>
           ))}
         </div>
+        {!allChecked && (
+          <p className="text-[10px] text-muted-foreground">모든 항목 체크 시 '검수 완료(확정)' 버튼이 활성화됩니다.</p>
+        )}
       </div>
+
+      {/* 미처리 항목 인라인 편집 (검수자도 즉시 수정/저장) */}
+      {isAdmin && (
+        <div className="rounded-lg border border-border/40 p-3 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-semibold flex items-center gap-1.5">
+              <AlertCircle className="size-3.5 text-amber-400" />
+              미처리 항목 즉시 편집
+            </span>
+            <Button size="sm" variant="outline" disabled={submitting} onClick={savePendingInline}>저장</Button>
+          </div>
+          <PendingItemsEditor
+            items={pendingItems}
+            note={pendingNote}
+            resolved={pendingResolved}
+            onItemsChange={setPendingItems}
+            onNoteChange={setPendingNote}
+            onResolvedChange={setPendingResolved}
+            showResolvedToggle
+          />
+        </div>
+      )}
+
+      {/* 이상영업 감시 — admin/planner */}
+      {isAdmin && (
+        <div className={`rounded-lg border p-3 space-y-2 ${fraudSuspect ? "border-destructive/60 bg-destructive/10" : "border-border/40"}`}>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold flex items-center gap-1.5">
+              <ShieldAlert className={`size-3.5 ${fraudSuspect ? "text-destructive" : "text-muted-foreground"}`} />
+              이상영업 예상 표기
+            </span>
+            <Switch
+              checked={fraudSuspect}
+              onCheckedChange={async (v) => {
+                setFraudSuspect(v);
+                await patchCustom({
+                  fraud_suspect: v,
+                  fraud_marked_at: v ? new Date().toISOString() : null,
+                  fraud_marked_by: v ? user?.id ?? null : null,
+                  ...(v ? {} : { fraud_reason: "" }),
+                });
+                if (v) toast.warning("이상영업으로 표기되었습니다 — 정산이 일시 중지됩니다");
+              }}
+            />
+          </div>
+          {fraudSuspect && (
+            <>
+              <Textarea
+                rows={2}
+                value={fraudReason}
+                onChange={(e) => setFraudReason(e.target.value)}
+                onBlur={() => patchCustom({ fraud_reason: fraudReason })}
+                placeholder="의심 사유 (예: 동일 명의 단기 재가입, 지원금 과다 등)"
+                className="bg-input/60 text-sm border-destructive/40"
+              />
+              <p className="text-[10px] text-destructive">⚠ 정산 일시중지 · 본사 검토 대상</p>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* 고객 SMS 발송 / 홈 설치 / 최종 판정 — 검수자 전용 */}
+      {isAdmin && (
+        <div className="grid gap-2">
+          {/* SMS */}
+          <div className="flex items-center justify-between rounded-lg border border-border/40 p-3">
+            <span className="text-xs font-semibold flex items-center gap-1.5">
+              <MessageCircle className="size-3.5 text-sky-400" />
+              개통고객 문자발송 완료
+            </span>
+            <Switch
+              checked={smsSent}
+              onCheckedChange={(v) => {
+                setSmsSent(v);
+                patchCustom({ sms_sent: v, sms_sent_at: v ? new Date().toISOString() : null });
+              }}
+            />
+          </div>
+
+          {/* 홈 설치 */}
+          {isHomeProduct && (
+            <div className="rounded-lg border border-border/40 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold flex items-center gap-1.5">
+                  <Home className="size-3.5 text-violet-400" />
+                  홈(인터넷/TV) 설치 관리
+                </span>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="install-done" className="text-[11px] cursor-pointer">설치완료</Label>
+                  <Switch
+                    id="install-done"
+                    checked={installDone}
+                    onCheckedChange={(v) => {
+                      setInstallDone(v);
+                      patchCustom({ install_done: v, install_done_at: v ? new Date().toISOString() : null });
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <CalendarClock className="size-3.5 text-muted-foreground" />
+                <Label className="text-[11px] text-muted-foreground">설치 예정일</Label>
+                <Input
+                  type="date"
+                  value={installDate}
+                  onChange={(e) => setInstallDate(e.target.value)}
+                  onBlur={() => patchCustom({ install_date: installDate || null })}
+                  className="h-8 text-xs bg-input/60 max-w-[180px]"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* 최종 판정 (F10) */}
+          <div className={`rounded-lg border p-3 space-y-2 ${
+            finalVerdict === "비정상" ? "border-destructive/60 bg-destructive/10"
+            : finalVerdict === "정상" ? "border-emerald-500/40 bg-emerald-500/10"
+            : "border-border/40"
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold flex items-center gap-1.5">
+                <Gavel className="size-3.5 text-primary-glow" />
+                검수 최종 판정 (F10)
+              </span>
+              <div className="flex rounded-md border border-border/40 overflow-hidden text-[11px]">
+                <button
+                  type="button"
+                  className={`px-3 py-1 ${finalVerdict === "정상" ? "bg-emerald-500/20 text-emerald-200" : "hover:bg-muted/40"}`}
+                  onClick={() => {
+                    setFinalVerdict("정상");
+                    setVerdictReason("");
+                    patchCustom({ final_verdict: "정상", verdict_reason: "", verdict_at: new Date().toISOString(), verdict_by: user?.id ?? null });
+                  }}
+                >정상</button>
+                <button
+                  type="button"
+                  className={`px-3 py-1 border-l border-border/40 ${finalVerdict === "비정상" ? "bg-destructive/20 text-destructive" : "hover:bg-muted/40"}`}
+                  onClick={() => {
+                    setFinalVerdict("비정상");
+                    patchCustom({ final_verdict: "비정상", verdict_at: new Date().toISOString(), verdict_by: user?.id ?? null });
+                  }}
+                >비정상</button>
+                {finalVerdict !== "" && (
+                  <button
+                    type="button"
+                    className="px-2 py-1 border-l border-border/40 text-muted-foreground hover:bg-muted/40"
+                    onClick={() => {
+                      setFinalVerdict("");
+                      setVerdictReason("");
+                      patchCustom({ final_verdict: null, verdict_reason: null });
+                    }}
+                  >해제</button>
+                )}
+              </div>
+            </div>
+            {finalVerdict === "비정상" && (
+              <Textarea
+                rows={2}
+                value={verdictReason}
+                onChange={(e) => setVerdictReason(e.target.value)}
+                onBlur={() => patchCustom({ verdict_reason: verdictReason })}
+                placeholder="비정상 사유 (예: 단가 불일치, 서류 위조 의심 등)"
+                className="bg-input/60 text-sm border-destructive/40"
+              />
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Admin actions */}
       {isAdmin ? (

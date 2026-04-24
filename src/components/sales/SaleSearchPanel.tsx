@@ -101,7 +101,7 @@ const APPROVAL_META: Record<ApprovalStatus, { className: string; icon: typeof Ch
 };
 
 const SELECT_COLS =
-  "id, created_by, customer_name, phone, device_serial, device_model, channel, product, rate_plan, status, open_date, manager, unit_price, net_fee, note, approval_status, locked, approved_at, pending_items, pending_note, pending_resolved, approval_override_reason, distributor_amount, cash_support_amount, cash_open, receivable_amount, receivable_paid, revision_fields, revision_reason, revision_requested_at, re_review_requested_at";
+  "id, created_by, customer_name, phone, device_serial, device_model, channel, product, rate_plan, status, open_date, manager, unit_price, net_fee, note, approval_status, locked, approved_at, pending_items, pending_note, pending_resolved, approval_override_reason, distributor_amount, cash_support_amount, cash_open, receivable_amount, receivable_paid, revision_fields, revision_reason, revision_requested_at, re_review_requested_at, custom_fields";
 
 export const SaleSearchPanel = () => {
   const { user } = useAuth();
@@ -492,6 +492,16 @@ export const SaleSearchPanel = () => {
                                   </Badge>
                                 )}
                                 {r.status && <Badge variant="outline" className="text-[10px]">{r.status}</Badge>}
+                                {(r as any).custom_fields?.fraud_suspect && (
+                                  <Badge variant="outline" className="text-[10px] gap-1 border-destructive/60 text-destructive bg-destructive/10 animate-pulse">
+                                    <AlertTriangle className="size-3" /> 이상영업
+                                  </Badge>
+                                )}
+                                {(r as any).custom_fields?.final_verdict === "비정상" && (
+                                  <Badge variant="outline" className="text-[10px] gap-1 border-destructive/60 text-destructive bg-destructive/10">
+                                    비정상
+                                  </Badge>
+                                )}
                               </div>
                               <div className="text-xs text-muted-foreground flex items-center gap-3 mt-1 flex-wrap">
                                 <span className="flex items-center gap-1"><Phone className="size-3" />{r.phone ?? "-"}</span>
@@ -705,7 +715,9 @@ export const SaleSearchPanel = () => {
                   re_review_requested_at: selected.re_review_requested_at,
                   approved_at: selected.approved_at,
                   pending_items: selected.pending_items,
+                  pending_note: (selected as any).pending_note ?? null,
                   pending_resolved: selected.pending_resolved,
+                  product: (selected as any).product ?? null,
                   custom_fields: (selected as any).custom_fields ?? null,
                 }}
                 onChanged={async () => {
