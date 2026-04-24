@@ -800,6 +800,31 @@ export const SaleSearchPanel = () => {
             </aside>
             </div>
           )}
+          {/* CS 진행 상태 요약 — 검수자가 한눈에 확인 */}
+          <div className="mt-4 rounded-lg border border-border/40 bg-muted/30 px-4 py-2.5 flex items-center gap-4 flex-wrap text-xs">
+            <span className="font-semibold flex items-center gap-1.5">
+              <ShieldCheck className="size-3.5 text-primary-glow" /> CS 진행 상태
+            </span>
+            <span className="flex items-center gap-1">
+              <CheckCircle2 className="size-3 text-emerald-400" />
+              오늘 검수 완료 <b className="tabular-nums text-foreground">{todayReviewedCount}건</b>
+            </span>
+            <span className="flex items-center gap-1">
+              <AlertTriangle className="size-3 text-amber-500" />
+              미처리 잔여 <b className="tabular-nums text-foreground">{unhandledCount}건</b>
+            </span>
+            <span className="flex items-center gap-1">
+              <AlertCircle className="size-3 text-amber-500" />
+              미승인 <b className="tabular-nums text-foreground">{pendingCount}건</b>
+            </span>
+            <span className="flex items-center gap-1">
+              <AlertTriangle className="size-3 text-destructive" />
+              비정상 <b className="tabular-nums text-foreground">{abnormalCount}건</b>
+            </span>
+            <span className="ml-auto text-muted-foreground">
+              저장 시 리스트가 즉시 갱신됩니다.
+            </span>
+          </div>
         </DialogContent>
       </Dialog>
 
