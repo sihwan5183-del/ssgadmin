@@ -71,8 +71,8 @@ const AuthPage = () => {
             <Sparkles className="size-5 text-primary-foreground" />
           </div>
           <div>
-            <div className="text-xs text-muted-foreground font-medium tracking-wide">연합통신</div>
-            <div className="text-lg font-bold tracking-tight">영업관리 시스템</div>
+            <div className="text-xs text-muted-foreground font-medium tracking-wide">UDak</div>
+            <div className="text-lg font-bold tracking-tight">유닥 영업관리 시스템</div>
           </div>
         </div>
 
@@ -163,7 +163,7 @@ const AuthPage = () => {
         </form>
 
         <p className="text-center text-[10px] text-muted-foreground mt-6">
-          © {new Date().getFullYear()} 연합통신. All rights reserved.
+          © {new Date().getFullYear()} UDak. All rights reserved.
         </p>
       </div>
     </div>
