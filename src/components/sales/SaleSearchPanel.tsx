@@ -23,6 +23,7 @@ import {
 import {
   Search, Edit3, FileText, History, Save, Phone, User, Smartphone, Lock,
   ShieldCheck, AlertCircle, CheckCircle2, XCircle, RotateCcw, AlertTriangle,
+  Bell, CalendarX2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { SaleDocuments } from "./SaleDocuments";
@@ -114,6 +115,9 @@ export const SaleSearchPanel = () => {
   const [pendingCount, setPendingCount] = useState(0);
   const [unhandledOnly, setUnhandledOnly] = useState(false);
   const [unhandledCount, setUnhandledCount] = useState(0);
+  const [abnormalOnly, setAbnormalOnly] = useState(false);
+  const [abnormalCount, setAbnormalCount] = useState(0);
+  const [todayReviewedCount, setTodayReviewedCount] = useState(0);
   const [results, setResults] = useState<SaleHit[]>([]);
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<SaleHit | null>(null);
@@ -176,22 +180,31 @@ export const SaleSearchPanel = () => {
 
   // 미승인 / 미처리 카운트
   const refreshCounts = async () => {
-    const [{ count: c1 }, { count: c2 }] = await Promise.all([
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const [{ count: c1 }, { count: c2 }, abnormalRes, reviewedRes] = await Promise.all([
       supabase.from("sales").select("id", { count: "exact", head: true }).eq("approval_status", "승인대기"),
       supabase.from("sales").select("id", { count: "exact", head: true }).eq("pending_resolved", false),
+      supabase.from("sales").select("id", { count: "exact", head: true }).contains("custom_fields", { final_verdict: "비정상" }),
+      supabase.from("sales").select("id", { count: "exact", head: true })
+        .in("approval_status", ["검수완료", "확정"])
+        .gte("approved_at", `${todayStr}T00:00:00`),
     ]);
     setPendingCount(c1 ?? 0);
     setUnhandledCount(c2 ?? 0);
+    setAbnormalCount(abnormalRes.count ?? 0);
+    setTodayReviewedCount(reviewedRes.count ?? 0);
   };
 
   useEffect(() => {
     refreshCounts();
   }, []);
 
-  const search = async (override?: string, pendingOverride?: boolean, unhandledOverride?: boolean) => {
+  const search = async (override?: string, pendingOverride?: boolean, unhandledOverride?: boolean, abnormalOverride?: boolean) => {
     const term = (override ?? q).trim();
     const onlyPending = pendingOverride ?? pendingOnly;
     const onlyUnhandled = unhandledOverride ?? unhandledOnly;
+    const onlyAbnormal = abnormalOverride ?? abnormalOnly;
 
     setSearching(true);
     let query = supabase.from("sales").select(SELECT_COLS);
@@ -204,6 +217,7 @@ export const SaleSearchPanel = () => {
     }
     if (onlyPending) query = query.eq("approval_status", "승인대기");
     if (onlyUnhandled) query = query.eq("pending_resolved", false);
+    if (onlyAbnormal) query = query.contains("custom_fields", { final_verdict: "비정상" });
     // 기간 필터 적용 (검색어 없이 기간만으로도 조회 가능)
     query = query.gte("open_date", startDate).lte("open_date", endDate);
 
@@ -355,6 +369,12 @@ export const SaleSearchPanel = () => {
           <Badge variant="outline" className="border-amber-400 text-amber-700 bg-amber-50 gap-1">
             <AlertTriangle className="size-3" /> 미처리 {unhandledCount}건
           </Badge>
+          <Badge variant="outline" className="border-destructive/50 text-destructive bg-destructive/10 gap-1">
+            <AlertTriangle className="size-3" /> 비정상 {abnormalCount}건
+          </Badge>
+          <Badge variant="outline" className="border-emerald-500/40 text-emerald-300 bg-emerald-500/10 gap-1">
+            <ShieldCheck className="size-3" /> 오늘 검수 {todayReviewedCount}건
+          </Badge>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/40 border border-border/40">
             <Switch
               id="pending-only"
@@ -379,6 +399,19 @@ export const SaleSearchPanel = () => {
             />
             <Label htmlFor="unhandled-only" className="text-xs cursor-pointer">
               미처리만
+            </Label>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-destructive/5 border border-destructive/30">
+            <Switch
+              id="abnormal-only"
+              checked={abnormalOnly}
+              onCheckedChange={(v) => {
+                setAbnormalOnly(v);
+                search(undefined, undefined, undefined, v);
+              }}
+            />
+            <Label htmlFor="abnormal-only" className="text-xs cursor-pointer text-destructive">
+              비정상만
             </Label>
           </div>
         </div>
@@ -463,10 +496,20 @@ export const SaleSearchPanel = () => {
                         const Icon = meta.icon;
                         const hasUnhandled = (r.pending_items?.length ?? 0) > 0 && r.pending_resolved === false;
                         const sel = bulk.isSelected(r.id);
+                        const cf = (r as any).custom_fields ?? {};
+                        const isAbnormal = cf.final_verdict === "비정상" || !!cf.fraud_suspect;
+                        const installOverdue = cf.install_date
+                          && !cf.install_done
+                          && cf.install_date < new Date().toISOString().slice(0, 10);
+                        const needsAttention = hasUnhandled || isAbnormal || installOverdue;
                         return (
                           <div
                             key={r.id}
-                            className={`flex items-stretch ${sel ? "bg-primary/5" : ""} ${hasUnhandled ? "bg-amber-50/70" : ""}`}
+                            className={`flex items-stretch ${sel ? "bg-primary/5" : ""} ${
+                              isAbnormal ? "bg-destructive/5"
+                              : installOverdue ? "bg-orange-50/80"
+                              : hasUnhandled ? "bg-amber-50/70" : ""
+                            }`}
                           >
                             <div className="pl-3 pr-1 flex items-center" onClick={(e) => e.stopPropagation()}>
                               <Checkbox checked={sel} onCheckedChange={() => bulk.toggle(r.id)} />
@@ -485,6 +528,11 @@ export const SaleSearchPanel = () => {
                                 {hasUnhandled && (
                                   <Badge variant="outline" className="text-[10px] gap-1 border-amber-400 text-amber-700 bg-amber-50">
                                     <AlertTriangle className="size-3" /> 미처리 {r.pending_items?.length}
+                                  </Badge>
+                                )}
+                                {installOverdue && (
+                                  <Badge variant="outline" className="text-[10px] gap-1 border-orange-500 text-orange-700 bg-orange-50">
+                                    <CalendarX2 className="size-3" /> 설치 지연
                                   </Badge>
                                 )}
                                 {r.locked && (
@@ -510,6 +558,14 @@ export const SaleSearchPanel = () => {
                                 <span>{r.channel ?? "-"} / {r.product ?? "-"}</span>
                               </div>
                             </div>
+                            {needsAttention && (
+                              <span
+                                title="CS 확인 필요"
+                                className="self-center mr-2 flex items-center gap-1 text-[10px] font-semibold text-destructive animate-pulse"
+                              >
+                                <Bell className="size-3.5" /> 확인 필요
+                              </span>
+                            )}
                             <Edit3 className="size-3.5 text-muted-foreground self-center mr-3" />
                             </button>
                           </div>
@@ -698,7 +754,15 @@ export const SaleSearchPanel = () => {
               </TabsContent>
 
               <TabsContent value="audit" className="mt-4">
-                <SaleAuditLog saleId={selected.id} />
+                <SaleAuditLog
+                  saleId={selected.id}
+                  onRestored={async () => {
+                    const { data } = await supabase.from("sales").select(SELECT_COLS).eq("id", selected.id).maybeSingle();
+                    if (data) openDetail(data as SaleHit);
+                    refreshCounts();
+                    search();
+                  }}
+                />
               </TabsContent>
             </Tabs>
 
@@ -736,6 +800,31 @@ export const SaleSearchPanel = () => {
             </aside>
             </div>
           )}
+          {/* CS 진행 상태 요약 — 검수자가 한눈에 확인 */}
+          <div className="mt-4 rounded-lg border border-border/40 bg-muted/30 px-4 py-2.5 flex items-center gap-4 flex-wrap text-xs">
+            <span className="font-semibold flex items-center gap-1.5">
+              <ShieldCheck className="size-3.5 text-primary-glow" /> CS 진행 상태
+            </span>
+            <span className="flex items-center gap-1">
+              <CheckCircle2 className="size-3 text-emerald-400" />
+              오늘 검수 완료 <b className="tabular-nums text-foreground">{todayReviewedCount}건</b>
+            </span>
+            <span className="flex items-center gap-1">
+              <AlertTriangle className="size-3 text-amber-500" />
+              미처리 잔여 <b className="tabular-nums text-foreground">{unhandledCount}건</b>
+            </span>
+            <span className="flex items-center gap-1">
+              <AlertCircle className="size-3 text-amber-500" />
+              미승인 <b className="tabular-nums text-foreground">{pendingCount}건</b>
+            </span>
+            <span className="flex items-center gap-1">
+              <AlertTriangle className="size-3 text-destructive" />
+              비정상 <b className="tabular-nums text-foreground">{abnormalCount}건</b>
+            </span>
+            <span className="ml-auto text-muted-foreground">
+              저장 시 리스트가 즉시 갱신됩니다.
+            </span>
+          </div>
         </DialogContent>
       </Dialog>
 

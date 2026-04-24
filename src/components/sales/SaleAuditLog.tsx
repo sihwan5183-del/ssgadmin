@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { History } from "lucide-react";
+import { History, Undo2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useRole } from "@/hooks/useRole";
+import { toast } from "sonner";
 
 interface Props {
   saleId: string;
+  onRestored?: () => void;
 }
 
 interface AuditRow {
@@ -51,10 +55,12 @@ const fmt = (v: unknown) => {
   return String(v);
 };
 
-export const SaleAuditLog = ({ saleId }: Props) => {
+export const SaleAuditLog = ({ saleId, onRestored }: Props) => {
   const [rows, setRows] = useState<AuditRow[]>([]);
   const [profiles, setProfiles] = useState<ProfileMap>({});
   const [loading, setLoading] = useState(true);
+  const { isAdmin } = useRole();
+  const [restoring, setRestoring] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -80,7 +86,19 @@ export const SaleAuditLog = ({ saleId }: Props) => {
       setLoading(false);
     };
     load();
-  }, [saleId]);
+  }, [saleId, restoring]);
+
+  const restoreField = async (key: string, oldValue: unknown) => {
+    if (!isAdmin) return;
+    if (!confirm(`'${FIELD_LABELS[key] ?? key}' 항목을 이전 값으로 되돌리시겠습니까?`)) return;
+    setRestoring(key);
+    const payload: Record<string, unknown> = { [key]: oldValue };
+    const { error } = await supabase.from("sales").update(payload as never).eq("id", saleId);
+    setRestoring(null);
+    if (error) return toast.error("복구 실패: " + error.message);
+    toast.success(`'${FIELD_LABELS[key] ?? key}' 이전 값으로 복구되었습니다`);
+    onRestored?.();
+  };
 
   if (loading) return <div className="text-center text-sm text-muted-foreground py-4">불러오는 중…</div>;
   if (rows.length === 0)
@@ -112,6 +130,18 @@ export const SaleAuditLog = ({ saleId }: Props) => {
                       <span className="line-through text-destructive/80">{fmt(diff.old)}</span>
                       <span className="text-muted-foreground">→</span>
                       <span className="text-success font-medium">{fmt(diff.new)}</span>
+                      {isAdmin && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-5 px-1.5 ml-auto text-[10px] text-muted-foreground hover:text-foreground"
+                          disabled={restoring === key}
+                          onClick={() => restoreField(key, diff.old)}
+                          title="이 값으로 복구 (관리자 전용)"
+                        >
+                          <Undo2 className="size-3 mr-0.5" /> 복구
+                        </Button>
+                      )}
                     </li>
                   ),
                 )}
