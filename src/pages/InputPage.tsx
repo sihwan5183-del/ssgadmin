@@ -20,7 +20,7 @@ import { useProductRatePlans } from "@/hooks/useProductRatePlans";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { cn } from "@/lib/utils";
 import { useFieldDefinitions } from "@/hooks/useFieldDefinitions";
-import { useNetFeeFormula } from "@/hooks/useNetFeeFormula";
+import { useNetFeeFormula, sumRevenue, sumOffer } from "@/hooks/useNetFeeFormula";
 import { DynamicFieldRenderer } from "@/components/admin/DynamicFieldRenderer";
 import { ExcelMappingDialog, type MappingTarget } from "@/components/admin/ExcelMappingDialog";
 import { ExcelTemplateEditor } from "@/components/admin/ExcelTemplateEditor";
