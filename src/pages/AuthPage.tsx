@@ -33,6 +33,10 @@ const AuthPage = () => {
     setBusy(true);
     try {
       if (mode === "signup") {
+        // 비밀번호 정책: 최소 8자 + 영문 + 숫자
+        if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+          throw new Error("비밀번호는 최소 8자이며, 영문과 숫자를 모두 포함해야 합니다.");
+        }
         const { error, data } = await supabase.auth.signUp({
           email,
           password,
