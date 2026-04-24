@@ -23,7 +23,7 @@ import {
 import {
   Search, Edit3, FileText, History, Save, Phone, User, Smartphone, Lock,
   ShieldCheck, AlertCircle, CheckCircle2, XCircle, RotateCcw, AlertTriangle,
-  Bell, CalendarX2,
+  Bell, CalendarX2, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { SaleDocuments } from "./SaleDocuments";
@@ -582,7 +582,7 @@ export const SaleSearchPanel = () => {
 
       {/* 상세/수정 다이얼로그 */}
       <Dialog open={!!selected} onOpenChange={(v) => !v && setSelected(null)}>
-        <DialogContent className="max-w-6xl max-h-[88vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[88vh] overflow-y-auto pb-20 relative">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 flex-wrap">
               실적 상세
@@ -825,6 +825,21 @@ export const SaleSearchPanel = () => {
               저장 시 리스트가 즉시 갱신됩니다.
             </span>
           </div>
+          {/* === 퀵 메뉴 (스크롤과 무관하게 항상 표시) === */}
+          {selected && (
+            <div className="sticky bottom-0 left-0 right-0 -mx-6 -mb-6 mt-4 px-6 py-3 border-t border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 flex items-center justify-end gap-2 z-10">
+              <span className="text-[11px] text-muted-foreground mr-auto">
+                저장 시 리스트가 즉시 갱신됩니다.
+              </span>
+              <Button variant="outline" size="sm" onClick={() => setSelected(null)}>
+                <X className="size-4 mr-1.5" /> 닫기
+              </Button>
+              <Button size="sm" onClick={saveEdit} disabled={!canEdit || saving} className="bg-gradient-primary">
+                <Save className="size-4 mr-1.5" />
+                {saving ? "저장 중…" : "저장"}
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
