@@ -115,6 +115,9 @@ export const SaleSearchPanel = () => {
   const [pendingCount, setPendingCount] = useState(0);
   const [unhandledOnly, setUnhandledOnly] = useState(false);
   const [unhandledCount, setUnhandledCount] = useState(0);
+  const [abnormalOnly, setAbnormalOnly] = useState(false);
+  const [abnormalCount, setAbnormalCount] = useState(0);
+  const [todayReviewedCount, setTodayReviewedCount] = useState(0);
   const [results, setResults] = useState<SaleHit[]>([]);
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<SaleHit | null>(null);
@@ -177,12 +180,20 @@ export const SaleSearchPanel = () => {
 
   // 미승인 / 미처리 카운트
   const refreshCounts = async () => {
-    const [{ count: c1 }, { count: c2 }] = await Promise.all([
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const [{ count: c1 }, { count: c2 }, abnormalRes, reviewedRes] = await Promise.all([
       supabase.from("sales").select("id", { count: "exact", head: true }).eq("approval_status", "승인대기"),
       supabase.from("sales").select("id", { count: "exact", head: true }).eq("pending_resolved", false),
+      supabase.from("sales").select("id", { count: "exact", head: true }).contains("custom_fields", { final_verdict: "비정상" }),
+      supabase.from("sales").select("id", { count: "exact", head: true })
+        .in("approval_status", ["검수완료", "확정"])
+        .gte("approved_at", `${todayStr}T00:00:00`),
     ]);
     setPendingCount(c1 ?? 0);
     setUnhandledCount(c2 ?? 0);
+    setAbnormalCount(abnormalRes.count ?? 0);
+    setTodayReviewedCount(reviewedRes.count ?? 0);
   };
 
   useEffect(() => {
