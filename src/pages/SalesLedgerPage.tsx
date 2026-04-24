@@ -744,15 +744,23 @@ const SalesLedgerPage = () => {
                       )}
                     </td>
                     <td className="px-3 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
-                      {canEdit && !isLocked ? (
-                        <div className="inline-flex gap-1">
-                          <button onClick={() => navigate(`/input?edit=${r.id}`)} className="size-7 rounded-lg grid place-items-center text-primary-glow hover:bg-primary/10">
-                            <Pencil className="size-3.5" />
-                          </button>
-                          {(mine || isAdmin) && (
-                            <button onClick={() => onDelete(r.id)} className="size-7 rounded-lg grid place-items-center text-destructive hover:bg-destructive/10">
-                              <Trash2 className="size-3.5" />
+                      {canEdit ? (
+                        <div className="inline-flex flex-col items-end gap-0.5">
+                          <div className="inline-flex gap-1">
+                            <button onClick={() => navigate(`/input?edit=${r.id}`)} className="size-7 rounded-lg grid place-items-center text-primary-glow hover:bg-primary/10">
+                              <Pencil className="size-3.5" />
                             </button>
+                            {(mine || isAdmin) && (
+                              <button onClick={() => onDelete(r.id)} className="size-7 rounded-lg grid place-items-center text-destructive hover:bg-destructive/10">
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            )}
+                          </div>
+                          {isLocked && adminOverride && (
+                            <span className="text-[9px] text-destructive/80 flex items-center gap-0.5 leading-tight max-w-[140px] text-right">
+                              <AlertTriangle className="size-2.5 shrink-0" />
+                              확정 실적 수정 — 정산 영향 주의
+                            </span>
                           )}
                         </div>
                       ) : isLocked ? (
