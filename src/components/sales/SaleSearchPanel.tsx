@@ -369,6 +369,12 @@ export const SaleSearchPanel = () => {
           <Badge variant="outline" className="border-amber-400 text-amber-700 bg-amber-50 gap-1">
             <AlertTriangle className="size-3" /> 미처리 {unhandledCount}건
           </Badge>
+          <Badge variant="outline" className="border-destructive/50 text-destructive bg-destructive/10 gap-1">
+            <AlertTriangle className="size-3" /> 비정상 {abnormalCount}건
+          </Badge>
+          <Badge variant="outline" className="border-emerald-500/40 text-emerald-300 bg-emerald-500/10 gap-1">
+            <ShieldCheck className="size-3" /> 오늘 검수 {todayReviewedCount}건
+          </Badge>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/40 border border-border/40">
             <Switch
               id="pending-only"
@@ -393,6 +399,19 @@ export const SaleSearchPanel = () => {
             />
             <Label htmlFor="unhandled-only" className="text-xs cursor-pointer">
               미처리만
+            </Label>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-destructive/5 border border-destructive/30">
+            <Switch
+              id="abnormal-only"
+              checked={abnormalOnly}
+              onCheckedChange={(v) => {
+                setAbnormalOnly(v);
+                search(undefined, undefined, undefined, v);
+              }}
+            />
+            <Label htmlFor="abnormal-only" className="text-xs cursor-pointer text-destructive">
+              비정상만
             </Label>
           </div>
         </div>
