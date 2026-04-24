@@ -36,6 +36,10 @@ import ChannelIntakePage from "./pages/ChannelIntakePage.tsx";
 import BudgetCategoriesPage from "./pages/BudgetCategoriesPage.tsx";
 import MyPage from "./pages/MyPage.tsx";
 import SalesLedgerPage from "./pages/SalesLedgerPage.tsx";
+import AccountManagementPage from "./pages/AccountManagementPage.tsx";
+import AccountPendingPage from "./pages/AccountPendingPage.tsx";
+import AccountStaffPage from "./pages/AccountStaffPage.tsx";
+import AccountRolesPage from "./pages/AccountRolesPage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -73,6 +77,11 @@ const App = () => (
                         <Route path="/staff-status" element={<StaffStatusPage />} />
                         <Route path="/admin" element={<AdminPage />} />
                         <Route path="/admin/menu" element={<MenuManagerPage />} />
+                        <Route path="/admin/accounts" element={<AccountManagementPage />}>
+                          <Route path="pending" element={<AccountPendingPage />} />
+                          <Route path="staff" element={<AccountStaffPage />} />
+                          <Route path="roles" element={<AccountRolesPage />} />
+                        </Route>
                         <Route path="/product-rate-plans" element={<ProductRatePlansPage />} />
                         <Route path="/device-inventory" element={<DeviceInventoryPage />} />
                         <Route path="/ad-calendar" element={<AdCalendarPage />} />

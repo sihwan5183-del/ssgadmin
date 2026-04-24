@@ -48,7 +48,9 @@ const AuthPage = () => {
             .update({ team: team || null, phone: phone || null })
             .eq("user_id", data.user.id);
         }
-        toast.success("가입 완료", { description: "이제 로그인하세요." });
+        toast.success("가입 신청 완료", {
+          description: "이메일 인증 후 관리자 승인이 완료되어야 로그인할 수 있습니다.",
+        });
         setMode("login");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
