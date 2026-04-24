@@ -4,15 +4,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import {
   CheckCircle2, XCircle, Edit3, RotateCcw, AlertCircle,
-  MessageSquare, Send, ShieldCheck, Clock,
+  MessageSquare, Send, ShieldCheck, Clock, ShieldAlert, MessageCircle,
+  Home, CalendarClock, Gavel,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
+import { PendingItemsEditor } from "./PendingItemsEditor";
 
 interface ChecklistItem { key: string; label: string }
 const DEFAULT_CHECKLIST: ChecklistItem[] = [
@@ -46,7 +50,9 @@ interface SaleSnapshot {
   re_review_requested_at: string | null;
   approved_at: string | null;
   pending_items: string[] | null;
+  pending_note?: string | null;
   pending_resolved: boolean | null;
+  product?: string | null;
   custom_fields?: Record<string, any> | null;
 }
 
