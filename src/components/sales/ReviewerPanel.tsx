@@ -26,7 +26,7 @@ const DEFAULT_CHECKLIST: ChecklistItem[] = [
   { key: "bundle_match", label: "결합 확인" },
 ];
 
-export type ApprovalStatus = "승인대기" | "확정" | "반려" | "수정요청" | "환수" | "취소";
+export type ApprovalStatus = "승인대기" | "검수완료" | "확정" | "반려" | "수정요청" | "환수" | "취소";
 
 export const REVISION_FIELD_OPTIONS = [
   "고객 정보",
@@ -63,6 +63,7 @@ interface Props {
 
 const STATUS_META: Record<string, { tone: string; icon: typeof CheckCircle2; label: string }> = {
   승인대기: { tone: "border-amber-400 text-amber-700 bg-amber-50", icon: AlertCircle, label: "승인대기" },
+  검수완료: { tone: "border-sky-500/50 text-sky-300 bg-sky-500/10", icon: ShieldCheck, label: "검수 완료" },
   확정: { tone: "border-emerald-500/40 text-emerald-300 bg-emerald-500/10", icon: CheckCircle2, label: "확정" },
   반려: { tone: "border-destructive/40 text-destructive bg-destructive/10", icon: XCircle, label: "반려" },
   수정요청: { tone: "border-orange-400 text-orange-700 bg-orange-50", icon: Edit3, label: "수정요청" },
