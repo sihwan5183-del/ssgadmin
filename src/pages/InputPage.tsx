@@ -852,6 +852,36 @@ const InputPage = () => {
               />
             </Field>
           </Grid>
+          {/* 분류 토큰 — 기변타겟C / 청소년 */}
+          <div className="flex flex-wrap items-center gap-2 px-1">
+            <span className="text-[11px] text-muted-foreground font-medium mr-1">분류:</span>
+            <button
+              type="button"
+              onClick={() => setCustomFields((f) => ({ ...f, target_c: !f.target_c }))}
+              className={cn(
+                "px-3 py-1.5 rounded-full border text-[11px] font-medium transition-all",
+                customFields.target_c
+                  ? "border-primary bg-primary/15 text-primary shadow-sm"
+                  : "border-border/40 text-muted-foreground hover:border-primary/40",
+              )}
+              aria-pressed={!!customFields.target_c}
+            >
+              {customFields.target_c ? "✓ " : ""}기변타겟C
+            </button>
+            <button
+              type="button"
+              onClick={() => setCustomFields((f) => ({ ...f, is_youth: !f.is_youth }))}
+              className={cn(
+                "px-3 py-1.5 rounded-full border text-[11px] font-medium transition-all",
+                customFields.is_youth
+                  ? "border-amber-400 bg-amber-50 text-amber-700 shadow-sm"
+                  : "border-border/40 text-muted-foreground hover:border-amber-400/60",
+              )}
+              aria-pressed={!!customFields.is_youth}
+            >
+              {customFields.is_youth ? "✓ " : ""}청소년
+            </button>
+          </div>
           <div className="border-t border-border/30 pt-3 mt-1" />
           <Grid cols={4}>
             <Field label="단말기">
