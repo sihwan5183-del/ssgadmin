@@ -17,7 +17,7 @@ export const MobileTopBar = () => {
           <Sparkles className="size-4 text-primary-foreground" />
         </div>
         <div className="min-w-0">
-          <div className="text-[10px] text-muted-foreground leading-none">신세계정보통신</div>
+          <div className="text-[10px] text-muted-foreground leading-none">UDak</div>
           <div className="text-sm font-semibold tracking-tight leading-tight mt-0.5 truncate">영업기획팀</div>
         </div>
       </div>

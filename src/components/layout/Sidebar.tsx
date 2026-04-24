@@ -66,7 +66,7 @@ export const Sidebar = () => {
           <Sparkles className="size-5 text-primary-foreground" />
         </div>
         <div>
-          <div className="text-sm text-muted-foreground leading-none">신세계정보통신</div>
+          <div className="text-sm text-muted-foreground leading-none">UDak</div>
           <div className="text-base font-semibold tracking-tight mt-1">영업기획팀</div>
         </div>
       </div>
