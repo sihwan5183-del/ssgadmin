@@ -145,10 +145,22 @@ const SalesLedgerPage = () => {
     else localStorage.removeItem("admin_force_unlock_sales");
   }, [forceUnlock]);
 
+  // 5대 오퍼 + 카드결제 + 제휴카드 할인
   const offerOf = (r: SaleRow) =>
-    (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0) + (r.customer_support_amount ?? 0) + (r.corp_card_amount ?? 0);
+    (r.distributor_amount ?? 0)
+    + (r.extra_subsidy ?? 0)
+    + (r.cash_support_amount ?? 0)
+    + (r.customer_support_amount ?? 0)
+    + (r.corp_card_amount ?? 0)
+    + Number((r as any).custom_fields?.partner_card_discount ?? 0);
+  // 5대 수익 - 오퍼
   const profitOf = (r: SaleRow) =>
-    (r.unit_price ?? 0) + (r.vas_fee ?? 0) + (r.trade_in_enabled ? (r.trade_in_confirmed ?? 0) : 0) - offerOf(r);
+    (r.unit_price ?? 0)
+    + (r.vas_fee ?? 0)
+    + (r.trade_in_enabled ? (r.trade_in_confirmed ?? 0) : 0)
+    + (r.receivable_amount ?? 0)
+    + Number((r as any).custom_fields?.voucher_amount ?? 0)
+    - offerOf(r);
   const hasDeductions = (r: SaleRow) =>
     offerOf(r) > 0;
 

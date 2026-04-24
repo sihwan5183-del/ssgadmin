@@ -20,7 +20,7 @@ import { useProductRatePlans } from "@/hooks/useProductRatePlans";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { cn } from "@/lib/utils";
 import { useFieldDefinitions } from "@/hooks/useFieldDefinitions";
-import { useNetFeeFormula } from "@/hooks/useNetFeeFormula";
+import { useNetFeeFormula, sumRevenue, sumOffer } from "@/hooks/useNetFeeFormula";
 import { DynamicFieldRenderer } from "@/components/admin/DynamicFieldRenderer";
 import { ExcelMappingDialog, type MappingTarget } from "@/components/admin/ExcelMappingDialog";
 import { ExcelTemplateEditor } from "@/components/admin/ExcelTemplateEditor";
@@ -1531,9 +1531,51 @@ const InputPage = () => {
           </div>
         )}
 
-        <div className="text-[10px] text-muted-foreground text-right -mb-1">
-          수익 자동계산 수식: <code className="font-mono text-primary/80">{netFeeFormula}</code>
-        </div>
+        {/* === 수익/오퍼 합계 요약 === */}
+        {(() => {
+          const row = {
+            ...form,
+            ...customFields,
+            voucher_amount: Number(customFields?.voucher_amount ?? 0),
+            partner_card_discount: Number(customFields?.partner_card_discount ?? 0),
+            custom_fields: customFields,
+          } as Record<string, any>;
+          const revenue = sumRevenue(row);
+          const offer = sumOffer(row);
+          const net = revenue - offer;
+          const fmt = (n: number) =>
+            (n < 0 ? "-" : "") + "₩" + Math.abs(Math.round(n)).toLocaleString("ko-KR");
+          return (
+            <div className="rounded-2xl border border-border/40 bg-muted/30 p-4 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">수익 합계 (5대 수익)</span>
+                <span className="font-mono tabular-nums font-semibold text-emerald-600 dark:text-emerald-400">
+                  +{fmt(revenue)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">오퍼 합계 (5대 오퍼 + 카드결제)</span>
+                <span className="font-mono tabular-nums font-semibold text-destructive">
+                  -{fmt(offer)}
+                </span>
+              </div>
+              <div className="border-t border-border/40 pt-2 flex items-center justify-between">
+                <span className="text-sm font-bold">최종 순수익</span>
+                <span
+                  className={cn(
+                    "font-mono tabular-nums text-lg font-extrabold",
+                    net < 0 ? "text-destructive" : "text-primary",
+                  )}
+                >
+                  {fmt(net)}
+                </span>
+              </div>
+              <div className="text-[10px] text-muted-foreground text-right pt-1">
+                자동계산 수식: <code className="font-mono text-primary/80">{netFeeFormula}</code>
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="flex gap-3">
           {editingId && (
