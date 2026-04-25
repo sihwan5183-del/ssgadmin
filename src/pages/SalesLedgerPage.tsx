@@ -17,7 +17,7 @@ import {
 import {
   Download, Search, Trash2, Pencil, ShieldAlert, Hash,
   Wallet as WalletIcon, Gift, TrendingUp, Banknote, FileText,
-  AlertTriangle, Filter, X, Lock, Unlock,
+  AlertTriangle, Filter, X, Lock, Unlock, Loader2,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
