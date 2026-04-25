@@ -19,6 +19,7 @@ import {
   SALES_COLUMNS,
   AD_SPEND_COLUMNS,
   DEVICE_INVENTORY_COLUMNS,
+  type ColumnDef,
 } from "@/lib/excelExport";
 
 type TabKey = "sales" | "expenses" | "customers" | "inventory";
