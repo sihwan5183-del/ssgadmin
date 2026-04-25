@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { useProductRatePlans } from "@/hooks/useProductRatePlans";
+import { useEquipmentCatalog } from "@/hooks/useEquipmentCatalog";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { cn } from "@/lib/utils";
 import { useFieldDefinitions } from "@/hooks/useFieldDefinitions";
