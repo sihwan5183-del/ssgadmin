@@ -11,7 +11,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, GripVertical } from "lucide-react";
+import { Plus, Trash2, Pencil } from "lucide-react";
+import { SortableList, SortableItem } from "@/components/common/SortableList";
 
 const TABLES = [
   { key: "sales", label: "실적 (sales)" },
@@ -149,6 +150,22 @@ export const DynamicFieldsManager = () => {
     load();
   };
 
+  const handleReorder = async (newRows: Def[]) => {
+    const reindexed = newRows.map((r, i) => ({ ...r, sort_order: i + 1 }));
+    setRows(reindexed);
+    const updates = await Promise.all(
+      reindexed.map((r) =>
+        supabase.from("field_definitions").update({ sort_order: r.sort_order }).eq("id", r.id),
+      ),
+    );
+    if (updates.some((u) => u.error)) {
+      toast.error("순서 저장 실패");
+      load();
+    } else {
+      toast.success("순서가 저장되었습니다");
+    }
+  };
+
   return (
     <Card className="p-6 glass border-border/40">
       <div className="flex items-center justify-between mb-4">
@@ -182,15 +199,16 @@ export const DynamicFieldsManager = () => {
               </div>
             ) : (
               <div className="space-y-2">
-                {rows.map((d) => (
-                  <div
-                    key={d.id}
-                    className={`flex items-center gap-3 p-3 rounded-lg border ${
-                      d.active ? "border-border/40 bg-card/40" : "border-dashed opacity-50"
-                    }`}
-                  >
-                    <GripVertical className="size-4 text-muted-foreground" />
-                    <div className="flex-1">
+                <SortableList items={rows} onReorder={handleReorder}>
+                  {(d) => (
+                    <SortableItem
+                      key={d.id}
+                      id={d.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg border ${
+                        d.active ? "border-border/40 bg-card/40" : "border-dashed opacity-50"
+                      }`}
+                    >
+                      <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{d.label}</span>
                         <Badge variant="outline" className="text-[10px]">
@@ -206,18 +224,19 @@ export const DynamicFieldsManager = () => {
                           섹션: {d.section}
                         </div>
                       )}
-                    </div>
-                    <Button size="sm" variant="ghost" onClick={() => toggleActive(d)}>
-                      {d.active ? "숨기기" : "사용"}
-                    </Button>
-                    <Button size="icon" variant="ghost" onClick={() => openEdit(d)}>
-                      <Pencil className="size-3.5" />
-                    </Button>
-                    <Button size="icon" variant="ghost" onClick={() => remove(d.id)}>
-                      <Trash2 className="size-3.5 text-destructive" />
-                    </Button>
-                  </div>
-                ))}
+                      </div>
+                      <Button size="sm" variant="ghost" onClick={() => toggleActive(d)}>
+                        {d.active ? "숨기기" : "사용"}
+                      </Button>
+                      <Button size="icon" variant="ghost" onClick={() => openEdit(d)}>
+                        <Pencil className="size-3.5" />
+                      </Button>
+                      <Button size="icon" variant="ghost" onClick={() => remove(d.id)}>
+                        <Trash2 className="size-3.5 text-destructive" />
+                      </Button>
+                    </SortableItem>
+                  )}
+                </SortableList>
               </div>
             )}
           </TabsContent>
