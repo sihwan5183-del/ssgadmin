@@ -786,19 +786,28 @@ const InputPage = () => {
                 <SelectContent>{PRODUCTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
               </Select>
             </Field>
-            <Field label="판매유형 *">
+            <Field label="판매유형">
               {(() => {
                 const allowed = getAllowedSaleTypes(form.product);
                 const types = allowed.length > 0 ? SALE_TYPES.filter((s) => allowed.includes(s)) : SALE_TYPES;
                 const defaults = getDefaultsForProduct(form.product);
                 const mismatch = defaults?.default_sale_type && form.sale_type && form.sale_type !== defaults.default_sale_type && !autoFilledFields.has("sale_type");
+                // 유선 상품(인터넷/TV프리/스마트홈)은 판매유형이 의미가 없어 비활성화 + 흐림 처리
+                const wiredProducts = ["인터넷", "TV프리", "스마트홈"];
+                const isWired = !!form.product && wiredProducts.includes(form.product);
                 return (
-                  <div>
-                    <Select value={form.sale_type ?? ""} onValueChange={(v) => set("sale_type", v)}>
-                      <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
+                  <div className={isWired ? "opacity-50" : ""}>
+                    <Select
+                      value={form.sale_type ?? ""}
+                      onValueChange={(v) => set("sale_type", v)}
+                      disabled={isWired}
+                    >
+                      <SelectTrigger className="h-9 bg-input/60 text-xs">
+                        <SelectValue placeholder={isWired ? "해당 없음" : "선택 (선택 사항)"} />
+                      </SelectTrigger>
                       <SelectContent>{types.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>
-                    {mismatch && (
+                    {!isWired && mismatch && (
                       <p className="text-[10px] text-amber-500 mt-1 flex items-center gap-1">
                         <AlertTriangle className="size-3" /> 기본 설정({defaults.default_sale_type})과 다릅니다
                       </p>
