@@ -21,7 +21,8 @@ export const SplashScreen = ({ onDone }: { onDone: () => void }) => {
   return (
     <div
       aria-hidden
-      className={`fixed inset-0 z-[9999] grid place-items-center bg-white transition-opacity duration-500 ${
+      style={{ backgroundColor: "#FFFFFF", colorScheme: "light" }}
+      className={`splash-root fixed inset-0 z-[9999] grid place-items-center transition-opacity duration-500 ${
         leaving ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
     >
@@ -35,7 +36,7 @@ export const SplashScreen = ({ onDone }: { onDone: () => void }) => {
           <img
             src={udakLogo}
             alt="UDak"
-            className="relative size-28 md:size-32 object-contain rounded-3xl splash-logo"
+            className="relative size-36 md:size-40 object-contain rounded-3xl splash-logo"
             draggable={false}
           />
         </div>
@@ -54,10 +55,11 @@ export const SplashScreen = ({ onDone }: { onDone: () => void }) => {
       </div>
 
       <style>{`
+        .splash-root { background-color: #FFFFFF !important; color-scheme: light; }
         @keyframes splashLogoIn {
           0%   { opacity: 0; transform: translateY(24px) scale(0.82); filter: blur(8px); }
-          60%  { opacity: 1; transform: translateY(-4px) scale(1.04); filter: blur(0); }
-          100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+          60%  { opacity: 1; transform: translateY(-4px) scale(1.25); filter: blur(0); }
+          100% { opacity: 1; transform: translateY(0) scale(1.2); filter: blur(0); }
         }
         @keyframes splashRing {
           0%   { opacity: 0; transform: scale(0.6); box-shadow: 0 0 0 0 hsl(325 85% 52% / 0.35); }
@@ -79,8 +81,10 @@ export const SplashScreen = ({ onDone }: { onDone: () => void }) => {
         .splash-logo {
           animation: splashLogoIn 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
           box-shadow:
-            0 18px 50px -12px hsl(325 85% 52% / 0.35),
-            0 8px 20px -8px hsl(22 95% 55% / 0.25);
+            0 0 0 6px rgba(255, 255, 255, 0.9),
+            0 18px 50px -12px hsl(325 85% 52% / 0.45),
+            0 8px 24px -6px hsl(22 95% 55% / 0.30);
+          filter: drop-shadow(0 4px 12px rgba(0,0,0,0.08));
         }
         .splash-ring {
           animation: splashRing 1400ms ease-out 200ms both;
