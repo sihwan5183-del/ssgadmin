@@ -8,7 +8,7 @@ import { toast } from "sonner";
  * @param fileName .xlsx 확장자 없이
  * @param sheetName 시트명
  */
-type ColumnDef = [string, string] | [string, string, (row: any) => any];
+export type ColumnDef = [string, string] | [string, string, (row: any) => any];
 
 const resolveValue = (row: any, col: ColumnDef) => {
   if (col.length === 3 && typeof col[2] === "function") {
