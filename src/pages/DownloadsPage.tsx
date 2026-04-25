@@ -24,7 +24,7 @@ import {
 type TabKey = "sales" | "expenses" | "customers" | "inventory";
 
 /* ── 카테고리별 컬럼 정의 ── */
-const INQUIRY_COLUMNS: Array<[string, string]> = [
+const INQUIRY_COLUMNS: Array<ColumnDef> = [
   ["inquiry_date", "문의일"],
   ["channel", "인입경로"],
   ["customer_name", "고객명"],
@@ -36,7 +36,7 @@ const INQUIRY_COLUMNS: Array<[string, string]> = [
   ["note", "메모"],
 ];
 
-const REGULARS_COLUMNS: Array<[string, string]> = [
+const REGULARS_COLUMNS: Array<ColumnDef> = [
   ["registered_date", "등록일"],
   ["customer_name", "고객명"],
   ["phone", "연락처"],
@@ -48,7 +48,7 @@ const REGULARS_COLUMNS: Array<[string, string]> = [
   ["note", "메모"],
 ];
 
-const STAFF_COLUMNS: Array<[string, string]> = [
+const STAFF_COLUMNS: Array<ColumnDef> = [
   ["display_name", "이름"],
   ["team", "팀"],
   ["store", "매장"],
@@ -58,7 +58,7 @@ const STAFF_COLUMNS: Array<[string, string]> = [
 ];
 
 /* 법인카드 전용 */
-const CORP_CARD_COLUMNS: Array<[string, string]> = [
+const CORP_CARD_COLUMNS: Array<ColumnDef> = [
   ["seq", "순번"],
   ["open_date", "개통일"],
   ["customer_name", "고객명"],
@@ -74,7 +74,7 @@ const CORP_CARD_COLUMNS: Array<[string, string]> = [
 ];
 
 /* 정산용 양식 */
-const SETTLEMENT_COLUMNS: Array<[string, string]> = [
+const SETTLEMENT_COLUMNS: Array<ColumnDef> = [
   ["seq", "순번"],
   ["open_date", "개통일"],
   ["customer_name", "고객명"],
@@ -97,7 +97,7 @@ interface TabDef {
   key: TabKey;
   label: string;
   icon: React.ReactNode;
-  columns: Array<[string, string]>;
+  columns: Array<ColumnDef>;
   table: string;
   dateField: string;
   statusFilters?: { label: string; field: string; value: string }[];
@@ -223,7 +223,7 @@ const DownloadsPage = () => {
   };
 
   /* ── 클라이언트 사이드 엑셀 추출 ── */
-  const runClientExport = async (tab: TabDef, cols: Array<[string, string]>, labelSuffix = "") => {
+  const runClientExport = async (tab: TabDef, cols: Array<ColumnDef>, labelSuffix = "") => {
     const key = tab.key + labelSuffix;
     setBusy(key);
     try {
