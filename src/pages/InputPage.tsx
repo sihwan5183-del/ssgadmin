@@ -1024,6 +1024,127 @@ const InputPage = () => {
             );
           })()}
 
+          {/* TV 추가 (인터넷/유선결합 상품) */}
+          {(() => {
+            const wiredAddonProducts = ["인터넷", "TV프리", "스마트홈", "홈", "유선결합"];
+            const isWired = !!form.product && wiredAddonProducts.some((p) => form.product!.includes(p));
+            if (!isWired) return null;
+
+            const tvLines: Array<{ rate_plan?: string; settop?: string }> = Array.isArray(customFields.tv_lines)
+              ? customFields.tv_lines
+              : [];
+
+            // TV 카테고리 요금제 (상품명에 'TV' 포함)
+            const tvPlans = Array.from(
+              new Set(
+                (mappings ?? [])
+                  .filter((m: any) => m.active && typeof m.product === "string" && m.product.toUpperCase().includes("TV"))
+                  .map((m: any) => m.rate_plan as string),
+              ),
+            );
+            // 셋톱박스 옵션 (어드민 field_options: settop 또는 device_models 의 셋톱 종류)
+            const settopOptions = settopOpts;
+
+            const updateLines = (next: typeof tvLines) =>
+              setCustomFields((f) => ({ ...f, tv_lines: next }));
+            const addLine = () => {
+              if (tvLines.length >= 3) return;
+              updateLines([...tvLines, { rate_plan: "", settop: "" }]);
+            };
+            const removeLine = (i: number) => updateLines(tvLines.filter((_, idx) => idx !== i));
+            const patchLine = (i: number, patch: Partial<{ rate_plan: string; settop: string }>) =>
+              updateLines(tvLines.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+
+            return (
+              <div className="border border-border/30 rounded-xl p-3 mt-2 bg-muted/10">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <Tv className="size-3.5 text-primary" />
+                  <span className="text-xs font-semibold">TV 추가 회선</span>
+                  <Badge variant="outline" className="text-[10px]">{tvLines.length}/3</Badge>
+                  <span className="text-[10px] text-muted-foreground ml-auto">인터넷 1회선 + TV {tvLines.length}회선</span>
+                </div>
+
+                <div className="space-y-2">
+                  {tvLines.map((line, i) => (
+                    <div
+                      key={i}
+                      className="rounded-lg border border-border/40 bg-background/40 p-2.5 animate-in fade-in slide-in-from-top-1 duration-200"
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[11px] font-semibold text-primary">TV #{i + 1}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-destructive hover:text-destructive"
+                          onClick={() => removeLine(i)}
+                        >
+                          <Trash2 className="size-3.5" />
+                          <span className="text-[11px] ml-1">삭제</span>
+                        </Button>
+                      </div>
+                      <Grid cols={2}>
+                        <Field label="TV 요금제">
+                          <Select
+                            value={line.rate_plan ?? ""}
+                            onValueChange={(v) => patchLine(i, { rate_plan: v })}
+                          >
+                            <SelectTrigger className="h-9 bg-input/60 text-xs">
+                              <SelectValue placeholder={tvPlans.length === 0 ? "TV 요금제 미등록 (어드민)" : "선택"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {tvPlans.map((p) => (
+                                <SelectItem key={p} value={p}>{p}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </Field>
+                        <Field label="셋톱박스">
+                          {settopOptions.length > 0 ? (
+                            <Select
+                              value={line.settop ?? ""}
+                              onValueChange={(v) => patchLine(i, { settop: v })}
+                            >
+                              <SelectTrigger className="h-9 bg-input/60 text-xs">
+                                <SelectValue placeholder="선택 또는 직접 입력" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {settopOptions.map((s) => (
+                                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Input
+                              value={line.settop ?? ""}
+                              onChange={(e) => patchLine(i, { settop: e.target.value })}
+                              placeholder="셋톱박스 모델 입력"
+                              className="h-9 bg-input/60 text-xs"
+                            />
+                          )}
+                        </Field>
+                      </Grid>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-2 pt-2 border-t border-border/30">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-full text-xs"
+                    onClick={addLine}
+                    disabled={tvLines.length >= 3}
+                  >
+                    <Plus className="size-3.5" />
+                    {tvLines.length >= 3 ? "최대 3대까지 추가 가능" : "TV 추가"}
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* 자동이체 정보 */}
           <div className="border border-border/30 rounded-xl p-3 mt-2 bg-muted/10">
             <div className="flex items-center gap-2 mb-2">
