@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Plus, Settings2, Pencil, Check, X } from "lucide-react";
+import { SortableList, SortableItem } from "@/components/common/SortableList";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -126,6 +127,24 @@ export default function FieldOptionsPage() {
     load();
   };
 
+  const handleReorder = async (newItems: Row[]) => {
+    // Optimistic update
+    const reindexed = newItems.map((r, i) => ({ ...r, sort_order: i + 1 }));
+    setRows(reindexed);
+    // Persist all sort_orders
+    const updates = await Promise.all(
+      reindexed.map((r) =>
+        supabase.from("field_options").update({ sort_order: r.sort_order }).eq("id", r.id),
+      ),
+    );
+    if (updates.some((u) => u.error)) {
+      toast.error("순서 저장 실패");
+      load();
+    } else {
+      toast.success("순서가 저장되었습니다");
+    }
+  };
+
   return (
     <div>
       <Header
@@ -193,13 +212,15 @@ export default function FieldOptionsPage() {
                 등록된 옵션이 없습니다
               </div>
             ) : (
-              rows.map((r, i) => (
-                <div
-                  key={r.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                    r.active ? "border-border bg-card" : "border-dashed border-border/50 bg-muted/30 opacity-60"
-                  }`}
-                >
+              <SortableList items={rows} onReorder={handleReorder}>
+                {(r, i) => (
+                  <SortableItem
+                    key={r.id}
+                    id={r.id}
+                    className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                      r.active ? "border-border bg-card" : "border-dashed border-border/50 bg-muted/30 opacity-60"
+                    }`}
+                  >
                   <span className="text-xs text-muted-foreground w-6 text-right">{i + 1}</span>
                   {editingId === r.id ? (
                     <div className="flex-1 flex items-center gap-1.5">
@@ -237,8 +258,9 @@ export default function FieldOptionsPage() {
                       </Button>
                     </>
                   )}
-                </div>
-              ))
+                  </SortableItem>
+                )}
+              </SortableList>
             )}
           </div>
         </Card>
