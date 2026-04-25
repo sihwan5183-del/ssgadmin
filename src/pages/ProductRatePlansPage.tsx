@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Plus, Link2, Package } from "lucide-react";
+import { Trash2, Plus, Link2, Package, ArrowUp, ArrowDown, Tag, Layers } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,13 +35,31 @@ export default function ProductRatePlansPage() {
   const { user } = useAuth();
   const { isAdmin, loading: roleLoading } = useRole();
   const { options: PRODUCTS } = useFieldOptions("product");
-  const { options: RATE_PLANS } = useFieldOptions("rate_plan");
-  const { options: SALE_TYPES } = useFieldOptions("sale_type");
+  const { options: RATE_PLANS, refresh: refreshRatePlans } = useFieldOptions("rate_plan");
+  const { options: SALE_TYPES, refresh: refreshSaleTypes } = useFieldOptions("sale_type");
 
   const [mappings, setMappings] = useState<Mapping[]>([]);
   const [activeProduct, setActiveProduct] = useState<string>("");
   const [newPlan, setNewPlan] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [newRatePlanName, setNewRatePlanName] = useState("");
+  const [newSaleTypeName, setNewSaleTypeName] = useState("");
+  const [showManager, setShowManager] = useState<"none" | "rate_plan" | "sale_type">("none");
+
+  // Master rows for rate_plan / sale_type to support edit/delete/reorder
+  const [ratePlanRows, setRatePlanRows] = useState<Array<{ id: string; value: string; sort_order: number; active: boolean }>>([]);
+  const [saleTypeRows, setSaleTypeRows] = useState<Array<{ id: string; value: string; sort_order: number; active: boolean }>>([]);
+
+  const loadOptionRows = async (field: "rate_plan" | "sale_type") => {
+    const { data, error } = await supabase
+      .from("field_options")
+      .select("id, value, sort_order, active")
+      .eq("field", field)
+      .order("sort_order", { ascending: true });
+    if (error) { toast.error(error.message); return; }
+    if (field === "rate_plan") setRatePlanRows((data ?? []) as any);
+    else setSaleTypeRows((data ?? []) as any);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -56,6 +74,11 @@ export default function ProductRatePlansPage() {
 
   useEffect(() => {
     load();
+  }, []);
+
+  useEffect(() => {
+    loadOptionRows("rate_plan");
+    loadOptionRows("sale_type");
   }, []);
 
   useEffect(() => {
@@ -128,6 +151,74 @@ export default function ProductRatePlansPage() {
     );
   }
 
+  // ===== 마스터 옵션(요금제 / 판매유형) 관리 =====
+  const addMasterOption = async (field: "rate_plan" | "sale_type", value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed || !user) return;
+    const rows = field === "rate_plan" ? ratePlanRows : saleTypeRows;
+    if (rows.some((r) => r.value === trimmed)) {
+      toast.error("이미 동일한 이름이 존재합니다");
+      return;
+    }
+    const maxOrder = rows.reduce((m, r) => Math.max(m, r.sort_order), 0);
+    const { error } = await supabase.from("field_options").insert({
+      field,
+      value: trimmed,
+      sort_order: maxOrder + 1,
+      created_by: user.id,
+    });
+    if (error) { toast.error("저장 실패: " + error.message); return; }
+    toast.success("추가되었습니다 (실적 입력창에 즉시 반영)");
+    if (field === "rate_plan") { setNewRatePlanName(""); refreshRatePlans(); }
+    else { setNewSaleTypeName(""); refreshSaleTypes(); }
+    loadOptionRows(field);
+  };
+
+  const removeMasterOption = async (field: "rate_plan" | "sale_type", id: string, value: string) => {
+    if (!confirm(`'${value}' 항목을 삭제할까요?\n과거 입력된 실적 데이터는 그대로 보존됩니다.`)) return;
+    const { error } = await supabase.from("field_options").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("삭제되었습니다");
+    if (field === "rate_plan") refreshRatePlans(); else refreshSaleTypes();
+    loadOptionRows(field);
+  };
+
+  const toggleMasterOption = async (field: "rate_plan" | "sale_type", id: string, active: boolean) => {
+    const { error } = await supabase.from("field_options").update({ active: !active }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    if (field === "rate_plan") refreshRatePlans(); else refreshSaleTypes();
+    loadOptionRows(field);
+  };
+
+  const moveMasterOption = async (field: "rate_plan" | "sale_type", index: number, direction: -1 | 1) => {
+    const rows = field === "rate_plan" ? [...ratePlanRows] : [...saleTypeRows];
+    const target = index + direction;
+    if (target < 0 || target >= rows.length) return;
+    const a = rows[index];
+    const b = rows[target];
+    const updates = await Promise.all([
+      supabase.from("field_options").update({ sort_order: b.sort_order }).eq("id", a.id),
+      supabase.from("field_options").update({ sort_order: a.sort_order }).eq("id", b.id),
+    ]);
+    if (updates.some((r) => r.error)) { toast.error("순서 변경 실패"); return; }
+    if (field === "rate_plan") refreshRatePlans(); else refreshSaleTypes();
+    loadOptionRows(field);
+  };
+
+  // ===== 매핑 순서 변경 =====
+  const moveMapping = async (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= filtered.length) return;
+    const a = filtered[index];
+    const b = filtered[target];
+    const updates = await Promise.all([
+      supabase.from("product_rate_plans").update({ sort_order: b.sort_order }).eq("id", a.id),
+      supabase.from("product_rate_plans").update({ sort_order: a.sort_order }).eq("id", b.id),
+    ]);
+    if (updates.some((r) => r.error)) { toast.error("순서 변경 실패"); return; }
+    load();
+  };
+
   // Save product-level defaults on the first mapping row
   const saveDefaults = async (field: string, value: any) => {
     if (!activeProduct || filtered.length === 0) return;
@@ -150,6 +241,129 @@ export default function ProductRatePlansPage() {
         subtitle="가입상품을 선택했을 때 실적 입력 화면에 표시될 요금제를 지정합니다"
         showScopeToggle={false}
       />
+
+      {/* 마스터 옵션 관리: 요금제 / 판매유형 추가·삭제·순서 변경 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        {/* 요금제 마스터 */}
+        <Card className="p-4 glass">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Tag className="size-4 text-primary" />
+              <span className="text-sm font-semibold">요금제 마스터</span>
+              <Badge variant="outline" className="text-[10px]">{ratePlanRows.length}개</Badge>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs"
+              onClick={() => setShowManager(showManager === "rate_plan" ? "none" : "rate_plan")}
+            >
+              {showManager === "rate_plan" ? "접기" : "펼치기"}
+            </Button>
+          </div>
+          <div className="flex gap-2">
+            <Input
+              placeholder="새 요금제 이름 (예: 5G 프리미어)"
+              value={newRatePlanName}
+              onChange={(e) => setNewRatePlanName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addMasterOption("rate_plan", newRatePlanName)}
+              className="h-9"
+            />
+            <Button
+              size="sm"
+              onClick={() => addMasterOption("rate_plan", newRatePlanName)}
+              disabled={!newRatePlanName.trim()}
+              className="gap-1 shrink-0"
+            >
+              <Plus className="size-3.5" /> 추가
+            </Button>
+          </div>
+          {showManager === "rate_plan" && (
+            <div className="mt-3 space-y-1 max-h-72 overflow-y-auto pr-1">
+              {ratePlanRows.length === 0 ? (
+                <div className="text-xs text-muted-foreground text-center py-4">등록된 요금제가 없습니다</div>
+              ) : ratePlanRows.map((r, i) => (
+                <div key={r.id} className={`flex items-center gap-1 p-2 rounded border text-sm ${r.active ? "border-border bg-card" : "border-dashed opacity-60"}`}>
+                  <span className="text-[10px] text-muted-foreground w-5 text-right">{i + 1}</span>
+                  <span className="flex-1 truncate">{r.value}</span>
+                  <Button variant="ghost" size="icon" className="size-7" onClick={() => moveMasterOption("rate_plan", i, -1)} disabled={i === 0}>
+                    <ArrowUp className="size-3" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="size-7" onClick={() => moveMasterOption("rate_plan", i, 1)} disabled={i === ratePlanRows.length - 1}>
+                    <ArrowDown className="size-3" />
+                  </Button>
+                  <Button variant="ghost" size="sm" className="text-[11px] h-7 px-2" onClick={() => toggleMasterOption("rate_plan", r.id, r.active)}>
+                    {r.active ? "숨김" : "사용"}
+                  </Button>
+                  <Button variant="ghost" size="icon" className="size-7" onClick={() => removeMasterOption("rate_plan", r.id, r.value)}>
+                    <Trash2 className="size-3 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        {/* 판매유형 마스터 */}
+        <Card className="p-4 glass">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Layers className="size-4 text-primary" />
+              <span className="text-sm font-semibold">판매유형 마스터</span>
+              <Badge variant="outline" className="text-[10px]">{saleTypeRows.length}개</Badge>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs"
+              onClick={() => setShowManager(showManager === "sale_type" ? "none" : "sale_type")}
+            >
+              {showManager === "sale_type" ? "접기" : "펼치기"}
+            </Button>
+          </div>
+          <div className="flex gap-2">
+            <Input
+              placeholder="새 판매유형 (예: MNP, 신규, 기변)"
+              value={newSaleTypeName}
+              onChange={(e) => setNewSaleTypeName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addMasterOption("sale_type", newSaleTypeName)}
+              className="h-9"
+            />
+            <Button
+              size="sm"
+              onClick={() => addMasterOption("sale_type", newSaleTypeName)}
+              disabled={!newSaleTypeName.trim()}
+              className="gap-1 shrink-0"
+            >
+              <Plus className="size-3.5" /> 추가
+            </Button>
+          </div>
+          {showManager === "sale_type" && (
+            <div className="mt-3 space-y-1 max-h-72 overflow-y-auto pr-1">
+              {saleTypeRows.length === 0 ? (
+                <div className="text-xs text-muted-foreground text-center py-4">등록된 판매유형이 없습니다</div>
+              ) : saleTypeRows.map((r, i) => (
+                <div key={r.id} className={`flex items-center gap-1 p-2 rounded border text-sm ${r.active ? "border-border bg-card" : "border-dashed opacity-60"}`}>
+                  <span className="text-[10px] text-muted-foreground w-5 text-right">{i + 1}</span>
+                  <span className="flex-1 truncate">{r.value}</span>
+                  <Button variant="ghost" size="icon" className="size-7" onClick={() => moveMasterOption("sale_type", i, -1)} disabled={i === 0}>
+                    <ArrowUp className="size-3" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="size-7" onClick={() => moveMasterOption("sale_type", i, 1)} disabled={i === saleTypeRows.length - 1}>
+                    <ArrowDown className="size-3" />
+                  </Button>
+                  <Button variant="ghost" size="sm" className="text-[11px] h-7 px-2" onClick={() => toggleMasterOption("sale_type", r.id, r.active)}>
+                    {r.active ? "숨김" : "사용"}
+                  </Button>
+                  <Button variant="ghost" size="icon" className="size-7" onClick={() => removeMasterOption("sale_type", r.id, r.value)}>
+                    <Trash2 className="size-3 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
         {/* 왼쪽: 상품 리스트 */}
@@ -342,6 +556,12 @@ export default function ProductRatePlansPage() {
                       비활성
                     </Badge>
                   )}
+                  <Button variant="ghost" size="icon" className="size-8" onClick={() => moveMapping(i, -1)} disabled={i === 0} title="위로">
+                    <ArrowUp className="size-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="size-8" onClick={() => moveMapping(i, 1)} disabled={i === filtered.length - 1} title="아래로">
+                    <ArrowDown className="size-3.5" />
+                  </Button>
                   <Button variant="ghost" size="sm" onClick={() => toggle(m)} className="text-xs">
                     {m.active ? "숨기기" : "사용"}
                   </Button>
