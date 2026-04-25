@@ -970,19 +970,35 @@ const InputPage = () => {
                 "transition-all duration-300 ease-out overflow-hidden",
                 form.product && vasRequired ? "max-h-[200px] opacity-100" : !form.product ? "max-h-[200px] opacity-100" : "max-h-0 opacity-0"
               )}>
-                <Grid cols={2}>
-                  <Field label="부가서비스 1 (주셋톱)">
+                 {(() => {
+                   const vasPlans = Array.from(new Set(
+                     (mappings ?? [])
+                       .filter((m: any) => m.active && typeof m.product === "string"
+                         && (m.product.includes("부가서비스") || m.product.toUpperCase().includes("VAS")))
+                       .map((m: any) => m.rate_plan as string),
+                   ));
+                   return (
+                 <Grid cols={2}>
+                  <Field label="부가서비스 1">
                     {(() => {
                       const mismatch = defaults?.default_vas1 && form.vas1 && form.vas1 !== defaults.default_vas1 && !autoFilledFields.has("vas1");
                       const locked = defaults?.vas1_locked && defaults?.default_vas1;
                       return (
                         <div>
-                          <Input
+                          <Select
                             value={form.vas1 ?? ""}
-                            onChange={(e) => set("vas1", e.target.value)}
-                            className={cn("h-9 bg-input/60 text-xs", locked && "opacity-70 cursor-not-allowed")}
-                            readOnly={!!locked}
-                          />
+                            onValueChange={(v) => set("vas1", v)}
+                            disabled={!!locked}
+                          >
+                            <SelectTrigger className={cn("h-9 bg-input/60 text-xs", locked && "opacity-70 cursor-not-allowed")}>
+                              <SelectValue placeholder={vasPlans.length === 0 ? "부가서비스 미등록 (어드민)" : "선택"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {vasPlans.map((p) => (
+                                <SelectItem key={`v1-${p}`} value={p}>{p}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           {locked && (
                             <p className="text-[10px] text-muted-foreground mt-1">🔒 자동 설정됨 (수정 불가)</p>
                           )}
@@ -995,18 +1011,26 @@ const InputPage = () => {
                       );
                     })()}
                   </Field>
-                  <Field label="부가서비스 2 (부셋톱)">
+                  <Field label="부가서비스 2">
                     {(() => {
                       const mismatch = defaults?.default_vas2 && form.vas2 && form.vas2 !== defaults.default_vas2 && !autoFilledFields.has("vas2");
                       const locked = defaults?.vas2_locked && defaults?.default_vas2;
                       return (
                         <div>
-                          <Input
+                          <Select
                             value={form.vas2 ?? ""}
-                            onChange={(e) => set("vas2", e.target.value)}
-                            className={cn("h-9 bg-input/60 text-xs", locked && "opacity-70 cursor-not-allowed")}
-                            readOnly={!!locked}
-                          />
+                            onValueChange={(v) => set("vas2", v)}
+                            disabled={!!locked}
+                          >
+                            <SelectTrigger className={cn("h-9 bg-input/60 text-xs", locked && "opacity-70 cursor-not-allowed")}>
+                              <SelectValue placeholder={vasPlans.length === 0 ? "부가서비스 미등록 (어드민)" : "선택"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {vasPlans.map((p) => (
+                                <SelectItem key={`v2-${p}`} value={p}>{p}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           {locked && (
                             <p className="text-[10px] text-muted-foreground mt-1">🔒 자동 설정됨 (수정 불가)</p>
                           )}
@@ -1020,14 +1044,19 @@ const InputPage = () => {
                     })()}
                   </Field>
                 </Grid>
+                   );
+                 })()}
               </div>
             );
           })()}
 
           {/* TV 추가 (인터넷/유선결합 상품) */}
           {(() => {
-            const wiredAddonProducts = ["인터넷", "TV프리", "스마트홈", "홈", "유선결합"];
-            const isWired = !!form.product && wiredAddonProducts.some((p) => form.product!.includes(p));
+            // 스마트홈은 TV 추가 대상 아님 — 인터넷/TV결합 상품에서만 노출
+            const wiredAddonProducts = ["인터넷", "TV프리", "유선결합", "TV"];
+            const product = form.product ?? "";
+            const isSmartHome = product.includes("스마트홈");
+            const isWired = !isSmartHome && wiredAddonProducts.some((p) => product.includes(p));
             if (!isWired) return null;
 
             const tvLines: Array<{ rate_plan?: string; settop?: string }> = Array.isArray(customFields.tv_lines)
