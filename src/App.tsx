@@ -1,8 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SplashScreen } from "@/components/SplashScreen";
 import { ViewScopeProvider } from "@/contexts/ViewScopeContext";
 import { PeriodProvider } from "@/contexts/PeriodContext";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -45,13 +47,36 @@ import SegCalendarPage from "./pages/SegCalendarPage.tsx";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const SPLASH_SESSION_KEY = "udak.splash.shown";
+
+const App = () => {
+  // 세션 동안 1회만 표시 (앱 진입 시), 새로고침 시 재표시
+  const [showSplash, setShowSplash] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return sessionStorage.getItem(SPLASH_SESSION_KEY) !== "1";
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    if (!showSplash) return;
+    try {
+      sessionStorage.setItem(SPLASH_SESSION_KEY, "1");
+    } catch {
+      /* noop */
+    }
+  }, [showSplash]);
+
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <BrowserRouter>
         <AuthProvider>
           <ViewScopeProvider>
             <PeriodProvider>
+            {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
             <Toaster />
             <Sonner />
             <Routes>
@@ -109,6 +134,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
