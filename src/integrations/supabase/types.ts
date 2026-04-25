@@ -595,6 +595,51 @@ export type Database = {
         }
         Relationships: []
       }
+      equipment_catalog: {
+        Row: {
+          active: boolean
+          carrier: string | null
+          category: string
+          created_at: string
+          created_by: string | null
+          equipment_name: string
+          id: string
+          model_code: string | null
+          monthly_rental: number
+          note: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          carrier?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          equipment_name: string
+          id?: string
+          model_code?: string | null
+          monthly_rental?: number
+          note?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          carrier?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          equipment_name?: string
+          id?: string
+          model_code?: string | null
+          monthly_rental?: number
+          note?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       excel_mappings: {
         Row: {
           created_at: string
