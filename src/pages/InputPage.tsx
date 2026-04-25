@@ -102,7 +102,7 @@ const InputPage = () => {
   const { options: OPEN_METHODS } = useFieldOptions("open_method");
   const { options: STATUSES } = useFieldOptions("status");
   const { options: RATE_PLANS } = useFieldOptions("rate_plan");
-  const { getPlansForProduct, getDefaultsForProduct, getAllowedSaleTypes } = useProductRatePlans();
+  const { mappings, getPlansForProduct, getDefaultsForProduct, getAllowedSaleTypes } = useProductRatePlans();
   const { options: DELIVERY_TYPES } = useFieldOptions("delivery_type");
   const { options: BANKS } = useFieldOptions("bank");
   const [form, setForm] = useState<Partial<SaleRow>>(emptyForm);
