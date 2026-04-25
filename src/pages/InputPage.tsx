@@ -1074,7 +1074,7 @@ const InputPage = () => {
               ),
             );
             // 셋톱박스 옵션 (없으면 자유 입력으로 폴백)
-            const settopOptions: string[] = [];
+            const settopOptions: string[] = getEquipmentByCategory("settop").map((e) => e.equipment_name);
 
             const updateLines = (next: typeof tvLines) =>
               setCustomFields((f) => ({ ...f, tv_lines: next }));
