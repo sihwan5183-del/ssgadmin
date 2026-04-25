@@ -1042,8 +1042,8 @@ const InputPage = () => {
                   .map((m: any) => m.rate_plan as string),
               ),
             );
-            // 셋톱박스 옵션 (어드민 field_options: settop 또는 device_models 의 셋톱 종류)
-            const settopOptions = settopOpts;
+            // 셋톱박스 옵션 (없으면 자유 입력으로 폴백)
+            const settopOptions: string[] = [];
 
             const updateLines = (next: typeof tvLines) =>
               setCustomFields((f) => ({ ...f, tv_lines: next }));
