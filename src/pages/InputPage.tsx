@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { useProductRatePlans } from "@/hooks/useProductRatePlans";
+import { useEquipmentCatalog } from "@/hooks/useEquipmentCatalog";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { cn } from "@/lib/utils";
 import { useFieldDefinitions } from "@/hooks/useFieldDefinitions";
@@ -103,6 +104,7 @@ const InputPage = () => {
   const { options: STATUSES } = useFieldOptions("status");
   const { options: RATE_PLANS } = useFieldOptions("rate_plan");
   const { mappings, getPlansForProduct, getDefaultsForProduct, getAllowedSaleTypes } = useProductRatePlans();
+  const { getByCategory: getEquipmentByCategory } = useEquipmentCatalog();
   const { options: DELIVERY_TYPES } = useFieldOptions("delivery_type");
   const { options: BANKS } = useFieldOptions("bank");
   const [form, setForm] = useState<Partial<SaleRow>>(emptyForm);
@@ -1072,7 +1074,7 @@ const InputPage = () => {
               ),
             );
             // 셋톱박스 옵션 (없으면 자유 입력으로 폴백)
-            const settopOptions: string[] = [];
+            const settopOptions: string[] = getEquipmentByCategory("settop").map((e) => e.equipment_name);
 
             const updateLines = (next: typeof tvLines) =>
               setCustomFields((f) => ({ ...f, tv_lines: next }));

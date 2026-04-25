@@ -40,7 +40,7 @@ import { UserManagementPanel } from "@/components/admin/UserManagementPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole, type AppRole } from "@/hooks/useRole";
-import { Users } from "lucide-react";
+import { Users, Tv } from "lucide-react";
 import { useAppSettings, type DashboardWidgets } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
@@ -314,6 +314,16 @@ export default function AdminPage() {
             <Button asChild variant="default">
               <Link to="/field-options">입력 항목 관리로 이동 →</Link>
             </Button>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button asChild variant="outline" size="sm">
+                <Link to="/product-rate-plans">상품-요금제 매핑 →</Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link to="/equipment-catalog" className="gap-1.5">
+                  <Tv className="size-3.5" /> 장비 / 셋톱박스 관리 →
+                </Link>
+              </Button>
+            </div>
           </Card>
         </TabsContent>
 

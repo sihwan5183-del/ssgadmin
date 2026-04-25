@@ -22,6 +22,7 @@ import RankingPage from "./pages/RankingPage.tsx";
 import TeamPage from "./pages/TeamPage.tsx";
 import AdminPage from "./pages/AdminPage.tsx";
 import ProductRatePlansPage from "./pages/ProductRatePlansPage.tsx";
+import EquipmentCatalogPage from "./pages/EquipmentCatalogPage.tsx";
 import DeviceInventoryPage from "./pages/DeviceInventoryPage.tsx";
 import AdCalendarPage from "./pages/AdCalendarPage.tsx";
 import DeviceModelsPage from "./pages/DeviceModelsPage.tsx";
@@ -110,6 +111,7 @@ const App = () => {
                           <Route path="roles" element={<AccountRolesPage />} />
                         </Route>
                         <Route path="/product-rate-plans" element={<ProductRatePlansPage />} />
+                        <Route path="/equipment-catalog" element={<EquipmentCatalogPage />} />
                         <Route path="/device-inventory" element={<DeviceInventoryPage />} />
                         <Route path="/ad-calendar" element={<AdCalendarPage />} />
                         <Route path="/device-models" element={<DeviceModelsPage />} />
