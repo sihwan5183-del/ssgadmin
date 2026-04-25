@@ -122,6 +122,8 @@ const SalesLedgerPage = () => {
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
   const [searchQ, setSearchQ] = useState("");
+  const [debouncedSearchQ, setDebouncedSearchQ] = useState("");
+  const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [quickFilter, setQuickFilter] = useState<"unpaid" | "unreturned" | null>(null);
@@ -178,17 +180,32 @@ const SalesLedgerPage = () => {
     if (managerFilter !== "all") {
       query = query.eq("manager", managerFilter);
     }
+    const sq = debouncedSearchQ.trim();
+    if (sq) {
+      const digits = sq.replace(/[^0-9]/g, "");
+      const esc = sq.replace(/[,()]/g, " ").trim();
+      const orParts = [
+        `customer_name.ilike.%${esc}%`,
+        `device_model.ilike.%${esc}%`,
+        `manager.ilike.%${esc}%`,
+        `channel.ilike.%${esc}%`,
+      ];
+      if (digits.length >= 2) orParts.push(`phone.ilike.%${digits}%`);
+      query = query.or(orParts.join(","));
+    }
     const { data, error, count } = await query
       .order("open_date", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
       .range(from, to);
     if (error) {
       toast.error("목록 불러오기 실패", { description: error.message });
+      setSearching(false);
       return;
     }
     setRows((data ?? []) as SaleRow[]);
     setTotal(count ?? 0);
-  }, [page, startDate, endDate, statusFilter, managerFilter]);
+    setSearching(false);
+  }, [page, startDate, endDate, statusFilter, managerFilter, debouncedSearchQ]);
 
   const loadSummary = useCallback(async () => {
     const { data } = await supabase
@@ -230,9 +247,16 @@ const SalesLedgerPage = () => {
     load();
     loadSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, startDate, endDate, statusFilter, managerFilter]);
+  }, [page, startDate, endDate, statusFilter, managerFilter, debouncedSearchQ]);
 
-  useEffect(() => { setPage(0); }, [startDate, endDate, statusFilter, managerFilter]);
+  useEffect(() => { setPage(0); }, [startDate, endDate, statusFilter, managerFilter, debouncedSearchQ]);
+
+  // 디바운스 (300ms) — 입력 중에는 스피너 표시
+  useEffect(() => {
+    if (searchQ !== debouncedSearchQ) setSearching(true);
+    const t = setTimeout(() => setDebouncedSearchQ(searchQ), 300);
+    return () => clearTimeout(t);
+  }, [searchQ, debouncedSearchQ]);
 
   // Collect unique managers for filter
   const managers = useMemo(() => {
@@ -242,7 +266,7 @@ const SalesLedgerPage = () => {
   }, [rows]);
 
   const filteredRows = useMemo(() => {
-    const q = searchQ.trim().toLowerCase();
+    const q = debouncedSearchQ.trim().toLowerCase().replace(/\s+/g, "");
     let result = rows;
     if (quickFilter === "unpaid") {
       result = result.filter((r) => (r.receivable_amount ?? 0) > 0 && r.receivable_paid !== "완료");
@@ -251,13 +275,20 @@ const SalesLedgerPage = () => {
     }
     if (bundleFilter) result = result.filter((r) => r.bundle === "Y");
     if (noOfferFilter) result = result.filter((r) => (r.custom_fields as any)?.has_offer === false);
+    if (storeFilter !== "all") result = result.filter((r) => (r.channel ?? "") === storeFilter);
     if (!q) return result;
+    const qDigits = q.replace(/[^0-9]/g, "");
     return result.filter((r) => {
-      const name = (r.customer_name ?? "").toLowerCase();
+      const name = (r.customer_name ?? "").toLowerCase().replace(/\s+/g, "");
       const phone = (r.phone ?? "").replace(/[^0-9]/g, "");
-      return name.includes(q) || phone.includes(q.replace(/[^0-9]/g, ""));
+      const model = (r.device_model ?? "").toLowerCase().replace(/\s+/g, "");
+      const manager = (r.manager ?? "").toLowerCase().replace(/\s+/g, "");
+      const store = (r.channel ?? "").toLowerCase().replace(/\s+/g, "");
+      if (name.includes(q) || model.includes(q) || manager.includes(q) || store.includes(q)) return true;
+      if (qDigits && phone.includes(qDigits)) return true;
+      return false;
     });
-  }, [rows, searchQ, quickFilter, bundleFilter, noOfferFilter]);
+  }, [rows, debouncedSearchQ, quickFilter, bundleFilter, noOfferFilter, storeFilter]);
 
   const allSelected = filteredRows.length > 0 && filteredRows.every((r) => selected.has(r.id));
   const toggleAll = () => {
@@ -463,9 +494,21 @@ const SalesLedgerPage = () => {
             <Input
               value={searchQ}
               onChange={(e) => setSearchQ(e.target.value)}
-              placeholder="고객명 또는 연락처 검색…"
-              className="h-9 pl-9 bg-input/60"
+              placeholder="고객명·연락처·모델·담당자·매장 검색…"
+              className="h-9 pl-9 pr-9 bg-input/60"
             />
+            {searching ? (
+              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground animate-spin" />
+            ) : searchQ ? (
+              <button
+                type="button"
+                onClick={() => setSearchQ("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded"
+                aria-label="검색어 지우기"
+              >
+                <X className="size-4" />
+              </button>
+            ) : null}
           </div>
         </div>
       </section>
