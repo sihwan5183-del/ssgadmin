@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Plus, Link2, Package, ArrowUp, ArrowDown, Tag, Layers } from "lucide-react";
+import { Trash2, Plus, Link2, Package, Tag, Layers } from "lucide-react";
+import { SortableList, SortableItem } from "@/components/common/SortableList";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
@@ -190,33 +191,46 @@ export default function ProductRatePlansPage() {
     loadOptionRows(field);
   };
 
-  const moveMasterOption = async (field: "rate_plan" | "sale_type", index: number, direction: -1 | 1) => {
-    const rows = field === "rate_plan" ? [...ratePlanRows] : [...saleTypeRows];
-    const target = index + direction;
-    if (target < 0 || target >= rows.length) return;
-    const a = rows[index];
-    const b = rows[target];
-    const updates = await Promise.all([
-      supabase.from("field_options").update({ sort_order: b.sort_order }).eq("id", a.id),
-      supabase.from("field_options").update({ sort_order: a.sort_order }).eq("id", b.id),
-    ]);
-    if (updates.some((r) => r.error)) { toast.error("순서 변경 실패"); return; }
-    if (field === "rate_plan") refreshRatePlans(); else refreshSaleTypes();
-    loadOptionRows(field);
+  const reorderMasterOptions = async (
+    field: "rate_plan" | "sale_type",
+    newRows: Array<{ id: string; value: string; sort_order: number; active: boolean }>,
+  ) => {
+    const reindexed = newRows.map((r, i) => ({ ...r, sort_order: i + 1 }));
+    if (field === "rate_plan") setRatePlanRows(reindexed);
+    else setSaleTypeRows(reindexed);
+    const updates = await Promise.all(
+      reindexed.map((r) =>
+        supabase.from("field_options").update({ sort_order: r.sort_order }).eq("id", r.id),
+      ),
+    );
+    if (updates.some((u) => u.error)) {
+      toast.error("순서 저장 실패");
+      loadOptionRows(field);
+    } else {
+      toast.success("순서가 저장되었습니다");
+      if (field === "rate_plan") refreshRatePlans(); else refreshSaleTypes();
+    }
   };
 
-  // ===== 매핑 순서 변경 =====
-  const moveMapping = async (index: number, direction: -1 | 1) => {
-    const target = index + direction;
-    if (target < 0 || target >= filtered.length) return;
-    const a = filtered[index];
-    const b = filtered[target];
-    const updates = await Promise.all([
-      supabase.from("product_rate_plans").update({ sort_order: b.sort_order }).eq("id", a.id),
-      supabase.from("product_rate_plans").update({ sort_order: a.sort_order }).eq("id", b.id),
-    ]);
-    if (updates.some((r) => r.error)) { toast.error("순서 변경 실패"); return; }
-    load();
+  // ===== 매핑 순서 변경 (드래그 앤 드롭) =====
+  const reorderMappings = async (newItems: Mapping[]) => {
+    const reindexed = newItems.map((m, i) => ({ ...m, sort_order: i + 1 }));
+    // Optimistic: replace filtered items inside mappings
+    setMappings((prev) => {
+      const others = prev.filter((p) => p.product !== activeProduct);
+      return [...others, ...reindexed];
+    });
+    const updates = await Promise.all(
+      reindexed.map((m) =>
+        supabase.from("product_rate_plans").update({ sort_order: m.sort_order }).eq("id", m.id),
+      ),
+    );
+    if (updates.some((u) => u.error)) {
+      toast.error("순서 저장 실패");
+      load();
+    } else {
+      toast.success("순서가 저장되었습니다");
+    }
   };
 
   // Save product-level defaults on the first mapping row
@@ -282,24 +296,26 @@ export default function ProductRatePlansPage() {
             <div className="mt-3 space-y-1 max-h-72 overflow-y-auto pr-1">
               {ratePlanRows.length === 0 ? (
                 <div className="text-xs text-muted-foreground text-center py-4">등록된 요금제가 없습니다</div>
-              ) : ratePlanRows.map((r, i) => (
-                <div key={r.id} className={`flex items-center gap-1 p-2 rounded border text-sm ${r.active ? "border-border bg-card" : "border-dashed opacity-60"}`}>
-                  <span className="text-[10px] text-muted-foreground w-5 text-right">{i + 1}</span>
-                  <span className="flex-1 truncate">{r.value}</span>
-                  <Button variant="ghost" size="icon" className="size-7" onClick={() => moveMasterOption("rate_plan", i, -1)} disabled={i === 0}>
-                    <ArrowUp className="size-3" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="size-7" onClick={() => moveMasterOption("rate_plan", i, 1)} disabled={i === ratePlanRows.length - 1}>
-                    <ArrowDown className="size-3" />
-                  </Button>
-                  <Button variant="ghost" size="sm" className="text-[11px] h-7 px-2" onClick={() => toggleMasterOption("rate_plan", r.id, r.active)}>
-                    {r.active ? "숨김" : "사용"}
-                  </Button>
-                  <Button variant="ghost" size="icon" className="size-7" onClick={() => removeMasterOption("rate_plan", r.id, r.value)}>
-                    <Trash2 className="size-3 text-destructive" />
-                  </Button>
-                </div>
-              ))}
+              ) : (
+                <SortableList items={ratePlanRows} onReorder={(n) => reorderMasterOptions("rate_plan", n)}>
+                  {(r, i) => (
+                    <SortableItem
+                      key={r.id}
+                      id={r.id}
+                      className={`flex items-center gap-1 p-2 rounded border text-sm ${r.active ? "border-border bg-card" : "border-dashed opacity-60"}`}
+                    >
+                      <span className="text-[10px] text-muted-foreground w-5 text-right">{i + 1}</span>
+                      <span className="flex-1 truncate">{r.value}</span>
+                      <Button variant="ghost" size="sm" className="text-[11px] h-7 px-2" onClick={() => toggleMasterOption("rate_plan", r.id, r.active)}>
+                        {r.active ? "숨김" : "사용"}
+                      </Button>
+                      <Button variant="ghost" size="icon" className="size-7" onClick={() => removeMasterOption("rate_plan", r.id, r.value)}>
+                        <Trash2 className="size-3 text-destructive" />
+                      </Button>
+                    </SortableItem>
+                  )}
+                </SortableList>
+              )}
             </div>
           )}
         </Card>
@@ -342,24 +358,26 @@ export default function ProductRatePlansPage() {
             <div className="mt-3 space-y-1 max-h-72 overflow-y-auto pr-1">
               {saleTypeRows.length === 0 ? (
                 <div className="text-xs text-muted-foreground text-center py-4">등록된 판매유형이 없습니다</div>
-              ) : saleTypeRows.map((r, i) => (
-                <div key={r.id} className={`flex items-center gap-1 p-2 rounded border text-sm ${r.active ? "border-border bg-card" : "border-dashed opacity-60"}`}>
-                  <span className="text-[10px] text-muted-foreground w-5 text-right">{i + 1}</span>
-                  <span className="flex-1 truncate">{r.value}</span>
-                  <Button variant="ghost" size="icon" className="size-7" onClick={() => moveMasterOption("sale_type", i, -1)} disabled={i === 0}>
-                    <ArrowUp className="size-3" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="size-7" onClick={() => moveMasterOption("sale_type", i, 1)} disabled={i === saleTypeRows.length - 1}>
-                    <ArrowDown className="size-3" />
-                  </Button>
-                  <Button variant="ghost" size="sm" className="text-[11px] h-7 px-2" onClick={() => toggleMasterOption("sale_type", r.id, r.active)}>
-                    {r.active ? "숨김" : "사용"}
-                  </Button>
-                  <Button variant="ghost" size="icon" className="size-7" onClick={() => removeMasterOption("sale_type", r.id, r.value)}>
-                    <Trash2 className="size-3 text-destructive" />
-                  </Button>
-                </div>
-              ))}
+              ) : (
+                <SortableList items={saleTypeRows} onReorder={(n) => reorderMasterOptions("sale_type", n)}>
+                  {(r, i) => (
+                    <SortableItem
+                      key={r.id}
+                      id={r.id}
+                      className={`flex items-center gap-1 p-2 rounded border text-sm ${r.active ? "border-border bg-card" : "border-dashed opacity-60"}`}
+                    >
+                      <span className="text-[10px] text-muted-foreground w-5 text-right">{i + 1}</span>
+                      <span className="flex-1 truncate">{r.value}</span>
+                      <Button variant="ghost" size="sm" className="text-[11px] h-7 px-2" onClick={() => toggleMasterOption("sale_type", r.id, r.active)}>
+                        {r.active ? "숨김" : "사용"}
+                      </Button>
+                      <Button variant="ghost" size="icon" className="size-7" onClick={() => removeMasterOption("sale_type", r.id, r.value)}>
+                        <Trash2 className="size-3 text-destructive" />
+                      </Button>
+                    </SortableItem>
+                  )}
+                </SortableList>
+              )}
             </div>
           )}
         </Card>
@@ -540,36 +558,33 @@ export default function ProductRatePlansPage() {
                 <div className="text-[11px] mt-1">위 드롭다운에서 요금제를 선택해 추가하세요</div>
               </div>
             ) : (
-              filtered.map((m, i) => (
-                <div
-                  key={m.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                    m.active
-                      ? "border-border bg-card"
-                      : "border-dashed border-border/50 bg-muted/30 opacity-60"
-                  }`}
-                >
-                  <span className="text-xs text-muted-foreground w-6 text-right">{i + 1}</span>
-                  <span className="flex-1 font-medium text-sm">{m.rate_plan}</span>
-                  {!m.active && (
-                    <Badge variant="outline" className="text-[10px]">
-                      비활성
-                    </Badge>
-                  )}
-                  <Button variant="ghost" size="icon" className="size-8" onClick={() => moveMapping(i, -1)} disabled={i === 0} title="위로">
-                    <ArrowUp className="size-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="size-8" onClick={() => moveMapping(i, 1)} disabled={i === filtered.length - 1} title="아래로">
-                    <ArrowDown className="size-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => toggle(m)} className="text-xs">
-                    {m.active ? "숨기기" : "사용"}
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => remove(m.id)} className="size-8">
-                    <Trash2 className="size-4 text-destructive" />
-                  </Button>
-                </div>
-              ))
+              <SortableList items={filtered} onReorder={reorderMappings}>
+                {(m, i) => (
+                  <SortableItem
+                    key={m.id}
+                    id={m.id}
+                    className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                      m.active
+                        ? "border-border bg-card"
+                        : "border-dashed border-border/50 bg-muted/30 opacity-60"
+                    }`}
+                  >
+                    <span className="text-xs text-muted-foreground w-6 text-right">{i + 1}</span>
+                    <span className="flex-1 font-medium text-sm">{m.rate_plan}</span>
+                    {!m.active && (
+                      <Badge variant="outline" className="text-[10px]">
+                        비활성
+                      </Badge>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={() => toggle(m)} className="text-xs">
+                      {m.active ? "숨기기" : "사용"}
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => remove(m.id)} className="size-8">
+                      <Trash2 className="size-4 text-destructive" />
+                    </Button>
+                  </SortableItem>
+                )}
+              </SortableList>
             )}
           </div>
         </Card>
