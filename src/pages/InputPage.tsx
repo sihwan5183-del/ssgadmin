@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Check, Upload, Zap, Pencil, X, FileSpreadsheet, Download, Search, Camera } from "lucide-react";
+import { Check, Upload, Zap, Pencil, X, FileSpreadsheet, Download, Search, Camera, Plus, Trash2, Tv } from "lucide-react";
 import { exportToExcel, SALES_COLUMNS, OFFER_COLUMNS } from "@/lib/excelExport";
 import { useRole } from "@/hooks/useRole";
 import { supabase } from "@/integrations/supabase/client";
