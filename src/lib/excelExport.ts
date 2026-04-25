@@ -8,9 +8,18 @@ import { toast } from "sonner";
  * @param fileName .xlsx 확장자 없이
  * @param sheetName 시트명
  */
+type ColumnDef = [string, string] | [string, string, (row: any) => any];
+
+const resolveValue = (row: any, col: ColumnDef) => {
+  if (col.length === 3 && typeof col[2] === "function") {
+    try { return col[2](row); } catch { return ""; }
+  }
+  return row[col[0]];
+};
+
 export const exportToExcel = <T extends Record<string, any>>(
   rows: T[],
-  columns: Array<[string, string]>,
+  columns: Array<ColumnDef>,
   fileName: string,
   sheetName = "Sheet1",
 ) => {
@@ -20,8 +29,9 @@ export const exportToExcel = <T extends Record<string, any>>(
   }
   const remapped = rows.map((r) => {
     const o: Record<string, any> = {};
-    for (const [key, label] of columns) {
-      const v = r[key];
+    for (const col of columns) {
+      const [, label] = col;
+      const v = resolveValue(r, col);
       o[label] = v == null ? "" : v;
     }
     return o;
@@ -30,10 +40,11 @@ export const exportToExcel = <T extends Record<string, any>>(
     header: columns.map(([, label]) => label),
   });
   // 컬럼 폭 자동 (한글 가중치)
-  const colWidths = columns.map(([key, label]) => {
+  const colWidths = columns.map((col) => {
+    const [, label] = col;
     const headerLen = label.length * 2;
     const maxBody = rows.reduce((m, r) => {
-      const s = String(r[key] ?? "");
+      const s = String(resolveValue(r, col) ?? "");
       return Math.max(m, s.length);
     }, 0);
     return { wch: Math.min(40, Math.max(headerLen, maxBody) + 2) };
@@ -49,7 +60,7 @@ export const exportToExcel = <T extends Record<string, any>>(
 
 /** 여러 시트를 하나의 워크북으로 저장 */
 export const exportMultiSheet = (
-  sheets: Array<{ name: string; rows: any[]; columns: Array<[string, string]> }>,
+  sheets: Array<{ name: string; rows: any[]; columns: Array<ColumnDef> }>,
   fileName: string,
 ) => {
   const wb = XLSX.utils.book_new();
@@ -58,7 +69,10 @@ export const exportMultiSheet = (
     if (!s.rows || s.rows.length === 0) continue;
     const remapped = s.rows.map((r) => {
       const o: Record<string, any> = {};
-      for (const [key, label] of s.columns) o[label] = r[key] ?? "";
+      for (const col of s.columns) {
+        const v = resolveValue(r, col);
+        o[col[1]] = v ?? "";
+      }
       return o;
     });
     const ws = XLSX.utils.json_to_sheet(remapped, {
@@ -77,7 +91,19 @@ export const exportMultiSheet = (
 };
 
 /** 컬럼 매핑 — 실적 sales */
-export const SALES_COLUMNS: Array<[string, string]> = [
+const tvLinesText = (row: any): string => {
+  const lines = row?.custom_fields?.tv_lines;
+  if (!Array.isArray(lines) || lines.length === 0) return "";
+  return lines
+    .map((l: any, i: number) => {
+      const plan = l?.rate_plan ?? "";
+      const settop = l?.settop ?? "";
+      return `TV${i + 1}: ${plan}${settop ? ` / ${settop}` : ""}`;
+    })
+    .join(" | ");
+};
+
+export const SALES_COLUMNS: Array<ColumnDef> = [
   ["seq", "순번"],
   ["open_date", "개통일"],
   ["channel", "인입경로"],
@@ -94,8 +120,9 @@ export const SALES_COLUMNS: Array<[string, string]> = [
   ["usim_model", "USIM"],
   ["usim_serial", "USIM 일련번호"],
   ["rate_plan", "개통요금제"],
-  ["vas1", "부가서비스1(주셋톱)"],
-  ["vas2", "부가서비스2(부셋톱)"],
+  ["vas1", "부가서비스1"],
+  ["vas2", "부가서비스2"],
+  ["tv_lines", "TV 추가회선", tvLinesText],
   ["unit_price", "단가표 기준(₩)"],
   ["vas_fee", "부가서비스 수수료(₩)"],
   ["distributor_amount", "유통망(₩)"],
