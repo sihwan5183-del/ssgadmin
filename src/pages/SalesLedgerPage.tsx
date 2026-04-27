@@ -1038,13 +1038,13 @@ const SalesLedgerPage = () => {
                       </td>
                     )}
                     <td className="px-3 py-2.5">{r.open_date ?? "-"}</td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center gap-1.5">
-                        <span>{r.channel ?? "-"}</span>
+                    <td className="px-3 py-3 align-middle whitespace-nowrap">
+                      <div className="flex flex-col items-start gap-1 leading-tight">
+                        <span className="no-underline">{r.channel ?? "-"}</span>
                         {isMoyoExcluded && (
-                          <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-muted-foreground/40 text-muted-foreground">
-                            모요 미적용
-                          </Badge>
+                          <span className="inline-flex items-center rounded-md bg-muted px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground no-underline">
+                            미적용
+                          </span>
                         )}
                       </div>
                     </td>
