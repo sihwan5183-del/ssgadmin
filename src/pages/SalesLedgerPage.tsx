@@ -186,11 +186,27 @@ const SalesLedgerPage = () => {
       .select("*", { count: "exact" })
       .gte("open_date", startDate)
       .lte("open_date", endDate);
-    if (statusFilter) {
-      query = query.eq("status", statusFilter);
+    if (statusFilter.length > 0) {
+      query = query.in("status", statusFilter);
     }
     if (managerFilter !== "all") {
       query = query.eq("manager", managerFilter);
+    }
+    if (storeFilter !== "all") {
+      query = query.eq("channel", storeFilter);
+    }
+    if (productFilter !== "all") {
+      query = query.eq("product", productFilter);
+    }
+    if (returnFilter === "returned") {
+      query = query.eq("voucher_returned", "유");
+    } else if (returnFilter === "unreturned") {
+      query = query.not("voucher", "is", null).neq("voucher", "").neq("voucher_returned", "유");
+    }
+    if (inspectionFilter === "inspected") {
+      query = query.eq("approval_status", "확정");
+    } else if (inspectionFilter === "uninspected") {
+      query = query.neq("approval_status", "확정");
     }
     const sq = debouncedSearchQ.trim();
     if (sq) {
