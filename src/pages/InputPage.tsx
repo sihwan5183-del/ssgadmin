@@ -330,9 +330,11 @@ const InputPage = () => {
       customer_support_amount: num(form.customer_support_amount),
       corp_card_amount: num(form.corp_card_amount),
     };
+    const selectedStaff = staffOptions.find((s) => s.user_id === form.manager || s.display_name === form.manager);
     const payload = {
       ...form,
       created_by: user.id,
+      manager: selectedStaff?.user_id ?? form.manager,
       ...baseNumeric,
       // 관리자가 정의한 수식으로 자동 계산 (사용자 입력값이 있으면 우선)
       net_fee: form.net_fee != null && form.net_fee !== 0
