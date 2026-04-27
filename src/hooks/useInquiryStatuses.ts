@@ -4,12 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 // 관리자가 field_options 의 field='inquiry_status' 로 등록한 값을 사용.
 // 비어 있으면 합리적인 기본값을 사용 (시스템 기본 CRM 상태).
 const FALLBACK_STATUSES = [
-  "미처리",
-  "문의중",
+  "상담전",
+  "상담중",
   "부재",
-  "재케어",
+  "재통화",
+  "예약",
+  "택배발송",
   "실패",
-  "방문예약",
   "개통완료",
 ];
 
