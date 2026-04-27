@@ -34,7 +34,7 @@ export const maskCardNumber = (card: string | null | undefined): string => {
   return digits.slice(0, 4) + "-****-****-" + digits.slice(-4);
 };
 
-/** 유효기간 마스킹: 12/27 → **/** */
+/** 유효기간 마스킹: 모두 별표 처리 */
 export const maskCardExpiry = (expiry: string | null | undefined): string => {
   if (!expiry) return "";
   return "**/**";
