@@ -294,6 +294,10 @@ const InputPage = () => {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    if (!customFields.contract_type) {
+      toast.error("약정 정보를 선택해주세요", { description: "선택약정 또는 이통사지원금 중 하나를 선택해야 합니다." });
+      return;
+    }
     setBusy(true);
     const baseNumeric = {
       unit_price: num(form.unit_price),
@@ -922,8 +926,9 @@ const InputPage = () => {
               </div>
             </Field>
           </Grid>
-          <Grid cols={3}>
-            <div className="md:col-span-2">
+          {/* 개통요금제 / 할부 / 동판·번들 / 약정 - 한 줄 슬림 배치 */}
+          <div className="grid grid-cols-12 gap-2 items-end">
+            <div className="col-span-12 md:col-span-5">
               <Field label="개통요금제">
               {(() => {
                 const mapped = getPlansForProduct(form.product);
@@ -948,31 +953,66 @@ const InputPage = () => {
               })()}
               </Field>
             </div>
-            <Field label="할부 개월">
-              <Input
-                type="text"
-                inputMode="numeric"
-                placeholder="예: 24"
-                className="h-9 bg-input/60 text-xs"
-                value={customFields.installment_months ?? ""}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/[^\d]/g, "").slice(0, 3);
-                  setCustomFields((f) => ({ ...f, installment_months: v }));
-                }}
-              />
-            </Field>
-            <Field label="동판/번들">
-              <div className="flex items-center gap-2 h-9">
-                <Switch
-                  checked={form.bundle === "Y"}
-                  onCheckedChange={(v) => set("bundle", v ? "Y" : null)}
+            <div className="col-span-3 md:col-span-1">
+              <Field label="할부(개월)">
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={2}
+                  placeholder="24"
+                  className="h-9 bg-input/60 text-xs text-center px-2"
+                  value={customFields.installment_months ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/[^\d]/g, "").slice(0, 2);
+                    setCustomFields((f) => ({ ...f, installment_months: v }));
+                  }}
                 />
-                <span className={cn("text-xs font-medium", form.bundle === "Y" ? "text-primary" : "text-muted-foreground")}>
-                  {form.bundle === "Y" ? "동판/번들" : "해당없음"}
-                </span>
-              </div>
-            </Field>
-          </Grid>
+              </Field>
+            </div>
+            <div className="col-span-9 md:col-span-3">
+              <Field label="동판/번들">
+                <div className="flex items-center gap-2 h-9 px-2.5 rounded-md border border-border/40 bg-input/60">
+                  <Switch
+                    checked={form.bundle === "Y"}
+                    onCheckedChange={(v) => set("bundle", v ? "Y" : null)}
+                  />
+                  <span className={cn("text-xs font-medium truncate", form.bundle === "Y" ? "text-primary" : "text-muted-foreground")}>
+                    {form.bundle === "Y" ? "동판/번들" : "해당없음"}
+                  </span>
+                </div>
+              </Field>
+            </div>
+            <div className="col-span-12 md:col-span-3">
+              <Field label="약정 정보 *">
+                <div className={cn(
+                  "inline-flex h-9 w-full rounded-md border bg-input/60 p-0.5 text-xs",
+                  customFields.contract_type ? "border-border/40" : "border-destructive/60"
+                )}>
+                  {[
+                    { v: "선택약정", label: "선택약정" },
+                    { v: "이통사지원금", label: "이통사지원금" },
+                  ].map((opt) => {
+                    const active = customFields.contract_type === opt.v;
+                    return (
+                      <button
+                        key={opt.v}
+                        type="button"
+                        onClick={() => setCustomFields((f) => ({ ...f, contract_type: opt.v }))}
+                        className={cn(
+                          "flex-1 rounded-[5px] font-medium transition-colors",
+                          active
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </Field>
+            </div>
+          </div>
           {/* 부가서비스 - 조건부 렌더링 */}
           {(() => {
             const defaults = getDefaultsForProduct(form.product);
@@ -1190,29 +1230,6 @@ const InputPage = () => {
               </div>
             );
           })()}
-
-          {/* 약정 정보 */}
-          <div className="border border-border/30 rounded-xl p-3 mt-2 bg-muted/10">
-            <div className="flex items-center gap-2 mb-2">
-              <Banknote className="size-3.5 text-primary" />
-              <span className="text-xs font-semibold">약정 정보</span>
-              <span className="text-[10px] text-muted-foreground">할인 방식 선택</span>
-            </div>
-            <Field label="약정 유형">
-              <Select
-                value={customFields.contract_type ?? ""}
-                onValueChange={(v) => setCustomFields((f) => ({ ...f, contract_type: v }))}
-              >
-                <SelectTrigger className="h-9 bg-input/60 text-xs">
-                  <SelectValue placeholder="약정 유형 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="선택약정">선택약정</SelectItem>
-                  <SelectItem value="이통사지원금">이통사지원금(공시지원금)</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-          </div>
 
           {/* 자동이체 정보 */}
           <div className="border border-border/30 rounded-xl p-3 mt-2 bg-muted/10">
