@@ -640,7 +640,33 @@ const RankingPage = () => {
           </h3>
 
           {loading ? (
-            <div className="py-16 text-center text-muted-foreground text-sm">로딩 중...</div>
+            <div className="space-y-5">
+              <p className="text-center text-xs text-muted-foreground py-1">데이터를 불러오는 중입니다...</p>
+              {/* Podium skeleton */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="rounded-2xl p-5 min-h-[260px] bg-muted/30 animate-pulse border border-border/40">
+                    <div className="h-6 w-12 rounded bg-muted/60 mb-3" />
+                    <div className="h-5 w-32 rounded bg-muted/60 mb-2" />
+                    <div className="h-3 w-20 rounded bg-muted/40 mb-4" />
+                    <div className="h-9 w-24 rounded bg-muted/60 mb-3" />
+                    <div className="space-y-2 pt-3 border-t border-border/30">
+                      {[0,1,2,3].map((j) => <div key={j} className="h-1.5 rounded-full bg-muted/40" />)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* List skeleton */}
+              <ul className="space-y-1.5">
+                {[0,1,2,3,4,5,6].map((i) => (
+                  <li key={i} className="flex items-center gap-3 px-3 py-3 rounded-lg bg-muted/20 animate-pulse">
+                    <div className="size-6 rounded bg-muted/50" />
+                    <div className="h-4 w-32 rounded bg-muted/50" />
+                    <div className="h-3 w-16 rounded bg-muted/40 ml-auto" />
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : top10.length === 0 ? (
             <div className="py-16 text-center text-muted-foreground text-sm">데이터가 없습니다</div>
           ) : (
