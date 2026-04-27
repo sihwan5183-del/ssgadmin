@@ -940,7 +940,7 @@ const SalesLedgerPage = () => {
                 )}
                 <th className="text-left px-3 py-2 font-medium">개통일</th>
                 <th className="text-left px-3 py-2 font-medium">경로</th>
-                <th className="text-left px-3 py-2 font-medium">담당</th>
+                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">담당</th>
                 <th className="text-left px-3 py-2 font-medium">상품</th>
                 <th className="text-left px-3 py-2 font-medium">고객</th>
                 <th className="text-left px-3 py-2 font-medium">연락처</th>
@@ -950,13 +950,13 @@ const SalesLedgerPage = () => {
                 <th className="text-center px-2 py-2 font-medium">할부</th>
                 <th className="text-center px-2 py-2 font-medium">동판</th>
                 <th className="text-center px-2 py-2 font-medium">오퍼</th>
-                <th className="text-right px-3 py-2 font-medium">리베이트 단가</th>
-                <th className="text-right px-3 py-2 font-medium">오퍼(지원금)</th>
-                <th className="text-right px-3 py-2 font-medium">최종 수익</th>
-                <th className="text-right px-3 py-2 font-medium">미수금</th>
-                <th className="text-right px-3 py-2 font-medium">고객지원</th>
-                <th className="text-right px-3 py-2 font-medium">법인카드</th>
-                <th className="text-right px-3 py-2 font-medium">중고폰</th>
+                <th className="text-right px-3 py-2 font-semibold text-sky-600 dark:text-sky-400">리베이트 단가</th>
+                <th className="text-right px-3 py-2 font-semibold text-rose-600 dark:text-rose-400">오퍼(지원금)</th>
+                <th className="text-right px-3 py-2 font-semibold">최종 수익</th>
+                <th className="text-right px-3 py-2 font-semibold text-sky-600 dark:text-sky-400">미수금</th>
+                <th className="text-right px-3 py-2 font-semibold text-rose-600 dark:text-rose-400">고객지원</th>
+                <th className="text-right px-3 py-2 font-semibold text-rose-600 dark:text-rose-400">법인카드</th>
+                <th className="text-right px-3 py-2 font-semibold text-sky-600 dark:text-sky-400">중고폰</th>
                 <th className="text-right px-3 py-2 font-medium">관리</th>
               </tr>
             </thead>
