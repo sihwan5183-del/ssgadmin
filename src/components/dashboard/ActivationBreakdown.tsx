@@ -31,12 +31,21 @@ export const ActivationBreakdown = () => {
   const mobileStats = useMemo(() => {
     const types = [
       { label: "MNP (번호이동)", key: "MNP", color: "hsl(195 90% 60%)" },
+      { label: "신규", key: "신규", color: "hsl(160 80% 50%)" },
       { label: "기변", key: "기변", color: "hsl(270 90% 65%)" },
     ];
     return types.map((t) => ({
       ...t,
       count: rows.filter((r) => (r.product || "").includes("모바일") && r.sale_type === t.key).length,
     }));
+  }, [rows]);
+
+  const secondDeviceCount = useMemo(() => {
+    return rows.filter((r) => {
+      const p = (r.product || "").toLowerCase();
+      const st = (r.sale_type || "").toLowerCase();
+      return /2nd|세컨|워치|watch|태블릿|tablet/.test(p) || /2nd|세컨|워치|watch|태블릿|tablet/.test(st);
+    }).length;
   }, [rows]);
 
   const strategyStats = useMemo(() => {
