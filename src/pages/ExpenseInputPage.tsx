@@ -292,7 +292,7 @@ export default function ExpenseInputPage() {
         ? `${days}일에 걸쳐 일별 ${dailyAmount.toLocaleString()}원씩 자동 분산 저장됨 (총 ${totalAmount.toLocaleString()}원)`
         : "광고비가 저장되었습니다",
     );
-    setAdForm({ spend_date: todayISO(), end_date: todayISO(), media: "", channel: "", amount: "", amount_mode: "total", campaign: "", note: "" });
+    setAdForm({ spend_date: todayISO(), end_date: todayISO(), media: "", channel: "", amount: "", amount_mode: "total", total_override: "", total_overridden: false, campaign: "", note: "" });
     fetchRows();
   };
 
