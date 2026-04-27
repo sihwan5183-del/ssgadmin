@@ -35,6 +35,7 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useFieldOptions } from "@/hooks/useFieldOptions";
 
 const PAGE_SIZE = 25;
 
