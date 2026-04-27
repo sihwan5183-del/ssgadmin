@@ -229,9 +229,9 @@ const SalesLedgerPage = () => {
       query = query.neq("approval_status", "확정");
     }
     if (moyoFilter === "applied") {
-      query = query.eq("channel", "모요").or("moyo_excluded.is.null,moyo_excluded.eq.false");
+      query = query.eq("channel", "모요").eq("product", "모바일").or("moyo_excluded.is.null,moyo_excluded.eq.false");
     } else if (moyoFilter === "excluded") {
-      query = query.eq("channel", "모요").eq("moyo_excluded", true);
+      query = query.eq("channel", "모요").eq("product", "모바일").eq("moyo_excluded", true);
     }
     const sq = debouncedSearchQ.trim();
     if (sq) {
@@ -270,9 +270,9 @@ const SalesLedgerPage = () => {
     if (storeFilter !== "all") q = q.eq("channel", storeFilter);
     if (productFilter !== "all") q = q.eq("product", productFilter);
     if (moyoFilter === "applied") {
-      q = q.eq("channel", "모요").or("moyo_excluded.is.null,moyo_excluded.eq.false");
+      q = q.eq("channel", "모요").eq("product", "모바일").or("moyo_excluded.is.null,moyo_excluded.eq.false");
     } else if (moyoFilter === "excluded") {
-      q = q.eq("channel", "모요").eq("moyo_excluded", true);
+      q = q.eq("channel", "모요").eq("product", "모바일").eq("moyo_excluded", true);
     }
     const { data } = await q;
     const all = data ?? [];
@@ -399,8 +399,8 @@ const SalesLedgerPage = () => {
     else if (returnFilter === "unreturned") q = q.not("voucher", "is", null).neq("voucher", "").neq("voucher_returned", "유");
     if (inspectionFilter === "inspected") q = q.eq("approval_status", "확정");
     else if (inspectionFilter === "uninspected") q = q.neq("approval_status", "확정");
-    if (moyoFilter === "applied") q = q.eq("channel", "모요").or("moyo_excluded.is.null,moyo_excluded.eq.false");
-    else if (moyoFilter === "excluded") q = q.eq("channel", "모요").eq("moyo_excluded", true);
+    if (moyoFilter === "applied") q = q.eq("channel", "모요").eq("product", "모바일").or("moyo_excluded.is.null,moyo_excluded.eq.false");
+    else if (moyoFilter === "excluded") q = q.eq("channel", "모요").eq("product", "모바일").eq("moyo_excluded", true);
     const { data, error } = await q.order("open_date", { ascending: false, nullsFirst: false });
     if (error) return toast.error("엑셀 내보내기 실패", { description: error.message });
     let sales = (data ?? []) as any[];
