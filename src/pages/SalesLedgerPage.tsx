@@ -180,6 +180,20 @@ const SalesLedgerPage = () => {
   const [unpaidCount, setUnpaidCount] = useState(0);
   const [unreturnedCount, setUnreturnedCount] = useState(0);
 
+  // 담당자 필드에 UUID가 들어간 경우 프로필 display_name으로 치환하기 위한 맵
+  const [managerNameMap, setManagerNameMap] = useState<Record<string, string>>({});
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const resolveManager = useCallback(
+    (raw: string | null | undefined, fallbackUid?: string | null) => {
+      const v = (raw ?? "").trim();
+      if (v && UUID_RE.test(v) && managerNameMap[v]) return managerNameMap[v];
+      if (v) return v;
+      if (fallbackUid && managerNameMap[fallbackUid]) return managerNameMap[fallbackUid];
+      return "-";
+    },
+    [managerNameMap],
+  );
+
   // ※ 확정 잠금 정책 폐지 — 직원이 자유롭게 수정 가능. 변경 이력은 sales_audit_log 트리거에 자동 기록됨.
 
   // 5대 오퍼 + 카드결제 + 제휴카드 할인
@@ -359,6 +373,33 @@ const SalesLedgerPage = () => {
     const set = new Set<string>();
     rows.forEach((r) => r.manager && set.add(r.manager));
     return Array.from(set).sort();
+  }, [rows]);
+
+  // 담당자가 UUID 형태로 저장된 행이 있으면 profiles에서 실명을 조회해 매핑
+  useEffect(() => {
+    const uids = new Set<string>();
+    rows.forEach((r) => {
+      const m = (r.manager ?? "").trim();
+      if (m && UUID_RE.test(m) && !managerNameMap[m]) uids.add(m);
+      const cb = (r as any).created_by as string | undefined;
+      if (cb && !managerNameMap[cb] && (!m || UUID_RE.test(m))) uids.add(cb);
+    });
+    if (uids.size === 0) return;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("user_id, display_name")
+        .in("user_id", Array.from(uids));
+      if (!data || data.length === 0) return;
+      setManagerNameMap((prev) => {
+        const next = { ...prev };
+        data.forEach((p: any) => {
+          if (p.user_id && p.display_name) next[p.user_id] = p.display_name;
+        });
+        return next;
+      });
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows]);
 
   const filteredRows = useMemo(() => {
@@ -666,7 +707,7 @@ const SalesLedgerPage = () => {
                 <SelectContent>
                   <SelectItem value="all">직원 전체</SelectItem>
                   {managers.map((m) => (
-                    <SelectItem key={m} value={m}>{m}</SelectItem>
+                    <SelectItem key={m} value={m}>{UUID_RE.test(m) && managerNameMap[m] ? managerNameMap[m] : m}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1010,7 +1051,7 @@ const SalesLedgerPage = () => {
                       </div>
                     </td>
                     <td className="px-3 py-2.5 whitespace-nowrap font-medium">
-                      {r.manager ?? "-"}
+                      {resolveManager(r.manager, (r as any).created_by)}
                       <ResignedTag userId={r.created_by} ids={resignedIds} />
                     </td>
                     <td className="px-3 py-2.5">{r.product ?? "-"}</td>
