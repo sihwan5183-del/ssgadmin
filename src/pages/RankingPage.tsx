@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
 import {
   Crown, Medal, Trophy, Star, TrendingUp, Flame, Zap,
   Award, BarChart3, Smartphone, Gift, ChevronDown, CheckCircle2, Sparkles,
-  Wifi, Tv, ArrowUp, ArrowDown, Minus, UserX, Target, Link2, ShieldCheck,
+  Wifi, Tv, ArrowUp, ArrowDown, Minus, UserX, Target, ShieldCheck,
+  Home, CreditCard, Monitor,
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -33,10 +34,13 @@ type RankedUser = {
   excluded?: boolean;
   achievement: number;           // 평균 목표 달성률 (%)
   goalCount: number;             // 설정된 목표 개수
-  comboRate: number;             // (인터넷+TV프리)/모바일 *100
   vasAttach: number;             // 부가서비스/모바일 *100
   cleanScore: number;            // 0~100, 누락/미해결 적을수록 높음
   cleanPenalty: number;          // 누락+미해결 합계 (낮을수록 좋음)
+  internetCount: number;         // 인터넷 가입 건수
+  tvfreeCount: number;           // TV프리 가입 건수
+  iotCount: number;              // 홈IOT/스마트홈 건수
+  partnerCardCount: number;      // 제휴카드 결제 건수
 };
 type ModelRank = { model: string; count: number; isStrategy: boolean };
 
@@ -118,30 +122,39 @@ const periodUpToYesterday = (period: string) => {
   return { start, end: yISO };
 };
 
-/** 개통완료/반납완료만 집계 (취소·반려 제외) — 판매원장 실시간 데이터와 정합 */
-const COUNTED_STATUSES = ["개통완료", "반납완료"];
+/** 개통완료만 집계 — 취소·반납·반려는 실시간 차감 */
+const COUNTED_STATUSES = ["개통완료"];
 /** 집계에서 제외할 승인 상태 */
 const EXCLUDED_APPROVAL = ["취소", "반려"];
 
 /** 상품 버킷 — staff 페이지와 동일 규칙 */
-const productBucket = (p: string | null): "모바일" | "인터넷" | "TV프리" | "기타" => {
+const productBucket = (p: string | null): "모바일" | "인터넷" | "TV프리" | "스마트홈" | "기타" => {
   const s = (p ?? "").toLowerCase();
   if (!s) return "기타";
+  // TV프리 우선 매칭 (일반 TV는 기타)
   if (/tv\s*프리|프리tv|tv프리/i.test(p ?? "") || (p ?? "").includes("TV프리")) return "TV프리";
+  // 스마트홈 / 홈IOT / IOT / 홈안심 등
+  if (/스마트홈|smart\s*home|홈\s*iot|^iot$|홈안심|허브|구글홈|애플홈/i.test(p ?? "")) return "스마트홈";
   if (/인터넷|기가|wifi/i.test(p ?? "")) return "인터넷";
   if (/모바일|mobile|usim|mnp|재약정|업셀/i.test(p ?? "")) return "모바일";
   return "기타";
 };
 
 /* ─── TABS ─── */
-type TabKey = "sales" | "profit" | "strategy" | "voucher" | "achievement" | "combo" | "vas" | "clean";
+type TabKey =
+  | "sales" | "profit" | "strategy" | "voucher" | "achievement"
+  | "internet" | "tvfree" | "iot" | "partnerCard"
+  | "vas" | "clean";
 const TABS: { key: TabKey; label: string; icon: typeof Crown; sortFn: (a: RankedUser, b: RankedUser) => number }[] = [
   { key: "sales", label: "판매 왕", icon: Crown, sortFn: (a, b) => b.count - a.count },
   { key: "profit", label: "수익 왕", icon: TrendingUp, sortFn: (a, b) => b.profit - a.profit },
   { key: "strategy", label: "전략 모델 마스터", icon: Zap, sortFn: (a, b) => b.strategyCount - a.strategyCount },
   { key: "voucher", label: "상품권 킬러", icon: Gift, sortFn: (a, b) => b.voucherReturned - a.voucherReturned },
   { key: "achievement", label: "달성률 챔피언", icon: Target, sortFn: (a, b) => b.achievement - a.achievement || b.count - a.count },
-  { key: "combo", label: "결합의 신", icon: Link2, sortFn: (a, b) => b.comboRate - a.comboRate || b.count - a.count },
+  { key: "internet", label: "인터넷 판매왕", icon: Wifi, sortFn: (a, b) => b.internetCount - a.internetCount },
+  { key: "tvfree", label: "TV프리 판매왕", icon: Monitor, sortFn: (a, b) => b.tvfreeCount - a.tvfreeCount },
+  { key: "iot", label: "홈IOT 판매왕", icon: Home, sortFn: (a, b) => b.iotCount - a.iotCount },
+  { key: "partnerCard", label: "제휴카드 판매왕", icon: CreditCard, sortFn: (a, b) => b.partnerCardCount - a.partnerCardCount },
   { key: "vas", label: "부가서비스 사냥꾼", icon: Sparkles, sortFn: (a, b) => b.vasAttach - a.vasAttach || b.count - a.count },
   { key: "clean", label: "클린 검수왕", icon: ShieldCheck, sortFn: (a, b) => b.cleanScore - a.cleanScore || a.cleanPenalty - b.cleanPenalty },
 ];
