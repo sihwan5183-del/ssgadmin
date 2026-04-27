@@ -322,7 +322,6 @@ const SalesLedgerPage = () => {
     }
     if (bundleFilter) result = result.filter((r) => r.bundle === "Y");
     if (noOfferFilter) result = result.filter((r) => (r.custom_fields as any)?.has_offer === false);
-    if (storeFilter !== "all") result = result.filter((r) => (r.channel ?? "") === storeFilter);
     if (!q) return result;
     const qDigits = q.replace(/[^0-9]/g, "");
     return result.filter((r) => {
