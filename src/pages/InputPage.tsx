@@ -758,7 +758,28 @@ const InputPage = () => {
               </Select>
             </Field>
             <Field label="담당자 *">
-              <Input value={form.manager ?? ""} onChange={(e) => set("manager", e.target.value)} className="h-9 bg-input/60 text-xs" required />
+              <Select
+                value={form.manager ?? ""}
+                onValueChange={(v) => set("manager", v)}
+              >
+                <SelectTrigger className="h-9 bg-input/60 text-xs">
+                  <SelectValue placeholder="직원 선택" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {/* 레거시 값(직원 리스트에 없는 기존 텍스트)도 유지해서 보여줌 */}
+                  {form.manager && !staffOptions.some((s) => s.display_name === form.manager) && (
+                    <SelectItem value={form.manager}>
+                      {form.manager} <span className="text-muted-foreground text-[10px]">(미등록)</span>
+                    </SelectItem>
+                  )}
+                  {staffOptions.map((s) => (
+                    <SelectItem key={s.user_id} value={s.display_name}>
+                      {s.display_name}
+                      {s.store && <span className="text-muted-foreground text-[10px] ml-1">({s.store})</span>}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
             <Field label="개통년월">
               <Input value={form.open_month ?? ""} onChange={(e) => set("open_month", e.target.value)} placeholder="2026. 4. 10" className="h-9 bg-input/60 text-xs" />
