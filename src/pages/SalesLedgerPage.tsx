@@ -386,14 +386,44 @@ const SalesLedgerPage = () => {
     });
 
   const handleExport = async () => {
-    const { data, error } = await supabase
+    let q = supabase
       .from("sales")
       .select("*")
       .gte("open_date", startDate)
-      .lte("open_date", endDate)
-      .order("open_date", { ascending: false, nullsFirst: false });
+      .lte("open_date", endDate);
+    if (statusFilter.length > 0) q = q.in("status", statusFilter);
+    if (managerFilter !== "all") q = q.eq("manager", managerFilter);
+    if (storeFilter !== "all") q = q.eq("channel", storeFilter);
+    if (productFilter !== "all") q = q.eq("product", productFilter);
+    if (returnFilter === "returned") q = q.eq("voucher_returned", "유");
+    else if (returnFilter === "unreturned") q = q.not("voucher", "is", null).neq("voucher", "").neq("voucher_returned", "유");
+    if (inspectionFilter === "inspected") q = q.eq("approval_status", "확정");
+    else if (inspectionFilter === "uninspected") q = q.neq("approval_status", "확정");
+    if (moyoFilter === "applied") q = q.eq("channel", "모요").or("moyo_excluded.is.null,moyo_excluded.eq.false");
+    else if (moyoFilter === "excluded") q = q.eq("channel", "모요").eq("moyo_excluded", true);
+    const { data, error } = await q.order("open_date", { ascending: false, nullsFirst: false });
     if (error) return toast.error("엑셀 내보내기 실패", { description: error.message });
-    const sales = data ?? [];
+    let sales = (data ?? []) as any[];
+    // 클라이언트 측 보조 필터 (퀵필터/번들/노오퍼/검색어)
+    const sq = debouncedSearchQ.trim().toLowerCase();
+    const sqDigits = sq.replace(/[^0-9]/g, "");
+    sales = sales.filter((r: any) => {
+      if (quickFilter === "unpaid" && !((r.receivable_amount ?? 0) > 0 && r.receivable_paid !== "완료")) return false;
+      if (quickFilter === "unreturned" && !(r.voucher && String(r.voucher).trim() !== "" && r.voucher_returned !== "유")) return false;
+      if (bundleFilter && r.bundle !== "Y") return false;
+      if (noOfferFilter && (r.custom_fields as any)?.has_offer !== false) return false;
+      if (sq) {
+        const name = (r.customer_name ?? "").toLowerCase();
+        const phone = (r.phone ?? "").replace(/[^0-9]/g, "");
+        const model = (r.device_model ?? "").toLowerCase();
+        const manager = (r.manager ?? "").toLowerCase();
+        const ch = (r.channel ?? "").toLowerCase();
+        const txt = name.includes(sq) || model.includes(sq) || manager.includes(sq) || ch.includes(sq);
+        const ph = sqDigits && phone.includes(sqDigits);
+        if (!txt && !ph) return false;
+      }
+      return true;
+    });
     // 담당자 UID → 성함 매핑 (created_by 기반)
     const uids = Array.from(new Set(sales.map((s: any) => s.created_by).filter(Boolean)));
     const uidToName: Record<string, string> = {};
