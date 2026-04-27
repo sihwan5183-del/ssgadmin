@@ -141,6 +141,8 @@ const SalesLedgerPage = () => {
   // inspectionFilter: all | inspected(검수완료=확정) | uninspected(미검수)
   const [returnFilter, setReturnFilter] = useState<"all" | "returned" | "unreturned">("all");
   const [inspectionFilter, setInspectionFilter] = useState<"all" | "inspected" | "uninspected">("all");
+  // 모요 적용 구분: all | applied(모요+토글OFF) | excluded(모요+토글ON)
+  const [moyoFilter, setMoyoFilter] = useState<"all" | "applied" | "excluded">("all");
 
   // URL 쿼리 파라미터로 진입 시 초기 필터 적용 (직원별 현황 → 비중 차트 클릭 등)
   useEffect(() => {
@@ -226,6 +228,11 @@ const SalesLedgerPage = () => {
     } else if (inspectionFilter === "uninspected") {
       query = query.neq("approval_status", "확정");
     }
+    if (moyoFilter === "applied") {
+      query = query.eq("channel", "모요").or("moyo_excluded.is.null,moyo_excluded.eq.false");
+    } else if (moyoFilter === "excluded") {
+      query = query.eq("channel", "모요").eq("moyo_excluded", true);
+    }
     const sq = debouncedSearchQ.trim();
     if (sq) {
       const digits = sq.replace(/[^0-9]/g, "");
@@ -251,14 +258,23 @@ const SalesLedgerPage = () => {
     setRows((data ?? []) as SaleRow[]);
     setTotal(count ?? 0);
     setSearching(false);
-  }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, debouncedSearchQ]);
+  }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
 
   const loadSummary = useCallback(async () => {
-    const { data } = await supabase
+    let q = supabase
       .from("sales")
-      .select("unit_price, vas_fee, distributor_amount, extra_subsidy, cash_support_amount, receivable_amount, trade_in_enabled, trade_in_confirmed, voucher, voucher_returned, customer_support_amount, corp_card_amount, custom_fields")
+      .select("unit_price, vas_fee, distributor_amount, extra_subsidy, cash_support_amount, receivable_amount, trade_in_enabled, trade_in_confirmed, voucher, voucher_returned, customer_support_amount, corp_card_amount, custom_fields, channel, moyo_excluded, manager, product, approval_status")
       .gte("open_date", startDate)
       .lte("open_date", endDate);
+    if (managerFilter !== "all") q = q.eq("manager", managerFilter);
+    if (storeFilter !== "all") q = q.eq("channel", storeFilter);
+    if (productFilter !== "all") q = q.eq("product", productFilter);
+    if (moyoFilter === "applied") {
+      q = q.eq("channel", "모요").or("moyo_excluded.is.null,moyo_excluded.eq.false");
+    } else if (moyoFilter === "excluded") {
+      q = q.eq("channel", "모요").eq("moyo_excluded", true);
+    }
+    const { data } = await q;
     const all = data ?? [];
     // 정산 제외 규칙: 상품권이 있고 반납 미완료('유' 아님) → 합계 제외
     const isExcluded = (r: any) =>
@@ -301,15 +317,15 @@ const SalesLedgerPage = () => {
       .not("voucher", "is", null)
       .neq("voucher_returned", "유");
     setUnreturnedCount(urc ?? 0);
-  }, [startDate, endDate]);
+  }, [startDate, endDate, managerFilter, storeFilter, productFilter, moyoFilter]);
 
   useEffect(() => {
     load();
     loadSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, debouncedSearchQ]);
+  }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
 
-  useEffect(() => { setPage(0); }, [startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, debouncedSearchQ]);
+  useEffect(() => { setPage(0); }, [startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
 
   // 디바운스 (300ms) — 입력 중에는 스피너 표시
   useEffect(() => {
@@ -370,14 +386,44 @@ const SalesLedgerPage = () => {
     });
 
   const handleExport = async () => {
-    const { data, error } = await supabase
+    let q = supabase
       .from("sales")
       .select("*")
       .gte("open_date", startDate)
-      .lte("open_date", endDate)
-      .order("open_date", { ascending: false, nullsFirst: false });
+      .lte("open_date", endDate);
+    if (statusFilter.length > 0) q = q.in("status", statusFilter);
+    if (managerFilter !== "all") q = q.eq("manager", managerFilter);
+    if (storeFilter !== "all") q = q.eq("channel", storeFilter);
+    if (productFilter !== "all") q = q.eq("product", productFilter);
+    if (returnFilter === "returned") q = q.eq("voucher_returned", "유");
+    else if (returnFilter === "unreturned") q = q.not("voucher", "is", null).neq("voucher", "").neq("voucher_returned", "유");
+    if (inspectionFilter === "inspected") q = q.eq("approval_status", "확정");
+    else if (inspectionFilter === "uninspected") q = q.neq("approval_status", "확정");
+    if (moyoFilter === "applied") q = q.eq("channel", "모요").or("moyo_excluded.is.null,moyo_excluded.eq.false");
+    else if (moyoFilter === "excluded") q = q.eq("channel", "모요").eq("moyo_excluded", true);
+    const { data, error } = await q.order("open_date", { ascending: false, nullsFirst: false });
     if (error) return toast.error("엑셀 내보내기 실패", { description: error.message });
-    const sales = data ?? [];
+    let sales = (data ?? []) as any[];
+    // 클라이언트 측 보조 필터 (퀵필터/번들/노오퍼/검색어)
+    const sq = debouncedSearchQ.trim().toLowerCase();
+    const sqDigits = sq.replace(/[^0-9]/g, "");
+    sales = sales.filter((r: any) => {
+      if (quickFilter === "unpaid" && !((r.receivable_amount ?? 0) > 0 && r.receivable_paid !== "완료")) return false;
+      if (quickFilter === "unreturned" && !(r.voucher && String(r.voucher).trim() !== "" && r.voucher_returned !== "유")) return false;
+      if (bundleFilter && r.bundle !== "Y") return false;
+      if (noOfferFilter && (r.custom_fields as any)?.has_offer !== false) return false;
+      if (sq) {
+        const name = (r.customer_name ?? "").toLowerCase();
+        const phone = (r.phone ?? "").replace(/[^0-9]/g, "");
+        const model = (r.device_model ?? "").toLowerCase();
+        const manager = (r.manager ?? "").toLowerCase();
+        const ch = (r.channel ?? "").toLowerCase();
+        const txt = name.includes(sq) || model.includes(sq) || manager.includes(sq) || ch.includes(sq);
+        const ph = sqDigits && phone.includes(sqDigits);
+        if (!txt && !ph) return false;
+      }
+      return true;
+    });
     // 담당자 UID → 성함 매핑 (created_by 기반)
     const uids = Array.from(new Set(sales.map((s: any) => s.created_by).filter(Boolean)));
     const uidToName: Record<string, string> = {};
@@ -467,6 +513,7 @@ const SalesLedgerPage = () => {
     productFilter !== "all" ||
     returnFilter !== "all" ||
     inspectionFilter !== "all" ||
+    moyoFilter !== "all" ||
     bundleFilter ||
     noOfferFilter;
 
@@ -478,6 +525,7 @@ const SalesLedgerPage = () => {
     setProductFilter("all");
     setReturnFilter("all");
     setInspectionFilter("all");
+    setMoyoFilter("all");
     setBundleFilter(false);
     setNoOfferFilter(false);
   };
@@ -619,6 +667,18 @@ const SalesLedgerPage = () => {
                   <SelectItem value="all">검수 전체</SelectItem>
                   <SelectItem value="inspected">검수완료(확정)</SelectItem>
                   <SelectItem value="uninspected">미검수</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* 모요 적용 구분 필터 */}
+              <Select value={moyoFilter} onValueChange={(v) => setMoyoFilter(v as any)}>
+                <SelectTrigger className="h-9 md:w-[150px]">
+                  <SelectValue placeholder="모요 전체" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">모요 전체</SelectItem>
+                  <SelectItem value="applied">모요 적용</SelectItem>
+                  <SelectItem value="excluded">모요 미적용</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -866,6 +926,7 @@ const SalesLedgerPage = () => {
                 const offer = offerOf(r);
                 const profit = profitOf(r);
                 const negative = profit < 0;
+                const isMoyoExcluded = r.channel === "모요" && r.moyo_excluded === true;
                 const handleRowClick = () => {
                   if (isLocked && !adminOverride) {
                     if (isAdmin) {
@@ -889,6 +950,7 @@ const SalesLedgerPage = () => {
                     mine && "bg-primary/[0.04]",
                     hasPending && "bg-amber-50/70 hover:bg-amber-500/[0.12]",
                     isLocked && "opacity-80",
+                    isMoyoExcluded && "text-muted-foreground/80 [&_td]:line-through",
                   )}
                   onClick={handleRowClick}
                   >
@@ -902,7 +964,16 @@ const SalesLedgerPage = () => {
                       </td>
                     )}
                     <td className="px-3 py-2.5">{r.open_date ?? "-"}</td>
-                    <td className="px-3 py-2.5">{r.channel ?? "-"}</td>
+                    <td className="px-3 py-2.5 no-underline">
+                      <div className="flex items-center gap-1.5 no-underline">
+                        <span>{r.channel ?? "-"}</span>
+                        {isMoyoExcluded && (
+                          <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-muted-foreground/40 text-muted-foreground no-underline">
+                            모요 미적용
+                          </Badge>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-3 py-2.5">
                       {r.manager ?? "-"}
                       <ResignedTag userId={r.created_by} ids={resignedIds} />
