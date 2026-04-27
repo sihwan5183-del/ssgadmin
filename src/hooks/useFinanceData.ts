@@ -87,7 +87,7 @@ const PRODUCT_PALETTE: Record<string, string> = {
   TV프리: "hsl(200 70% 55%)",
   홈: "hsl(210 70% 55%)",
   대명: "hsl(45 80% 55%)",
-  IOT: "hsl(280 70% 60%)",
+  스마트홈: "hsl(280 70% 60%)",
   기타: "hsl(220 10% 60%)",
 };
 
