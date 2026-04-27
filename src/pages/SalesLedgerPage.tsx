@@ -926,7 +926,7 @@ const SalesLedgerPage = () => {
                 const offer = offerOf(r);
                 const profit = profitOf(r);
                 const negative = profit < 0;
-                const isMoyoExcluded = r.channel === "모요" && r.moyo_excluded === true;
+                const isMoyoExcluded = r.channel === "모요" && r.product === "모바일" && r.moyo_excluded === true;
                 const handleRowClick = () => {
                   if (isLocked && !adminOverride) {
                     if (isAdmin) {
