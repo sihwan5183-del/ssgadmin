@@ -589,6 +589,46 @@ export default function ExpenseInputPage() {
                   );
                 })()}
               </div>
+              {adForm.amount_mode === "daily" && (() => {
+                const start = new Date(adForm.spend_date + "T00:00:00");
+                const end = new Date((adForm.end_date || adForm.spend_date) + "T00:00:00");
+                const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
+                const dailyAmt = Number((adForm.amount || "").replace(/[^0-9.-]/g, "")) || 0;
+                const autoTotal = dailyAmt * days;
+                const displayValue = adForm.total_overridden
+                  ? adForm.total_override
+                  : (autoTotal ? String(autoTotal) : "");
+                return (
+                  <div>
+                    <Label className="flex items-center gap-1.5">
+                      최종 합산 금액 (₩)
+                      {adForm.total_overridden && (
+                        <span className="text-[10px] font-normal text-amber-600 dark:text-amber-400">수기 수정됨</span>
+                      )}
+                    </Label>
+                    <Input
+                      inputMode="numeric"
+                      placeholder="자동 계산"
+                      value={displayValue}
+                      onChange={(e) => setAdForm({ ...adForm, total_override: e.target.value, total_overridden: true })}
+                    />
+                    <div className="flex items-center justify-between mt-1 gap-2">
+                      <p className="text-[10px] text-muted-foreground">
+                        ※ 기간에 따라 자동 계산되나, 실제 집행액에 맞게 직접 수정 가능합니다.
+                      </p>
+                      {adForm.total_overridden && (
+                        <button
+                          type="button"
+                          className="text-[10px] text-primary underline shrink-0"
+                          onClick={() => setAdForm({ ...adForm, total_override: "", total_overridden: false })}
+                        >
+                          자동계산 복귀
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
               <div className="md:col-span-2">
                 <Label>캠페인명</Label>
                 <Input placeholder="예: 11월 신규개통 프로모션"
