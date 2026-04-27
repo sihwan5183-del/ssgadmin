@@ -314,7 +314,7 @@ const RankingPage = () => {
     // 개통완료/반납완료 실적 (취소·반려 제외) — 판매원장 실시간 반영
     const { data: sales } = await supabase
       .from("sales")
-      .select("id, created_by, manager, device_model, product, sale_type, status, approval_status, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned, vas1, vas2, open_date")
+      .select("id, created_by, manager, device_model, product, sale_type, status, approval_status, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned, vas1, vas2, open_date, custom_fields")
       .in("status", COUNTED_STATUSES)
       .not("approval_status", "in", `(${EXCLUDED_APPROVAL.join(",")})`)
       .gte("open_date", start)
@@ -349,6 +349,8 @@ const RankingPage = () => {
       count: number; profit: number; strategyCount: number; voucherReturned: number;
       dateCounts: Map<string, number>;
       productCounts: { 모바일: number; 인터넷: number; TV프리: number; 부가서비스: number };
+      iotCount: number;
+      partnerCardCount: number;
     }>();
     const mMap = new Map<string, { count: number; isStrategy: boolean }>();
     const seenSaleIds = new Set<string>();
@@ -362,6 +364,8 @@ const RankingPage = () => {
         count: 0, profit: 0, strategyCount: 0, voucherReturned: 0,
         dateCounts: new Map(),
         productCounts: { 모바일: 0, 인터넷: 0, TV프리: 0, 부가서비스: 0 },
+        iotCount: 0,
+        partnerCardCount: 0,
       });
       const u = uMap.get(uid)!;
       u.count++;
@@ -371,12 +375,18 @@ const RankingPage = () => {
       if (s.voucher && s.voucher_returned === "유") u.voucherReturned++;
       if (s.open_date) u.dateCounts.set(s.open_date, (u.dateCounts.get(s.open_date) ?? 0) + 1);
 
-      // 상품별 카운트
+      // 상품별 카운트 (product 필드 매핑된 행만 정확히 합산)
       const b = productBucket(s.product);
       if (b !== "기타") u.productCounts[b]++;
+      // 스마트홈/홈IOT는 별도 카운트
+      if (b === "스마트홈") u.iotCount++;
       if ((s.vas1 && String(s.vas1).trim() && s.vas1 !== "없음") || (s.vas2 && String(s.vas2).trim() && s.vas2 !== "없음")) {
         u.productCounts.부가서비스++;
       }
+
+      // 제휴카드: custom_fields.partner_card_enabled === true
+      const cf = (s as any).custom_fields ?? {};
+      if (cf && cf.partner_card_enabled) u.partnerCardCount++;
 
       // Model ranking
       if (s.device_model) {
