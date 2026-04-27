@@ -86,12 +86,12 @@ export const ActivationBreakdown = () => {
               </div>
               <div>
                 <h3 className="font-semibold text-sm">모바일 유형별 건수</h3>
-                <p className="text-[11px] text-muted-foreground">MNP · 기변</p>
+                <p className="text-[11px] text-muted-foreground">MNP · 신규 · 기변 · 2nd</p>
               </div>
             </div>
             <div className="text-right">
               <div className="text-xs text-muted-foreground">합계</div>
-              <div className="font-bold tabular-nums">{totalMobile.toLocaleString()}건</div>
+              <div className="font-bold tabular-nums">{(totalMobile + secondDeviceCount).toLocaleString()}건</div>
             </div>
           </div>
 
@@ -114,6 +114,18 @@ export const ActivationBreakdown = () => {
                 </div>
               );
             })}
+            <div className="pt-3 mt-1 border-t border-border/40">
+              <div className="flex items-baseline justify-between mb-1.5">
+                <span className="text-sm font-medium flex items-center gap-1.5">
+                  <span className="size-2 rounded-full" style={{ background: "hsl(35 95% 60%)" }} />
+                  2nd 디바이스 <span className="text-[10px] text-muted-foreground font-normal">(워치·태블릿 등)</span>
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-lg font-bold tabular-nums">{secondDeviceCount}</span>
+                  <span className="text-[11px] text-muted-foreground">건</span>
+                </div>
+              </div>
+            </div>
           </div>
         </Card>
 
