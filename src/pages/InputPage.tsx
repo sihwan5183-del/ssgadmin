@@ -137,11 +137,11 @@ const InputPage = () => {
         .order("display_name", { ascending: true });
       const list = (data ?? []) as { user_id: string; display_name: string; store: string | null }[];
       setStaffOptions(list);
-      // 신규 입력일 때 본인 이름 자동 세팅
+      // 신규 입력일 때 본인 UID 자동 세팅
       setForm((f) => {
         if (f.manager || !user) return f;
         const me = list.find((p) => p.user_id === user.id);
-        return me ? { ...f, manager: me.display_name } : f;
+        return me ? { ...f, manager: me.user_id } : f;
       });
     })();
   }, [user]);
@@ -767,13 +767,13 @@ const InputPage = () => {
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
                   {/* 레거시 값(직원 리스트에 없는 기존 텍스트)도 유지해서 보여줌 */}
-                  {form.manager && !staffOptions.some((s) => s.display_name === form.manager) && (
+                  {form.manager && !staffOptions.some((s) => s.user_id === form.manager || s.display_name === form.manager) && (
                     <SelectItem value={form.manager}>
                       {form.manager} <span className="text-muted-foreground text-[10px]">(미등록)</span>
                     </SelectItem>
                   )}
                   {staffOptions.map((s) => (
-                    <SelectItem key={s.user_id} value={s.display_name}>
+                    <SelectItem key={s.user_id} value={s.user_id}>
                       {s.display_name}
                       {s.store && <span className="text-muted-foreground text-[10px] ml-1">({s.store})</span>}
                     </SelectItem>
