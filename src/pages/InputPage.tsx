@@ -1303,45 +1303,185 @@ const InputPage = () => {
           })()}
 
           {/* 자동이체 정보 */}
-          <div className="border border-border/30 rounded-xl p-3 mt-2 bg-muted/10">
-            <div className="flex items-center gap-2 mb-2">
-              <Banknote className="size-3.5 text-primary" />
-              <span className="text-xs font-semibold">자동이체 정보</span>
-              <span className="text-[10px] text-muted-foreground">월 요금 자동 출금 계좌</span>
-            </div>
-            <Grid cols={3}>
-              <Field label="은행명">
-                <Select
-                  value={customFields.autopay_bank ?? ""}
-                  onValueChange={(v) => setCustomFields((f) => ({ ...f, autopay_bank: v }))}
-                >
-                  <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="은행 선택" /></SelectTrigger>
-                  <SelectContent>{BANKS.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
-                </Select>
-              </Field>
-              <Field label="계좌번호">
-                <Input
-                  value={customFields.autopay_account ?? ""}
-                  onChange={(e) => {
-                    const v = e.target.value.replace(/[^\d-]/g, "").slice(0, 20);
-                    setCustomFields((f) => ({ ...f, autopay_account: v }));
-                  }}
-                  placeholder="000-0000-0000"
-                  className="h-9 bg-input/60 text-xs tabular-nums"
-                  inputMode="numeric"
-                />
-              </Field>
-              <Field label="예금주">
-                <Input
-                  value={customFields.autopay_holder ?? ""}
-                  onChange={(e) => setCustomFields((f) => ({ ...f, autopay_holder: e.target.value }))}
-                  placeholder="홍길동"
-                  className="h-9 bg-input/60 text-xs"
-                  maxLength={30}
-                />
-              </Field>
-            </Grid>
-          </div>
+          {(() => {
+            const method: "account" | "card" =
+              customFields.autopay_method === "card" ? "card" : "account";
+            const thirdParty = !!customFields.autopay_third_party;
+            const setMethod = (m: "account" | "card") =>
+              setCustomFields((f) => ({ ...f, autopay_method: m }));
+            const formatCardNumber = (raw: string) => {
+              const d = raw.replace(/\D/g, "").slice(0, 16);
+              return d.replace(/(.{4})/g, "$1-").replace(/-$/, "");
+            };
+            const formatExpiry = (raw: string) => {
+              const d = raw.replace(/\D/g, "").slice(0, 4);
+              return d.length <= 2 ? d : `${d.slice(0, 2)}/${d.slice(2)}`;
+            };
+            return (
+              <div className="border border-border/30 rounded-xl p-3 mt-2 mb-2 bg-muted/10 transition-all duration-300 ease-out">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <Banknote className="size-3.5 text-primary" />
+                  <span className="text-xs font-semibold">자동이체 정보</span>
+                  <span className="text-[10px] text-muted-foreground">월 요금 자동 출금 수단</span>
+                  {/* 결제수단 토글 */}
+                  <div className="ml-auto flex items-center gap-1 rounded-lg border border-border/40 bg-background/60 p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setMethod("account")}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                        method === "account"
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:bg-muted/40"
+                      }`}
+                    >계좌이체</button>
+                    <button
+                      type="button"
+                      onClick={() => setMethod("card")}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                        method === "card"
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:bg-muted/40"
+                      }`}
+                    >신용카드</button>
+                  </div>
+                  {/* 제3자 결제 토글 */}
+                  <button
+                    type="button"
+                    onClick={() => setCustomFields((f) => ({ ...f, autopay_third_party: !f.autopay_third_party }))}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium border transition-colors ${
+                      thirdParty
+                        ? "border-amber-500/60 bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300"
+                        : "border-border/40 bg-background/60 text-muted-foreground hover:bg-muted/40"
+                    }`}
+                    title="가입자와 결제 명의자가 다를 경우 ON"
+                  >
+                    {thirdParty ? "● 제3자 결제" : "○ 제3자 결제"}
+                  </button>
+                </div>
+
+                {/* 결제수단별 동적 폼 */}
+                <div className="animate-fade-in">
+                  {method === "account" ? (
+                    <Grid cols={3}>
+                      <Field label="은행명">
+                        <Select
+                          value={customFields.autopay_bank ?? ""}
+                          onValueChange={(v) => setCustomFields((f) => ({ ...f, autopay_bank: v }))}
+                        >
+                          <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="은행 선택" /></SelectTrigger>
+                          <SelectContent>{BANKS.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </Field>
+                      <Field label="계좌번호">
+                        <Input
+                          value={customFields.autopay_account ?? ""}
+                          onChange={(e) => {
+                            const v = e.target.value.replace(/[^\d-]/g, "").slice(0, 20);
+                            setCustomFields((f) => ({ ...f, autopay_account: v }));
+                          }}
+                          placeholder="000-0000-0000"
+                          className="h-9 bg-input/60 text-xs tabular-nums"
+                          inputMode="numeric"
+                        />
+                      </Field>
+                      <Field label="예금주">
+                        <Input
+                          value={customFields.autopay_holder ?? ""}
+                          onChange={(e) => setCustomFields((f) => ({ ...f, autopay_holder: e.target.value }))}
+                          placeholder="홍길동"
+                          className="h-9 bg-input/60 text-xs"
+                          maxLength={30}
+                        />
+                      </Field>
+                    </Grid>
+                  ) : (
+                    <Grid cols={3}>
+                      <Field label="카드사">
+                        <Input
+                          value={customFields.autopay_card_company ?? ""}
+                          onChange={(e) =>
+                            setCustomFields((f) => ({ ...f, autopay_card_company: e.target.value.slice(0, 30) }))
+                          }
+                          placeholder="국민/신한/현대 등"
+                          className="h-9 bg-input/60 text-xs"
+                          maxLength={30}
+                        />
+                      </Field>
+                      <Field label="카드번호">
+                        <Input
+                          value={customFields.autopay_card_number ?? ""}
+                          onChange={(e) =>
+                            setCustomFields((f) => ({ ...f, autopay_card_number: formatCardNumber(e.target.value) }))
+                          }
+                          placeholder="1234-5678-9012-3456"
+                          className="h-9 bg-input/60 text-xs tabular-nums"
+                          inputMode="numeric"
+                          maxLength={19}
+                        />
+                      </Field>
+                      <Field label="유효기간 (MM/YY)">
+                        <Input
+                          value={customFields.autopay_card_expiry ?? ""}
+                          onChange={(e) =>
+                            setCustomFields((f) => ({ ...f, autopay_card_expiry: formatExpiry(e.target.value) }))
+                          }
+                          placeholder="MM/YY"
+                          className="h-9 bg-input/60 text-xs tabular-nums"
+                          inputMode="numeric"
+                          maxLength={5}
+                        />
+                      </Field>
+                    </Grid>
+                  )}
+                </div>
+
+                {/* 제3자 결제 정보 (조건부) */}
+                {thirdParty && (
+                  <div className="mt-3 pt-3 border-t border-dashed border-border/40 animate-fade-in">
+                    <div className="text-[10px] text-amber-700 dark:text-amber-400 mb-1.5 font-medium">
+                      ⚠ 가입자와 결제 명의자가 다른 경우 — 명의자 정보를 입력하세요
+                    </div>
+                    <Grid cols={3}>
+                      <Field label="명의자 성함">
+                        <Input
+                          value={customFields.autopay_owner_name ?? ""}
+                          onChange={(e) =>
+                            setCustomFields((f) => ({ ...f, autopay_owner_name: e.target.value.slice(0, 30) }))
+                          }
+                          placeholder="홍길동"
+                          className="h-9 bg-input/60 text-xs"
+                          maxLength={30}
+                        />
+                      </Field>
+                      <Field label="가입자와의 관계">
+                        <Select
+                          value={customFields.autopay_owner_relation ?? ""}
+                          onValueChange={(v) => setCustomFields((f) => ({ ...f, autopay_owner_relation: v }))}
+                        >
+                          <SelectTrigger className="h-9 bg-input/60 text-xs">
+                            <SelectValue placeholder="관계 선택" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {["배우자", "부모", "자녀", "형제/자매", "본인", "친척", "지인", "기타"].map((r) => (
+                              <SelectItem key={r} value={r}>{r}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                      <Field label="명의자 생년월일">
+                        <Input
+                          type="date"
+                          value={customFields.autopay_owner_birth ?? ""}
+                          onChange={(e) => setCustomFields((f) => ({ ...f, autopay_owner_birth: e.target.value }))}
+                          className="h-9 bg-input/60 text-xs"
+                        />
+                      </Field>
+                    </Grid>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* 제휴카드 */}
           <div className="border border-border/30 rounded-xl p-3 mt-2 bg-muted/10">
