@@ -128,6 +128,8 @@ export default function ExpenseInputPage() {
     channel: "",
     amount: "",          // 입력 금액 (모드에 따라 일별 또는 총액)
     amount_mode: "total" as "daily" | "total", // 입력 모드
+    total_override: "",  // daily 모드 시 사용자가 수기로 수정한 최종 합산 금액
+    total_overridden: false,
     campaign: "",
     note: "",
   });
@@ -254,10 +256,19 @@ export default function ExpenseInputPage() {
     const end = new Date((adForm.end_date || adForm.spend_date) + "T00:00:00");
     const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
     const inputAmount = Number(adForm.amount.replace(/[^0-9.-]/g, "")) || 0;
-    const dailyAmount =
-      adForm.amount_mode === "daily" ? inputAmount : Math.round(inputAmount / days);
-    const totalAmount =
-      adForm.amount_mode === "total" ? inputAmount : inputAmount * days;
+    // daily 모드에서 사용자가 [최종 합산 금액]을 수기로 수정한 경우 그 값을 우선 사용
+    const overrideTotal = Number((adForm.total_override || "").replace(/[^0-9.-]/g, "")) || 0;
+    const useOverride = adForm.amount_mode === "daily" && adForm.total_overridden && overrideTotal > 0;
+    const totalAmount = useOverride
+      ? overrideTotal
+      : adForm.amount_mode === "total"
+        ? inputAmount
+        : inputAmount * days;
+    const dailyAmount = useOverride
+      ? Math.round(overrideTotal / days)
+      : adForm.amount_mode === "daily"
+        ? inputAmount
+        : Math.round(inputAmount / days);
 
     // 기간 동안 매일 ad_spend 행을 생성하여 일자별로 자동 분산
     const inserts = [] as any[];
@@ -290,7 +301,7 @@ export default function ExpenseInputPage() {
         ? `${days}일에 걸쳐 일별 ${dailyAmount.toLocaleString()}원씩 자동 분산 저장됨 (총 ${totalAmount.toLocaleString()}원)`
         : "광고비가 저장되었습니다",
     );
-    setAdForm({ spend_date: todayISO(), end_date: todayISO(), media: "", channel: "", amount: "", amount_mode: "total", campaign: "", note: "" });
+    setAdForm({ spend_date: todayISO(), end_date: todayISO(), media: "", channel: "", amount: "", amount_mode: "total", total_override: "", total_overridden: false, campaign: "", note: "" });
     fetchRows();
   };
 
@@ -578,6 +589,46 @@ export default function ExpenseInputPage() {
                   );
                 })()}
               </div>
+              {adForm.amount_mode === "daily" && (() => {
+                const start = new Date(adForm.spend_date + "T00:00:00");
+                const end = new Date((adForm.end_date || adForm.spend_date) + "T00:00:00");
+                const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
+                const dailyAmt = Number((adForm.amount || "").replace(/[^0-9.-]/g, "")) || 0;
+                const autoTotal = dailyAmt * days;
+                const displayValue = adForm.total_overridden
+                  ? adForm.total_override
+                  : (autoTotal ? String(autoTotal) : "");
+                return (
+                  <div>
+                    <Label className="flex items-center gap-1.5">
+                      최종 합산 금액 (₩)
+                      {adForm.total_overridden && (
+                        <span className="text-[10px] font-normal text-amber-600 dark:text-amber-400">수기 수정됨</span>
+                      )}
+                    </Label>
+                    <Input
+                      inputMode="numeric"
+                      placeholder="자동 계산"
+                      value={displayValue}
+                      onChange={(e) => setAdForm({ ...adForm, total_override: e.target.value, total_overridden: true })}
+                    />
+                    <div className="flex items-center justify-between mt-1 gap-2">
+                      <p className="text-[10px] text-muted-foreground">
+                        ※ 기간에 따라 자동 계산되나, 실제 집행액에 맞게 직접 수정 가능합니다.
+                      </p>
+                      {adForm.total_overridden && (
+                        <button
+                          type="button"
+                          className="text-[10px] text-primary underline shrink-0"
+                          onClick={() => setAdForm({ ...adForm, total_override: "", total_overridden: false })}
+                        >
+                          자동계산 복귀
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
               <div className="md:col-span-2">
                 <Label>캠페인명</Label>
                 <Input placeholder="예: 11월 신규개통 프로모션"
