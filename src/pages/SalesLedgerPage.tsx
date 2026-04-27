@@ -165,7 +165,19 @@ const SalesLedgerPage = () => {
   const { options: productOptions } = useFieldOptions("product");
   const { options: statusOptions } = useFieldOptions("status");
 
-  const [dbSummary, setDbSummary] = useState({ count: 0, totalRebate: 0, totalOffer: 0, totalProfit: 0, excludedCount: 0 });
+  const [dbSummary, setDbSummary] = useState({
+    count: 0,
+    totalRebate: 0,
+    totalOffer: 0,
+    totalProfit: 0,
+    excludedCount: 0,
+    moyoCount: 0,
+    moyoFeeTotal: 0,
+    totalReceivable: 0,
+    totalVoucher: 0,
+    totalTradeIn: 0,
+    totalVas: 0,
+  });
   const [unpaidCount, setUnpaidCount] = useState(0);
   const [unreturnedCount, setUnreturnedCount] = useState(0);
 
@@ -279,21 +291,43 @@ const SalesLedgerPage = () => {
     const { data } = await q;
     const all = data ?? [];
     // ✅ 단일 공식 (calcDashboardProfit) — 대시보드/엑셀과 1원도 어긋나지 않게 통일
-    let totalRevenue = 0;
-    let totalExpense = 0;
-    let totalRebate = 0;
+    // ※ 모요 수수료는 [총 리베이트/총 오퍼]에서 분리. 마지막 [최종 수익]에서만 차감.
+    let totalCommission = 0;
+    let totalVas = 0;
+    let totalReceivable = 0;
+    let totalVoucher = 0;
+    let totalTradeIn = 0;
+    let totalOfferExpense = 0; // 모요 수수료 제외한 순수 지출 합계
+    let moyoFeeTotal = 0;
+    let moyoCount = 0;
     for (const r of all) {
       const p = calcDashboardProfit(r as any);
-      totalRevenue += p.revenue;
-      totalExpense += p.expense;
-      totalRebate += p.salesCommission;
+      totalCommission += p.salesCommission;
+      totalVas += p.vasFee;
+      totalReceivable += p.receivableAmount;
+      totalVoucher += p.voucherAmount;
+      totalTradeIn += p.tradeInConfirmed;
+      // 지출에서 모요 수수료 제외 → 순수 오퍼/지출 항목만
+      totalOfferExpense += p.expense - p.moyoFee;
+      moyoFeeTotal += p.moyoFee;
+      if (p.moyoFee > 0) moyoCount += 1;
     }
+    const totalRebate = totalCommission + totalVas; // 단가표 + 부가서비스 (순수 영업)
+    const totalRevenuePure = totalRebate + totalReceivable + totalVoucher + totalTradeIn;
+    // 최종 수익 = (순수 수익) - (순수 지출) - (모요 수수료) ← 마지막에 차감
+    const totalProfit = totalRevenuePure - totalOfferExpense - moyoFeeTotal;
     setDbSummary({
       count: all.length,
       totalRebate,
-      totalOffer: totalExpense,
-      totalProfit: totalRevenue - totalExpense,
+      totalOffer: totalOfferExpense,
+      totalProfit,
       excludedCount: 0,
+      moyoCount,
+      moyoFeeTotal,
+      totalReceivable,
+      totalVoucher,
+      totalTradeIn,
+      totalVas,
     });
 
     const { count: uc } = await supabase
