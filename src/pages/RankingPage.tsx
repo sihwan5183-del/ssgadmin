@@ -112,8 +112,10 @@ const periodUpToYesterday = (period: string) => {
   return { start, end: yISO };
 };
 
-/** 확정·개통완료/반납완료만 집계 */
+/** 개통완료/반납완료만 집계 (취소·반려 제외) — 판매원장 실시간 데이터와 정합 */
 const COUNTED_STATUSES = ["개통완료", "반납완료"];
+/** 집계에서 제외할 승인 상태 */
+const EXCLUDED_APPROVAL = ["취소", "반려"];
 
 /** 상품 버킷 — staff 페이지와 동일 규칙 */
 const productBucket = (p: string | null): "모바일" | "인터넷" | "TV프리" | "기타" => {
@@ -275,12 +277,12 @@ const RankingPage = () => {
     const { data: stratModels } = await supabase.from("device_models").select("model_name").eq("is_strategy", true).eq("active", true);
     const stratSet = new Set((stratModels ?? []).map((m) => m.model_name));
 
-    // Fetch confirmed + 개통완료/반납완료 sales only — 판매원장 확정 데이터와 일치
+    // 개통완료/반납완료 실적 (취소·반려 제외) — 판매원장 실시간 반영
     const { data: sales } = await supabase
       .from("sales")
       .select("id, created_by, manager, device_model, product, status, approval_status, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned, vas1, vas2, open_date")
-      .eq("approval_status", "확정")
       .in("status", COUNTED_STATUSES)
+      .not("approval_status", "in", `(${EXCLUDED_APPROVAL.join(",")})`)
       .gte("open_date", start)
       .lte("open_date", end)
       .limit(20000);
@@ -289,8 +291,8 @@ const RankingPage = () => {
     const { data: ySales } = await supabase
       .from("sales")
       .select("created_by")
-      .eq("approval_status", "확정")
       .in("status", COUNTED_STATUSES)
+      .not("approval_status", "in", `(${EXCLUDED_APPROVAL.join(",")})`)
       .gte("open_date", yd.start)
       .lte("open_date", yd.end);
 
@@ -300,8 +302,8 @@ const RankingPage = () => {
       const { data: yps } = await supabase
         .from("sales")
         .select("created_by, device_model, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned")
-        .eq("approval_status", "확정")
         .in("status", COUNTED_STATUSES)
+        .not("approval_status", "in", `(${EXCLUDED_APPROVAL.join(",")})`)
         .gte("open_date", yPeriod.start)
         .lte("open_date", yPeriod.end)
         .limit(20000);
@@ -678,7 +680,10 @@ const RankingPage = () => {
                         </div>
                         <div className="mt-2">
                           <div className="text-lg font-extrabold truncate text-foreground">{u.name}</div>
-                          <div className="text-[11px] text-muted-foreground truncate">{u.store ?? "매장 미배정"}</div>
+                        <div className="text-[11px] text-muted-foreground truncate flex items-center gap-1">
+                          <span className="size-1 rounded-full bg-muted-foreground/60" />
+                          {u.store ?? "매장 미배정"}
+                        </div>
                         </div>
                         <div className={cn("mt-3 font-extrabold tabular-nums", i === 0 ? "text-3xl" : "text-2xl", S.color)}>
                           {getValue(u)}
@@ -720,11 +725,9 @@ const RankingPage = () => {
                         <span className="text-xs text-muted-foreground tabular-nums w-6 text-center shrink-0">{i + 4}</span>
                         <span className="text-base shrink-0">{tier.icon}</span>
                         <span className="text-sm font-semibold truncate">{u.name}</span>
-                        {u.store && (
-                          <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded bg-muted/60 shrink-0 hidden sm:inline">
-                            {u.store}
-                          </span>
-                        )}
+                        <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded bg-muted/60 shrink-0">
+                          {u.store ?? "미배정"}
+                        </span>
                         <RankDeltaPill delta={u.rankDelta} />
                         {u.isClean && <CleanBadge days={u.cleanDays} />}
                         {u.streak >= 3 && (
