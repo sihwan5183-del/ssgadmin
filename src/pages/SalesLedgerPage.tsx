@@ -639,6 +639,18 @@ const SalesLedgerPage = () => {
                   <SelectItem value="uninspected">미검수</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* 모요 적용 구분 필터 */}
+              <Select value={moyoFilter} onValueChange={(v) => setMoyoFilter(v as any)}>
+                <SelectTrigger className="h-9 md:w-[150px]">
+                  <SelectValue placeholder="모요 전체" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">모요 전체</SelectItem>
+                  <SelectItem value="applied">모요 적용</SelectItem>
+                  <SelectItem value="excluded">모요 미적용</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* 상태 멀티셀렉트 (칩) */}
