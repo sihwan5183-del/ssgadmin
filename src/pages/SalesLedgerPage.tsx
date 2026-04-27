@@ -1109,6 +1109,7 @@ const SalesLedgerPage = () => {
                   <tr key={r.id} className={cn(
                     "border-b border-border/20 hover:bg-muted/30 cursor-pointer transition-colors",
                     isMoyoExcluded && "text-muted-foreground",
+                    isManagerMissing(r) && "bg-amber-50/60 dark:bg-amber-500/10",
                   )}
                   onClick={handleRowClick}
                   >
