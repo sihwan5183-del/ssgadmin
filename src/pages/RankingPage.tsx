@@ -676,6 +676,12 @@ const RankingPage = () => {
       case "strategy": return `${u.strategyCount}건`;
       case "voucher": return `${u.voucherReturned}건`;
       case "achievement": return u.goalCount > 0 ? `${u.achievement}%` : "목표 미설정";
+      case "internet": return `${u.internetCount}건`;
+      case "tvfree": return `${u.tvfreeCount}건`;
+      case "iot": return `${u.iotCount}건`;
+      case "partnerCard": return `${u.partnerCardCount}건`;
+      case "vas": return `${u.vasAttach}%`;
+      case "clean": return `${u.cleanScore}점`;
     }
   };
 
