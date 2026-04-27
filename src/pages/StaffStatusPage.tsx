@@ -699,50 +699,81 @@ export default function StaffStatusPage() {
               </Card>
             </section>
 
-            {/* === 부가서비스 / 2nd / 판매비중 === */}
-            <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            {/* === 부가서비스 유치율 / 2nd 디바이스 / 5종 판매비중 === */}
+            <section className="grid grid-cols-1 lg:grid-cols-4 gap-5">
               <Card className="p-6 glass">
                 <div className="text-sm font-semibold flex items-center gap-2 mb-2">
-                  <Gift className="size-4 text-primary-glow" /> 부가서비스 유치
+                  <Gift className="size-4 text-primary-glow" /> 부가서비스 유치율
                 </div>
-                <div className="text-4xl font-extrabold text-amber-700 tabular-nums">{analytics.vasCount}<span className="text-base font-normal text-muted-foreground ml-1">건</span></div>
-                <p className="text-xs text-muted-foreground mt-2">VAS1·VAS2 합산. 성공 실적 기준</p>
+                <div className="text-4xl font-extrabold text-amber-700 tabular-nums">
+                  {analytics.mobileVasRate}<span className="text-base font-normal text-muted-foreground ml-1">%</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  모바일 {analytics.mobileCount}건 중 부가 포함 · 총 {analytics.vasCount}건
+                </p>
               </Card>
 
               <Card className="p-6 glass">
                 <div className="text-sm font-semibold flex items-center gap-2 mb-2">
-                  <Smartphone className="size-4 text-primary-glow" /> 모바일 2nd 부가 유치율
+                  <Smartphone className="size-4 text-primary-glow" /> 2nd 디바이스 판매
                 </div>
-                <div className="text-4xl font-extrabold text-emerald-300 tabular-nums">{analytics.secondVasRate}<span className="text-base font-normal text-muted-foreground ml-1">%</span></div>
-                <p className="text-xs text-muted-foreground mt-2">2ND 디바이스 {analytics.secondCount}건 중 부가 포함 건 비율</p>
+                <div className="text-4xl font-extrabold text-emerald-300 tabular-nums">
+                  {analytics.secondCount}<span className="text-base font-normal text-muted-foreground ml-1">대</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  워치·태블릿 등 · 부가 부착률 {analytics.secondVasRate}%
+                </p>
               </Card>
 
-              <Card className="p-6 glass">
+              <Card className="p-6 glass lg:col-span-2">
                 <div className="text-sm font-semibold flex items-center gap-2 mb-3">
-                  <Wifi className="size-4 text-primary-glow" /> 모바일 vs 유선/솔루션 비중
+                  <Wifi className="size-4 text-primary-glow" /> 가입상품 5종 판매비중
+                  <span className="text-[10px] text-muted-foreground ml-1">· 항목 클릭 시 실적 리스트로 이동</span>
                 </div>
                 {analytics.mixData.length === 0 ? (
                   <div className="h-32 grid place-items-center text-xs text-muted-foreground">데이터 없음</div>
                 ) : (
-                  <div className="h-36">
-                    <ResponsiveContainer>
-                      <PieChart>
-                        <Pie data={analytics.mixData} dataKey="value" nameKey="name" innerRadius={42} outerRadius={66} paddingAngle={3} stroke="none">
-                          {analytics.mixData.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />)}
-                        </Pie>
-                        <RTooltip contentStyle={{ background: "hsl(0 0% 100% / 0.96)", color: "#374151", border: "1px solid hsl(0 0% 88%)", borderRadius: 12, fontSize: 12 }} />
-                      </PieChart>
-                    </ResponsiveContainer>
+                  <div className="grid grid-cols-2 gap-3 items-center">
+                    <div className="h-40">
+                      <ResponsiveContainer>
+                        <PieChart>
+                          <Pie data={analytics.mixData} dataKey="value" nameKey="name" innerRadius={45} outerRadius={72} paddingAngle={3} stroke="none">
+                            {analytics.mixData.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />)}
+                          </Pie>
+                          <RTooltip contentStyle={{ background: "hsl(0 0% 100% / 0.96)", color: "#374151", border: "1px solid hsl(0 0% 88%)", borderRadius: 12, fontSize: 12 }} formatter={(v: any, n: any) => [`${v}건`, n]} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="space-y-1.5">
+                      {analytics.mixData.map((d, i) => {
+                        const total = analytics.mixData.reduce((a, x) => a + x.value, 0);
+                        const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
+                        const handleClick = () => {
+                          const params = new URLSearchParams();
+                          if (d.key === "부가서비스") {
+                            params.set("vas", "1");
+                          } else {
+                            params.set("product", d.key);
+                          }
+                          if (selected) params.set("manager", selected.display_name);
+                          window.location.href = `/sales-ledger?${params.toString()}`;
+                        };
+                        return (
+                          <button
+                            key={d.name}
+                            onClick={handleClick}
+                            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/40 transition-colors text-left"
+                          >
+                            <span className="size-2.5 rounded-full shrink-0" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                            <span className="text-xs font-medium flex-1 truncate">{d.name}</span>
+                            <span className="text-xs tabular-nums text-muted-foreground">{d.value}건</span>
+                            <span className="text-[10px] tabular-nums text-emerald-300 font-semibold w-9 text-right">{pct}%</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
-                <div className="flex flex-wrap justify-center gap-2 text-[10px] mt-1">
-                  {analytics.mixData.map((d, i) => (
-                    <span key={d.name} className="flex items-center gap-1">
-                      <span className="size-2 rounded-full" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
-                      {d.name} {d.value}건
-                    </span>
-                  ))}
-                </div>
               </Card>
             </section>
 
