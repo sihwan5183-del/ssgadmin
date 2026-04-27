@@ -75,6 +75,15 @@ interface SaleHit {
   revision_reason: string | null;
   revision_requested_at: string | null;
   re_review_requested_at: string | null;
+  // 추가 표시용
+  bundle?: string | null;
+  sale_type?: string | null;
+  open_method?: string | null;
+  birth_date?: string | null;
+  vas_fee?: number | null;
+  extra_subsidy?: number | null;
+  moyo_excluded?: boolean | null;
+  custom_fields?: Record<string, any> | null;
 }
 
 const EDITABLE_FIELDS: Array<{ key: keyof SaleHit; label: string; type?: string }> = [
