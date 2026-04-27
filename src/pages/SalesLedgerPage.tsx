@@ -181,16 +181,7 @@ const SalesLedgerPage = () => {
   const [unpaidCount, setUnpaidCount] = useState(0);
   const [unreturnedCount, setUnreturnedCount] = useState(0);
 
-  // 최고관리자 전용: 확정된 실적 강제 잠금 해제 토글 (localStorage 저장)
-  const [forceUnlock, setForceUnlock] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("admin_force_unlock_sales") === "1";
-  });
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (forceUnlock) localStorage.setItem("admin_force_unlock_sales", "1");
-    else localStorage.removeItem("admin_force_unlock_sales");
-  }, [forceUnlock]);
+  // ※ 확정 잠금 정책 폐지 — 직원이 자유롭게 수정 가능. 변경 이력은 sales_audit_log 트리거에 자동 기록됨.
 
   // 5대 오퍼 + 카드결제 + 제휴카드 할인
   const offerOf = (r: SaleRow) =>
