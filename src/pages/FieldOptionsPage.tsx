@@ -23,6 +23,7 @@ const FIELDS: { key: string; label: string; hint: string }[] = [
   { key: "expense_type", label: "지출 항목", hint: "임대료, 통신비, 운영비 등" },
   { key: "inquiry_channel", label: "인입 채널", hint: "당근, 네이버 플레이스, 인스타, 지인소개 등" },
   { key: "carrier", label: "통신사", hint: "SKT, KT, LGU+, 알뜰폰 등" },
+  { key: "inquiry_status", label: "고객 상태(인입)", hint: "상담전, 상담중, 부재, 재케어, 실패, 방문예약, 개통완료 등" },
 ];
 
 interface Row {

@@ -8,9 +8,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   PhoneOff, RefreshCw, XCircle, Phone, Search, Clock, AlertTriangle,
-  MessageSquare, Plus, BarChart3, ListPlus, ChevronRight,
+  MessageSquare, Plus, BarChart3, ListPlus, ChevronRight, Pencil, Trash2, History,
 } from "lucide-react";
 import {
   Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, Funnel, FunnelChart,
@@ -22,11 +33,10 @@ import { InquiryForm } from "@/components/inquiries/InquiryForm";
 import { FailureAnalysisChart } from "@/components/inquiries/FailureAnalysisChart";
 import { LeadSourceChart } from "@/components/inquiries/LeadSourceChart";
 import { StaffTimelinePanel } from "@/components/inquiries/StaffTimelinePanel";
+import { useInquiryStatuses } from "@/hooks/useInquiryStatuses";
+import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-
-const CRM_STATUSES = ["미처리", "문의중", "부재", "재케어", "실패", "방문예약", "개통완료"] as const;
-type CrmStatus = (typeof CRM_STATUSES)[number];
 
 const FAIL_REASONS = [
   "가격(지원금) 불만",
@@ -319,6 +329,8 @@ function TimelineDialog({
 const ChannelIntakePage = () => {
   const { startDate, endDate } = usePeriod();
   const { user } = useAuth();
+  const { statuses: CRM_STATUSES, refresh: refreshStatuses } = useInquiryStatuses();
+  const { options: channelOptions } = useFieldOptions("inquiry_channel");
   const [rows, setRows] = useState<InquiryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("전체");
@@ -328,6 +340,23 @@ const ChannelIntakePage = () => {
   const [editStatus, setEditStatus] = useState("");
   const [editRetryAt, setEditRetryAt] = useState("");
   const [editFailReason, setEditFailReason] = useState("");
+  // 상세 수정 다이얼로그
+  const [detailRow, setDetailRow] = useState<InquiryRow | null>(null);
+  const [detail, setDetail] = useState<{
+    customer_name: string;
+    phone: string;
+    channel: string;
+    content: string;
+    manager: string;
+    note: string;
+    status: string;
+  }>({ customer_name: "", phone: "", channel: "", content: "", manager: "", note: "", status: "" });
+  const [detailHistory, setDetailHistory] = useState<LogEntry[]>([]);
+  const [savingDetail, setSavingDetail] = useState(false);
+  // 일괄 선택
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -341,6 +370,7 @@ const ChannelIntakePage = () => {
       .limit(2000);
     setRows((data as InquiryRow[]) ?? []);
     setLoading(false);
+    setSelectedIds(new Set());
   }, [startDate, endDate]);
 
   useEffect(() => { refresh(); }, [refresh]);
@@ -379,6 +409,7 @@ const ChannelIntakePage = () => {
 
   const saveStatus = async () => {
     if (!editingRow) return;
+    const prevStatus = editingRow.status;
     const update = {
       status: editStatus,
       retry_at: ["부재", "재케어"].includes(editStatus) && editRetryAt ? new Date(editRetryAt).toISOString() : null as string | null,
@@ -387,8 +418,103 @@ const ChannelIntakePage = () => {
     } as const;
     const { error } = await supabase.from("inquiries").update(update).eq("id", editingRow.id);
     if (error) { toast.error(error.message); return; }
+    // 상태 변경 이력 자동 기록
+    if (user && prevStatus !== editStatus) {
+      await supabase.from("inquiry_logs").insert({
+        inquiry_id: editingRow.id,
+        action: "상태변경",
+        content: `${prevStatus || "-"} → ${editStatus}`,
+        created_by: user.id,
+      });
+    }
     toast.success("상태 변경 완료");
     setEditingRow(null);
+    refresh();
+  };
+
+  // ── 상세 수정 ──
+  const openDetailEditor = async (row: InquiryRow) => {
+    setDetailRow(row);
+    setDetail({
+      customer_name: row.customer_name ?? "",
+      phone: row.phone ?? "",
+      channel: row.channel ?? "",
+      content: row.content ?? "",
+      manager: row.manager ?? "",
+      note: row.note ?? "",
+      status: row.status ?? "",
+    });
+    const { data } = await supabase
+      .from("inquiry_logs")
+      .select("*")
+      .eq("inquiry_id", row.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    setDetailHistory((data as LogEntry[]) ?? []);
+  };
+
+  const saveDetail = async () => {
+    if (!detailRow || !user) return;
+    setSavingDetail(true);
+    const prevStatus = detailRow.status;
+    const { error } = await supabase
+      .from("inquiries")
+      .update({
+        customer_name: detail.customer_name || null,
+        phone: detail.phone || null,
+        channel: detail.channel || detailRow.channel,
+        content: detail.content || null,
+        manager: detail.manager || null,
+        note: detail.note || null,
+        status: detail.status || detailRow.status,
+        last_action_at: new Date().toISOString(),
+      })
+      .eq("id", detailRow.id);
+    if (error) {
+      setSavingDetail(false);
+      toast.error("저장 실패: " + error.message);
+      return;
+    }
+    if (prevStatus !== detail.status) {
+      await supabase.from("inquiry_logs").insert({
+        inquiry_id: detailRow.id,
+        action: "상태변경",
+        content: `${prevStatus || "-"} → ${detail.status}`,
+        created_by: user.id,
+      });
+    }
+    setSavingDetail(false);
+    toast.success("고객 정보가 저장되었습니다");
+    setDetailRow(null);
+    refresh();
+  };
+
+  // ── 일괄 선택/삭제 ──
+  const toggleOne = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const toggleAllVisible = (checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) filtered.forEach((r) => next.add(r.id));
+      else filtered.forEach((r) => next.delete(r.id));
+      return next;
+    });
+  };
+  const bulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setBulkDeleting(true);
+    const { error } = await supabase.from("inquiries").delete().in("id", ids);
+    setBulkDeleting(false);
+    setBulkConfirmOpen(false);
+    if (error) { toast.error("삭제 실패: " + error.message); return; }
+    toast.success(`${ids.length}건 삭제 완료`);
     refresh();
   };
 
@@ -402,7 +528,10 @@ const ChannelIntakePage = () => {
       }
     });
     return map;
-  }, [rows]);
+  }, [rows, CRM_STATUSES]);
+
+  const allVisibleSelected = filtered.length > 0 && filtered.every((r) => selectedIds.has(r.id));
+  const someVisibleSelected = filtered.some((r) => selectedIds.has(r.id));
 
   return (
     <>
@@ -439,16 +568,32 @@ const ChannelIntakePage = () => {
           ))}
         </div>
 
-        {/* Search + New */}
-        <div className="flex gap-3 items-center">
-          <div className="relative flex-1 max-w-md">
+        {/* Toolbar: Search + Bulk actions (responsive) */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="고객명 · 전화번호 · 채널 · 담당자 검색…"
-              className="h-9 pl-9 bg-input/60"
+              placeholder="고객명 · 전화번호 · 담당자 검색…"
+              className="h-9 pl-9 bg-input/60 w-full"
             />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {selectedIds.size > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {selectedIds.size}건 선택됨
+              </span>
+            )}
+            <Button
+              size="sm"
+              variant="destructive"
+              className="h-9 gap-1.5"
+              disabled={selectedIds.size === 0}
+              onClick={() => setBulkConfirmOpen(true)}
+            >
+              <Trash2 className="size-3.5" /> 일괄 삭제
+            </Button>
           </div>
         </div>
 
@@ -461,6 +606,13 @@ const ChannelIntakePage = () => {
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-xs text-muted-foreground">
                 <tr>
+                  <th className="text-left px-3 py-2 w-10">
+                    <Checkbox
+                      checked={allVisibleSelected}
+                      onCheckedChange={(c) => toggleAllVisible(!!c)}
+                      aria-label="전체 선택"
+                    />
+                  </th>
                   <th className="text-left px-3 py-2">날짜</th>
                   <th className="text-left px-3 py-2">채널</th>
                   <th className="text-left px-3 py-2">고객</th>
@@ -474,9 +626,9 @@ const ChannelIntakePage = () => {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={9} className="text-center py-10 text-muted-foreground">불러오는 중…</td></tr>
+                  <tr><td colSpan={10} className="text-center py-10 text-muted-foreground">불러오는 중…</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={9} className="text-center py-10 text-muted-foreground">데이터 없음</td></tr>
+                  <tr><td colSpan={10} className="text-center py-10 text-muted-foreground">데이터 없음</td></tr>
                 ) : (
                   filtered.map((r) => {
                     const newLead = isNewLead(r);
@@ -488,6 +640,13 @@ const ChannelIntakePage = () => {
                         newLead && "bg-orange-50 dark:bg-orange-950/20",
                         abandoned && !newLead && "bg-destructive/5"
                       )}>
+                        <td className="px-3 py-2">
+                          <Checkbox
+                            checked={selectedIds.has(r.id)}
+                            onCheckedChange={() => toggleOne(r.id)}
+                            aria-label="선택"
+                          />
+                        </td>
                         <td className="px-3 py-2 text-xs tabular-nums">{r.inquiry_date}</td>
                         <td className="px-3 py-2">
                           <Badge variant="outline" className="text-[10px]">{r.channel}</Badge>
@@ -547,8 +706,11 @@ const ChannelIntakePage = () => {
                           <Button size="sm" variant="ghost" className="h-7 text-xs mr-1" onClick={() => setSelectedInquiry(r)}>
                             <MessageSquare className="size-3 mr-1" /> 기록
                           </Button>
-                          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => openStatusEditor(r)}>
+                          <Button size="sm" variant="outline" className="h-7 text-xs mr-1" onClick={() => openStatusEditor(r)}>
                             상태변경
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => openDetailEditor(r)}>
+                            <Pencil className="size-3" /> 수정
                           </Button>
                         </td>
                       </tr>
@@ -634,6 +796,144 @@ const ChannelIntakePage = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* 상세 수정 다이얼로그 (이름/번호/관심상품/상담메모 + 이력) */}
+      <Dialog open={!!detailRow} onOpenChange={(v) => !v && setDetailRow(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="size-4" /> 고객 정보 수정
+            </DialogTitle>
+          </DialogHeader>
+          {detailRow && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">고객명</label>
+                  <Input
+                    value={detail.customer_name}
+                    onChange={(e) => setDetail((d) => ({ ...d, customer_name: e.target.value }))}
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">연락처</label>
+                  <Input
+                    value={detail.phone}
+                    onChange={(e) => setDetail((d) => ({ ...d, phone: e.target.value }))}
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">채널</label>
+                  <Select
+                    value={detail.channel}
+                    onValueChange={(v) => setDetail((d) => ({ ...d, channel: v }))}
+                  >
+                    <SelectTrigger className="h-9"><SelectValue placeholder="채널 선택" /></SelectTrigger>
+                    <SelectContent>
+                      {(channelOptions.length ? channelOptions : [detailRow.channel]).filter(Boolean).map((c) => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">담당자</label>
+                  <Input
+                    value={detail.manager}
+                    onChange={(e) => setDetail((d) => ({ ...d, manager: e.target.value }))}
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-xs text-muted-foreground">관심 상품 / 문의 내용</label>
+                  <Textarea
+                    value={detail.content}
+                    onChange={(e) => setDetail((d) => ({ ...d, content: e.target.value }))}
+                    rows={2}
+                  />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-xs text-muted-foreground">상담 메모</label>
+                  <Textarea
+                    value={detail.note}
+                    onChange={(e) => setDetail((d) => ({ ...d, note: e.target.value }))}
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">상태</label>
+                  <Select
+                    value={detail.status}
+                    onValueChange={(v) => setDetail((d) => ({ ...d, status: v }))}
+                  >
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {CRM_STATUSES.map((s) => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* 상태 변경 이력 */}
+              <div>
+                <h4 className="text-xs font-semibold flex items-center gap-1.5 mb-2">
+                  <History className="size-3.5" /> 상태 변경 이력
+                </h4>
+                <div className="rounded-md border border-border/40 max-h-48 overflow-y-auto divide-y divide-border/30">
+                  {detailHistory.filter((l) => l.action === "상태변경").length === 0 ? (
+                    <div className="text-xs text-muted-foreground text-center py-4">변경 이력이 없습니다</div>
+                  ) : (
+                    detailHistory
+                      .filter((l) => l.action === "상태변경")
+                      .map((log) => (
+                        <div key={log.id} className="flex items-center gap-2 px-3 py-2 text-xs">
+                          <Badge variant="outline" className="text-[10px] h-4">{log.action}</Badge>
+                          <span className="font-medium">{log.content}</span>
+                          <span className="ml-auto text-[10px] text-muted-foreground tabular-nums">
+                            {formatTime(log.created_at)}
+                          </span>
+                        </div>
+                      ))
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => setDetailRow(null)}>취소</Button>
+                <Button onClick={saveDetail} disabled={savingDetail}>
+                  {savingDetail ? "저장 중…" : "저장"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* 일괄 삭제 확인 */}
+      <AlertDialog open={bulkConfirmOpen} onOpenChange={setBulkConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>정말 삭제하시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription>
+              선택한 {selectedIds.size}건의 인입 데이터가 영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); bulkDelete(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={bulkDeleting}
+            >
+              {bulkDeleting ? "삭제 중…" : "삭제"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
