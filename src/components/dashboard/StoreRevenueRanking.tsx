@@ -2,49 +2,90 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
-import { Store, ArrowRight } from "lucide-react";
+import { Trophy, ArrowRight, Crown, Medal } from "lucide-react";
 import { formatShortKRW } from "@/data/mockData";
 
-interface StoreRow {
+interface StaffRow {
+  uid: string;
+  name: string;
   store: string;
   count: number;
-  profit: number;
+  revenue: number;     // 판매수수료(net_fee) + VAS 수수료
+  expense: number;     // 지원금 합
+  profit: number;      // 순수익
 }
 
 /**
- * 매장별 수익 수평 막대 차트 — 수익 내림차순 정렬
- * 막대 클릭 시 활동관리 페이지로 매장 필터 적용 이동 (드릴다운)
+ * 개인별 순수익 랭킹 (전사 통합)
+ * 순수익 = (net_fee + vas_fee) - (distributor_amount + extra_subsidy + cash_support_amount + customer_support_amount + corp_card_amount)
+ * 모요 채널 건은 인당 88,000원 모요 수수료 추가 차감
  */
 export const StoreRevenueRanking = () => {
   const { startDate, endDate } = usePeriod();
   const navigate = useNavigate();
-  const [rows, setRows] = useState<StoreRow[]>([]);
+  const [rows, setRows] = useState<StaffRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let alive = true;
     (async () => {
       setLoading(true);
-      // sales 데이터를 manager(매장 추정 필드)별 집계 — 실제로는 store join이 이상적
-      const { data } = await supabase
-        .from("sales")
-        .select("manager, net_fee, distributor_amount, extra_subsidy")
-        .gte("open_date", startDate)
-        .lte("open_date", endDate)
-        .eq("status", "개통완료")
-        .limit(2000);
+      const [salesRes, profilesRes] = await Promise.all([
+        supabase
+          .from("sales")
+          .select("created_by, manager, channel, net_fee, vas_fee, distributor_amount, extra_subsidy, cash_support_amount, customer_support_amount, corp_card_amount, voucher, voucher_returned, moyo_excluded")
+          .gte("open_date", startDate)
+          .lte("open_date", endDate)
+          .eq("status", "개통완료")
+          .limit(10000),
+        supabase
+          .from("profiles")
+          .select("user_id, display_name, store")
+          .neq("status", "deleted"),
+      ]);
       if (!alive) return;
 
-      const map = new Map<string, StoreRow>();
-      (data ?? []).forEach((r: any) => {
-        const key = r.manager || "미지정";
-        const profit = (Number(r.net_fee) || 0) - (Number(r.distributor_amount) || 0) - (Number(r.extra_subsidy) || 0);
-        const cur = map.get(key) ?? { store: key, count: 0, profit: 0 };
+      const profiles = profilesRes.data ?? [];
+      const byId = new Map(profiles.map((p) => [p.user_id, p]));
+      const byName = new Map<string, string>();
+      profiles.forEach((p) => byName.set((p.display_name || "").trim().toLowerCase(), p.user_id));
+
+      const ownerOf = (s: any): string => {
+        const m = (s.manager ?? "").trim().toLowerCase();
+        if (m && byName.has(m)) return byName.get(m)!;
+        return s.created_by;
+      };
+
+      const map = new Map<string, StaffRow>();
+      (salesRes.data ?? []).forEach((r: any) => {
+        // 상품권 미반납 건은 정산 제외
+        const voucherExcluded = r.voucher && String(r.voucher).trim() !== "" && r.voucher_returned !== "유";
+        if (voucherExcluded) return;
+
+        const uid = ownerOf(r);
+        if (!uid) return;
+        const p = byId.get(uid);
+        const name = p?.display_name ?? "미지정";
+        const store = p?.store ?? "-";
+
+        const revenue = (Number(r.net_fee) || 0) + (Number(r.vas_fee) || 0);
+        const expense =
+          (Number(r.distributor_amount) || 0) +
+          (Number(r.extra_subsidy) || 0) +
+          (Number(r.cash_support_amount) || 0) +
+          (Number(r.customer_support_amount) || 0) +
+          (Number(r.corp_card_amount) || 0);
+        const moyoFee = (r.channel === "모요" && !r.moyo_excluded) ? 88000 : 0;
+        const profit = revenue - expense - moyoFee;
+
+        const cur = map.get(uid) ?? { uid, name, store, count: 0, revenue: 0, expense: 0, profit: 0 };
         cur.count += 1;
+        cur.revenue += revenue;
+        cur.expense += expense + moyoFee;
         cur.profit += profit;
-        map.set(key, cur);
+        map.set(uid, cur);
       });
-      const sorted = Array.from(map.values()).sort((a, b) => b.profit - a.profit).slice(0, 8);
+      const sorted = Array.from(map.values()).sort((a, b) => b.profit - a.profit).slice(0, 10);
       setRows(sorted);
       setLoading(false);
     })();
@@ -53,7 +94,7 @@ export const StoreRevenueRanking = () => {
     };
   }, [startDate, endDate]);
 
-  const max = Math.max(1, ...rows.map((r) => r.profit));
+  const max = Math.max(1, ...rows.map((r) => Math.abs(r.profit)));
 
   const getBarColor = (i: number) => {
     if (i === 0) return "linear-gradient(90deg, hsl(330 100% 55%), hsl(345 100% 65%))";
@@ -67,13 +108,13 @@ export const StoreRevenueRanking = () => {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h3 className="text-lg font-semibold tracking-tight flex items-center gap-2">
-            <Store className="size-5 text-primary" />
-            매장별 수익 랭킹
+            <Trophy className="size-5 text-primary" />
+            개인별 순수익 랭킹
           </h3>
-          <p className="text-xs text-muted-foreground mt-1">막대 클릭 시 해당 매장 상세로 이동</p>
+          <p className="text-xs text-muted-foreground mt-1">전사 통합 · (수수료+VAS) − 지원금 − 모요수수료</p>
         </div>
         <span className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-primary/10 text-primary border border-primary/30 font-bold">
-          DRILL-DOWN
+          TOP 10
         </span>
       </div>
 
@@ -84,25 +125,28 @@ export const StoreRevenueRanking = () => {
       ) : (
         <div className="space-y-3">
           {rows.map((r, i) => {
-            const widthPct = (r.profit / max) * 100;
+            const widthPct = (Math.abs(r.profit) / max) * 100;
+            const RankIcon = i === 0 ? Crown : i < 3 ? Medal : null;
             return (
               <button
-                key={r.store}
-                onClick={() => navigate(`/activities?manager=${encodeURIComponent(r.store)}`)}
+                key={r.uid}
+                onClick={() => navigate(`/activities?manager=${encodeURIComponent(r.name)}`)}
                 className="w-full text-left group"
               >
                 <div className="flex items-center justify-between text-xs mb-1.5">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
                     <span className="font-bold tabular-nums w-5 text-muted-foreground group-hover:text-primary transition-colors">
                       #{i + 1}
                     </span>
-                    <span className="font-semibold text-sm">{r.store}</span>
+                    {RankIcon && <RankIcon className={`size-3.5 ${i === 0 ? "text-amber-400" : i === 1 ? "text-slate-300" : "text-orange-400"}`} />}
+                    <span className="font-semibold text-sm truncate">{r.name}</span>
+                    <span className="text-[10px] text-muted-foreground truncate">{r.store}</span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
                       {r.count}건
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-sm tabular-nums text-foreground">{formatShortKRW(r.profit)}</span>
+                    <span className={`font-bold text-sm tabular-nums ${r.profit < 0 ? "text-destructive" : "text-foreground"}`}>{formatShortKRW(r.profit)}</span>
                     <ArrowRight className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                   </div>
                 </div>

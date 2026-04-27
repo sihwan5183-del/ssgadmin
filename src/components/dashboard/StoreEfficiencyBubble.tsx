@@ -1,25 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  ResponsiveContainer,
-  ScatterChart,
-  Scatter,
-  XAxis,
-  YAxis,
-  ZAxis,
-  Tooltip,
-  CartesianGrid,
-  Cell,
-} from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
-import { Sparkles } from "lucide-react";
+import { Sparkles, TrendingUp, TrendingDown } from "lucide-react";
+import { formatShortKRW } from "@/data/mockData";
 
-interface Bubble {
-  store: string;
-  count: number;
-  margin: number;
-  total: number;
+interface ChannelRow {
+  channel: string;
+  count: number;       // 인입(개통완료) 건수
+  revenue: number;     // 수수료 + VAS
+  expense: number;     // 지원금 합
+  moyoFee: number;     // 모요 수수료
+  profit: number;      // 순수익
+  efficiency: number;  // 수익률 % = profit / revenue * 100
 }
 
 const NEON = [
@@ -34,14 +26,13 @@ const NEON = [
 ];
 
 /**
- * 매장 효율 버블 차트
- * X축: 판매 건수 / Y축: 건당 평균 마진 / 버블 크기: 총 수익
- * 우상단 = 박리다매 효율 매장 / 좌상단 = 내실형 / 우하단 = 박리저마진
+ * 채널별 효율 분석
+ * 인입 대비 순수익(%) 기준 시각화
+ * 모요 수수료(88,000/건, moyo_excluded=false인 건만) 차감 반영
  */
 export const StoreEfficiencyBubble = () => {
   const { startDate, endDate } = usePeriod();
-  const navigate = useNavigate();
-  const [bubbles, setBubbles] = useState<Bubble[]>([]);
+  const [rows, setRows] = useState<ChannelRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -50,30 +41,43 @@ export const StoreEfficiencyBubble = () => {
       setLoading(true);
       const { data } = await supabase
         .from("sales")
-        .select("manager, net_fee, distributor_amount, extra_subsidy")
+        .select("channel, net_fee, vas_fee, distributor_amount, extra_subsidy, cash_support_amount, customer_support_amount, corp_card_amount, voucher, voucher_returned, moyo_excluded")
         .gte("open_date", startDate)
         .lte("open_date", endDate)
         .eq("status", "개통완료")
-        .limit(2000);
+        .limit(10000);
       if (!alive) return;
 
-      const map = new Map<string, { count: number; total: number }>();
+      const map = new Map<string, ChannelRow>();
       (data ?? []).forEach((r: any) => {
-        const key = r.manager || "미지정";
-        const profit =
-          (Number(r.net_fee) || 0) - (Number(r.distributor_amount) || 0) - (Number(r.extra_subsidy) || 0);
-        const cur = map.get(key) ?? { count: 0, total: 0 };
+        const voucherExcluded = r.voucher && String(r.voucher).trim() !== "" && r.voucher_returned !== "유";
+        if (voucherExcluded) return;
+
+        const ch = (r.channel || "기타").toString().trim() || "기타";
+        const revenue = (Number(r.net_fee) || 0) + (Number(r.vas_fee) || 0);
+        const expense =
+          (Number(r.distributor_amount) || 0) +
+          (Number(r.extra_subsidy) || 0) +
+          (Number(r.cash_support_amount) || 0) +
+          (Number(r.customer_support_amount) || 0) +
+          (Number(r.corp_card_amount) || 0);
+        const moyoFee = (ch === "모요" && !r.moyo_excluded) ? 88000 : 0;
+        const profit = revenue - expense - moyoFee;
+
+        const cur = map.get(ch) ?? { channel: ch, count: 0, revenue: 0, expense: 0, moyoFee: 0, profit: 0, efficiency: 0 };
         cur.count += 1;
-        cur.total += profit;
-        map.set(key, cur);
+        cur.revenue += revenue;
+        cur.expense += expense;
+        cur.moyoFee += moyoFee;
+        cur.profit += profit;
+        map.set(ch, cur);
       });
-      const arr = Array.from(map.entries()).map(([store, v]) => ({
-        store,
-        count: v.count,
-        total: v.total,
-        margin: v.count > 0 ? Math.round(v.total / v.count) : 0,
+      const arr = Array.from(map.values()).map((c) => ({
+        ...c,
+        efficiency: c.revenue > 0 ? (c.profit / c.revenue) * 100 : 0,
       }));
-      setBubbles(arr.slice(0, 12));
+      arr.sort((a, b) => b.profit - a.profit);
+      setRows(arr);
       setLoading(false);
     })();
     return () => {
@@ -81,7 +85,7 @@ export const StoreEfficiencyBubble = () => {
     };
   }, [startDate, endDate]);
 
-  const maxTotal = useMemo(() => Math.max(1, ...bubbles.map((b) => Math.abs(b.total))), [bubbles]);
+  const maxAbsProfit = useMemo(() => Math.max(1, ...rows.map((r) => Math.abs(r.profit))), [rows]);
 
   return (
     <div className="glass rounded-2xl p-6 shadow-card-elevated">
@@ -89,73 +93,62 @@ export const StoreEfficiencyBubble = () => {
         <div>
           <h3 className="text-lg font-semibold tracking-tight flex items-center gap-2">
             <Sparkles className="size-5 text-primary" />
-            매장 효율 분석 (건수 × 건당 마진)
+            채널별 효율 분석
           </h3>
-          <p className="text-xs text-muted-foreground mt-1">우상단일수록 내실 있는 매장 · 버블 크기 = 총 수익</p>
+          <p className="text-xs text-muted-foreground mt-1">인입 대비 순수익률(%) · 모요 수수료(88,000원/건) 차감 반영</p>
         </div>
       </div>
 
       {loading ? (
         <div className="h-72 grid place-items-center text-sm text-muted-foreground">불러오는 중…</div>
-      ) : bubbles.length === 0 ? (
+      ) : rows.length === 0 ? (
         <div className="h-72 grid place-items-center text-sm text-muted-foreground">데이터가 없습니다</div>
       ) : (
-        <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <ScatterChart margin={{ top: 12, right: 16, bottom: 28, left: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis
-                type="number"
-                dataKey="count"
-                name="판매건수"
-                stroke="hsl(var(--muted-foreground))"
-                tick={{ fontSize: 11 }}
-                label={{ value: "판매 건수 →", position: "insideBottom", offset: -8, fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-              />
-              <YAxis
-                type="number"
-                dataKey="margin"
-                name="건당 마진"
-                stroke="hsl(var(--muted-foreground))"
-                tick={{ fontSize: 11 }}
-                tickFormatter={(v) => `${Math.round(v / 10000)}만`}
-                label={{ value: "건당 마진 ↑", angle: -90, position: "insideLeft", fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-              />
-              <ZAxis type="number" dataKey="total" range={[200, 2400]} />
-              <Tooltip
-                cursor={{ strokeDasharray: "3 3" }}
-                contentStyle={{
-                  background: "hsl(0 0% 100% / 0.96)",
-                  color: "#374151",
-                  border: "1px solid hsl(0 0% 88%)",
-                  borderRadius: 12,
-                  fontSize: 12,
-                  boxShadow: "0 4px 20px hsl(0 0% 0% / 0.10)",
-                  padding: "8px 12px",
-                }}
-                formatter={(value: any, name: string) => {
-                  if (name === "건당 마진" || name === "총수익") return [Number(value).toLocaleString() + "원", name];
-                  return [value, name];
-                }}
-                labelFormatter={(_, payload) => (payload?.[0]?.payload?.store ? `🏬 ${payload[0].payload.store}` : "")}
-              />
-              <Scatter
-                data={bubbles}
-                onClick={(d: any) => d?.store && navigate(`/activities?manager=${encodeURIComponent(d.store)}`)}
-                cursor="pointer"
-              >
-                {bubbles.map((b, i) => (
-                  <Cell
-                    key={b.store}
-                    fill={NEON[i % NEON.length]}
-                    fillOpacity={0.65}
-                    stroke={NEON[i % NEON.length]}
-                    strokeWidth={2}
+        <div className="space-y-2.5">
+          {rows.map((r, i) => {
+            const widthPct = (Math.abs(r.profit) / maxAbsProfit) * 100;
+            const positive = r.profit >= 0;
+            const TrendIcon = positive ? TrendingUp : TrendingDown;
+            const color = NEON[i % NEON.length];
+            return (
+              <div key={r.channel} className="rounded-xl border border-border/40 bg-background/40 p-3">
+                <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="size-2.5 rounded-full shrink-0" style={{ background: color }} />
+                    <span className="font-semibold text-sm">{r.channel}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{r.count}건</span>
+                    {r.moyoFee > 0 && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-warning/15 text-warning border border-warning/30">
+                        모요 -{formatShortKRW(r.moyoFee)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <div className="text-[10px] text-muted-foreground leading-tight">순수익</div>
+                      <div className={`font-bold text-sm tabular-nums ${positive ? "text-foreground" : "text-destructive"}`}>
+                        {formatShortKRW(r.profit)}
+                      </div>
+                    </div>
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold tabular-nums ${positive ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+                      <TrendIcon className="size-3" />
+                      {r.efficiency.toFixed(1)}%
+                    </div>
+                  </div>
+                </div>
+                <div className="h-2 rounded-full bg-muted/60 overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{ width: `${Math.max(widthPct, 2)}%`, background: positive ? color : "hsl(var(--destructive))" }}
                   />
-                ))}
-              </Scatter>
-            </ScatterChart>
-          </ResponsiveContainer>
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-1.5 tabular-nums">
+                  <span>수익 {formatShortKRW(r.revenue)}</span>
+                  <span>지출 {formatShortKRW(r.expense + r.moyoFee)}</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
