@@ -376,11 +376,13 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
   const saveEdit = async () => {
     if (!selected) return;
     if (!canEdit) return toast.error("수정 권한이 없습니다");
+    // ⚠️ 강제 저장(Force Save) 모드: 변경 감지 없이 화면의 모든 값을 그대로 전송
+    // (특히 ReviewerPanel 의 '홈 설치 관리' 등 onBlur 기반 패치가 누락되는 케이스 대응)
     const payload: Record<string, unknown> = {};
     EDITABLE_FIELDS.forEach(({ key }) => {
-      if (editForm[key] !== selected[key]) payload[key as string] = editForm[key];
+      payload[key as string] = editForm[key] ?? null;
     });
-    // 오퍼(지원금) 필드 변경 감지
+    // 오퍼(지원금) 필드 — 항상 전송
     const offerKeys: (keyof SaleHit)[] = [
       "distributor_amount",
       "cash_support_amount",
@@ -389,28 +391,24 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
       "receivable_paid",
     ];
     offerKeys.forEach((k) => {
-      if ((editForm[k] ?? null) !== (selected[k] ?? null)) {
-        payload[k as string] = editForm[k] ?? null;
-      }
+      payload[k as string] = (editForm[k] ?? null) as unknown;
     });
-    // 미처리 항목 변경 감지
-    const pendingChanged =
-      JSON.stringify(selected.pending_items ?? []) !== JSON.stringify(pendingItems) ||
-      (selected.pending_note ?? "") !== pendingNote ||
-      (selected.pending_resolved ?? true) !== pendingResolved;
-    if (pendingChanged) {
-      payload.pending_items = pendingItems;
-      payload.pending_note = pendingNote || null;
-      payload.pending_resolved = pendingItems.length === 0 ? true : pendingResolved;
-    }
-    if (Object.keys(payload).length === 0) {
-      toast.info("변경된 내용이 없습니다");
-      return;
+    // 미처리 항목 — 항상 전송
+    payload.pending_items = pendingItems;
+    payload.pending_note = pendingNote || null;
+    payload.pending_resolved = pendingItems.length === 0 ? true : pendingResolved;
+    // custom_fields (홈 설치 관리, 비정상 사유 등) — 최신값 그대로 전송
+    if ((selected as any).custom_fields !== undefined) {
+      payload.custom_fields = (selected as any).custom_fields ?? {};
     }
     setSaving(true);
     const { error } = await supabase.from("sales").update(payload as never).eq("id", selected.id);
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      console.error("[saveEdit] update error", error, { saleId: selected.id, payload });
+      return toast.error(error.message);
+    }
+    console.log("[saveEdit] 저장 완료", { saleId: selected.id, fields: Object.keys(payload) });
     toast.success("저장되었습니다");
     const { data } = await supabase.from("sales").select(SELECT_COLS).eq("id", selected.id).maybeSingle();
     if (data) openDetail(data as SaleHit);
