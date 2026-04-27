@@ -17,3 +17,25 @@ export const maskName = (name: string | null | undefined): string => {
   if (name.length <= 1) return "*";
   return name.slice(0, -1) + "*";
 };
+
+/** 계좌번호 마스킹: 끝 4자리만 노출 → ****-****-1234 */
+export const maskAccount = (account: string | null | undefined): string => {
+  if (!account) return "";
+  const digits = account.replace(/[^0-9]/g, "");
+  if (digits.length <= 4) return "****";
+  return "****-****-" + digits.slice(-4);
+};
+
+/** 카드번호 마스킹: 1234-****-****-5678 */
+export const maskCardNumber = (card: string | null | undefined): string => {
+  if (!card) return "";
+  const digits = card.replace(/[^0-9]/g, "");
+  if (digits.length < 8) return "****";
+  return digits.slice(0, 4) + "-****-****-" + digits.slice(-4);
+};
+
+/** 유효기간 마스킹: 12/27 → **/** */
+export const maskCardExpiry = (expiry: string | null | undefined): string => {
+  if (!expiry) return "";
+  return "**/**";
+};
