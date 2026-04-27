@@ -55,10 +55,10 @@ const ExpensesPage = () => {
 
       {/* 상단 KPI — 모두 실데이터 */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <KpiTile label="총 수익(마진)" value={formatKRW(f.totalRevenue)} tone="revenue" Icon={TrendingUp} hint={`${f.totalSuccess}건 합산`} />
-        <KpiTile label="총 지출 (광고+유통망+고객입금)" value={formatKRW(f.totalExpense)} tone="expense" Icon={TrendingDown}
-          hint={`광고 ${formatKRW(f.totalAdSpend)} + 유통망 ${formatKRW(f.totalDistributor)} + 고객입금 ${formatKRW(f.totalCustomerDeposit)}`} />
-        <KpiTile label="순이익 (Net Margin)" value={formatKRW(f.netMargin)} tone="primary" Icon={Sparkles}
+        <KpiTile label="총 수익" value={formatKRW(f.totalRevenue)} tone="revenue" Icon={TrendingUp} hint="수수료 + 수급완료 미수금 + 반납완료 상품권 + 확정 중고폰" />
+        <KpiTile label="총 지출" value={formatKRW(f.totalExpense)} tone="expense" Icon={TrendingDown}
+          hint="지원금 + 5번 법인카드 + 광고비/기타지출 + 모요 수수료" />
+        <KpiTile label="순수익 (수익-지출)" value={formatKRW(f.netMargin)} tone="primary" Icon={Sparkles}
           hint={`마진율 ${Math.round(f.marginRate)}% · ROI ${Math.round(f.roi)}%`} />
         <KpiTile label="평균 CPA" value={formatKRW(f.cpaAvg)} tone="expense" Icon={Target}
           hint={f.totalSuccess > 0 ? `광고비 ÷ ${f.totalSuccess}건` : "데이터 없음"} />
@@ -80,13 +80,13 @@ const ExpensesPage = () => {
           hint="수수료 발생 대상" />
       </section>
 
-      <SectionTitle index={1} title="지출 상세 분석" subtitle="매체별 광고비 집행 + 채널별 CPA" />
+      <SectionTitle index={1} title="지출 상세 분석" subtitle="실질 지출 항목만 합산 · 하단 카드 결제금액 제외" />
       <section className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-8">
         <div className="lg:col-span-3"><MediaSpendStack /></div>
         <div className="lg:col-span-2"><CpaChart /></div>
       </section>
 
-      <SectionTitle index={2} title="수익 상세 분석" subtitle="구성 + 순수익 + 오퍼 추이" />
+      <SectionTitle index={2} title="수익 상세 분석" subtitle="확정 수익 항목별 비중 + 순수익 정산" />
       <section className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-4">
         <div className="lg:col-span-2"><RevenueComposition /></div>
         <div className="lg:col-span-3"><NetMarginCard /></div>
