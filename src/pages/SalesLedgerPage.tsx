@@ -971,34 +971,34 @@ const SalesLedgerPage = () => {
       {/* 테이블 */}
       <section className="glass-strong rounded-2xl p-5 md:p-6 shadow-card-elevated">
         <div className="overflow-x-auto -mx-2">
-          <table className="w-full text-xs min-w-[1100px]">
+          <table className="w-full text-[13px] min-w-[1400px] font-sans [font-feature-settings:'tnum']">
             <thead>
-              <tr className="text-[11px] text-muted-foreground border-b border-border/40">
+              <tr className="text-[12px] text-muted-foreground border-b border-border/40 bg-muted/30">
                 {isAdmin && (
                   <th className="px-3 py-2 w-8">
                     <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="전체 선택" />
                   </th>
                 )}
-                <th className="text-left px-3 py-2 font-medium">개통일</th>
-                <th className="text-left px-3 py-2 font-medium">경로</th>
-                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">담당</th>
-                <th className="text-left px-3 py-2 font-medium">상품</th>
-                <th className="text-left px-3 py-2 font-medium">고객</th>
-                <th className="text-left px-3 py-2 font-medium">연락처</th>
-                <th className="text-left px-3 py-2 font-medium">단말</th>
-                <th className="text-left px-3 py-2 font-medium">요금제</th>
-                <th className="text-left px-3 py-2 font-medium">약정</th>
-                <th className="text-center px-2 py-2 font-medium">할부</th>
-                <th className="text-center px-2 py-2 font-medium">동판</th>
-                <th className="text-center px-2 py-2 font-medium">오퍼</th>
-                <th className="text-right px-3 py-2 font-semibold text-sky-600 dark:text-sky-400">리베이트 단가</th>
-                <th className="text-right px-3 py-2 font-semibold text-rose-600 dark:text-rose-400">오퍼(지원금)</th>
-                <th className="text-right px-3 py-2 font-semibold">최종 수익</th>
-                <th className="text-right px-3 py-2 font-semibold text-sky-600 dark:text-sky-400">미수금</th>
-                <th className="text-right px-3 py-2 font-semibold text-rose-600 dark:text-rose-400">고객지원</th>
-                <th className="text-right px-3 py-2 font-semibold text-rose-600 dark:text-rose-400">법인카드</th>
-                <th className="text-right px-3 py-2 font-semibold text-sky-600 dark:text-sky-400">중고폰</th>
-                <th className="text-right px-3 py-2 font-medium">관리</th>
+                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">개통일</th>
+                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">경로</th>
+                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">담당</th>
+                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">상품</th>
+                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">고객</th>
+                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">연락처</th>
+                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">단말</th>
+                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">요금제</th>
+                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">약정</th>
+                <th className="text-center px-2 py-2.5 font-medium whitespace-nowrap">할부</th>
+                <th className="text-center px-2 py-2.5 font-medium whitespace-nowrap">동판</th>
+                <th className="text-center px-2 py-2.5 font-medium whitespace-nowrap">오퍼</th>
+                <th className="text-right px-3 py-2.5 font-semibold whitespace-nowrap text-foreground">리베이트 단가</th>
+                <th className="text-right px-3 py-2.5 font-semibold whitespace-nowrap text-destructive">오퍼(지원금)</th>
+                <th className="text-right px-3 py-2.5 font-semibold whitespace-nowrap text-foreground">최종 수익</th>
+                <th className="text-right px-3 py-2.5 font-semibold whitespace-nowrap text-foreground">미수금</th>
+                <th className="text-right px-3 py-2.5 font-semibold whitespace-nowrap text-destructive">고객지원</th>
+                <th className="text-right px-3 py-2.5 font-semibold whitespace-nowrap text-destructive">법인카드</th>
+                <th className="text-right px-3 py-2.5 font-semibold whitespace-nowrap text-foreground">중고폰</th>
+                <th className="text-right px-3 py-2.5 font-medium whitespace-nowrap">관리</th>
               </tr>
             </thead>
             <tbody>
