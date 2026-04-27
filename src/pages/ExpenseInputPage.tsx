@@ -128,6 +128,8 @@ export default function ExpenseInputPage() {
     channel: "",
     amount: "",          // 입력 금액 (모드에 따라 일별 또는 총액)
     amount_mode: "total" as "daily" | "total", // 입력 모드
+    total_override: "",  // daily 모드 시 사용자가 수기로 수정한 최종 합산 금액
+    total_overridden: false,
     campaign: "",
     note: "",
   });
