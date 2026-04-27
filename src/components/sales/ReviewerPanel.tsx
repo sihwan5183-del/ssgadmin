@@ -402,18 +402,33 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
         </div>
 
         {/* SMS 발송 */}
-        <div className="flex items-center justify-between rounded-lg border border-border/40 p-3">
-          <span className="text-xs font-semibold flex items-center gap-1.5">
-            <MessageCircle className="size-3.5 text-sky-400" />
-            고객 문자발송
-          </span>
-          <Switch
-            checked={smsSent}
-            onCheckedChange={(v) => {
-              setSmsSent(v);
-              patchCustom({ sms_sent: v, sms_sent_at: v ? new Date().toISOString() : null });
-            }}
-          />
+        <div className="space-y-2">
+          <div className="flex items-center justify-between rounded-lg border border-border/40 p-3">
+            <span className="text-xs font-semibold flex items-center gap-1.5">
+              <MessageCircle className="size-3.5 text-sky-400" />
+              고객 문자발송
+            </span>
+            <Switch
+              checked={smsSent}
+              onCheckedChange={(v) => {
+                setSmsSent(v);
+                patchCustom({ sms_sent: v, sms_sent_at: v ? new Date().toISOString() : null });
+              }}
+            />
+          </div>
+          {/* 개통완료 버튼 — 모바일/2nd 상품 + 상태가 '택배발송'일 때만 노출 */}
+          {canMarkActivated && (
+            <button
+              type="button"
+              onClick={markActivated}
+              disabled={marking}
+              className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-emerald-400/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-50"
+              title="택배발송 → 개통완료로 변경"
+            >
+              <CheckCircle2 className="size-3.5" />
+              개통완료 처리
+            </button>
+          )}
         </div>
 
         {/* 최종 판정 (정상/비정상) */}
@@ -426,20 +441,7 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
                 <Gavel className="size-3.5 text-primary-glow" />
                 최종 판정
               </span>
-              <div className="flex items-center gap-2">
-                {canMarkActivated && (
-                  <button
-                    type="button"
-                    onClick={markActivated}
-                    disabled={marking}
-                    className="inline-flex items-center gap-1 rounded-md border border-emerald-400/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:opacity-50"
-                    title="택배발송 → 개통완료로 변경"
-                  >
-                    <CheckCircle2 className="size-3" />
-                    개통완료
-                  </button>
-                )}
-                <div className="flex rounded-md border border-border/40 overflow-hidden text-[11px]">
+              <div className="flex rounded-md border border-border/40 overflow-hidden text-[11px]">
                 <button
                   type="button"
                   className={`px-3 py-1 ${finalVerdict === "정상" ? "bg-emerald-500/20 text-emerald-200" : "hover:bg-muted/40"}`}
@@ -457,7 +459,6 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
                     patchCustom({ final_verdict: "비정상", verdict_at: new Date().toISOString(), verdict_by: user?.id ?? null });
                   }}
                 >비정상</button>
-                </div>
               </div>
             </div>
 
