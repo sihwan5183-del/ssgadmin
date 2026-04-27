@@ -707,7 +707,7 @@ const SalesLedgerPage = () => {
                 <SelectContent>
                   <SelectItem value="all">직원 전체</SelectItem>
                   {managers.map((m) => (
-                    <SelectItem key={m} value={m}>{m}</SelectItem>
+                    <SelectItem key={m} value={m}>{UUID_RE.test(m) && managerNameMap[m] ? managerNameMap[m] : m}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
