@@ -150,7 +150,7 @@ export function useFinanceData(): FinanceData {
     const settledSalesRows = salesRows;
     const effectiveSpendRows = spendRows.filter((r) => {
       const category = String(r.category ?? "광고비").trim();
-      return category === "광고비" || category === "기타지출";
+      return category === "광고비" || category === "기타지출" || category === "고정지출";
     });
 
     // ---------- 신규 합산 (대표님 정의 정확 매칭) ----------
@@ -212,6 +212,15 @@ export function useFinanceData(): FinanceData {
       (s, r) => s + Number(r.amount ?? 0),
       0,
     );
+    const totalFixedExpense = spendRows
+      .filter((r) => String(r.category ?? "").trim() === "고정지출")
+      .reduce((s, r) => s + Number(r.amount ?? 0), 0);
+    const totalAdOnly = spendRows
+      .filter((r) => String(r.category ?? "").trim() === "광고비")
+      .reduce((s, r) => s + Number(r.amount ?? 0), 0);
+    const totalEtcOnly = spendRows
+      .filter((r) => String(r.category ?? "").trim() === "기타지출")
+      .reduce((s, r) => s + Number(r.amount ?? 0), 0);
 
     // --- 항목별 세부 금액 (field_mapping 기반) ---
     const totalVasFee = settledSalesRows.reduce((s, r) => s + Number(r.vas_fee ?? 0), 0);
@@ -257,7 +266,9 @@ export function useFinanceData(): FinanceData {
       { key: "extra_subsidy", label: "추가 지원금", amount: sumExtraSubsidy },
       { key: "customer_support", label: "고객 지원금", amount: sumCustomerSupport },
       { key: "corp_card", label: "5번 법인카드 결제금액", amount: sumCorpCard },
-      { key: "ad_spend", label: "광고비 / 기타지출", amount: totalAdSpend },
+      { key: "ad_spend", label: "광고비", amount: totalAdOnly },
+      { key: "etc_spend", label: "기타지출", amount: totalEtcOnly },
+      { key: "fixed_spend", label: "고정지출", amount: totalFixedExpense },
       { key: "moyo_fee", label: "모요 수수료", amount: sumMoyoFee },
     ];
 
