@@ -12,13 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import confetti from "canvas-confetti";
 import {
   Search, Users, TrendingUpIcon, Coins, Target, Sparkles, Info,
   Smartphone, Wifi, Gift, Calculator, CheckCircle2, Clock, XCircle, ChevronDown,
-  PhoneCall, Package, Settings2, Plus,
+  PhoneCall, Package, Settings2, Plus, Trophy,
 } from "lucide-react";
 import { ArrowUp, ArrowDown, Minus, Activity, Wallet, AlertTriangle, Lightbulb } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RTooltip, RadialBarChart, RadialBar, PolarAngleAxis, BarChart, Bar, XAxis, YAxis, CartesianGrid, RadarChart, Radar, PolarGrid, PolarRadiusAxis } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RTooltip, RadialBarChart, RadialBar, PolarAngleAxis, BarChart, Bar, XAxis, YAxis, CartesianGrid, RadarChart, Radar, PolarGrid, PolarRadiusAxis, ReferenceLine } from "recharts";
 import { formatKRWShort } from "@/data/financeData";
 import { useIncentiveRates } from "@/hooks/useIncentiveRates";
 import { calcTotalIncentive, forecastIncentive, calcIncentiveForSale } from "@/lib/incentiveEngine";
@@ -65,6 +66,15 @@ interface GoalRow {
   product: string;
   year_month: string;
   goal_count: number;
+  sale_type: string;
+  goal_type: string;   // 'count' | 'rate'
+  goal_value: number;
+}
+
+interface InquiryCountRow {
+  user_id: string;
+  year_month: string;
+  inflow_count: number;
 }
 
 const DONUT_COLORS = [
@@ -74,6 +84,24 @@ const DONUT_COLORS = [
 
 // Standard products tracked for goals
 const GOAL_PRODUCTS = ["모바일", "인터넷", "TV프리", "스마트홈", "2ND"];
+
+// Mobile sale-type buckets for granular goals
+const MOBILE_SALE_TYPES = ["신규", "번이", "기변"] as const;
+function mobileSaleTypeBucket(t: string | null): "신규" | "번이" | "기변" | null {
+  if (!t) return null;
+  const s = t.trim();
+  if (/신규/.test(s)) return "신규";
+  if (/MNP|번이|이동/i.test(s)) return "번이";
+  if (/기변|재약정|업셀/i.test(s)) return "기변";
+  return null;
+}
+
+// Rate-based goals (e.g., attach rates relative to mobile)
+const RATE_GOALS = [
+  { key: "vas_rate", label: "부가서비스 유치율", unit: "%" },
+  { key: "internet_rate", label: "인터넷 유치율", unit: "%" },
+  { key: "tvfree_rate", label: "TV프리 유치율", unit: "%" },
+] as const;
 
 // Mix chart products (detailed breakdown)
 const MIX_PRODUCTS = ["모바일", "인터넷", "TV프리", "스마트홈", "부가서비스"];
