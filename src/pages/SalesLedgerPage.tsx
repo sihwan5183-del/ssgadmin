@@ -964,25 +964,17 @@ const SalesLedgerPage = () => {
             <tbody>
               {filteredRows.map((r) => {
                 const mine = r.created_by === user?.id;
-                const isLocked = r.approval_status === "확정";
-                const adminOverride = isAdmin && forceUnlock;
-                const canEdit = adminOverride || (mine && !isLocked) || (isAdmin && !isLocked);
+                // ※ 잠금 정책 폐지 — 본인 또는 관리자는 언제든 수정 가능 (히스토리는 sales_audit_log 자동 기록)
+                const canEdit = mine || isAdmin;
+                // 검수 완료 = 관리자가 검수에서 확정 처리한 상태
+                const isInspected =
+                  r.approval_status === "확정" || r.approval_status === "검수완료";
                 const hasPending = (r.pending_items?.length ?? 0) > 0 && r.pending_resolved === false;
                 const offer = offerOf(r);
                 const profit = profitOf(r);
                 const negative = profit < 0;
                 const isMoyoExcluded = r.channel === "모요" && r.product === "모바일" && r.moyo_excluded === true;
                 const handleRowClick = () => {
-                  if (isLocked && !adminOverride) {
-                    if (isAdmin) {
-                      toast.info("확정된 실적입니다", {
-                        description: "상단의 [수정 잠금 강제 해제] 토글을 켠 뒤 다시 시도하세요.",
-                      });
-                      return;
-                    }
-                    toast.info("확정된 실적은 수정할 수 없습니다", { description: "관리자에게 잠금 해제를 요청하세요." });
-                    return;
-                  }
                   if (!canEdit) {
                     toast.info("본인이 등록한 실적만 수정할 수 있습니다");
                     return;
@@ -994,7 +986,6 @@ const SalesLedgerPage = () => {
                     "border-b border-border/20 hover:bg-white/[0.03] cursor-pointer transition-colors",
                     mine && "bg-primary/[0.04]",
                     hasPending && "bg-amber-50/70 hover:bg-amber-500/[0.12]",
-                    isLocked && "opacity-80",
                     isMoyoExcluded && "text-muted-foreground/80 [&_td]:line-through",
                   )}
                   onClick={handleRowClick}
