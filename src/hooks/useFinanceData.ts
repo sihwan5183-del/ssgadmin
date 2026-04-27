@@ -148,6 +148,10 @@ export function useFinanceData(): FinanceData {
     // ※ 모든 행은 status=개통완료 (쿼리에서 필터됨).
     //    상품권/미수금/중고폰은 '확정 상태'에서만 수익으로 잡히므로 정산 제외 필터 불필요.
     const settledSalesRows = salesRows;
+    const effectiveSpendRows = spendRows.filter((r) => {
+      const category = String(r.category ?? "광고비").trim();
+      return category === "광고비" || category === "기타지출";
+    });
 
     // ---------- 신규 합산 (대표님 정의 정확 매칭) ----------
     let sumCommission = 0;
@@ -203,7 +207,7 @@ export function useFinanceData(): FinanceData {
       }
     }
     const moyoFee = sumMoyoFee;
-    const totalAdSpend = spendRows.reduce(
+    const totalAdSpend = effectiveSpendRows.reduce(
       (s, r) => s + Number(r.amount ?? 0),
       0,
     );
@@ -280,7 +284,7 @@ export function useFinanceData(): FinanceData {
       row.rebate += p.revenue;
       row.offer += p.expense;
     }
-    for (const r of spendRows) {
+    for (const r of effectiveSpendRows) {
       const ch = (r.channel ?? r.media ?? "기타").toString().trim() || "기타";
       ensure(ch).spend += Number(r.amount ?? 0);
     }
@@ -317,7 +321,7 @@ export function useFinanceData(): FinanceData {
       });
     }
     const mediaTotalsMap = new Map<string, number>();
-    for (const r of spendRows) {
+    for (const r of effectiveSpendRows) {
       const m = (r.media ?? "기타").toString();
       mediaSet.add(m);
       mediaTotalsMap.set(m, (mediaTotalsMap.get(m) ?? 0) + Number(r.amount ?? 0));
