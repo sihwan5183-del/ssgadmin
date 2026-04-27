@@ -1128,6 +1128,38 @@ export default function StaffStatusPage() {
                 </Card>
               </div>
 
+              {/* 인입 대비 전환율 + 비율 목표 */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                <Card className="p-4 glass border-primary/30 bg-gradient-to-br from-primary/[0.08] to-transparent">
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                    <PhoneCall className="size-3.5 text-primary-glow" /> 인입 대비 성공률(전환율)
+                  </div>
+                  <div className="text-3xl font-extrabold tabular-nums text-primary-glow mt-1">
+                    {selectedConversion.rate}<span className="text-sm font-normal text-muted-foreground ml-0.5">%</span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-1">
+                    상담 인입 {selectedConversion.inflow}건 / 개통 {selectedConversion.success}건
+                  </div>
+                </Card>
+                {selectedRateGoals.map((r) => (
+                  <Card key={r.key} className="p-4 glass">
+                    <div className="text-[11px] text-muted-foreground flex items-center justify-between">
+                      <span className="flex items-center gap-1.5"><Target className="size-3.5 text-amber-500" /> {r.label} 목표</span>
+                      {r.goal > 0 && r.current >= r.goal && (
+                        <Badge variant="outline" className="text-[9px] border-emerald-400 text-emerald-700 bg-emerald-50">달성!</Badge>
+                      )}
+                    </div>
+                    <div className="flex items-baseline gap-1.5 mt-1">
+                      <div className="text-2xl font-extrabold tabular-nums text-foreground">{r.current}%</div>
+                      <div className="text-xs text-muted-foreground">
+                        / {r.goal > 0 ? `${r.goal}%` : "미설정"}
+                      </div>
+                    </div>
+                    <Progress value={r.goal > 0 ? Math.min(100, r.pct) : 0} className="h-1.5 mt-1.5" />
+                  </Card>
+                ))}
+              </div>
+
               {/* Attach Rate (전 상품) + 월간 목표 달성률 + Radar */}
               <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
                 {/* 전 상품 모바일 대비 유치율 — 가로형 멀티 막대 */}
