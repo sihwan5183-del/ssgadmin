@@ -629,7 +629,8 @@ const InputPage = () => {
           delivery_type: pick(r, "발송유형") as string | null,
           tracking_no: pick(r, "운송장") ? String(pick(r, "운송장")) : null,
           note: pick(r, "특이사항") as string | null,
-        }));
+          });
+        });
 
       if (!records.length) {
         toast.error("불러올 행이 없습니다", { description: "엑셀 헤더가 '실적장표' 형식인지 확인하세요." });
