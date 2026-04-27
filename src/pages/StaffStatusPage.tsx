@@ -444,6 +444,130 @@ export default function StaffStatusPage() {
     };
   }, [sales, inquiries]);
 
+  // === Previous-period sales for selected (for trend deltas) ===
+  const prevSalesForSelected = useMemo(() => {
+    if (!selected) return [] as SaleRow[];
+    const m = new Map<string, SaleRow[]>();
+    prevSales.forEach((s) => {
+      const id = ownerOf(s);
+      const arr = m.get(id) ?? [];
+      arr.push(s);
+      m.set(id, arr);
+    });
+    return m.get(selected.user_id) ?? [];
+  }, [prevSales, selected, ownerOf]);
+
+  // === Productivity analytics: attach rates, ARPU, unsettled, bundle, deltas, summary ===
+  const productivity = useMemo(() => {
+    const success = sales.filter(isSuccess);
+    const counts = { 모바일: 0, 인터넷: 0, TV프리: 0, 스마트홈: 0, "2ND": 0 } as Record<string, number>;
+    success.forEach((s) => {
+      const b = productBucket(s.product);
+      if (b in counts) counts[b] += 1;
+    });
+    const mobile = counts["모바일"];
+    let vasCount = 0;
+    success.forEach((s) => {
+      if (s.vas1 && s.vas1.trim() && s.vas1 !== "없음") vasCount += 1;
+      if (s.vas2 && s.vas2.trim() && s.vas2 !== "없음") vasCount += 1;
+    });
+    const rate = (n: number) => (mobile > 0 ? Math.round((n / mobile) * 100) : 0);
+    const attach = {
+      internet: rate(counts["인터넷"]),
+      tvfree: rate(counts["TV프리"]),
+      vas: rate(vasCount),
+      smarthome: rate(counts["스마트홈"]),
+      second: rate(counts["2ND"]),
+    };
+
+    // ARPU: total revenue (distributor + net_fee) / total open count
+    const totalRevenue = success.reduce(
+      (a, s) => a + Number(s.distributor_amount ?? 0) + Number(s.net_fee ?? 0),
+      0
+    );
+    const arpu = success.length > 0 ? Math.round(totalRevenue / success.length) : 0;
+
+    // 미반납/미검수 잔여율 = pending_resolved=false / 전체
+    const unresolved = sales.filter((s) => s.pending_resolved === false).length;
+    const unresolvedRate = sales.length > 0 ? Math.round((unresolved / sales.length) * 100) : 0;
+
+    // === Previous-month attach for delta ===
+    const prevSuccess = prevSalesForSelected.filter(isSuccess);
+    const prevCounts = { 모바일: 0, 인터넷: 0, TV프리: 0, 스마트홈: 0, "2ND": 0 } as Record<string, number>;
+    prevSuccess.forEach((s) => {
+      const b = productBucket(s.product);
+      if (b in prevCounts) prevCounts[b] += 1;
+    });
+    let prevVas = 0;
+    prevSuccess.forEach((s) => {
+      if (s.vas1 && s.vas1.trim() && s.vas1 !== "없음") prevVas += 1;
+      if (s.vas2 && s.vas2.trim() && s.vas2 !== "없음") prevVas += 1;
+    });
+    const prevMobile = prevCounts["모바일"];
+    const prevRate = (n: number) => (prevMobile > 0 ? Math.round((n / prevMobile) * 100) : 0);
+    const prevAttach = {
+      internet: prevRate(prevCounts["인터넷"]),
+      tvfree: prevRate(prevCounts["TV프리"]),
+      vas: prevRate(prevVas),
+      smarthome: prevRate(prevCounts["스마트홈"]),
+      second: prevRate(prevCounts["2ND"]),
+    };
+    const delta = {
+      internet: attach.internet - prevAttach.internet,
+      tvfree: attach.tvfree - prevAttach.tvfree,
+      vas: attach.vas - prevAttach.vas,
+      smarthome: attach.smarthome - prevAttach.smarthome,
+      second: attach.second - prevAttach.second,
+    };
+
+    // Bar/Radar data
+    const attachBars = [
+      { name: "인터넷", value: attach.internet, prev: prevAttach.internet, delta: delta.internet, fill: "hsl(195 90% 60%)" },
+      { name: "TV프리", value: attach.tvfree, prev: prevAttach.tvfree, delta: delta.tvfree, fill: "hsl(280 80% 70%)" },
+      { name: "부가서비스", value: attach.vas, prev: prevAttach.vas, delta: delta.vas, fill: "hsl(45 95% 60%)" },
+      { name: "스마트홈", value: attach.smarthome, prev: prevAttach.smarthome, delta: delta.smarthome, fill: "hsl(155 75% 55%)" },
+      { name: "2nd 디바이스", value: attach.second, prev: prevAttach.second, delta: delta.second, fill: "hsl(15 85% 65%)" },
+    ];
+    const radarData = attachBars.map((b) => ({
+      metric: b.name,
+      value: Math.min(b.value, 150),
+      fullMark: 100,
+    }));
+
+    // === 영업 성향 진단 (모바일 집중형 vs 결합 만능형) ===
+    const totalSales = success.length || 1;
+    const mobileShare = (mobile / totalSales) * 100;
+    const wiredShare = ((counts["인터넷"] + counts["TV프리"] + counts["스마트홈"]) / totalSales) * 100;
+    let salesType = "균형형";
+    if (mobileShare > 70) salesType = "모바일 집중형";
+    else if (wiredShare > 35 && attach.internet >= 30) salesType = "결합 만능형";
+    else if (attach.vas >= 80) salesType = "부가서비스 강화형";
+
+    // === 강점/약점 한 줄 요약 ===
+    const strengths: string[] = [];
+    const weaknesses: string[] = [];
+    if (attach.internet >= 30) strengths.push("인터넷 유치율 우수");
+    else if (attach.internet < 10 && mobile > 0) weaknesses.push("인터넷 유치율 낮음");
+    if (attach.tvfree >= 20) strengths.push("TV프리 결합 우수");
+    else if (attach.tvfree < 5 && mobile > 0) weaknesses.push("TV프리 결합 부족");
+    if (attach.vas >= 80) strengths.push("부가서비스 우수");
+    else if (attach.vas < 50 && mobile > 0) weaknesses.push("부가서비스 유치율 평균 대비 낮음");
+    if (attach.second >= 15) strengths.push("2nd 디바이스 번들 우수");
+    if (unresolvedRate >= 30) weaknesses.push("미정산/미검수 비율 높음");
+    let summary = "";
+    if (mobile === 0 && success.length === 0) summary = "분석할 실적이 부족합니다.";
+    else if (strengths.length && weaknesses.length) summary = `${strengths[0]}, 그러나 ${weaknesses[0]}.`;
+    else if (strengths.length) summary = `${strengths.join(" · ")}.`;
+    else if (weaknesses.length) summary = `${weaknesses.join(" · ")} — 개선 필요.`;
+    else summary = "전반적으로 평이한 실적 분포입니다.";
+
+    return {
+      attach, attachBars, radarData, arpu, totalRevenue,
+      unresolved, unresolvedRate, salesType, summary, strengths, weaknesses,
+      mobileShare: Math.round(mobileShare), wiredShare: Math.round(wiredShare),
+    };
+  }, [sales, prevSalesForSelected]);
+
   // Goals for selected
   const selectedGoals = useMemo(() => {
     if (!selected) return [] as { product: string; goal: number; achieved: number; pct: number }[];
