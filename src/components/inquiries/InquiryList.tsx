@@ -121,7 +121,7 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
                 title={
                   <div className="flex items-center gap-2 flex-wrap">
                     <span>{r.customer_name ?? "(이름없음)"}</span>
-                    <Badge variant={statusVariant(r.status)} className="text-[10px]">{r.status}</Badge>
+                    <Badge variant="outline" className={cn("text-[10px]", inquiryStatusClass(r.status))}>{r.status}</Badge>
                   </div>
                 }
                 meta={
