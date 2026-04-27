@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   FileWarning, Search, Upload, Phone, User, Smartphone, AlertTriangle, ListChecks,
-  ClipboardList, CheckCircle2, Pencil, Building2, Clock, PackageCheck,
+  ClipboardList, CheckCircle2, Pencil, Building2, Clock,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
@@ -445,22 +445,22 @@ const ActivitiesPage = () => {
   const wantPending = searchParams.get("pending") === "1";
   const tabParam = searchParams.get("tab");
   const statusParam = searchParams.get("status");
-  const initialTab =
-    tabParam ||
-    (statusParam === "청약완료,택배발송,예약"
-      ? "pending-activation"
-      : statusParam === "청약완료,택배발송"
-        ? "subscribed"
-        : wantPending
-          ? "search"
-          : (isAdmin ? "super" : "search"));
+  // 미완료 항목 탭으로 라우팅: 신규/구 alias 모두 수용
+  const isIncompleteParam =
+    tabParam === "incomplete" ||
+    tabParam === "pending-activation" ||
+    tabParam === "subscribed" ||
+    statusParam === "청약완료,택배발송,예약" ||
+    statusParam === "청약완료,택배발송";
+  const initialTab = isIncompleteParam
+    ? "incomplete"
+    : (tabParam || (wantPending ? "search" : (isAdmin ? "super" : "search")));
   const [tab, setTab] = useState<string>(initialTab);
   useEffect(() => {
-    if (tabParam) setTab(tabParam);
-    else if (statusParam === "청약완료,택배발송,예약") setTab("pending-activation");
-    else if (statusParam === "청약완료,택배발송") setTab("subscribed");
+    if (isIncompleteParam) setTab("incomplete");
+    else if (tabParam) setTab(tabParam);
     else if (wantPending) setTab("search");
-  }, [wantPending, tabParam, statusParam]);
+  }, [wantPending, tabParam, statusParam, isIncompleteParam]);
 
   return (
     <>
@@ -488,14 +488,8 @@ const ActivitiesPage = () => {
           <TabsTrigger value="missing-docs" className="gap-2">
             <FileWarning className="size-4" /> 서류 미첨부
           </TabsTrigger>
-          <TabsTrigger value="pending" className="gap-2">
-            <ClipboardList className="size-4" /> 미처리 항목
-          </TabsTrigger>
-          <TabsTrigger value="pending-activation" className="gap-2">
-            <Clock className="size-4" /> 개통 대기
-          </TabsTrigger>
-          <TabsTrigger value="subscribed" className="gap-2">
-            <PackageCheck className="size-4" /> 청약/택배 완료
+          <TabsTrigger value="incomplete" className="gap-2">
+            <Clock className="size-4" /> 미완료 항목
           </TabsTrigger>
         </TabsList>
 
@@ -515,16 +509,12 @@ const ActivitiesPage = () => {
           <MissingDocsSection />
         </TabsContent>
 
-        <TabsContent value="pending">
-          <PendingItemsSection />
-        </TabsContent>
-
-        <TabsContent value="pending-activation" className="space-y-6">
-          <SaleSearchPanel presetStatus="청약완료,택배발송,예약" />
-        </TabsContent>
-
-        <TabsContent value="subscribed" className="space-y-6">
-          <SaleSearchPanel presetStatus="청약완료,택배발송" />
+        <TabsContent value="incomplete" className="space-y-3">
+          <div className="rounded-lg border border-amber-300/60 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/30 px-4 py-2.5 text-xs text-amber-800 dark:text-amber-200 flex items-center gap-2">
+            <AlertTriangle className="size-4 shrink-0" />
+            <span>※ 택배발송 및 청약완료 건만 표시됩니다. (개통일 미정 건 포함)</span>
+          </div>
+          <SaleSearchPanel presetStatus="청약완료,택배발송" bypassPeriod />
         </TabsContent>
       </Tabs>
     </>

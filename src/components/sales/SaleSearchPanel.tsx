@@ -132,9 +132,10 @@ const SALE_STATUS_BADGE: Record<string, string> = {
 
 interface SaleSearchPanelProps {
   presetStatus?: string | null;
+  bypassPeriod?: boolean;
 }
 
-export const SaleSearchPanel = ({ presetStatus = null }: SaleSearchPanelProps = {}) => {
+export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: SaleSearchPanelProps = {}) => {
   const { user } = useAuth();
   const { isAdmin } = useRole();
   const { startDate, endDate, label, setSingleDay } = usePeriod();
@@ -271,7 +272,10 @@ export const SaleSearchPanel = ({ presetStatus = null }: SaleSearchPanelProps = 
       else if (list.length === 1) query = query.eq("approval_status", list[0]);
     }
     // 기간 필터 적용 (검색어 없이 기간만으로도 조회 가능)
-    query = query.gte("open_date", startDate).lte("open_date", endDate);
+    // ※ presetStatus 모드(미완료 항목 탭 등)에서는 open_date 가 NULL 인 청약완료 건도 포함하도록 기간 필터를 생략
+    if (!bypassPeriod) {
+      query = query.gte("open_date", startDate).lte("open_date", endDate);
+    }
 
     const { data, error } = await query
       .order("open_date", { ascending: false, nullsFirst: false })
