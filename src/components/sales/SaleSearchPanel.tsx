@@ -663,7 +663,11 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
                         return (
                           <div
                             key={r.id}
-                            className={`flex items-stretch ${sel ? "bg-primary/5" : ""} ${
+                            className={`flex items-stretch transition-all duration-300 ease-out overflow-hidden ${
+                              completingIds.has(r.id)
+                                ? "opacity-0 -translate-x-4 max-h-0 py-0 my-0 border-transparent"
+                                : "opacity-100 max-h-40"
+                            } ${sel ? "bg-primary/5" : ""} ${
                               isAbnormal ? "bg-destructive/5"
                               : installOverdue ? "bg-orange-50/80"
                               : hasUnhandled ? "bg-yellow-100/80" : ""
@@ -732,6 +736,21 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
                               </div>
                             </div>
                             </button>
+                            {/* 전용 완료 버튼: 모바일=개통완료 / 홈=설치완료 */}
+                            {matchesPendingActivationStatus(r.status) && (
+                              <div className="self-center pr-3 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                <Button
+                                  size="sm"
+                                  onClick={(e) => markCompletion(r, e)}
+                                  disabled={completingIds.has(r.id)}
+                                  className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+                                  title={`${completionLabelFor(r.product)} 처리 (리스트에서 제거)`}
+                                >
+                                  <CheckCircle2 className="size-3.5" />
+                                  {completionLabelFor(r.product)}
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
