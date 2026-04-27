@@ -89,15 +89,21 @@ interface SaleHit {
 const EDITABLE_FIELDS: Array<{ key: keyof SaleHit; label: string; type?: string }> = [
   { key: "customer_name", label: "고객명" },
   { key: "phone", label: "전화번호" },
+  { key: "birth_date", label: "생년월일" },
   { key: "device_model", label: "단말기 모델" },
   { key: "device_serial", label: "단말기 일련번호" },
   { key: "channel", label: "채널" },
   { key: "product", label: "상품" },
   { key: "rate_plan", label: "요금제" },
+  { key: "sale_type", label: "가입유형" },
+  { key: "open_method", label: "개통방식" },
+  { key: "bundle", label: "결합/번들" },
   { key: "status", label: "상태" },
   { key: "manager", label: "담당자" },
   { key: "open_date", label: "개통일", type: "date" },
   { key: "unit_price", label: "단가", type: "number" },
+  { key: "vas_fee", label: "부가서비스 수수료", type: "number" },
+  { key: "extra_subsidy", label: "추가지원금", type: "number" },
   { key: "note", label: "메모" },
 ];
 
