@@ -1023,9 +1023,7 @@ const SalesLedgerPage = () => {
                 };
                 return (
                   <tr key={r.id} className={cn(
-                    "border-b border-border/20 hover:bg-white/[0.03] cursor-pointer transition-colors",
-                    mine && "bg-primary/[0.04]",
-                    hasPending && "bg-amber-50/70 hover:bg-amber-500/[0.12]",
+                    "border-b border-border/20 hover:bg-muted/30 cursor-pointer transition-colors",
                     isMoyoExcluded && "text-muted-foreground",
                   )}
                   onClick={handleRowClick}
@@ -1099,18 +1097,17 @@ const SalesLedgerPage = () => {
                         ? <Badge variant="secondary" className="text-[9px] px-1.5 py-0">무오퍼</Badge>
                         : <Badge variant="outline" className="text-[9px] px-1.5 py-0">오퍼</Badge>}
                     </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-sky-600 dark:text-sky-400">
+                    <td className="px-3 py-3 text-right tabular-nums font-bold text-foreground">
                       {(r.unit_price ?? 0).toLocaleString("ko-KR")}
                     </td>
                     <td className={cn(
-                      "px-3 py-2.5 text-right tabular-nums font-semibold",
-                      offer < 0 ? "text-destructive" : "text-rose-600 dark:text-rose-400"
+                      "px-3 py-3 text-right tabular-nums font-bold text-destructive"
                     )}>
                       {offer.toLocaleString("ko-KR")}
                     </td>
                     <td className={cn(
-                      "px-3 py-2.5 text-right tabular-nums font-semibold",
-                      negative ? "text-destructive" : hasDeductions(r) ? "text-warning" : "text-revenue"
+                      "px-3 py-3 text-right tabular-nums font-bold",
+                      negative ? "text-destructive" : "text-foreground"
                     )}>
                       <TooltipProvider delayDuration={200}>
                         <Tooltip>
@@ -1134,38 +1131,32 @@ const SalesLedgerPage = () => {
                         </Tooltip>
                       </TooltipProvider>
                     </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums">
+                    <td className="px-3 py-3 text-right tabular-nums">
                       {(r.receivable_amount ?? 0) > 0 ? (
                         <span className={
                           r.receivable_paid === "완료"
                             ? "text-muted-foreground line-through"
                             : (r.receivable_amount ?? 0) < 0
-                              ? "text-destructive font-semibold"
-                              : "text-sky-600 dark:text-sky-400 font-semibold"
+                              ? "text-destructive font-bold"
+                              : "text-foreground font-bold"
                         }>
                           {(r.receivable_amount ?? 0).toLocaleString("ko-KR")}
                         </span>
                       ) : <span className="text-muted-foreground">-</span>}
                     </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums">
+                    <td className="px-3 py-3 text-right tabular-nums">
                       {(r.customer_support_amount ?? 0) > 0
-                        ? <span className={cn(
-                            "font-semibold",
-                            (r.customer_support_amount ?? 0) < 0 ? "text-destructive" : "text-rose-600 dark:text-rose-400"
-                          )}>{(r.customer_support_amount ?? 0).toLocaleString("ko-KR")}</span>
+                        ? <span className="font-bold text-destructive">{(r.customer_support_amount ?? 0).toLocaleString("ko-KR")}</span>
                         : <span className="text-muted-foreground">-</span>}
                     </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums">
+                    <td className="px-3 py-3 text-right tabular-nums">
                       {(r.corp_card_amount ?? 0) > 0
-                        ? <span className={cn(
-                            "font-semibold",
-                            (r.corp_card_amount ?? 0) < 0 ? "text-destructive" : "text-rose-600 dark:text-rose-400"
-                          )}>{(r.corp_card_amount ?? 0).toLocaleString("ko-KR")}</span>
+                        ? <span className="font-bold text-destructive">{(r.corp_card_amount ?? 0).toLocaleString("ko-KR")}</span>
                         : <span className="text-muted-foreground">-</span>}
                     </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums">
+                    <td className="px-3 py-3 text-right tabular-nums">
                       {r.trade_in_enabled ? (
-                        <span className="text-sky-600 dark:text-sky-400 font-semibold" title={r.trade_in_model ?? ""}>
+                        <span className="text-foreground font-bold" title={r.trade_in_model ?? ""}>
                           {(r.trade_in_confirmed ?? 0) > 0
                             ? `₩${(r.trade_in_confirmed ?? 0).toLocaleString("ko-KR")}`
                             : "대기"}
