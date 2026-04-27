@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   FileWarning, Search, Upload, Phone, User, Smartphone, AlertTriangle, ListChecks,
-  ClipboardList, CheckCircle2, Pencil, Building2,
+  ClipboardList, CheckCircle2, Pencil, Building2, Clock, PackageCheck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
@@ -444,12 +444,23 @@ const ActivitiesPage = () => {
   const [searchParams] = useSearchParams();
   const wantPending = searchParams.get("pending") === "1";
   const tabParam = searchParams.get("tab");
-  const initialTab = tabParam || (wantPending ? "search" : (isAdmin ? "super" : "search"));
+  const statusParam = searchParams.get("status");
+  const initialTab =
+    tabParam ||
+    (statusParam === "청약완료,택배발송,예약"
+      ? "pending-activation"
+      : statusParam === "청약완료,택배발송"
+        ? "subscribed"
+        : wantPending
+          ? "search"
+          : (isAdmin ? "super" : "search"));
   const [tab, setTab] = useState<string>(initialTab);
   useEffect(() => {
-    if (wantPending) setTab("search");
-    else if (tabParam) setTab(tabParam);
-  }, [wantPending, tabParam]);
+    if (tabParam) setTab(tabParam);
+    else if (statusParam === "청약완료,택배발송,예약") setTab("pending-activation");
+    else if (statusParam === "청약완료,택배발송") setTab("subscribed");
+    else if (wantPending) setTab("search");
+  }, [wantPending, tabParam, statusParam]);
 
   return (
     <>
@@ -480,6 +491,12 @@ const ActivitiesPage = () => {
           <TabsTrigger value="pending" className="gap-2">
             <ClipboardList className="size-4" /> 미처리 항목
           </TabsTrigger>
+          <TabsTrigger value="pending-activation" className="gap-2">
+            <Clock className="size-4" /> 개통 대기
+          </TabsTrigger>
+          <TabsTrigger value="subscribed" className="gap-2">
+            <PackageCheck className="size-4" /> 청약/택배 완료
+          </TabsTrigger>
         </TabsList>
 
         {isAdmin && (
@@ -500,6 +517,14 @@ const ActivitiesPage = () => {
 
         <TabsContent value="pending">
           <PendingItemsSection />
+        </TabsContent>
+
+        <TabsContent value="pending-activation" className="space-y-6">
+          <SaleSearchPanel presetStatus="청약완료,택배발송,예약" />
+        </TabsContent>
+
+        <TabsContent value="subscribed" className="space-y-6">
+          <SaleSearchPanel presetStatus="청약완료,택배발송" />
         </TabsContent>
       </Tabs>
     </>

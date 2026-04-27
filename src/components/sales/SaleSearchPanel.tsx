@@ -120,7 +120,21 @@ const APPROVAL_META: Record<ApprovalStatus, { className: string; icon: typeof Ch
 const SELECT_COLS =
   "id, created_by, customer_name, phone, birth_date, device_serial, device_model, channel, product, rate_plan, sale_type, open_method, bundle, status, open_date, manager, unit_price, vas_fee, extra_subsidy, moyo_excluded, net_fee, note, approval_status, locked, approved_at, pending_items, pending_note, pending_resolved, approval_override_reason, distributor_amount, cash_support_amount, cash_open, receivable_amount, receivable_paid, revision_fields, revision_reason, revision_requested_at, re_review_requested_at, custom_fields";
 
-export const SaleSearchPanel = () => {
+const SALE_STATUS_BADGE: Record<string, string> = {
+  청약완료: "border-sky-400 text-sky-700 bg-sky-50 dark:bg-sky-500/15 dark:text-sky-300 dark:border-sky-500/30",
+  택배발송: "border-indigo-400 text-indigo-700 bg-indigo-50 dark:bg-indigo-500/15 dark:text-indigo-300 dark:border-indigo-500/30",
+  개통완료: "border-emerald-400 text-emerald-700 bg-emerald-50 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30",
+  설치완료: "border-emerald-400 text-emerald-700 bg-emerald-50 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30",
+  예약: "border-violet-400 text-violet-700 bg-violet-50 dark:bg-violet-500/15 dark:text-violet-300 dark:border-violet-500/30",
+  보류: "border-amber-400 text-amber-700 bg-amber-50 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30",
+  취소: "border-destructive/40 text-destructive bg-destructive/10",
+};
+
+interface SaleSearchPanelProps {
+  presetStatus?: string | null;
+}
+
+export const SaleSearchPanel = ({ presetStatus = null }: SaleSearchPanelProps = {}) => {
   const { user } = useAuth();
   const { isAdmin } = useRole();
   const { startDate, endDate, label, setSingleDay } = usePeriod();
@@ -321,6 +335,13 @@ export const SaleSearchPanel = () => {
     search();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate]);
+
+  // 외부 탭에서 전달받은 상태 프리셋(개통대기/청약완료 등) 적용
+  useEffect(() => {
+    setStatusFilter(presetStatus ?? null);
+    search(undefined, undefined, undefined, undefined, presetStatus ?? null, undefined, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetStatus]);
 
   const openDetail = (sale: SaleHit) => {
     setSelected(sale);
@@ -607,7 +628,7 @@ export const SaleSearchPanel = () => {
                                 </Badge>
                                 {/* 2. 개통 상태 */}
                                 {r.status && (
-                                  <Badge variant="outline" className="text-[10px]">{r.status}</Badge>
+                                  <Badge variant="outline" className={`text-[10px] ${SALE_STATUS_BADGE[r.status] ?? ""}`}>{r.status}</Badge>
                                 )}
                                 {/* 3. 미처리 */}
                                 {hasUnhandled && (
