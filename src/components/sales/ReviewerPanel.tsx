@@ -24,6 +24,9 @@ const DEFAULT_CHECKLIST: ChecklistItem[] = [
   { key: "plan_match", label: "요금제 확인" },
   { key: "price_match", label: "단가 확인" },
   { key: "bundle_match", label: "결합 확인" },
+  { key: "autodebit_match", label: "자동이체 / 입금계좌 확인" },
+  { key: "fee_match", label: "단가/수수료 정책 일치" },
+  { key: "vas_fee_match", label: "부가서비스 수수료 적용" },
 ];
 
 export type ApprovalStatus = "승인대기" | "검수완료" | "확정" | "반려" | "수정요청" | "환수" | "취소";
@@ -481,13 +484,16 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
       {isAdmin ? (
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">검수 메모 / 사유</Label>
+            <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <MessageSquare className="size-3.5" />
+              검수 메모 / 사유 (반려·수정요청 시 필수)
+            </Label>
             <Textarea
-              rows={2}
+              rows={5}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="반려·수정요청 시 사유를 작성하세요"
-              className="bg-input/60 text-sm"
+              placeholder="검수 과정에서 발견된 특이사항이나 반려/수정요청 사유를 자세히 작성하세요. 변경 이력은 검수 타임라인에서 확인할 수 있습니다."
+              className="bg-input/60 text-sm leading-relaxed"
             />
           </div>
 

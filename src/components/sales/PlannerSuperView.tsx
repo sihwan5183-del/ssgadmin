@@ -12,7 +12,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Building2, Download, Search, Eye, Lock, Unlock, ShieldCheck, FileWarning,
-  Inbox, ClipboardCheck, RotateCcw, ChevronRight,
+  Inbox, ClipboardCheck, RotateCcw, ChevronRight, CalendarDays, ChevronLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useViewScope } from "@/contexts/ViewScopeContext";
@@ -91,6 +91,12 @@ export const PlannerSuperView = () => {
   const [storeFilter, setStoreFilter] = useState<string>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sortKey, setSortKey] = useState<SortKey>("updated");
+  const [showCalendar, setShowCalendar] = useState(true);
+  const [calMonth, setCalMonth] = useState<Date>(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const [dateFilter, setDateFilter] = useState<string | null>(null); // YYYY-MM-DD
 
   const load = async () => {
     setLoading(true);
@@ -135,6 +141,7 @@ export const PlannerSuperView = () => {
     const q = search.trim().toLowerCase();
     const result = rows.filter((r) => {
       if (storeFilter !== "all" && r.manager !== storeFilter) return false;
+      if (dateFilter && r.open_date !== dateFilter) return false;
       if (!q) return true;
       return [r.customer_name, r.device_model, r.manager, r.channel]
         .filter(Boolean)
@@ -146,7 +153,33 @@ export const PlannerSuperView = () => {
       result.sort((a, b) => profit(b) - profit(a));
     }
     return result;
-  }, [rows, search, storeFilter, sortKey]);
+  }, [rows, search, storeFilter, sortKey, dateFilter]);
+
+  // 달력: 해당 월의 날짜별 건수
+  const calendarCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    rows.forEach((r) => {
+      if (!r.open_date) return;
+      m.set(r.open_date, (m.get(r.open_date) ?? 0) + 1);
+    });
+    return m;
+  }, [rows]);
+
+  const calendarGrid = useMemo(() => {
+    const y = calMonth.getFullYear();
+    const m = calMonth.getMonth();
+    const first = new Date(y, m, 1);
+    const startWeekday = first.getDay(); // 0=Sun
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const cells: Array<{ date: string | null; day: number | null }> = [];
+    for (let i = 0; i < startWeekday; i++) cells.push({ date: null, day: null });
+    for (let d = 1; d <= daysInMonth; d++) {
+      const ds = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      cells.push({ date: ds, day: d });
+    }
+    while (cells.length % 7 !== 0) cells.push({ date: null, day: null });
+    return cells;
+  }, [calMonth]);
 
   const counts = useMemo(() => ({
     submitted: rows.filter((r) => TAB_FILTER.submitted.includes(r.approval_status ?? "")).length,
@@ -280,6 +313,77 @@ export const PlannerSuperView = () => {
             )}
           </div>
         </div>
+      </Card>
+
+      {/* 캘린더 보기 */}
+      <Card className="p-4 glass border-border/40">
+        <div className="flex items-center gap-2 mb-3">
+          <CalendarDays className="size-4 text-primary-glow" />
+          <span className="font-semibold text-sm">캘린더 보기</span>
+          <span className="text-[11px] text-muted-foreground">개통일자 클릭 시 하단 리스트가 즉시 필터링됩니다</span>
+          <div className="ml-auto flex items-center gap-1">
+            <Button size="sm" variant="ghost" onClick={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1))}>
+              <ChevronLeft className="size-3.5" />
+            </Button>
+            <span className="text-sm font-semibold tabular-nums min-w-[88px] text-center">
+              {calMonth.getFullYear()}.{String(calMonth.getMonth() + 1).padStart(2, "0")}
+            </span>
+            <Button size="sm" variant="ghost" onClick={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1))}>
+              <ChevronRight className="size-3.5" />
+            </Button>
+            {dateFilter && (
+              <Button size="sm" variant="outline" className="ml-2 h-7 text-[11px]" onClick={() => setDateFilter(null)}>
+                날짜 필터 해제 ({dateFilter})
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" className="ml-1 h-7 text-[11px]" onClick={() => setShowCalendar((v) => !v)}>
+              {showCalendar ? "접기" : "펴기"}
+            </Button>
+          </div>
+        </div>
+        {showCalendar && (
+          <div>
+            <div className="grid grid-cols-7 gap-1 text-[10px] text-muted-foreground mb-1">
+              {["일", "월", "화", "수", "목", "금", "토"].map((w) => (
+                <div key={w} className="text-center py-1">{w}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {calendarGrid.map((c, i) => {
+                if (!c.date) return <div key={i} className="h-14" />;
+                const cnt = calendarCounts.get(c.date) ?? 0;
+                const isSel = dateFilter === c.date;
+                const isToday = c.date === new Date().toISOString().slice(0, 10);
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setDateFilter(isSel ? null : c.date!)}
+                    className={
+                      "h-14 rounded-md border px-1.5 py-1 flex flex-col items-start justify-between transition-colors text-left " +
+                      (isSel
+                        ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                        : isToday
+                          ? "border-primary/40 bg-primary/5 hover:bg-primary/10"
+                          : "border-border/40 hover:bg-muted/40")
+                    }
+                  >
+                    <span className={"text-[11px] font-medium tabular-nums " + (isToday ? "text-primary" : "")}>
+                      {c.day}
+                    </span>
+                    {cnt > 0 ? (
+                      <span className="text-[11px] font-bold tabular-nums text-primary">{cnt}건</span>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground/50">·</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 text-[11px] text-muted-foreground">
+              ※ 현재 탭({TAB_META[tab].label}) 데이터 기준 · 숫자는 해당 날짜 개통 건수
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* 탭 + 액션바 */}
