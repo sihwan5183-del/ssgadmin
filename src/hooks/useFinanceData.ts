@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { useBudgetCategories, type BudgetCategory } from "./useBudgetCategories";
+import { calcDashboardProfit } from "@/lib/profit";
 
 /**
  * 지출/ROI 화면 전용 통합 집계 훅
@@ -59,6 +60,9 @@ export interface FinanceData {
   roi: number;                  // netMargin / totalExpense * 100
   cpaAvg: number;               // totalAdSpend / totalSuccess
   marginRate: number;           // netMargin / totalRevenue * 100
+  // 신규 정밀 합산 (대표님 정의 기준)
+  revenueBreakdown: { label: string; amount: number; key: string }[];
+  expenseBreakdown: { label: string; amount: number; key: string }[];
   // 모요
   moyoAppliedCount: number;     // 모요 적용 건수
   moyoExcludedCount: number;    // 모요 미적용 건수
@@ -117,10 +121,11 @@ export function useFinanceData(): FinanceData {
         supabase
           .from("sales")
           .select(
-            "channel, product, open_date, unit_price, distributor_amount, cash_support_amount, extra_subsidy, receivable_amount, moyo_excluded, vas_fee, net_fee, voucher, voucher_returned",
+            "channel, product, open_date, unit_price, distributor_amount, cash_support_amount, cash_open, extra_subsidy, customer_support_amount, corp_card_amount, receivable_amount, receivable_paid, moyo_excluded, vas_fee, net_fee, voucher, voucher_returned, trade_in_confirmed, custom_fields",
           )
           .gte("open_date", startDate)
           .lte("open_date", endDate)
+          .eq("status", "개통완료")
           .limit(10000),
         supabase
           .from("ad_spend")
@@ -140,10 +145,36 @@ export function useFinanceData(): FinanceData {
   }, [startDate, endDate]);
 
   return useMemo<FinanceData>(() => {
-    // 정산 제외 규칙: 상품권이 있고 반납 미완료('유' 아님) → 합계 제외
-    const isVoucherExcluded = (r: any) =>
-      r.voucher && String(r.voucher).trim() !== "" && r.voucher_returned !== "유";
-    const settledSalesRows = salesRows.filter((r) => !isVoucherExcluded(r));
+    // ※ 모든 행은 status=개통완료 (쿼리에서 필터됨).
+    //    상품권/미수금/중고폰은 '확정 상태'에서만 수익으로 잡히므로 정산 제외 필터 불필요.
+    const settledSalesRows = salesRows;
+
+    // ---------- 신규 합산 (대표님 정의 정확 매칭) ----------
+    let sumCommission = 0;
+    let sumVas = 0;
+    let sumReceivable = 0;
+    let sumVoucher = 0;
+    let sumTradeIn = 0;
+    let sumDistributor = 0;
+    let sumCashOpen = 0;
+    let sumExtraSubsidy = 0;
+    let sumCustomerSupport = 0;
+    let sumCorpCard = 0;
+    let sumMoyoFee = 0;
+    for (const r of settledSalesRows) {
+      const p = calcDashboardProfit(r);
+      sumCommission += p.salesCommission;
+      sumVas += p.vasFee;
+      sumReceivable += p.receivableAmount;
+      sumVoucher += p.voucherAmount;
+      sumTradeIn += p.tradeInConfirmed;
+      sumDistributor += p.distributor;
+      sumCashOpen += p.cashSupport;
+      sumExtraSubsidy += p.offerSubsidy;
+      sumCustomerSupport += p.customerSupport;
+      sumCorpCard += p.cardSubsidy;
+      sumMoyoFee += p.moyoFee;
+    }
     // ---------- 합계 ----------
     let totalRevenue = 0;
     let totalDistributor = 0;
@@ -171,7 +202,7 @@ export function useFinanceData(): FinanceData {
         }
       }
     }
-    const moyoFee = moyoAppliedCount * 88000;
+    const moyoFee = sumMoyoFee;
     const totalAdSpend = spendRows.reduce(
       (s, r) => s + Number(r.amount ?? 0),
       0,
@@ -202,19 +233,26 @@ export function useFinanceData(): FinanceData {
       isIncludedInBase: (c as any).is_included_in_base ?? false,
     }));
 
-    // 동적 합산: field_mapping 기반으로 On 항목만 합산
-    let dynamicExpense = 0;
-    let dynamicRevenue = 0;
-    for (const c of categories) {
-      const amt = c.field_mapping ? (fieldAmountMap[c.field_mapping] ?? 0) : 0;
-      if (!c.dashboard_included) continue;
-      // is_included_in_base가 true이면 상위 항목에 이미 포함 → 합산에서 제외
-      if ((c as any).is_included_in_base) continue;
-      if (c.category_type === "지출") dynamicExpense += amt;
-      if (c.category_type === "수익") dynamicRevenue += amt;
-    }
-    const totalExpense = dynamicExpense;
-    const computedRevenue = dynamicRevenue > 0 ? dynamicRevenue : totalRevenue;
+    // ---------- 신규 정의: 수익/지출 브레이크다운 ----------
+    const revenueBreakdown = [
+      { key: "commission", label: "단가표 기준 수수료", amount: sumCommission },
+      { key: "vas", label: "부가서비스 수수료", amount: sumVas },
+      { key: "receivable", label: "미수금 (수급완료)", amount: sumReceivable },
+      { key: "voucher", label: "상품권 (반납완료)", amount: sumVoucher },
+      { key: "trade_in", label: "중고폰 (확정 반납)", amount: sumTradeIn },
+    ];
+    const expenseBreakdown = [
+      { key: "distributor", label: "유통망 지원금", amount: sumDistributor },
+      { key: "cash_open", label: "현금개통 금액", amount: sumCashOpen },
+      { key: "extra_subsidy", label: "추가 지원금", amount: sumExtraSubsidy },
+      { key: "customer_support", label: "고객 지원금", amount: sumCustomerSupport },
+      { key: "corp_card", label: "법인카드 결제(오퍼/카드)", amount: sumCorpCard },
+      { key: "moyo_fee", label: "모요 수수료", amount: sumMoyoFee },
+      { key: "ad_spend", label: "광고비 / 기타지출", amount: totalAdSpend },
+    ];
+
+    const computedRevenue = revenueBreakdown.reduce((s, r) => s + r.amount, 0);
+    const totalExpense = expenseBreakdown.reduce((s, r) => s + r.amount, 0);
     const netMargin = computedRevenue - totalExpense;
     const roi = totalExpense > 0 ? (netMargin / totalExpense) * 100 : 0;    
     const cpaAvg = totalSuccess > 0 ? totalAdSpend / totalSuccess : 0;
@@ -360,6 +398,8 @@ export function useFinanceData(): FinanceData {
       offerWeekly,
       channelNames,
       categoryBreakdown,
+      revenueBreakdown,
+      expenseBreakdown,
       hasSales: totalSuccess > 0,
       hasSpend: totalAdSpend > 0,
     };
