@@ -346,6 +346,8 @@ const InputPage = () => {
       pending_resolved: pendingItems.length === 0 ? true : pendingResolved,
       trade_in_enabled: !!form.trade_in_enabled,
       trade_in_model: form.trade_in_enabled ? (form.trade_in_model || null) : null,
+      // 개통년월은 개통일자에서 자동 추출 (YYYY-MM)
+      open_month: form.open_date ? String(form.open_date).slice(0, 7) : null,
     };
     try {
       if (editingId) {
@@ -583,19 +585,23 @@ const InputPage = () => {
 
       const records = json
         .filter((r) => pick(r, "고객명", "인입경로", "담당자"))
-        .map((r) => ({
+        .map((r) => {
+          const _openDate = toDate(pick(r, "개통일자"));
+          return ({
           created_by: user.id,
           seq: pick(r, "번호", "No", "no") ? Number(pick(r, "번호", "No", "no")) : null,
           channel: pick(r, "인입경로") as string | null,
           moyo_excluded: toBool(pick(r, "모요\n미적용", "모요 미적용", "모요미적용")),
           manager: pick(r, "담당자") as string | null,
-          open_month: pick(r, "개통년월") ? String(pick(r, "개통년월")) : null,
+          open_month: _openDate
+            ? _openDate.slice(0, 7)
+            : (pick(r, "개통년월") ? String(pick(r, "개통년월")) : null),
           product: pick(r, "가입상품") as string | null,
           sale_type: pick(r, "판매유형") as string | null,
           bundle: pick(r, "동판/번들") as string | null,
           open_method: pick(r, "개통방식") as string | null,
           status: (pick(r, "최종상태") as string) || "개통완료",
-          open_date: toDate(pick(r, "개통일자")),
+          open_date: _openDate,
           customer_name: pick(r, "고객명") as string | null,
           birth_date: pick(r, "생년월일") ? String(pick(r, "생년월일")) : null,
           phone: pick(r, "연락처") as string | null,
@@ -623,7 +629,8 @@ const InputPage = () => {
           delivery_type: pick(r, "발송유형") as string | null,
           tracking_no: pick(r, "운송장") ? String(pick(r, "운송장")) : null,
           note: pick(r, "특이사항") as string | null,
-        }));
+          });
+        });
 
       if (!records.length) {
         toast.error("불러올 행이 없습니다", { description: "엑셀 헤더가 '실적장표' 형식인지 확인하세요." });
@@ -783,9 +790,6 @@ const InputPage = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </Field>
-            <Field label="개통년월">
-              <Input value={form.open_month ?? ""} onChange={(e) => set("open_month", e.target.value)} placeholder="2026. 4. 10" className="h-9 bg-input/60 text-xs" />
             </Field>
             <Field label="옵션">
               <div className="flex items-center gap-2 h-9">
