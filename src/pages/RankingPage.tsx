@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   Crown, Medal, Trophy, Star, TrendingUp, Flame, Zap,
   Award, BarChart3, Smartphone, Gift, ChevronDown, CheckCircle2, Sparkles,
+  Wifi, Tv, ArrowUp, ArrowDown, Minus, UserX,
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -24,9 +25,12 @@ type RankedUser = {
   strategyCount: number;
   voucherReturned: number;
   streak: number;
-  yesterdayDelta: number;
+  yesterdayDelta: number;        // count delta vs yesterday
+  rankDelta: number;             // rank position change vs yesterday (positive = climbed)
+  productCounts: { 모바일: number; 인터넷: number; TV프리: number; 부가서비스: number };
   isClean: boolean;
   cleanDays: number;
+  excluded?: boolean;
 };
 type ModelRank = { model: string; count: number; isStrategy: boolean };
 
@@ -72,6 +76,7 @@ const PERIOD_OPTIONS = [
   { value: "today", label: "오늘" },
   { value: "week", label: "이번 주" },
   { value: "month", label: "이번 달" },
+  { value: "quarter", label: "이번 분기" },
 ];
 
 const dateRange = (period: string) => {
@@ -84,6 +89,10 @@ const dateRange = (period: string) => {
     const mon = new Date(y, m, d - (day === 0 ? 6 : day - 1));
     return { start: toISO(mon), end: toISO(now) };
   }
+  if (period === "quarter") {
+    const qStartMonth = Math.floor(m / 3) * 3;
+    return { start: `${y}-${String(qStartMonth + 1).padStart(2, "0")}-01`, end: toISO(now) };
+  }
   return { start: `${y}-${String(m + 1).padStart(2, "0")}-01`, end: toISO(now) };
 };
 const yesterdayRange = () => {
@@ -91,6 +100,29 @@ const yesterdayRange = () => {
   y.setDate(y.getDate() - 1);
   const s = y.toISOString().slice(0, 10);
   return { start: s, end: s };
+};
+/** 어제까지 누적된 같은 기간 (period 시작 ~ 어제) — 어제 시점 순위 계산용 */
+const periodUpToYesterday = (period: string) => {
+  const { start } = dateRange(period);
+  const today = new Date();
+  const yest = new Date(today.getTime() - 86400000);
+  const yISO = yest.toISOString().slice(0, 10);
+  // start might be after yISO if period=today — return null then
+  if (yISO < start) return null;
+  return { start, end: yISO };
+};
+
+/** 확정·개통완료/반납완료만 집계 */
+const COUNTED_STATUSES = ["개통완료", "반납완료"];
+
+/** 상품 버킷 — staff 페이지와 동일 규칙 */
+const productBucket = (p: string | null): "모바일" | "인터넷" | "TV프리" | "기타" => {
+  const s = (p ?? "").toLowerCase();
+  if (!s) return "기타";
+  if (/tv\s*프리|프리tv|tv프리/i.test(p ?? "") || (p ?? "").includes("TV프리")) return "TV프리";
+  if (/인터넷|기가|wifi/i.test(p ?? "")) return "인터넷";
+  if (/모바일|mobile|usim|mnp|재약정|업셀/i.test(p ?? "")) return "모바일";
+  return "기타";
 };
 
 /* ─── TABS ─── */
@@ -103,10 +135,87 @@ const TABS: { key: TabKey; label: string; icon: typeof Crown; sortFn: (a: Ranked
 ];
 
 const PODIUM_STYLES = [
-  { bg: "bg-gradient-to-br from-amber-100 to-orange-100 ring-amber-400", icon: Crown, color: "text-amber-700" },
-  { bg: "bg-gradient-to-br from-slate-300/25 to-slate-500/5 ring-slate-300/40", icon: Trophy, color: "text-slate-200" },
-  { bg: "bg-gradient-to-br from-orange-100 to-amber-100 ring-orange-400", icon: Medal, color: "text-orange-400" },
+  {
+    bg: "bg-gradient-to-br from-amber-200 via-yellow-100 to-orange-200",
+    ring: "ring-2 ring-amber-400 shadow-[0_0_24px_-4px_hsl(45_100%_60%/0.6)]",
+    icon: Crown,
+    color: "text-amber-700",
+    halo: "from-amber-300/40 via-yellow-300/30 to-transparent",
+  },
+  {
+    bg: "bg-gradient-to-br from-slate-200 via-slate-100 to-slate-300",
+    ring: "ring-2 ring-slate-400 shadow-[0_0_18px_-4px_hsl(220_15%_70%/0.5)]",
+    icon: Trophy,
+    color: "text-slate-700",
+    halo: "from-slate-300/40 to-transparent",
+  },
+  {
+    bg: "bg-gradient-to-br from-orange-200 via-amber-100 to-orange-300",
+    ring: "ring-2 ring-orange-400 shadow-[0_0_18px_-4px_hsl(25_95%_60%/0.5)]",
+    icon: Medal,
+    color: "text-orange-700",
+    halo: "from-orange-300/40 to-transparent",
+  },
 ];
+
+/** 미니 게이지 색상 */
+const PRODUCT_COLORS = {
+  모바일: "from-cyan-400 to-cyan-500",
+  인터넷: "from-violet-400 to-violet-500",
+  TV프리: "from-pink-400 to-pink-500",
+  부가서비스: "from-amber-400 to-amber-500",
+} as const;
+
+const ProductMiniGauges = ({ counts, big = false }: { counts: RankedUser["productCounts"]; big?: boolean }) => {
+  const max = Math.max(1, counts.모바일, counts.인터넷, counts.TV프리, counts.부가서비스);
+  const items: { key: keyof typeof PRODUCT_COLORS; icon: any }[] = [
+    { key: "모바일", icon: Smartphone },
+    { key: "인터넷", icon: Wifi },
+    { key: "TV프리", icon: Tv },
+    { key: "부가서비스", icon: Gift },
+  ];
+  return (
+    <div className={cn("space-y-1", big && "space-y-1.5")}>
+      {items.map(({ key, icon: Icon }) => {
+        const v = counts[key];
+        const pct = Math.round((v / max) * 100);
+        return (
+          <div key={key} className="flex items-center gap-1.5">
+            <Icon className={cn("text-muted-foreground shrink-0", big ? "size-3" : "size-2.5")} />
+            <div className={cn("flex-1 rounded-full bg-muted/50 overflow-hidden", big ? "h-1.5" : "h-1")}>
+              <div
+                className={cn("h-full rounded-full bg-gradient-to-r transition-all", PRODUCT_COLORS[key])}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <span className={cn("text-muted-foreground tabular-nums shrink-0 text-right", big ? "text-[10px] w-6" : "text-[9px] w-5")}>{v}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const RankDeltaPill = ({ delta }: { delta: number }) => {
+  if (delta === 0)
+    return (
+      <span className="inline-flex items-center gap-0.5 text-[9px] text-muted-foreground bg-muted/30 border border-border/40 px-1.5 py-0.5 rounded-full">
+        <Minus className="size-2.5" /> 동률
+      </span>
+    );
+  const up = delta > 0;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-0.5 text-[9px] tabular-nums px-1.5 py-0.5 rounded-full border",
+        up ? "text-emerald-700 bg-emerald-100 border-emerald-300" : "text-red-600 bg-red-100 border-red-300"
+      )}
+    >
+      {up ? <ArrowUp className="size-2.5" /> : <ArrowDown className="size-2.5" />}
+      {Math.abs(delta)}
+    </span>
+  );
+};
 
 /* ─── Component ─── */
 const RankingPage = () => {
@@ -121,11 +230,35 @@ const RankingPage = () => {
   const [stores, setStores] = useState<string[]>([]);
   const [cleanMap, setCleanMap] = useState<Map<string, { isClean: boolean; cleanDays: number }>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
+  const [hideExcluded, setHideExcluded] = useState(true);
+  const [configLoaded, setConfigLoaded] = useState(false);
+
+  // Load ranking config from app_settings (default period + excluded users)
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "ranking.config")
+        .maybeSingle();
+      if (data?.value) {
+        const cfg: any = data.value;
+        if (cfg.default_period && ["today", "week", "month", "quarter"].includes(cfg.default_period)) {
+          setPeriod(cfg.default_period);
+        }
+        if (Array.isArray(cfg.excluded_user_ids)) setExcludedIds(new Set(cfg.excluded_user_ids));
+        if (typeof cfg.hide_excluded === "boolean") setHideExcluded(cfg.hide_excluded);
+      }
+      setConfigLoaded(true);
+    })();
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
     const { start, end } = dateRange(period);
     const yd = yesterdayRange();
+    const yPeriod = periodUpToYesterday(period);
 
     // Fetch profiles
     const { data: profs } = await supabase.from("profiles").select("user_id, display_name, store").eq("status", "active");
@@ -142,27 +275,58 @@ const RankingPage = () => {
     const { data: stratModels } = await supabase.from("device_models").select("model_name").eq("is_strategy", true).eq("active", true);
     const stratSet = new Set((stratModels ?? []).map((m) => m.model_name));
 
-    // Fetch sales in period
+    // Fetch confirmed + 개통완료/반납완료 sales only — 판매원장 확정 데이터와 일치
     const { data: sales } = await supabase
       .from("sales")
-      .select("created_by, device_model, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned, open_date")
+      .select("id, created_by, manager, device_model, product, status, approval_status, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned, vas1, vas2, open_date")
+      .eq("approval_status", "확정")
+      .in("status", COUNTED_STATUSES)
       .gte("open_date", start)
-      .lte("open_date", end);
+      .lte("open_date", end)
+      .limit(20000);
 
-    // Yesterday sales for delta
+    // Yesterday daily delta (count change)
     const { data: ySales } = await supabase
       .from("sales")
       .select("created_by")
+      .eq("approval_status", "확정")
+      .in("status", COUNTED_STATUSES)
       .gte("open_date", yd.start)
       .lte("open_date", yd.end);
 
+    // Period-up-to-yesterday sales for rank-delta snapshot
+    let yPeriodSales: any[] = [];
+    if (yPeriod) {
+      const { data: yps } = await supabase
+        .from("sales")
+        .select("created_by, device_model, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned")
+        .eq("approval_status", "확정")
+        .in("status", COUNTED_STATUSES)
+        .gte("open_date", yPeriod.start)
+        .lte("open_date", yPeriod.end)
+        .limit(20000);
+      yPeriodSales = yps ?? [];
+    }
+
     // Build per-user aggregates
-    const uMap = new Map<string, { count: number; profit: number; strategyCount: number; voucherReturned: number; dateCounts: Map<string, number> }>();
+    const uMap = new Map<string, {
+      count: number; profit: number; strategyCount: number; voucherReturned: number;
+      dateCounts: Map<string, number>;
+      productCounts: { 모바일: number; 인터넷: number; TV프리: number; 부가서비스: number };
+    }>();
     const mMap = new Map<string, { count: number; isStrategy: boolean }>();
+    const seenSaleIds = new Set<string>();
 
     (sales ?? []).forEach((s) => {
+      // 중복 집계 방지
+      if (seenSaleIds.has(s.id)) return;
+      seenSaleIds.add(s.id);
       const uid = s.created_by;
-      if (!uMap.has(uid)) uMap.set(uid, { count: 0, profit: 0, strategyCount: 0, voucherReturned: 0, dateCounts: new Map() });
+      if (!uMap.has(uid)) uMap.set(uid, {
+        count: 0, profit: 0, strategyCount: 0, voucherReturned: 0,
+        dateCounts: new Map(),
+        productCounts: { 모바일: 0, 인터넷: 0, TV프리: 0, 부가서비스: 0 },
+      });
       const u = uMap.get(uid)!;
       u.count++;
       const offer = (s.distributor_amount ?? 0) + (s.extra_subsidy ?? 0) + (s.cash_support_amount ?? 0);
@@ -170,6 +334,13 @@ const RankingPage = () => {
       if (s.device_model && stratSet.has(s.device_model)) u.strategyCount++;
       if (s.voucher && s.voucher_returned === "유") u.voucherReturned++;
       if (s.open_date) u.dateCounts.set(s.open_date, (u.dateCounts.get(s.open_date) ?? 0) + 1);
+
+      // 상품별 카운트
+      const b = productBucket(s.product);
+      if (b !== "기타") u.productCounts[b]++;
+      if ((s.vas1 && String(s.vas1).trim() && s.vas1 !== "없음") || (s.vas2 && String(s.vas2).trim() && s.vas2 !== "없음")) {
+        u.productCounts.부가서비스++;
+      }
 
       // Model ranking
       if (s.device_model) {
@@ -181,6 +352,19 @@ const RankingPage = () => {
     // Yesterday per-user counts
     const yMap = new Map<string, number>();
     (ySales ?? []).forEach((s) => yMap.set(s.created_by, (yMap.get(s.created_by) ?? 0) + 1));
+
+    // === Yesterday-snapshot rankings (per current tab metric) for rank delta ===
+    const yAgg = new Map<string, { count: number; profit: number; strategyCount: number; voucherReturned: number }>();
+    yPeriodSales.forEach((s: any) => {
+      const uid = s.created_by;
+      if (!yAgg.has(uid)) yAgg.set(uid, { count: 0, profit: 0, strategyCount: 0, voucherReturned: 0 });
+      const u = yAgg.get(uid)!;
+      u.count++;
+      const offer = (s.distributor_amount ?? 0) + (s.extra_subsidy ?? 0) + (s.cash_support_amount ?? 0);
+      u.profit += (s.unit_price ?? 0) - offer;
+      if (s.device_model && stratSet.has(s.device_model)) u.strategyCount++;
+      if (s.voucher && s.voucher_returned === "유") u.voucherReturned++;
+    });
 
     // Calculate streak (consecutive days with sales ending today)
     const calcStreak = (dateCounts: Map<string, number>) => {
@@ -236,9 +420,42 @@ const RankingPage = () => {
         voucherReturned: v.voucherReturned,
         streak: calcStreak(v.dateCounts),
         yesterdayDelta: v.count - (yMap.get(uid) ?? 0),
+        rankDelta: 0,
+        productCounts: v.productCounts,
         isClean: clean?.isClean ?? false,
         cleanDays: clean?.cleanDays ?? 0,
+        excluded: excludedIds.has(uid),
       });
+    });
+
+    // === rank delta vs yesterday: compute by sorting both snapshots by current tab metric ===
+    const metricFor = (m: { count: number; profit: number; strategyCount: number; voucherReturned: number }) => {
+      switch (tab) {
+        case "profit": return m.profit;
+        case "strategy": return m.strategyCount;
+        case "voucher": return m.voucherReturned;
+        default: return m.count;
+      }
+    };
+    const todayMetric = ranked.map((r) => ({ uid: r.user_id, v: metricFor(r) }));
+    todayMetric.sort((a, b) => b.v - a.v);
+    const todayRank = new Map<string, number>();
+    todayMetric.forEach((r, i) => todayRank.set(r.uid, i + 1));
+
+    const yMetric: { uid: string; v: number }[] = [];
+    yAgg.forEach((m, uid) => yMetric.push({ uid, v: metricFor(m) }));
+    // Include users with 0 in yesterday so they have a baseline rank
+    ranked.forEach((r) => {
+      if (!yAgg.has(r.user_id)) yMetric.push({ uid: r.user_id, v: 0 });
+    });
+    yMetric.sort((a, b) => b.v - a.v);
+    const yRank = new Map<string, number>();
+    yMetric.forEach((r, i) => yRank.set(r.uid, i + 1));
+
+    ranked.forEach((r) => {
+      const t = todayRank.get(r.user_id) ?? 0;
+      const y = yRank.get(r.user_id) ?? 0;
+      r.rankDelta = y && t ? y - t : 0; // positive = climbed
     });
 
     setUsers(ranked);
@@ -249,26 +466,33 @@ const RankingPage = () => {
         .slice(0, 5)
     );
     setLoading(false);
-  }, [period]);
+  }, [period, tab, excludedIds]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { if (configLoaded) load(); }, [load, configLoaded]);
 
   const activeTab = TABS.find((t) => t.key === tab)!;
   const sorted = useMemo(() => {
     let list = [...users];
     if (storeFilter !== "all") list = list.filter((u) => u.store === storeFilter);
+    if (hideExcluded) list = list.filter((u) => !u.excluded);
     return list.sort(activeTab.sortFn);
-  }, [users, storeFilter, activeTab, cleanMap]);
+  }, [users, storeFilter, activeTab, hideExcluded]);
 
   const top10 = sorted.slice(0, 10);
   const podium = top10.slice(0, 3);
   const rest = top10.slice(3);
 
   // Rising star: highest yesterdayDelta
+  // Rising star: 어제 대비 순위가 가장 많이 상승한 직원 (rankDelta) — 동률이면 yesterdayDelta 순위
   const risingStar = useMemo(() => {
-    const candidates = users.filter((u) => u.yesterdayDelta > 0);
-    if (candidates.length === 0) return null;
-    return candidates.sort((a, b) => b.yesterdayDelta - a.yesterdayDelta)[0];
+    const pool = users.filter((u) => !u.excluded);
+    const climbers = pool.filter((u) => u.rankDelta > 0);
+    if (climbers.length > 0) {
+      return [...climbers].sort((a, b) => b.rankDelta - a.rankDelta || b.yesterdayDelta - a.yesterdayDelta)[0];
+    }
+    const grew = pool.filter((u) => u.yesterdayDelta > 0);
+    if (grew.length > 0) return [...grew].sort((a, b) => b.yesterdayDelta - a.yesterdayDelta)[0];
+    return null;
   }, [users]);
 
   // My rank
@@ -395,7 +619,11 @@ const RankingPage = () => {
               <p className="text-sm font-bold">
                 {risingStar.name}
                 {risingStar.store && <span className="text-xs text-muted-foreground font-normal ml-1.5">({risingStar.store})</span>}
-                <span className="text-xs text-primary-glow ml-2">어제 대비 +{risingStar.yesterdayDelta}건 급증! 🚀</span>
+                <span className="text-xs text-primary-glow ml-2">
+                  {risingStar.rankDelta > 0
+                    ? `어제 대비 순위 ▲${risingStar.rankDelta}계단 상승! 🚀`
+                    : `어제 대비 +${risingStar.yesterdayDelta}건 급증! 🚀`}
+                </span>
               </p>
             </div>
           </div>
@@ -416,60 +644,101 @@ const RankingPage = () => {
           ) : (
             <>
               {/* Podium */}
-              <div className="grid grid-cols-3 gap-3 mb-5">
+              {/* Podium — TOP3 (1.5x 크게, 금/은/동 그라데이션 + 왕관) */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-stretch">
                 {podium.map((u, i) => {
                   const S = PODIUM_STYLES[i];
                   const Icon = S.icon;
                   const tier = getTier(u.count);
+                  const isMe = u.user_id === user?.id;
                   return (
-                    <div key={u.user_id} className={cn("rounded-xl p-3 ring-1 backdrop-blur-md relative overflow-hidden", S.bg)}>
-                      <div className="flex items-center justify-between">
-                        <Icon className={cn("size-5", S.color)} />
-                        <span className={cn("text-xs font-bold", S.color)}>#{i + 1}</span>
-                      </div>
-                      <div className="mt-2">
-                        <div className="text-sm font-bold truncate">{u.name}</div>
-                        <div className="text-[10px] text-muted-foreground truncate">{u.store ?? "미배정"}</div>
-                      </div>
-                      <div className="mt-2 text-lg font-bold text-gradient">{getValue(u)}</div>
-                      <div className="flex items-center gap-1 mt-1">
-                        <span className="text-[10px]">{tier.icon}</span>
-                        <span className="text-[10px] text-muted-foreground">{tier.label}</span>
-                      </div>
-                      {u.isClean && u.cleanDays > 0 && (
-                        <div className="mt-1"><CleanBadge days={u.cleanDays} /></div>
+                    <div
+                      key={u.user_id}
+                      className={cn(
+                        "relative overflow-hidden rounded-2xl p-5 backdrop-blur-md transition-all hover:-translate-y-1",
+                        "min-h-[260px]",
+                        S.bg, S.ring,
+                        isMe && "outline outline-2 outline-primary/50 outline-offset-2"
                       )}
-                      {u.streak >= 3 && (
-                        <Badge className="absolute top-2 right-2 text-[9px] bg-orange-100 text-orange-700 border-orange-300 px-1 py-0">
-                          <Flame className="size-2.5" /> {u.streak}일
-                        </Badge>
-                      )}
+                    >
+                      {/* 반짝임 후광 */}
+                      <div className={cn("absolute -top-12 -right-12 size-40 rounded-full blur-3xl bg-gradient-to-br pointer-events-none", S.halo)} />
+                      {/* 왕관 (1위만 큼) */}
+                      <div className={cn(
+                        "absolute -top-2 left-1/2 -translate-x-1/2 grid place-items-center",
+                        i === 0 ? "size-12" : "size-9"
+                      )}>
+                        <Icon className={cn(S.color, "drop-shadow-md", i === 0 ? "size-9 animate-pulse" : "size-6")} />
+                      </div>
+
+                      <div className="relative pt-6 flex flex-col h-full">
+                        <div className="flex items-center justify-between">
+                          <span className={cn("text-2xl font-extrabold tabular-nums", S.color)}>#{i + 1}</span>
+                          <RankDeltaPill delta={u.rankDelta} />
+                        </div>
+                        <div className="mt-2">
+                          <div className="text-lg font-extrabold truncate text-foreground">{u.name}</div>
+                          <div className="text-[11px] text-muted-foreground truncate">{u.store ?? "매장 미배정"}</div>
+                        </div>
+                        <div className={cn("mt-3 font-extrabold tabular-nums", i === 0 ? "text-3xl" : "text-2xl", S.color)}>
+                          {getValue(u)}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                          <Badge className={cn("text-[10px] px-2 py-0.5 border bg-gradient-to-br", tier.color)}>
+                            <span className="mr-1">{tier.icon}</span>
+                            {tier.label}
+                          </Badge>
+                          {u.streak >= 3 && (
+                            <Badge className="text-[9px] bg-orange-100 text-orange-700 border-orange-300 gap-0.5">
+                              <Flame className="size-2.5" /> {u.streak}일
+                            </Badge>
+                          )}
+                          {u.isClean && u.cleanDays > 0 && <CleanBadge days={u.cleanDays} />}
+                        </div>
+
+                        {/* 상품별 미니 게이지 */}
+                        <div className="mt-3 pt-3 border-t border-foreground/10">
+                          <ProductMiniGauges counts={u.productCounts} big />
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
               </div>
 
               {/* 4~10위 리스트 */}
-              <ul className="space-y-1">
+              <ul className="space-y-1.5">
                 {rest.map((u, i) => {
                   const tier = getTier(u.count);
                   const isMe = u.user_id === user?.id;
                   return (
                     <li key={u.user_id} className={cn(
-                      "flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors",
-                      isMe ? "bg-primary/[0.08] ring-1 ring-primary/20" : "hover:bg-muted/30"
+                      "grid grid-cols-12 items-center gap-2 px-3 py-2.5 rounded-lg transition-colors border border-transparent",
+                      isMe ? "bg-primary/[0.08] ring-1 ring-primary/20" : "hover:bg-muted/30 hover:border-border/40"
                     )}>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-muted-foreground tabular-nums w-6 text-center">{i + 4}</span>
-                        <span className="text-[10px]">{tier.icon}</span>
-                        <span className="text-sm font-medium">{u.name}</span>
-                        {u.store && <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded bg-muted/60">{u.store}</span>}
+                      <div className="col-span-6 flex items-center gap-2 min-w-0">
+                        <span className="text-xs text-muted-foreground tabular-nums w-6 text-center shrink-0">{i + 4}</span>
+                        <span className="text-base shrink-0">{tier.icon}</span>
+                        <span className="text-sm font-semibold truncate">{u.name}</span>
+                        {u.store && (
+                          <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded bg-muted/60 shrink-0 hidden sm:inline">
+                            {u.store}
+                          </span>
+                        )}
+                        <RankDeltaPill delta={u.rankDelta} />
                         {u.isClean && <CleanBadge days={u.cleanDays} />}
                         {u.streak >= 3 && (
-                          <span className="text-[10px] text-orange-400 flex items-center gap-0.5"><Flame className="size-2.5" />{u.streak}일</span>
+                          <span className="text-[10px] text-orange-500 flex items-center gap-0.5 shrink-0">
+                            <Flame className="size-2.5" />{u.streak}일
+                          </span>
                         )}
                       </div>
-                      <span className="text-sm font-semibold tabular-nums">{getValue(u)}</span>
+                      <div className="col-span-4 hidden md:block">
+                        <ProductMiniGauges counts={u.productCounts} />
+                      </div>
+                      <div className="col-span-6 md:col-span-2 text-right">
+                        <span className="text-sm font-bold tabular-nums">{getValue(u)}</span>
+                      </div>
                     </li>
                   );
                 })}
