@@ -117,12 +117,14 @@ export const HeroPerformance = () => {
       ydate.setDate(ydate.getDate() - 1);
       const ydayISO = ydate.toISOString().slice(0, 10);
 
+      // 개통대기 = 청약완료 + 택배발송 (현장 개통 전 단계 통합 카운트)
+      const PENDING_STATUSES = ["청약완료", "택배발송"];
       const [a, b, c, d, e] = await Promise.all([
         supabase.from("sales").select("product").gte("open_date", startDate).lte("open_date", endDate).eq("status", "개통완료").limit(10000),
         supabase.from("sales").select("product").gte("open_date", prevStartDate).lte("open_date", prevEndDate).eq("status", "개통완료").limit(10000),
         supabase.from("sales").select("product").eq("open_date", todayISO).eq("status", "개통완료").limit(5000),
         supabase.from("sales").select("product").eq("open_date", ydayISO).eq("status", "개통완료").limit(5000),
-        supabase.from("sales").select("product, created_at").in("status", ["개통대기", "접수완료"]).limit(5000),
+        supabase.from("sales").select("product, created_at").in("status", PENDING_STATUSES).limit(5000),
       ]);
       if (!alive) return;
       setCurrentRows(a.data ?? []);
@@ -203,7 +205,7 @@ export const HeroPerformance = () => {
             "p-2.5 glass relative overflow-hidden cursor-pointer transition-all hover:shadow-glow",
             hasPending && "border-warning/40"
           )}
-          onClick={() => navigate("/activities?status=" + encodeURIComponent("개통대기") + "&auto=1")}
+          onClick={() => navigate("/activities?status=" + encodeURIComponent("청약완료,택배발송") + "&auto=1")}
         >
           <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
             <Clock className={cn("size-3", hasPending ? "text-warning" : "text-muted-foreground")} />
