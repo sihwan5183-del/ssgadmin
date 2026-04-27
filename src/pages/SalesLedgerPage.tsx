@@ -19,7 +19,6 @@ import {
   Wallet as WalletIcon, Gift, TrendingUp, Banknote, FileText,
   AlertTriangle, Filter, X, Loader2, ChevronDown, ChevronUp, CheckCircle2,
 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
