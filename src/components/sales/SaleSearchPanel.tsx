@@ -1078,6 +1078,7 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
                   pending_note: (selected as any).pending_note ?? null,
                   pending_resolved: selected.pending_resolved,
                   product: (selected as any).product ?? null,
+                  status: (selected as any).status ?? null,
                   custom_fields: (selected as any).custom_fields ?? null,
                 }}
                 onChanged={async () => {
