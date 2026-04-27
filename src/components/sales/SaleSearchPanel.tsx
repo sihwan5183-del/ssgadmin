@@ -99,7 +99,6 @@ const EDITABLE_FIELDS: Array<{ key: keyof SaleHit; label: string; type?: string 
   { key: "open_method", label: "개통방식" },
   { key: "bundle", label: "결합/번들" },
   { key: "status", label: "상태" },
-  { key: "manager", label: "담당자" },
   { key: "open_date", label: "개통일", type: "date" },
   { key: "unit_price", label: "단가", type: "number" },
   { key: "vas_fee", label: "부가서비스 수수료", type: "number" },
@@ -190,6 +189,24 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
   const [purgeOpen, setPurgeOpen] = useState(false);
   // 개통/설치 완료 처리 중인 행(부드러운 사라짐 애니메이션용)
   const [completingIds, setCompletingIds] = useState<Set<string>>(new Set());
+
+  // 직원 목록 — 담당자 선택을 UUID 대신 실명 드롭다운으로 표시
+  const [staffList, setStaffList] = useState<{ user_id: string; display_name: string }[]>([]);
+  const staffNameMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    staffList.forEach((s) => { if (s.user_id) m[s.user_id] = s.display_name; });
+    return m;
+  }, [staffList]);
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("user_id, display_name")
+        .eq("status", "active")
+        .order("display_name", { ascending: true });
+      setStaffList((data ?? []) as { user_id: string; display_name: string }[]);
+    })();
+  }, []);
 
   const markCompletion = async (row: SaleHit, e: React.MouseEvent) => {
     e.stopPropagation();
