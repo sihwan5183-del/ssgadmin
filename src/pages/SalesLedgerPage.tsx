@@ -233,7 +233,7 @@ const SalesLedgerPage = () => {
     setRows((data ?? []) as SaleRow[]);
     setTotal(count ?? 0);
     setSearching(false);
-  }, [page, startDate, endDate, statusFilter, managerFilter, debouncedSearchQ]);
+  }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, debouncedSearchQ]);
 
   const loadSummary = useCallback(async () => {
     const { data } = await supabase
@@ -289,9 +289,9 @@ const SalesLedgerPage = () => {
     load();
     loadSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, startDate, endDate, statusFilter, managerFilter, debouncedSearchQ]);
+  }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, debouncedSearchQ]);
 
-  useEffect(() => { setPage(0); }, [startDate, endDate, statusFilter, managerFilter, debouncedSearchQ]);
+  useEffect(() => { setPage(0); }, [startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, debouncedSearchQ]);
 
   // 디바운스 (300ms) — 입력 중에는 스피너 표시
   useEffect(() => {
