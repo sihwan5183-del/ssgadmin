@@ -186,6 +186,7 @@ export default function StaffStatusPage() {
   const [allInquiries, setAllInquiries] = useState<InquiryRow[]>([]);
   const [prevSales, setPrevSales] = useState<SaleRow[]>([]);
   const [goals, setGoals] = useState<GoalRow[]>([]);
+  const [inquiryCounts, setInquiryCounts] = useState<InquiryCountRow[]>([]);
   const [loading, setLoading] = useState(false);
   const { rates: incentiveRates } = useIncentiveRates();
   const [showDetail, setShowDetail] = useState(false);
@@ -248,7 +249,7 @@ export default function StaffStatusPage() {
     const ids = profiles.map((p) => p.user_id);
     const names = profiles.map((p) => p.display_name);
     // Sales: rows where created_by in ids OR manager in names — fetch via two queries to avoid OR complexity
-    const [{ data: byCreator }, { data: byManager }, { data: inq }, { data: goalRows }, { data: prevByCreator }, { data: prevByManager }] = await Promise.all([
+    const [{ data: byCreator }, { data: byManager }, { data: inq }, { data: goalRows }, { data: prevByCreator }, { data: prevByManager }, { data: inquiryRows }] = await Promise.all([
       supabase.from("sales")
         .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, status, approval_status, pending_resolved, pending_items, distributor_amount, net_fee, vas1, vas2")
         .in("created_by", ids)
@@ -270,7 +271,7 @@ export default function StaffStatusPage() {
         .lte("inquiry_date", endDate)
         .limit(5000),
       supabase.from("staff_product_goals")
-        .select("id, user_id, product, year_month, goal_count")
+        .select("id, user_id, product, year_month, goal_count, sale_type, goal_type, goal_value")
         .in("user_id", ids)
         .eq("year_month", yearMonth),
       supabase.from("sales")
@@ -285,6 +286,10 @@ export default function StaffStatusPage() {
         .gte("open_date", prevRange.start)
         .lte("open_date", prevRange.end)
         .limit(5000),
+      supabase.from("staff_monthly_inquiries")
+        .select("user_id, year_month, inflow_count")
+        .in("user_id", ids)
+        .eq("year_month", yearMonth),
     ]);
     // Merge & dedupe
     const map = new Map<string, SaleRow>();
@@ -295,6 +300,7 @@ export default function StaffStatusPage() {
     setPrevSales(Array.from(prevMap.values()));
     setAllInquiries((inq ?? []) as InquiryRow[]);
     setGoals((goalRows ?? []) as GoalRow[]);
+    setInquiryCounts((inquiryRows ?? []) as InquiryCountRow[]);
     setLoading(false);
   }, [profiles, startDate, endDate, yearMonth, roleLoading, prevRange.start, prevRange.end]);
 
