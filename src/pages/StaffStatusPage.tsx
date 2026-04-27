@@ -171,6 +171,16 @@ export default function StaffStatusPage() {
   const canViewAll = isAdmin || isManager;
   const yearMonth = useMemo(() => (endDate || new Date().toISOString().slice(0, 10)).slice(0, 7), [endDate]);
 
+  // Previous-period range (same length as current, immediately before startDate)
+  const prevRange = useMemo(() => {
+    const s = new Date(startDate);
+    const e = new Date(endDate);
+    const lenMs = e.getTime() - s.getTime();
+    const prevEnd = new Date(s.getTime() - 24 * 3600 * 1000);
+    const prevStart = new Date(prevEnd.getTime() - lenMs);
+    return { start: prevStart.toISOString().slice(0, 10), end: prevEnd.toISOString().slice(0, 10) };
+  }, [startDate, endDate]);
+
   // Load profiles
   useEffect(() => {
     if (roleLoading || !user) return;
