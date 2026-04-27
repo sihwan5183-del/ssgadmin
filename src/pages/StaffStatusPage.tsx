@@ -1186,6 +1186,15 @@ export default function StaffStatusPage() {
                               contentStyle={{ background: "hsl(0 0% 100% / 0.96)", color: "#374151", border: "1px solid hsl(0 0% 88%)", borderRadius: 12, fontSize: 12 }}
                               formatter={(v: any, _n: any, p: any) => [`${v}% (전월 ${p?.payload?.prev ?? 0}%)`, "유치율"]}
                             />
+                            {selectedRateGoals.filter((r) => r.goal > 0).map((r) => (
+                              <ReferenceLine
+                                key={r.key}
+                                x={r.goal}
+                                stroke="hsl(45 95% 55%)"
+                                strokeDasharray="4 4"
+                                label={{ value: `목표 ${r.goal}%`, position: "top", fill: "hsl(45 95% 35%)", fontSize: 10 }}
+                              />
+                            ))}
                             <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={22}>
                               {productivity.attachBars.filter((b) => b.name !== "2nd 디바이스").map((b, i) => <Cell key={i} fill={b.fill} />)}
                             </Bar>
