@@ -1142,7 +1142,13 @@ const SalesLedgerPage = () => {
                       </div>
                     </td>
                     <td className="px-3 py-2.5 whitespace-nowrap font-medium">
-                      {resolveManager(r.manager, (r as any).created_by)}
+                      {isManagerMissing(r) ? (
+                        <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-300">
+                          <AlertTriangle className="size-3.5" /> 미지정
+                        </span>
+                      ) : (
+                        resolveManager(r.manager, (r as any).created_by)
+                      )}
                       <ResignedTag userId={r.created_by} ids={resignedIds} />
                     </td>
                     <td className="px-3 py-2.5">{r.product ?? "-"}</td>
