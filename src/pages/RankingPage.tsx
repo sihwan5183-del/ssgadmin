@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   Crown, Medal, Trophy, Star, TrendingUp, Flame, Zap,
   Award, BarChart3, Smartphone, Gift, ChevronDown, CheckCircle2, Sparkles,
-  Wifi, Tv, ArrowUp, ArrowDown, Minus, UserX, Target,
+  Wifi, Tv, ArrowUp, ArrowDown, Minus, UserX, Target, Link2, ShieldCheck,
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -33,6 +33,10 @@ type RankedUser = {
   excluded?: boolean;
   achievement: number;           // 평균 목표 달성률 (%)
   goalCount: number;             // 설정된 목표 개수
+  comboRate: number;             // (인터넷+TV프리)/모바일 *100
+  vasAttach: number;             // 부가서비스/모바일 *100
+  cleanScore: number;            // 0~100, 누락/미해결 적을수록 높음
+  cleanPenalty: number;          // 누락+미해결 합계 (낮을수록 좋음)
 };
 type ModelRank = { model: string; count: number; isStrategy: boolean };
 
@@ -130,13 +134,16 @@ const productBucket = (p: string | null): "모바일" | "인터넷" | "TV프리"
 };
 
 /* ─── TABS ─── */
-type TabKey = "sales" | "profit" | "strategy" | "voucher" | "achievement";
+type TabKey = "sales" | "profit" | "strategy" | "voucher" | "achievement" | "combo" | "vas" | "clean";
 const TABS: { key: TabKey; label: string; icon: typeof Crown; sortFn: (a: RankedUser, b: RankedUser) => number }[] = [
   { key: "sales", label: "판매 왕", icon: Crown, sortFn: (a, b) => b.count - a.count },
   { key: "profit", label: "수익 왕", icon: TrendingUp, sortFn: (a, b) => b.profit - a.profit },
   { key: "strategy", label: "전략 모델 마스터", icon: Zap, sortFn: (a, b) => b.strategyCount - a.strategyCount },
   { key: "voucher", label: "상품권 킬러", icon: Gift, sortFn: (a, b) => b.voucherReturned - a.voucherReturned },
   { key: "achievement", label: "달성률 챔피언", icon: Target, sortFn: (a, b) => b.achievement - a.achievement || b.count - a.count },
+  { key: "combo", label: "결합의 신", icon: Link2, sortFn: (a, b) => b.comboRate - a.comboRate || b.count - a.count },
+  { key: "vas", label: "부가서비스 사냥꾼", icon: Sparkles, sortFn: (a, b) => b.vasAttach - a.vasAttach || b.count - a.count },
+  { key: "clean", label: "클린 검수왕", icon: ShieldCheck, sortFn: (a, b) => b.cleanScore - a.cleanScore || a.cleanPenalty - b.cleanPenalty },
 ];
 
 const PODIUM_STYLES = [
@@ -276,6 +283,17 @@ const RankingPage = () => {
     setProfiles(pMap);
     setStores(Array.from(storeSet).sort());
 
+    // === user_id 통합 매칭: manager(이름) → user_id 우선, 없으면 created_by ===
+    const nameToUid = new Map<string, string>();
+    (profs ?? []).forEach((p) => {
+      if (p.display_name) nameToUid.set(p.display_name.trim().toLowerCase(), p.user_id);
+    });
+    const ownerOf = (s: { manager?: string | null; created_by: string }) => {
+      const m = (s.manager ?? "").trim().toLowerCase();
+      if (m && nameToUid.has(m)) return nameToUid.get(m)!;
+      return s.created_by;
+    };
+
     // Fetch strategy model names
     const { data: stratModels } = await supabase.from("device_models").select("model_name").eq("is_strategy", true).eq("active", true);
     const stratSet = new Set((stratModels ?? []).map((m) => m.model_name));
@@ -283,7 +301,7 @@ const RankingPage = () => {
     // 개통완료/반납완료 실적 (취소·반려 제외) — 판매원장 실시간 반영
     const { data: sales } = await supabase
       .from("sales")
-      .select("id, created_by, manager, device_model, product, status, approval_status, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned, vas1, vas2, open_date")
+      .select("id, created_by, manager, device_model, product, sale_type, status, approval_status, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned, vas1, vas2, open_date")
       .in("status", COUNTED_STATUSES)
       .not("approval_status", "in", `(${EXCLUDED_APPROVAL.join(",")})`)
       .gte("open_date", start)
@@ -293,7 +311,7 @@ const RankingPage = () => {
     // Yesterday daily delta (count change)
     const { data: ySales } = await supabase
       .from("sales")
-      .select("created_by")
+      .select("created_by, manager")
       .in("status", COUNTED_STATUSES)
       .not("approval_status", "in", `(${EXCLUDED_APPROVAL.join(",")})`)
       .gte("open_date", yd.start)
@@ -304,7 +322,7 @@ const RankingPage = () => {
     if (yPeriod) {
       const { data: yps } = await supabase
         .from("sales")
-        .select("created_by, device_model, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned")
+        .select("created_by, manager, device_model, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned")
         .in("status", COUNTED_STATUSES)
         .not("approval_status", "in", `(${EXCLUDED_APPROVAL.join(",")})`)
         .gte("open_date", yPeriod.start)
@@ -326,7 +344,7 @@ const RankingPage = () => {
       // 중복 집계 방지
       if (seenSaleIds.has(s.id)) return;
       seenSaleIds.add(s.id);
-      const uid = s.created_by;
+      const uid = ownerOf(s as any);
       if (!uMap.has(uid)) uMap.set(uid, {
         count: 0, profit: 0, strategyCount: 0, voucherReturned: 0,
         dateCounts: new Map(),
@@ -356,7 +374,10 @@ const RankingPage = () => {
 
     // Yesterday per-user counts
     const yMap = new Map<string, number>();
-    (ySales ?? []).forEach((s) => yMap.set(s.created_by, (yMap.get(s.created_by) ?? 0) + 1));
+    (ySales ?? []).forEach((s: any) => {
+      const uid = ownerOf(s);
+      yMap.set(uid, (yMap.get(uid) ?? 0) + 1);
+    });
 
     // === 목표 달성률 (당월 staff_product_goals 기준) ===
     const yearMonth = new Date().toISOString().slice(0, 7);
@@ -381,7 +402,7 @@ const RankingPage = () => {
       mobileBySaleType: Record<string, number>;
     }>();
     (sales ?? []).forEach((s: any) => {
-      const uid = s.created_by;
+      const uid = ownerOf(s);
       if (!realByUser.has(uid)) realByUser.set(uid, {
         mobile: 0, internet: 0, tvfree: 0, smarthome: 0, vas: 0,
         mobileBySaleType: {},
@@ -439,7 +460,7 @@ const RankingPage = () => {
     // === Yesterday-snapshot rankings (per current tab metric) for rank delta ===
     const yAgg = new Map<string, { count: number; profit: number; strategyCount: number; voucherReturned: number }>();
     yPeriodSales.forEach((s: any) => {
-      const uid = s.created_by;
+      const uid = ownerOf(s);
       if (!yAgg.has(uid)) yAgg.set(uid, { count: 0, profit: 0, strategyCount: 0, voucherReturned: 0 });
       const u = yAgg.get(uid)!;
       u.count++;
@@ -466,7 +487,7 @@ const RankingPage = () => {
     // Clean status: missing docs & unresolved pending items
     const { data: allSalesClean } = await supabase
       .from("sales")
-      .select("id, created_by, pending_resolved")
+      .select("id, created_by, manager, pending_resolved")
       .gte("open_date", start)
       .lte("open_date", end);
     const { data: allDocs } = await supabase
@@ -474,9 +495,10 @@ const RankingPage = () => {
       .select("sale_id");
     const docSet = new Set((allDocs ?? []).map((d) => d.sale_id));
     const cleanCalc = new Map<string, { missingDocs: number; pendingItems: number }>();
-    (allSalesClean ?? []).forEach((s) => {
-      if (!cleanCalc.has(s.created_by)) cleanCalc.set(s.created_by, { missingDocs: 0, pendingItems: 0 });
-      const c = cleanCalc.get(s.created_by)!;
+    (allSalesClean ?? []).forEach((s: any) => {
+      const uid = ownerOf(s);
+      if (!cleanCalc.has(uid)) cleanCalc.set(uid, { missingDocs: 0, pendingItems: 0 });
+      const c = cleanCalc.get(uid)!;
       if (!docSet.has(s.id)) c.missingDocs++;
       if (!s.pending_resolved) c.pendingItems++;
     });
@@ -493,6 +515,12 @@ const RankingPage = () => {
       const p = pMap[uid];
       if (!p) return;
       const clean = cMap.get(uid);
+      const mob = v.productCounts.모바일;
+      const comboRate = mob > 0 ? Math.round(((v.productCounts.인터넷 + v.productCounts.TV프리) / mob) * 100) : 0;
+      const vasAttach = mob > 0 ? Math.round((v.productCounts.부가서비스 / mob) * 100) : 0;
+      const penalty = (cleanCalc.get(uid)?.missingDocs ?? 0) + (cleanCalc.get(uid)?.pendingItems ?? 0);
+      const total = v.count || 1;
+      const cleanScore = Math.max(0, Math.round((1 - penalty / total) * 100));
       ranked.push({
         user_id: uid,
         name: p.display_name,
@@ -510,6 +538,10 @@ const RankingPage = () => {
         excluded: excludedIds.has(uid),
         achievement: Math.round(achMap.get(uid)?.avg ?? 0),
         goalCount: achMap.get(uid)?.cnt ?? 0,
+        comboRate,
+        vasAttach,
+        cleanScore,
+        cleanPenalty: penalty,
       });
     });
 
@@ -561,6 +593,8 @@ const RankingPage = () => {
     if (storeFilter !== "all") list = list.filter((u) => u.store === storeFilter);
     if (hideExcluded) list = list.filter((u) => !u.excluded);
     if (tab === "achievement") list = list.filter((u) => u.goalCount > 0);
+    if (tab === "combo" || tab === "vas") list = list.filter((u) => u.productCounts.모바일 > 0);
+    if (tab === "clean") list = list.filter((u) => u.count > 0);
     return list.sort(activeTab.sortFn);
   }, [users, storeFilter, activeTab, hideExcluded, tab]);
 

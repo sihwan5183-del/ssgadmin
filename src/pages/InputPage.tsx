@@ -126,6 +126,25 @@ const InputPage = () => {
   const { isAdmin } = useRole();
   const [searchParams, setSearchParams] = useSearchParams();
   const [linkedInquiryId, setLinkedInquiryId] = useState<string | null>(null);
+  // === 담당자 후보: 시스템에 등록된 active 직원 ===
+  const [staffOptions, setStaffOptions] = useState<{ user_id: string; display_name: string; store: string | null }[]>([]);
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("user_id, display_name, store")
+        .eq("status", "active")
+        .order("display_name", { ascending: true });
+      const list = (data ?? []) as { user_id: string; display_name: string; store: string | null }[];
+      setStaffOptions(list);
+      // 신규 입력일 때 본인 이름 자동 세팅
+      setForm((f) => {
+        if (f.manager || !user) return f;
+        const me = list.find((p) => p.user_id === user.id);
+        return me ? { ...f, manager: me.display_name } : f;
+      });
+    })();
+  }, [user]);
   // 인입 → 실적 자동 채움 (URL 파라미터)
   useEffect(() => {
     const fromInquiry = searchParams.get("from_inquiry");
@@ -739,7 +758,28 @@ const InputPage = () => {
               </Select>
             </Field>
             <Field label="담당자 *">
-              <Input value={form.manager ?? ""} onChange={(e) => set("manager", e.target.value)} className="h-9 bg-input/60 text-xs" required />
+              <Select
+                value={form.manager ?? ""}
+                onValueChange={(v) => set("manager", v)}
+              >
+                <SelectTrigger className="h-9 bg-input/60 text-xs">
+                  <SelectValue placeholder="직원 선택" />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {/* 레거시 값(직원 리스트에 없는 기존 텍스트)도 유지해서 보여줌 */}
+                  {form.manager && !staffOptions.some((s) => s.display_name === form.manager) && (
+                    <SelectItem value={form.manager}>
+                      {form.manager} <span className="text-muted-foreground text-[10px]">(미등록)</span>
+                    </SelectItem>
+                  )}
+                  {staffOptions.map((s) => (
+                    <SelectItem key={s.user_id} value={s.display_name}>
+                      {s.display_name}
+                      {s.store && <span className="text-muted-foreground text-[10px] ml-1">({s.store})</span>}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
             <Field label="개통년월">
               <Input value={form.open_month ?? ""} onChange={(e) => set("open_month", e.target.value)} placeholder="2026. 4. 10" className="h-9 bg-input/60 text-xs" />
