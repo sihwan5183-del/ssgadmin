@@ -10,8 +10,10 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
-    persistSession: true,
+    // 보안 강화: 자동 로그인 완전 차단
+    // sessionStorage 사용 → 브라우저(탭) 종료 시 세션 자동 만료
+    storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
+    persistSession: true,        // 동일 탭 새로고침은 유지
     autoRefreshToken: true,
   }
 });
