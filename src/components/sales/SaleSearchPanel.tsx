@@ -187,13 +187,14 @@ export const SaleSearchPanel = () => {
     search();
   };
 
-  const isLocked = !!selected?.locked;
+  // ※ 잠금 정책 폐지 — 본인 또는 관리자는 언제든 수정 가능 (변경 이력은 sales_audit_log 자동 기록)
+  const isInspected =
+    !!selected && (selected.approval_status === "확정" || selected.approval_status === "검수완료");
   const canEdit = useMemo(() => {
     if (!selected || !user) return false;
     if (isAdmin) return true;
-    if (isLocked) return false;
     return selected.created_by === user.id;
-  }, [selected, user, isAdmin, isLocked]);
+  }, [selected, user, isAdmin]);
 
   // 미승인 / 미처리 카운트
   const refreshCounts = async () => {
@@ -331,7 +332,7 @@ export const SaleSearchPanel = () => {
 
   const saveEdit = async () => {
     if (!selected) return;
-    if (!canEdit) return toast.error(isLocked ? "확정된 실적은 수정할 수 없습니다" : "수정 권한이 없습니다");
+    if (!canEdit) return toast.error("수정 권한이 없습니다");
     const payload: Record<string, unknown> = {};
     EDITABLE_FIELDS.forEach(({ key }) => {
       if (editForm[key] !== selected[key]) payload[key as string] = editForm[key];
@@ -621,11 +622,6 @@ export const SaleSearchPanel = () => {
                                     <CalendarX2 className="size-3" /> 설치지연
                                   </Badge>
                                 )}
-                                {r.locked && (
-                                  <Badge variant="outline" className="text-[10px] gap-1 border-border/60">
-                                    <Lock className="size-3" /> 잠금
-                                  </Badge>
-                                )}
                                 {(r as any).custom_fields?.fraud_suspect && (
                                   <Badge variant="outline" className="text-[10px] gap-1 border-destructive/60 text-destructive bg-destructive/10 animate-pulse">
                                     <AlertTriangle className="size-3" /> 이상영업
@@ -675,12 +671,7 @@ export const SaleSearchPanel = () => {
                   </Badge>
                 );
               })()}
-              {isLocked && (
-                <Badge variant="outline" className="text-[10px] flex items-center gap-1">
-                  <Lock className="size-3" /> 잠금됨
-                </Badge>
-              )}
-              {!canEdit && !isLocked && (
+              {!canEdit && (
                 <Badge variant="outline" className="text-[10px] flex items-center gap-1">
                   <Lock className="size-3" /> 읽기 전용
                 </Badge>
@@ -712,11 +703,10 @@ export const SaleSearchPanel = () => {
               </TabsList>
 
               <TabsContent value="edit" className="mt-4">
-                {isLocked && (
-                  <div className="mb-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-200 flex items-center gap-2">
-                    <Lock className="size-3.5" />
-                    이 실적은 '확정' 상태로 잠겨 있어 수정/삭제할 수 없습니다.
-                    {isAdmin && " (관리자는 검수 탭에서 상태를 되돌릴 수 있습니다)"}
+                {isInspected && (
+                  <div className="mb-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 flex items-center gap-2">
+                    <CheckCircle2 className="size-3.5" />
+                    이 실적은 [검수 완료] 처리되었습니다. 수정 시 변경 이력이 자동으로 기록됩니다.
                   </div>
                 )}
                 {/* === 검수 핵심 요약 (번들·동판·TV·VAS) === */}

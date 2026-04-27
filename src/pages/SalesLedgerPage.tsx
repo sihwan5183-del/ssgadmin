@@ -17,9 +17,8 @@ import {
 import {
   Download, Search, Trash2, Pencil, ShieldAlert, Hash,
   Wallet as WalletIcon, Gift, TrendingUp, Banknote, FileText,
-  AlertTriangle, Filter, X, Lock, Unlock, Loader2, ChevronDown, ChevronUp,
+  AlertTriangle, Filter, X, Loader2, ChevronDown, ChevronUp, CheckCircle2,
 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
@@ -181,16 +180,7 @@ const SalesLedgerPage = () => {
   const [unpaidCount, setUnpaidCount] = useState(0);
   const [unreturnedCount, setUnreturnedCount] = useState(0);
 
-  // 최고관리자 전용: 확정된 실적 강제 잠금 해제 토글 (localStorage 저장)
-  const [forceUnlock, setForceUnlock] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("admin_force_unlock_sales") === "1";
-  });
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (forceUnlock) localStorage.setItem("admin_force_unlock_sales", "1");
-    else localStorage.removeItem("admin_force_unlock_sales");
-  }, [forceUnlock]);
+  // ※ 확정 잠금 정책 폐지 — 직원이 자유롭게 수정 가능. 변경 이력은 sales_audit_log 트리거에 자동 기록됨.
 
   // 5대 오퍼 + 카드결제 + 제휴카드 할인
   const offerOf = (r: SaleRow) =>
@@ -882,27 +872,6 @@ const SalesLedgerPage = () => {
 
         <div className="ml-auto flex items-center gap-2">
           <Badge className="bg-primary/15 text-primary-glow border-primary/30">총 {dbSummary.count.toLocaleString()}건</Badge>
-          {isAdmin && (
-            <div className={cn(
-              "flex items-center gap-2 rounded-xl border px-3 py-1.5 transition-colors",
-              forceUnlock
-                ? "border-destructive/50 bg-destructive/10 text-destructive"
-                : "border-border/40 bg-muted/30 text-muted-foreground"
-            )}>
-              {forceUnlock ? <Unlock className="size-3.5" /> : <Lock className="size-3.5" />}
-              <span className="text-xs font-medium">수정 잠금 강제 해제</span>
-              <Switch
-                checked={forceUnlock}
-                onCheckedChange={(v) => {
-                  setForceUnlock(v);
-                  if (v) toast.warning("확정 실적 잠금이 해제되었습니다", {
-                    description: "수정 시 정산 데이터에 영향을 줄 수 있습니다. 모든 변경 이력은 자동 기록됩니다.",
-                  });
-                }}
-                aria-label="확정 실적 잠금 강제 해제"
-              />
-            </div>
-          )}
           {isAdmin && selected.size > 0 && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -994,25 +963,17 @@ const SalesLedgerPage = () => {
             <tbody>
               {filteredRows.map((r) => {
                 const mine = r.created_by === user?.id;
-                const isLocked = r.approval_status === "확정";
-                const adminOverride = isAdmin && forceUnlock;
-                const canEdit = adminOverride || (mine && !isLocked) || (isAdmin && !isLocked);
+                // ※ 잠금 정책 폐지 — 본인 또는 관리자는 언제든 수정 가능 (히스토리는 sales_audit_log 자동 기록)
+                const canEdit = mine || isAdmin;
+                // 검수 완료 = 관리자가 검수에서 확정 처리한 상태
+                const isInspected =
+                  r.approval_status === "확정" || r.approval_status === "검수완료";
                 const hasPending = (r.pending_items?.length ?? 0) > 0 && r.pending_resolved === false;
                 const offer = offerOf(r);
                 const profit = profitOf(r);
                 const negative = profit < 0;
                 const isMoyoExcluded = r.channel === "모요" && r.product === "모바일" && r.moyo_excluded === true;
                 const handleRowClick = () => {
-                  if (isLocked && !adminOverride) {
-                    if (isAdmin) {
-                      toast.info("확정된 실적입니다", {
-                        description: "상단의 [수정 잠금 강제 해제] 토글을 켠 뒤 다시 시도하세요.",
-                      });
-                      return;
-                    }
-                    toast.info("확정된 실적은 수정할 수 없습니다", { description: "관리자에게 잠금 해제를 요청하세요." });
-                    return;
-                  }
                   if (!canEdit) {
                     toast.info("본인이 등록한 실적만 수정할 수 있습니다");
                     return;
@@ -1024,7 +985,6 @@ const SalesLedgerPage = () => {
                     "border-b border-border/20 hover:bg-white/[0.03] cursor-pointer transition-colors",
                     mine && "bg-primary/[0.04]",
                     hasPending && "bg-amber-50/70 hover:bg-amber-500/[0.12]",
-                    isLocked && "opacity-80",
                     isMoyoExcluded && "text-muted-foreground/80 [&_td]:line-through",
                   )}
                   onClick={handleRowClick}
@@ -1057,9 +1017,9 @@ const SalesLedgerPage = () => {
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span>{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
-                        {isLocked && (
-                          <Badge variant="outline" className="text-[9px] gap-0.5 border-border/60 px-1.5 py-0">
-                            <Lock className="size-2.5" /> 확정
+                        {isInspected && (
+                          <Badge variant="outline" className="text-[9px] gap-0.5 border-emerald-500/50 text-emerald-700 bg-emerald-50 px-1.5 py-0">
+                            <CheckCircle2 className="size-2.5" /> 검수 완료
                           </Badge>
                         )}
                         {hasPending && (
@@ -1167,15 +1127,12 @@ const SalesLedgerPage = () => {
                               </button>
                             )}
                           </div>
-                          {isLocked && adminOverride && (
-                            <span className="text-[9px] text-destructive/80 flex items-center gap-0.5 leading-tight max-w-[140px] text-right">
-                              <AlertTriangle className="size-2.5 shrink-0" />
-                              확정 실적 수정 — 정산 영향 주의
+                          {isInspected && (
+                            <span className="text-[9px] text-emerald-700 flex items-center gap-0.5 leading-tight">
+                              <CheckCircle2 className="size-2.5 shrink-0" /> 검수 완료
                             </span>
                           )}
                         </div>
-                      ) : isLocked ? (
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-1 justify-end"><Lock className="size-3" /> 잠금</span>
                       ) : (
                         <span className="text-[10px] text-muted-foreground">읽기전용</span>
                       )}
