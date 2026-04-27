@@ -25,7 +25,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { PaginationBar } from "@/components/ui/pagination-bar";
-import { exportToExcel, SALES_COLUMNS, OFFER_COLUMNS } from "@/lib/excelExport";
+import { exportToExcel, SALES_COLUMNS, OFFER_COLUMNS, exportSalesFullExcel } from "@/lib/excelExport";
 import { useQuickExport, useLastUpdated } from "@/hooks/useQuickExport";
 import { maskPhone, maskName } from "@/lib/maskPii";
 import { useResignedUsers, ResignedTag } from "@/hooks/useResignedUsers";
@@ -377,7 +377,18 @@ const SalesLedgerPage = () => {
       .lte("open_date", endDate)
       .order("open_date", { ascending: false, nullsFirst: false });
     if (error) return toast.error("엑셀 내보내기 실패", { description: error.message });
-    exportToExcel(data ?? [], SALES_COLUMNS, `실적장표_${periodLabel.replace(/\s/g, "")}`, "실적");
+    const sales = data ?? [];
+    // 담당자 UID → 성함 매핑 (created_by 기반)
+    const uids = Array.from(new Set(sales.map((s: any) => s.created_by).filter(Boolean)));
+    const uidToName: Record<string, string> = {};
+    if (uids.length > 0) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("user_id, display_name")
+        .in("user_id", uids as string[]);
+      (profs ?? []).forEach((p: any) => { uidToName[p.user_id] = p.display_name; });
+    }
+    exportSalesFullExcel(sales, uidToName, `실적장표_${periodLabel.replace(/\s/g, "")}`, "판매원장");
   };
 
   const handleExportOffers = async () => {
