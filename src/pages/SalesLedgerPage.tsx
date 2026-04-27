@@ -999,11 +999,11 @@ const SalesLedgerPage = () => {
                       </td>
                     )}
                     <td className="px-3 py-2.5">{r.open_date ?? "-"}</td>
-                    <td className="px-3 py-2.5 no-underline">
-                      <div className="flex items-center gap-1.5 no-underline">
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-1.5">
                         <span>{r.channel ?? "-"}</span>
                         {isMoyoExcluded && (
-                          <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-muted-foreground/40 text-muted-foreground no-underline">
+                          <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-muted-foreground/40 text-muted-foreground">
                             모요 미적용
                           </Badge>
                         )}
