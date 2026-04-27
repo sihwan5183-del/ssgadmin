@@ -145,6 +145,10 @@ const SalesLedgerPage = () => {
   const isMobile = useIsMobile();
   const [filterOpen, setFilterOpen] = useState(false);
 
+  const { options: channelOptions } = useFieldOptions("channel");
+  const { options: productOptions } = useFieldOptions("product");
+  const { options: statusOptions } = useFieldOptions("status");
+
   const [dbSummary, setDbSummary] = useState({ count: 0, totalRebate: 0, totalOffer: 0, totalProfit: 0, excludedCount: 0 });
   const [unpaidCount, setUnpaidCount] = useState(0);
   const [unreturnedCount, setUnreturnedCount] = useState(0);
