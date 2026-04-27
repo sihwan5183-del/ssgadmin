@@ -17,7 +17,8 @@ import {
   Smartphone, Wifi, Gift, Calculator, CheckCircle2, Clock, XCircle, ChevronDown,
   PhoneCall, Package, Settings2, Plus,
 } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RTooltip, RadialBarChart, RadialBar, PolarAngleAxis, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import { ArrowUp, ArrowDown, Minus, Activity, Wallet, AlertTriangle, Lightbulb } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RTooltip, RadialBarChart, RadialBar, PolarAngleAxis, BarChart, Bar, XAxis, YAxis, CartesianGrid, RadarChart, Radar, PolarGrid, PolarRadiusAxis } from "recharts";
 import { formatKRWShort } from "@/data/financeData";
 import { useIncentiveRates } from "@/hooks/useIncentiveRates";
 import { calcTotalIncentive, forecastIncentive, calcIncentiveForSale } from "@/lib/incentiveEngine";
