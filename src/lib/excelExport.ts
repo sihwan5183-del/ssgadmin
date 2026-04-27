@@ -311,6 +311,7 @@ export const SALES_COLUMNS: Array<ColumnDef> = [
   ["vas1", "부가서비스1"],
   ["vas2", "부가서비스2"],
   ["tv_lines", "TV 추가회선", tvLinesText],
+  ["welfare_discount", "복지할인", (r: any) => r?.custom_fields?.welfare_discount ?? "해당없음"],
   ["unit_price", "단가표 기준(₩)"],
   ["vas_fee", "부가서비스 수수료(₩)"],
   ["distributor_amount", "유통망(₩)"],
