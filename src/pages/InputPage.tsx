@@ -767,9 +767,10 @@ const InputPage = () => {
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
                   {/* 레거시 값(직원 리스트에 없는 기존 텍스트)도 유지해서 보여줌 */}
-                  {form.manager && !staffOptions.some((s) => s.user_id === form.manager || s.display_name === form.manager) && (
+                  {form.manager && !staffOptions.some((s) => s.user_id === form.manager) && (
                     <SelectItem value={form.manager}>
-                      {form.manager} <span className="text-muted-foreground text-[10px]">(미등록)</span>
+                      {staffOptions.find((s) => s.display_name === form.manager)?.display_name ?? form.manager}
+                      <span className="text-muted-foreground text-[10px]"> (기존값)</span>
                     </SelectItem>
                   )}
                   {staffOptions.map((s) => (
