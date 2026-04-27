@@ -941,7 +941,7 @@ const InputPage = () => {
               )}
               aria-pressed={!!customFields.is_youth}
             >
-              {customFields.is_youth ? "✓ " : ""}청소년
+              {customFields.is_youth ? "✓ " : ""}청소년/시니어
             </button>
           </div>
           <div className="border-t border-border/30 pt-3 mt-1" />
