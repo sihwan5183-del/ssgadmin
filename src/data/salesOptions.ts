@@ -1,6 +1,6 @@
 // 엑셀 '실적장표' 기준 입력 옵션
 export const CHANNELS = ["모요", "유닥", "오프라인", "캠페인", "당근", "도그마루", "SEG활동", "기타"] as const;
-export const PRODUCTS = ["모바일", "USIM MNP", "세컨", "인터넷", "TV프리", "IOT", "대명", "홈"] as const;
+export const PRODUCTS = ["모바일", "USIM MNP", "세컨", "인터넷", "TV프리", "스마트홈", "대명", "홈"] as const;
 export const SALE_TYPES = ["MNP", "신규", "기변", "USIM MNP"] as const;
 export const OPEN_METHODS = ["선개통", "후개통"] as const;
 export const STATUSES = ["청약완료", "택배발송", "개통완료", "예약", "보류", "취소"] as const;

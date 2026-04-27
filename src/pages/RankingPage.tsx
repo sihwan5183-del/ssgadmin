@@ -39,7 +39,7 @@ type RankedUser = {
   cleanPenalty: number;          // 누락+미해결 합계 (낮을수록 좋음)
   internetCount: number;         // 인터넷 가입 건수
   tvfreeCount: number;           // TV프리 가입 건수
-  iotCount: number;              // 홈IOT/스마트홈 건수
+  iotCount: number;              // 스마트홈 건수 (구 홈IOT 통합)
   partnerCardCount: number;      // 제휴카드 결제 건수
 };
 type ModelRank = { model: string; count: number; isStrategy: boolean };
@@ -153,7 +153,7 @@ const TABS: { key: TabKey; label: string; icon: typeof Crown; sortFn: (a: Ranked
   { key: "achievement", label: "달성률 챔피언", icon: Target, sortFn: (a, b) => b.achievement - a.achievement || b.count - a.count },
   { key: "internet", label: "인터넷 판매왕", icon: Wifi, sortFn: (a, b) => b.internetCount - a.internetCount },
   { key: "tvfree", label: "TV프리 판매왕", icon: Monitor, sortFn: (a, b) => b.tvfreeCount - a.tvfreeCount },
-  { key: "iot", label: "홈IOT 판매왕", icon: Home, sortFn: (a, b) => b.iotCount - a.iotCount },
+  { key: "iot", label: "스마트홈 판매왕", icon: Home, sortFn: (a, b) => b.iotCount - a.iotCount },
   { key: "partnerCard", label: "제휴카드 판매왕", icon: CreditCard, sortFn: (a, b) => b.partnerCardCount - a.partnerCardCount },
   { key: "vas", label: "부가서비스 사냥꾼", icon: Sparkles, sortFn: (a, b) => b.vasAttach - a.vasAttach || b.count - a.count },
   { key: "clean", label: "클린 검수왕", icon: ShieldCheck, sortFn: (a, b) => b.cleanScore - a.cleanScore || a.cleanPenalty - b.cleanPenalty },
@@ -379,7 +379,7 @@ const RankingPage = () => {
       // 상품별 카운트 (product 필드 매핑된 행만 정확히 합산)
       const b = productBucket(s.product);
       if (b !== "기타") u.productCounts[b]++;
-      // 스마트홈/홈IOT는 별도 카운트
+      // 스마트홈은 별도 카운트
       if (b === "스마트홈") u.iotCount++;
       if ((s.vas1 && String(s.vas1).trim() && s.vas1 !== "없음") || (s.vas2 && String(s.vas2).trim() && s.vas2 !== "없음")) {
         u.productCounts.부가서비스++;
