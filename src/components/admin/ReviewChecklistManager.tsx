@@ -12,6 +12,9 @@ const DEFAULT: ChecklistItem[] = [
   { key: "plan_match", label: "요금제 확인" },
   { key: "price_match", label: "단가 확인" },
   { key: "bundle_match", label: "결합 확인" },
+  { key: "autodebit_match", label: "자동이체 / 입금계좌 확인" },
+  { key: "fee_match", label: "단가/수수료 정책 일치" },
+  { key: "vas_fee_match", label: "부가서비스 수수료 적용" },
 ];
 
 const slugify = (s: string) =>
