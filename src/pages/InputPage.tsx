@@ -1455,7 +1455,8 @@ const InputPage = () => {
                     const revenue =
                       (form.unit_price ?? 0) +
                       (form.vas_fee ?? 0) +
-                      (form.trade_in_enabled ? (form.trade_in_confirmed ?? 0) : 0);
+                      (form.trade_in_enabled ? (form.trade_in_confirmed ?? 0) : 0) +
+                      Number(customFields?.voucher_amount ?? 0);
                     const offerTotal =
                       (form.distributor_amount ?? 0) +
                       (form.cash_support_amount ?? 0) +
@@ -1485,7 +1486,13 @@ const InputPage = () => {
               </Select>
             </Field>
             <Field label="상품권 금액 (₩)">
-              <MoneyInput value={form.extra_subsidy} onChange={(v) => set("extra_subsidy", v)} />
+              <MoneyInput
+                value={Number(customFields?.voucher_amount ?? 0)}
+                onChange={(v) => setCustomFields((f) => ({ ...f, voucher_amount: v }))}
+              />
+              <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5">
+                수익(+)으로 합산됩니다 · 추가지원금과 별개 항목
+              </p>
             </Field>
             <Field label="반납 상태">
               <div className="flex items-center gap-2 h-9">
