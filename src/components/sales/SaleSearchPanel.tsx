@@ -187,13 +187,14 @@ export const SaleSearchPanel = () => {
     search();
   };
 
-  const isLocked = !!selected?.locked;
+  // ※ 잠금 정책 폐지 — 본인 또는 관리자는 언제든 수정 가능 (변경 이력은 sales_audit_log 자동 기록)
+  const isInspected =
+    !!selected && (selected.approval_status === "확정" || selected.approval_status === "검수완료");
   const canEdit = useMemo(() => {
     if (!selected || !user) return false;
     if (isAdmin) return true;
-    if (isLocked) return false;
     return selected.created_by === user.id;
-  }, [selected, user, isAdmin, isLocked]);
+  }, [selected, user, isAdmin]);
 
   // 미승인 / 미처리 카운트
   const refreshCounts = async () => {
@@ -331,7 +332,7 @@ export const SaleSearchPanel = () => {
 
   const saveEdit = async () => {
     if (!selected) return;
-    if (!canEdit) return toast.error(isLocked ? "확정된 실적은 수정할 수 없습니다" : "수정 권한이 없습니다");
+    if (!canEdit) return toast.error("수정 권한이 없습니다");
     const payload: Record<string, unknown> = {};
     EDITABLE_FIELDS.forEach(({ key }) => {
       if (editForm[key] !== selected[key]) payload[key as string] = editForm[key];
