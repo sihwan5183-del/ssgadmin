@@ -644,60 +644,101 @@ const RankingPage = () => {
           ) : (
             <>
               {/* Podium */}
-              <div className="grid grid-cols-3 gap-3 mb-5">
+              {/* Podium — TOP3 (1.5x 크게, 금/은/동 그라데이션 + 왕관) */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-stretch">
                 {podium.map((u, i) => {
                   const S = PODIUM_STYLES[i];
                   const Icon = S.icon;
                   const tier = getTier(u.count);
+                  const isMe = u.user_id === user?.id;
                   return (
-                    <div key={u.user_id} className={cn("rounded-xl p-3 ring-1 backdrop-blur-md relative overflow-hidden", S.bg)}>
-                      <div className="flex items-center justify-between">
-                        <Icon className={cn("size-5", S.color)} />
-                        <span className={cn("text-xs font-bold", S.color)}>#{i + 1}</span>
-                      </div>
-                      <div className="mt-2">
-                        <div className="text-sm font-bold truncate">{u.name}</div>
-                        <div className="text-[10px] text-muted-foreground truncate">{u.store ?? "미배정"}</div>
-                      </div>
-                      <div className="mt-2 text-lg font-bold text-gradient">{getValue(u)}</div>
-                      <div className="flex items-center gap-1 mt-1">
-                        <span className="text-[10px]">{tier.icon}</span>
-                        <span className="text-[10px] text-muted-foreground">{tier.label}</span>
-                      </div>
-                      {u.isClean && u.cleanDays > 0 && (
-                        <div className="mt-1"><CleanBadge days={u.cleanDays} /></div>
+                    <div
+                      key={u.user_id}
+                      className={cn(
+                        "relative overflow-hidden rounded-2xl p-5 backdrop-blur-md transition-all hover:-translate-y-1",
+                        "min-h-[260px]",
+                        S.bg, S.ring,
+                        isMe && "outline outline-2 outline-primary/50 outline-offset-2"
                       )}
-                      {u.streak >= 3 && (
-                        <Badge className="absolute top-2 right-2 text-[9px] bg-orange-100 text-orange-700 border-orange-300 px-1 py-0">
-                          <Flame className="size-2.5" /> {u.streak}일
-                        </Badge>
-                      )}
+                    >
+                      {/* 반짝임 후광 */}
+                      <div className={cn("absolute -top-12 -right-12 size-40 rounded-full blur-3xl bg-gradient-to-br pointer-events-none", S.halo)} />
+                      {/* 왕관 (1위만 큼) */}
+                      <div className={cn(
+                        "absolute -top-2 left-1/2 -translate-x-1/2 grid place-items-center",
+                        i === 0 ? "size-12" : "size-9"
+                      )}>
+                        <Icon className={cn(S.color, "drop-shadow-md", i === 0 ? "size-9 animate-pulse" : "size-6")} />
+                      </div>
+
+                      <div className="relative pt-6 flex flex-col h-full">
+                        <div className="flex items-center justify-between">
+                          <span className={cn("text-2xl font-extrabold tabular-nums", S.color)}>#{i + 1}</span>
+                          <RankDeltaPill delta={u.rankDelta} />
+                        </div>
+                        <div className="mt-2">
+                          <div className="text-lg font-extrabold truncate text-foreground">{u.name}</div>
+                          <div className="text-[11px] text-muted-foreground truncate">{u.store ?? "매장 미배정"}</div>
+                        </div>
+                        <div className={cn("mt-3 font-extrabold tabular-nums", i === 0 ? "text-3xl" : "text-2xl", S.color)}>
+                          {getValue(u)}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                          <Badge className={cn("text-[10px] px-2 py-0.5 border bg-gradient-to-br", tier.color)}>
+                            <span className="mr-1">{tier.icon}</span>
+                            {tier.label}
+                          </Badge>
+                          {u.streak >= 3 && (
+                            <Badge className="text-[9px] bg-orange-100 text-orange-700 border-orange-300 gap-0.5">
+                              <Flame className="size-2.5" /> {u.streak}일
+                            </Badge>
+                          )}
+                          {u.isClean && u.cleanDays > 0 && <CleanBadge days={u.cleanDays} />}
+                        </div>
+
+                        {/* 상품별 미니 게이지 */}
+                        <div className="mt-3 pt-3 border-t border-foreground/10">
+                          <ProductMiniGauges counts={u.productCounts} big />
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
               </div>
 
               {/* 4~10위 리스트 */}
-              <ul className="space-y-1">
+              <ul className="space-y-1.5">
                 {rest.map((u, i) => {
                   const tier = getTier(u.count);
                   const isMe = u.user_id === user?.id;
                   return (
                     <li key={u.user_id} className={cn(
-                      "flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors",
-                      isMe ? "bg-primary/[0.08] ring-1 ring-primary/20" : "hover:bg-muted/30"
+                      "grid grid-cols-12 items-center gap-2 px-3 py-2.5 rounded-lg transition-colors border border-transparent",
+                      isMe ? "bg-primary/[0.08] ring-1 ring-primary/20" : "hover:bg-muted/30 hover:border-border/40"
                     )}>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-muted-foreground tabular-nums w-6 text-center">{i + 4}</span>
-                        <span className="text-[10px]">{tier.icon}</span>
-                        <span className="text-sm font-medium">{u.name}</span>
-                        {u.store && <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded bg-muted/60">{u.store}</span>}
+                      <div className="col-span-6 flex items-center gap-2 min-w-0">
+                        <span className="text-xs text-muted-foreground tabular-nums w-6 text-center shrink-0">{i + 4}</span>
+                        <span className="text-base shrink-0">{tier.icon}</span>
+                        <span className="text-sm font-semibold truncate">{u.name}</span>
+                        {u.store && (
+                          <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded bg-muted/60 shrink-0 hidden sm:inline">
+                            {u.store}
+                          </span>
+                        )}
+                        <RankDeltaPill delta={u.rankDelta} />
                         {u.isClean && <CleanBadge days={u.cleanDays} />}
                         {u.streak >= 3 && (
-                          <span className="text-[10px] text-orange-400 flex items-center gap-0.5"><Flame className="size-2.5" />{u.streak}일</span>
+                          <span className="text-[10px] text-orange-500 flex items-center gap-0.5 shrink-0">
+                            <Flame className="size-2.5" />{u.streak}일
+                          </span>
                         )}
                       </div>
-                      <span className="text-sm font-semibold tabular-nums">{getValue(u)}</span>
+                      <div className="col-span-4 hidden md:block">
+                        <ProductMiniGauges counts={u.productCounts} />
+                      </div>
+                      <div className="col-span-6 md:col-span-2 text-right">
+                        <span className="text-sm font-bold tabular-nums">{getValue(u)}</span>
+                      </div>
                     </li>
                   );
                 })}
