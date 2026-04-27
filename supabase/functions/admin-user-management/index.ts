@@ -386,9 +386,36 @@ Deno.serve(async (req) => {
       if (body.user_id === callerId) {
         return json({ error: "본인 계정은 삭제할 수 없습니다" }, 400);
       }
-      const { error } = await admin.auth.admin.deleteUser(body.user_id);
-      if (error) return json({ error: error.message }, 400);
-      return json({ ok: true });
+      // 슈퍼관리자(h860306@naver.com)만 가능
+      const { data: callerUser } = await admin.auth.admin.getUserById(callerId);
+      if ((callerUser?.user?.email ?? "").toLowerCase() !== "h860306@naver.com") {
+        return json({ error: "슈퍼관리자만 계정을 삭제할 수 있습니다" }, 403);
+      }
+      // 소프트 삭제: 데이터 보존, 로그인 차단, 모든 세션 종료
+      const { error: banErr } = await admin.auth.admin.updateUserById(body.user_id, {
+        ban_duration: "876000h",
+      });
+      if (banErr) return json({ error: banErr.message }, 400);
+      // 모든 세션 강제 종료
+      await admin.auth.admin.signOut(body.user_id, "global").catch(() => {});
+      // profile 상태 변경 (resigned + deleted_at 표기)
+      const { error: profErr } = await admin.from("profiles").update({
+        status: "resigned",
+        deleted_at: new Date().toISOString(),
+        deleted_by: callerId,
+      }).eq("user_id", body.user_id);
+      if (profErr) return json({ error: profErr.message }, 400);
+      // 활성 세션 테이블 정리
+      await admin.from("active_sessions").delete().eq("user_id", body.user_id).catch(() => {});
+      await admin.from("auth_attempts").insert({
+        user_id: body.user_id,
+        kind: "soft_delete",
+        success: true,
+        ip,
+        user_agent: ua,
+        detail: `soft-deleted by ${callerId}`,
+      });
+      return json({ ok: true, soft_deleted: true });
     }
 
     // 승인 (pending -> active)
