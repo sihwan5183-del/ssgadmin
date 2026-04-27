@@ -33,6 +33,8 @@ import { DashboardLayoutManager } from "@/components/dashboard/DashboardLayoutMa
 import { useRole } from "@/hooks/useRole";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useFinanceData } from "@/hooks/useFinanceData";
+import { RevenueComposition } from "@/components/finance/RevenueComposition";
+import { CategoryBreakdownChart } from "@/components/finance/CategoryBreakdownChart";
 
 const Index = () => {
   const finance = useFinanceData();
@@ -97,6 +99,13 @@ const Index = () => {
 
       {canSeeAdminWidgets && isVisible("channel_activation") && <ChannelActivationBreakdown />}
       {isVisible("activation_breakdown") && <ActivationBreakdown />}
+
+      {isVisible("settlement_charts") && (
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-1.5 mb-1.5">
+          <RevenueComposition />
+          <CategoryBreakdownChart type="지출" />
+        </section>
+      )}
 
       {/* 나의 예상 인센티브 */}
       {isVisible("my_incentive") && (
