@@ -245,8 +245,16 @@ export const SaleSearchPanel = () => {
     if (onlyPending) query = query.eq("approval_status", "승인대기");
     if (onlyUnhandled) query = query.eq("pending_resolved", false);
     if (onlyAbnormal) query = query.contains("custom_fields", { final_verdict: "비정상" });
-    if (stStatus) query = query.eq("status", stStatus);
-    if (stApproval) query = query.eq("approval_status", stApproval);
+    if (stStatus) {
+      const list = stStatus.split(",").map((s) => s.trim()).filter(Boolean);
+      if (list.length > 1) query = query.in("status", list);
+      else if (list.length === 1) query = query.eq("status", list[0]);
+    }
+    if (stApproval) {
+      const list = stApproval.split(",").map((s) => s.trim()).filter(Boolean);
+      if (list.length > 1) query = query.in("approval_status", list);
+      else if (list.length === 1) query = query.eq("approval_status", list[0]);
+    }
     // 기간 필터 적용 (검색어 없이 기간만으로도 조회 가능)
     query = query.gte("open_date", startDate).lte("open_date", endDate);
 
