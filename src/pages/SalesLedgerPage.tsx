@@ -118,6 +118,7 @@ const SalesLedgerPage = () => {
   const { startDate, endDate, label: periodLabel } = usePeriod();
   const navigate = useNavigate();
   const quickExport = useQuickExport();
+  const resignedIds = useResignedUsers();
 
   const [rows, setRows] = useState<SaleRow[]>([]);
   const [page, setPage] = useState(0);
