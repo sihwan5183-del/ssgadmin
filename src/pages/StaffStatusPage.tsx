@@ -861,6 +861,56 @@ export default function StaffStatusPage() {
           </section>
         )}
 
+        {/* Achievement-rate leaderboard (전 직원 목표 달성률 순위) */}
+        {canViewAll && achievementLeaderboard.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Trophy className="size-4 text-amber-500" />
+                전 직원 목표 달성률 순위
+                <Badge variant="outline" className="text-[10px] ml-1">매장 무관</Badge>
+              </h3>
+            </div>
+            <Card className="glass overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border/40 bg-muted/40 text-[11px] text-muted-foreground">
+                      <th className="text-left px-3 py-2 w-14">순위</th>
+                      <th className="text-left px-3 py-2">직원</th>
+                      <th className="text-right px-3 py-2">평균 달성률</th>
+                      <th className="text-right px-3 py-2">달성 / 목표 항목</th>
+                      <th className="px-3 py-2 w-48">진행도</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {achievementLeaderboard.slice(0, 20).map((r, i) => (
+                      <tr key={r.profile.user_id} className="border-b border-border/30 hover:bg-muted/30 cursor-pointer" onClick={() => setSelectedId(r.profile.user_id)}>
+                        <td className="px-3 py-2 font-bold tabular-nums">
+                          <span className={`inline-flex items-center justify-center size-6 rounded-md text-xs ${
+                            i === 0 ? "bg-amber-100 text-amber-700" :
+                            i === 1 ? "bg-slate-200 text-slate-700" :
+                            i === 2 ? "bg-orange-100 text-orange-700" :
+                            "bg-muted/50 text-muted-foreground"}`}>{i + 1}</span>
+                        </td>
+                        <td className="px-3 py-2 font-medium">
+                          {r.profile.display_name}
+                          {r.profile.team && <span className="text-[10px] text-muted-foreground ml-1.5">{r.profile.team}</span>}
+                        </td>
+                        <td className="px-3 py-2 text-right tabular-nums">
+                          <span className={r.avgPct >= 100 ? "text-emerald-600 font-bold" : "text-foreground font-semibold"}>{r.avgPct}%</span>
+                        </td>
+                        <td className="px-3 py-2 text-right text-xs text-muted-foreground tabular-nums">{r.hits} / {r.goalCount}</td>
+                        <td className="px-3 py-2"><Progress value={Math.min(100, r.avgPct)} className="h-1.5" /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </section>
+        )}
+
         {!selected ? (
           <Card className="p-12 text-center glass">
             <Users className="size-10 text-muted-foreground mx-auto mb-3" />
