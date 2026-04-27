@@ -393,9 +393,17 @@ export default function ExpenseInputPage() {
           <TabsContent value="광고비">
             <form onSubmit={submitAd} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
-                <Label>집행일 *</Label>
+                <Label>집행일 (시작) *</Label>
                 <Input type="date" value={adForm.spend_date}
                   onChange={(e) => setAdForm({ ...adForm, spend_date: e.target.value })} />
+              </div>
+              <div>
+                <Label>종료일</Label>
+                <Input type="date" value={adForm.end_date} min={adForm.spend_date}
+                  onChange={(e) => setAdForm({ ...adForm, end_date: e.target.value })} />
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  기간 입력 시 일자별로 자동 분산되어 저장됩니다
+                </p>
               </div>
               <div>
                 <Label>매체 *</Label>
@@ -416,10 +424,39 @@ export default function ExpenseInputPage() {
                 </Select>
               </div>
               <div>
-                <Label>금액 (₩) *</Label>
+                <Label>금액 입력 방식 *</Label>
+                <Select
+                  value={adForm.amount_mode}
+                  onValueChange={(v: "daily" | "total") => setAdForm({ ...adForm, amount_mode: v })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="total">최종 합산 금액 (총액 입력)</SelectItem>
+                    <SelectItem value="daily">일별 소진 금액 (매일 동일)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>
+                  {adForm.amount_mode === "daily" ? "일별 소진 금액 (₩) *" : "최종 합산 금액 (₩) *"}
+                </Label>
                 <Input inputMode="numeric" placeholder="예: 500000"
                   value={adForm.amount}
                   onChange={(e) => setAdForm({ ...adForm, amount: e.target.value })} />
+                {(() => {
+                  const start = new Date(adForm.spend_date + "T00:00:00");
+                  const end = new Date((adForm.end_date || adForm.spend_date) + "T00:00:00");
+                  const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
+                  const amt = Number((adForm.amount || "").replace(/[^0-9.-]/g, "")) || 0;
+                  if (!amt || days < 1) return null;
+                  const daily = adForm.amount_mode === "daily" ? amt : Math.round(amt / days);
+                  const total = adForm.amount_mode === "total" ? amt : amt * days;
+                  return (
+                    <p className="text-[10px] text-muted-foreground mt-1 tabular-nums">
+                      {days}일 · 일별 ₩{daily.toLocaleString()} · 총 ₩{total.toLocaleString()}
+                    </p>
+                  );
+                })()}
               </div>
               <div className="md:col-span-2">
                 <Label>캠페인명</Label>
