@@ -91,6 +91,12 @@ export const PlannerSuperView = () => {
   const [storeFilter, setStoreFilter] = useState<string>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sortKey, setSortKey] = useState<SortKey>("updated");
+  const [showCalendar, setShowCalendar] = useState(true);
+  const [calMonth, setCalMonth] = useState<Date>(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const [dateFilter, setDateFilter] = useState<string | null>(null); // YYYY-MM-DD
 
   const load = async () => {
     setLoading(true);
@@ -135,6 +141,7 @@ export const PlannerSuperView = () => {
     const q = search.trim().toLowerCase();
     const result = rows.filter((r) => {
       if (storeFilter !== "all" && r.manager !== storeFilter) return false;
+      if (dateFilter && r.open_date !== dateFilter) return false;
       if (!q) return true;
       return [r.customer_name, r.device_model, r.manager, r.channel]
         .filter(Boolean)
@@ -146,7 +153,33 @@ export const PlannerSuperView = () => {
       result.sort((a, b) => profit(b) - profit(a));
     }
     return result;
-  }, [rows, search, storeFilter, sortKey]);
+  }, [rows, search, storeFilter, sortKey, dateFilter]);
+
+  // 달력: 해당 월의 날짜별 건수
+  const calendarCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    rows.forEach((r) => {
+      if (!r.open_date) return;
+      m.set(r.open_date, (m.get(r.open_date) ?? 0) + 1);
+    });
+    return m;
+  }, [rows]);
+
+  const calendarGrid = useMemo(() => {
+    const y = calMonth.getFullYear();
+    const m = calMonth.getMonth();
+    const first = new Date(y, m, 1);
+    const startWeekday = first.getDay(); // 0=Sun
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const cells: Array<{ date: string | null; day: number | null }> = [];
+    for (let i = 0; i < startWeekday; i++) cells.push({ date: null, day: null });
+    for (let d = 1; d <= daysInMonth; d++) {
+      const ds = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      cells.push({ date: ds, day: d });
+    }
+    while (cells.length % 7 !== 0) cells.push({ date: null, day: null });
+    return cells;
+  }, [calMonth]);
 
   const counts = useMemo(() => ({
     submitted: rows.filter((r) => TAB_FILTER.submitted.includes(r.approval_status ?? "")).length,
