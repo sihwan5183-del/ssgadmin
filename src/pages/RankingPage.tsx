@@ -560,8 +560,9 @@ const RankingPage = () => {
     let list = [...users];
     if (storeFilter !== "all") list = list.filter((u) => u.store === storeFilter);
     if (hideExcluded) list = list.filter((u) => !u.excluded);
+    if (tab === "achievement") list = list.filter((u) => u.goalCount > 0);
     return list.sort(activeTab.sortFn);
-  }, [users, storeFilter, activeTab, hideExcluded]);
+  }, [users, storeFilter, activeTab, hideExcluded, tab]);
 
   const top10 = sorted.slice(0, 10);
   const podium = top10.slice(0, 3);
