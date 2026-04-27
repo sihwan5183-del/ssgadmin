@@ -56,6 +56,7 @@ interface SaleSnapshot {
   pending_note?: string | null;
   pending_resolved: boolean | null;
   product?: string | null;
+  status?: string | null;
   custom_fields?: Record<string, any> | null;
 }
 
@@ -131,6 +132,22 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
   const isHomeProduct = (sale.product ?? "").includes("인터넷")
     || (sale.product ?? "").includes("TV")
     || (sale.product ?? "").includes("홈");
+
+  // 모바일/2nd 상품 + 상태가 '택배발송'이면 → 우측에 [개통완료] 토큰 노출
+  const normalizedStatus = (sale.status ?? "").replace(/\s+/g, "").trim();
+  const canMarkActivated = !isHomeProduct && normalizedStatus === "택배발송";
+  const [marking, setMarking] = useState(false);
+  const markActivated = async () => {
+    setMarking(true);
+    const { error } = await supabase
+      .from("sales")
+      .update({ status: "개통완료" } as never)
+      .eq("id", sale.id);
+    setMarking(false);
+    if (error) return toast.error(error.message);
+    toast.success("개통완료로 변경되었습니다");
+    onChanged();
+  };
 
   // 신규 메타 저장 helpers
   const patchCustom = async (patch: Record<string, any>) => {
