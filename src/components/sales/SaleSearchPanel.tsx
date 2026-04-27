@@ -132,6 +132,8 @@ export const SaleSearchPanel = () => {
   const [unhandledCount, setUnhandledCount] = useState(0);
   const [abnormalOnly, setAbnormalOnly] = useState(false);
   const [abnormalCount, setAbnormalCount] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [approvalFilter, setApprovalFilter] = useState<string | null>(null);
   const [todayReviewedCount, setTodayReviewedCount] = useState(0);
   const [results, setResults] = useState<SaleHit[]>([]);
   const [searching, setSearching] = useState(false);
@@ -215,11 +217,21 @@ export const SaleSearchPanel = () => {
     refreshCounts();
   }, []);
 
-  const search = async (override?: string, pendingOverride?: boolean, unhandledOverride?: boolean, abnormalOverride?: boolean) => {
+  const search = async (
+    override?: string,
+    pendingOverride?: boolean,
+    unhandledOverride?: boolean,
+    abnormalOverride?: boolean,
+    statusOverride?: string | null,
+    approvalOverride?: string | null,
+    autoOpenIfSingle?: boolean,
+  ) => {
     const term = (override ?? q).trim();
     const onlyPending = pendingOverride ?? pendingOnly;
     const onlyUnhandled = unhandledOverride ?? unhandledOnly;
     const onlyAbnormal = abnormalOverride ?? abnormalOnly;
+    const stStatus = statusOverride !== undefined ? statusOverride : statusFilter;
+    const stApproval = approvalOverride !== undefined ? approvalOverride : approvalFilter;
 
     setSearching(true);
     let query = supabase.from("sales").select(SELECT_COLS);
@@ -233,6 +245,8 @@ export const SaleSearchPanel = () => {
     if (onlyPending) query = query.eq("approval_status", "승인대기");
     if (onlyUnhandled) query = query.eq("pending_resolved", false);
     if (onlyAbnormal) query = query.contains("custom_fields", { final_verdict: "비정상" });
+    if (stStatus) query = query.eq("status", stStatus);
+    if (stApproval) query = query.eq("approval_status", stApproval);
     // 기간 필터 적용 (검색어 없이 기간만으로도 조회 가능)
     query = query.gte("open_date", startDate).lte("open_date", endDate);
 
@@ -242,14 +256,22 @@ export const SaleSearchPanel = () => {
       .limit(200);
     setSearching(false);
     if (error) return toast.error(error.message);
-    setResults((data ?? []) as SaleHit[]);
+    const rows = (data ?? []) as SaleHit[];
+    setResults(rows);
+    if (autoOpenIfSingle && rows.length === 1) {
+      openDetail(rows[0]);
+    }
   };
 
-  // URL ?sale=ID 자동 오픈 + ?pending=1 미처리 필터 + ?date=YYYY-MM-DD 단일일자
+  // URL params: ?sale=ID 자동 오픈 / ?pending=1 미처리 / ?date=YYYY-MM-DD 단일일자
+  // ?status=<개통상태> / ?approval=<승인상태> / ?auto=1 (결과 1건이면 자동 상세 열림)
   useEffect(() => {
     const id = params.get("sale");
     const wantPending = params.get("pending") === "1";
     const dateParam = params.get("date");
+    const statusParam = params.get("status");
+    const approvalParam = params.get("approval");
+    const autoOpen = params.get("auto") === "1";
     if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
       setSingleDay(dateParam);
       params.delete("date");
@@ -257,8 +279,17 @@ export const SaleSearchPanel = () => {
     }
     if (wantPending) {
       setUnhandledOnly(true);
-      search(undefined, undefined, true);
+      search(undefined, undefined, true, undefined, undefined, undefined, autoOpen);
       params.delete("pending");
+      params.delete("auto");
+      setParams(params, { replace: true });
+    } else if (statusParam || approvalParam) {
+      if (statusParam) setStatusFilter(statusParam);
+      if (approvalParam) setApprovalFilter(approvalParam);
+      search(undefined, undefined, undefined, undefined, statusParam ?? null, approvalParam ?? null, autoOpen);
+      params.delete("status");
+      params.delete("approval");
+      params.delete("auto");
       setParams(params, { replace: true });
     }
     if (id) {
