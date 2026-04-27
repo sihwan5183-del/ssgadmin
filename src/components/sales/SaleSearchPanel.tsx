@@ -112,7 +112,7 @@ const APPROVAL_META: Record<ApprovalStatus, { className: string; icon: typeof Ch
 };
 
 const SELECT_COLS =
-  "id, created_by, customer_name, phone, device_serial, device_model, channel, product, rate_plan, status, open_date, manager, unit_price, net_fee, note, approval_status, locked, approved_at, pending_items, pending_note, pending_resolved, approval_override_reason, distributor_amount, cash_support_amount, cash_open, receivable_amount, receivable_paid, revision_fields, revision_reason, revision_requested_at, re_review_requested_at, custom_fields";
+  "id, created_by, customer_name, phone, birth_date, device_serial, device_model, channel, product, rate_plan, sale_type, open_method, bundle, status, open_date, manager, unit_price, vas_fee, extra_subsidy, moyo_excluded, net_fee, note, approval_status, locked, approved_at, pending_items, pending_note, pending_resolved, approval_override_reason, distributor_amount, cash_support_amount, cash_open, receivable_amount, receivable_paid, revision_fields, revision_reason, revision_requested_at, re_review_requested_at, custom_fields";
 
 export const SaleSearchPanel = () => {
   const { user } = useAuth();
