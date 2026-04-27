@@ -290,7 +290,9 @@ const SalesLedgerPage = () => {
     if (statusFilter.length > 0) {
       query = query.in("status", statusFilter);
     }
-    if (managerFilter !== "all") {
+    if (managerFilter === "__none__") {
+      query = query.or("manager.is.null,manager.eq.");
+    } else if (managerFilter !== "all") {
       query = query.eq("manager", managerFilter);
     }
     if (storeFilter !== "all") {
@@ -348,7 +350,8 @@ const SalesLedgerPage = () => {
       .gte("open_date", startDate)
       .lte("open_date", endDate)
       .in("status", ["개통완료", "설치완료"]);
-    if (managerFilter !== "all") q = q.eq("manager", managerFilter);
+    if (managerFilter === "__none__") q = q.or("manager.is.null,manager.eq.");
+    else if (managerFilter !== "all") q = q.eq("manager", managerFilter);
     if (storeFilter !== "all") q = q.eq("channel", storeFilter);
     if (productFilter !== "all") q = q.eq("product", productFilter);
     if (moyoFilter === "applied") {
