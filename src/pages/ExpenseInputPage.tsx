@@ -14,10 +14,11 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, PlusCircle, Megaphone, Receipt, Download, Building2, Banknote, Wallet, TrendingUp, Coins, Sparkles } from "lucide-react";
+import { Trash2, PlusCircle, Megaphone, Receipt, Download, Building2, Banknote, Wallet, TrendingUp, Coins, Sparkles, Repeat, CalendarClock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
+import { Switch } from "@/components/ui/switch";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { exportToExcel, AD_SPEND_COLUMNS } from "@/lib/excelExport";
@@ -56,11 +57,12 @@ export default function ExpenseInputPage() {
   const { options: MEDIA_OPTIONS } = useFieldOptions("media");
   const { options: CHANNELS } = useFieldOptions("channel");
   const { options: EXPENSE_TYPES } = useFieldOptions("expense_type");
+  const { options: FIXED_EXPENSE_TYPES } = useFieldOptions("fixed_expense_type");
 
   const [rows, setRows] = useState<ExpenseRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState<"광고비" | "기타지출">("광고비");
+  const [tab, setTab] = useState<"광고비" | "기타지출" | "고정지출">("광고비");
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
   const { startDate, endDate, label: periodLabel } = usePeriod();
@@ -138,6 +140,41 @@ export default function ExpenseInputPage() {
     note: "",
   });
 
+  const [fixedForm, setFixedForm] = useState({
+    spend_date: todayISO(),
+    expense_type: "",
+    amount: "",
+    vendor: "",
+    note: "",
+    auto_register: true,
+    day_of_month: 1,
+  });
+
+  // recurring expense templates
+  interface RecurringRow {
+    id: string;
+    created_by: string;
+    expense_type: string;
+    amount: number;
+    vendor: string | null;
+    note: string | null;
+    active: boolean;
+    auto_register: boolean;
+    day_of_month: number;
+    last_generated_month: string | null;
+  }
+  const [recurring, setRecurring] = useState<RecurringRow[]>([]);
+  const fetchRecurring = async () => {
+    const { data, error } = await supabase
+      .from("recurring_expenses")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (!error) setRecurring((data ?? []) as RecurringRow[]);
+  };
+  useEffect(() => {
+    fetchRecurring();
+  }, []);
+
   const fetchRows = async () => {
     setLoading(true);
     const from = page * PAGE_SIZE;
@@ -180,9 +217,11 @@ export default function ExpenseInputPage() {
   const totals = useMemo(() => {
     const ad = rows.filter((r) => r.category === "광고비");
     const etc = rows.filter((r) => r.category === "기타지출");
+    const fixed = rows.filter((r) => r.category === "고정지출");
     const sum = (xs: ExpenseRow[]) => xs.reduce((s, r) => s + Number(r.amount || 0), 0);
     const adTotal = sum(ad);
     const etcTotal = sum(etc);
+    const fixedTotal = sum(fixed);
     const byMedia = ad.reduce<Record<string, number>>((acc, r) => {
       acc[r.media] = (acc[r.media] ?? 0) + Number(r.amount || 0);
       return acc;
@@ -192,7 +231,12 @@ export default function ExpenseInputPage() {
       acc[k] = (acc[k] ?? 0) + Number(r.amount || 0);
       return acc;
     }, {});
-    return { adTotal, etcTotal, byMedia, byType, total: adTotal + etcTotal };
+    const byFixed = fixed.reduce<Record<string, number>>((acc, r) => {
+      const k = r.expense_type ?? r.media ?? "기타";
+      acc[k] = (acc[k] ?? 0) + Number(r.amount || 0);
+      return acc;
+    }, {});
+    return { adTotal, etcTotal, fixedTotal, byMedia, byType, byFixed, total: adTotal + etcTotal + fixedTotal };
   }, [rows]);
 
   const submitAd = async (e: React.FormEvent) => {
@@ -277,6 +321,72 @@ export default function ExpenseInputPage() {
     fetchRows();
   };
 
+  const submitFixed = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    if (!fixedForm.expense_type || !fixedForm.amount || !fixedForm.spend_date) {
+      toast.error("집행일·항목·금액은 필수입니다");
+      return;
+    }
+    setSaving(true);
+    const amount = Number(fixedForm.amount.replace(/[^0-9.-]/g, "")) || 0;
+    const { error } = await supabase.from("ad_spend").insert({
+      created_by: user.id,
+      category: "고정지출",
+      spend_date: fixedForm.spend_date,
+      spend_month: fixedForm.spend_date.slice(0, 7),
+      media: fixedForm.expense_type,
+      expense_type: fixedForm.expense_type,
+      channel: null,
+      amount,
+      campaign: fixedForm.vendor || null,
+      note: fixedForm.note || null,
+    });
+    if (error) {
+      setSaving(false);
+      return toast.error("저장 실패: " + error.message);
+    }
+
+    // Optionally save as recurring template
+    if (fixedForm.auto_register) {
+      const monthKey = fixedForm.spend_date.slice(0, 7);
+      await supabase.from("recurring_expenses").insert({
+        created_by: user.id,
+        expense_type: fixedForm.expense_type,
+        amount,
+        vendor: fixedForm.vendor || null,
+        note: fixedForm.note || null,
+        active: true,
+        auto_register: true,
+        day_of_month: Math.min(28, Math.max(1, fixedForm.day_of_month || 1)),
+        last_generated_month: monthKey,
+      });
+      toast.success("고정지출 저장 + 매월 자동 등록 템플릿 추가");
+      fetchRecurring();
+    } else {
+      toast.success("고정지출이 저장되었습니다");
+    }
+    setSaving(false);
+    setFixedForm({ spend_date: todayISO(), expense_type: "", amount: "", vendor: "", note: "", auto_register: true, day_of_month: 1 });
+    fetchRows();
+  };
+
+  const toggleRecurringActive = async (r: RecurringRow) => {
+    const { error } = await supabase
+      .from("recurring_expenses")
+      .update({ active: !r.active })
+      .eq("id", r.id);
+    if (error) toast.error(error.message);
+    else fetchRecurring();
+  };
+
+  const deleteRecurring = async (id: string) => {
+    if (!confirm("이 자동등록 템플릿을 삭제할까요?")) return;
+    const { error } = await supabase.from("recurring_expenses").delete().eq("id", id);
+    if (error) toast.error(error.message);
+    else { toast.success("삭제됨"); fetchRecurring(); }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm("이 지출 내역을 삭제할까요?")) return;
     const { error } = await supabase.from("ad_spend").delete().eq("id", id);
@@ -356,6 +466,13 @@ export default function ExpenseInputPage() {
           <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(totals.etcTotal)}</div>
           <div className="text-[11px] text-muted-foreground mt-1">임대료 · 통신비 · 운영비 등</div>
         </Card>
+        <Card className="p-5 glass border-primary/20">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Repeat className="size-3.5" /> 고정지출
+          </div>
+          <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(totals.fixedTotal)}</div>
+          <div className="text-[11px] text-muted-foreground mt-1">SaaS · 렌탈 · 구독 등 매월 반복</div>
+        </Card>
         <Card className="p-5 glass border-expense/20">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Building2 className="size-3.5" /> 유통망 지원금 (지출)
@@ -380,13 +497,16 @@ export default function ExpenseInputPage() {
       </div>
 
       <Card className="p-6 glass mb-6">
-        <Tabs value={tab} onValueChange={(v) => setTab(v as "광고비" | "기타지출")}>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "광고비" | "기타지출" | "고정지출")}>
           <TabsList className="mb-5">
             <TabsTrigger value="광고비" className="gap-2">
               <Megaphone className="size-4" /> 광고비
             </TabsTrigger>
             <TabsTrigger value="기타지출" className="gap-2">
               <Receipt className="size-4" /> 기타 지출
+            </TabsTrigger>
+            <TabsTrigger value="고정지출" className="gap-2">
+              <Repeat className="size-4" /> 고정지출
             </TabsTrigger>
           </TabsList>
 
