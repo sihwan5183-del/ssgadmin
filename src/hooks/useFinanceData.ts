@@ -243,13 +243,14 @@ export function useFinanceData(): FinanceData {
     }));
 
     // ---------- 신규 정의: 수익/지출 브레이크다운 ----------
+    // 0원이라도 항상 표기하여 데이터 정합성 검증 가능하도록 filter 제거
     const revenueBreakdown = [
-      { key: "commission", label: "단가표 기준 수수료", amount: sumCommission },
-      { key: "vas", label: "부가서비스 수수료", amount: sumVas },
-      { key: "receivable", label: "미수금 (수급완료)", amount: sumReceivable },
-      { key: "voucher", label: "상품권 (반납완료)", amount: sumVoucher },
-      { key: "trade_in", label: "중고폰 (확정 반납)", amount: sumTradeIn },
-    ].filter((item) => item.amount > 0);
+      { key: "commission", label: "단가표 수수료 합계", amount: sumCommission },
+      { key: "vas", label: "부가서비스 수수료 합계", amount: sumVas },
+      { key: "receivable", label: "미수금 수급 합계", amount: sumReceivable },
+      { key: "voucher", label: "상품권 반납 합계", amount: sumVoucher },
+      { key: "trade_in", label: "중고폰 반납 합계", amount: sumTradeIn },
+    ];
     const expenseBreakdown = [
       { key: "distributor", label: "유통망 지원금", amount: sumDistributor },
       { key: "cash_open", label: "현금개통 금액", amount: sumCashOpen },
@@ -258,7 +259,7 @@ export function useFinanceData(): FinanceData {
       { key: "corp_card", label: "5번 법인카드 결제금액", amount: sumCorpCard },
       { key: "ad_spend", label: "광고비 / 기타지출", amount: totalAdSpend },
       { key: "moyo_fee", label: "모요 수수료", amount: sumMoyoFee },
-    ].filter((item) => item.amount > 0);
+    ];
 
     const computedRevenue = revenueBreakdown.reduce((s, r) => s + r.amount, 0);
     const totalExpense = expenseBreakdown.reduce((s, r) => s + r.amount, 0);
