@@ -194,6 +194,70 @@ const SalesLedgerPage = () => {
     [managerNameMap],
   );
 
+  // === 일괄 담당자 지정용: 활성 직원 목록 ===
+  const [staffList, setStaffList] = useState<{ user_id: string; display_name: string }[]>([]);
+  const [bulkManager, setBulkManager] = useState<string>("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+  useEffect(() => {
+    if (!isAdmin) return;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("user_id, display_name")
+        .eq("status", "active")
+        .order("display_name", { ascending: true });
+      const list = (data ?? []) as { user_id: string; display_name: string }[];
+      setStaffList(list);
+      setManagerNameMap((prev) => {
+        const next = { ...prev };
+        list.forEach((p) => { if (p.user_id && p.display_name) next[p.user_id] = p.display_name; });
+        return next;
+      });
+    })();
+  }, [isAdmin]);
+
+  // 담당자 비어있는지 헬퍼
+  const isManagerMissing = (r: SaleRow) => {
+    const v = (r.manager ?? "").trim();
+    if (!v) return true;
+    // UUID인데 매핑이 없거나 활성 직원에 없는 경우는 표시상 비어보이지 않음 — 빈 값만 강조
+    return false;
+  };
+
+  const bulkAssignManager = async () => {
+    if (!isAdmin || selected.size === 0 || !bulkManager) return;
+    const ids = Array.from(selected);
+    setBulkBusy(true);
+    try {
+      const { error } = await supabase
+        .from("sales")
+        .update({ manager: bulkManager })
+        .in("id", ids);
+      if (error) throw error;
+      // 더블체크: 실제로 반영되었는지 다시 SELECT
+      const { data: verify, error: verr } = await supabase
+        .from("sales")
+        .select("id, manager")
+        .in("id", ids);
+      if (verr) throw verr;
+      const ok = (verify ?? []).filter((v: any) => v.manager === bulkManager).length;
+      if (ok !== ids.length) {
+        toast.error(`반영 검증 실패: ${ok}/${ids.length}건만 저장됨`);
+      } else {
+        const nm = staffList.find((s) => s.user_id === bulkManager)?.display_name ?? bulkManager;
+        toast.success(`${ids.length}건 담당자 [${nm}] 지정 완료`);
+      }
+      setSelected(new Set());
+      setBulkManager("");
+      load();
+      loadSummary();
+    } catch (e) {
+      toast.error("담당자 일괄 지정 실패", { description: (e as Error).message });
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   // ※ 확정 잠금 정책 폐지 — 직원이 자유롭게 수정 가능. 변경 이력은 sales_audit_log 트리거에 자동 기록됨.
 
   // 5대 오퍼 + 카드결제 + 제휴카드 할인
@@ -226,7 +290,9 @@ const SalesLedgerPage = () => {
     if (statusFilter.length > 0) {
       query = query.in("status", statusFilter);
     }
-    if (managerFilter !== "all") {
+    if (managerFilter === "__none__") {
+      query = query.or("manager.is.null,manager.eq.");
+    } else if (managerFilter !== "all") {
       query = query.eq("manager", managerFilter);
     }
     if (storeFilter !== "all") {
@@ -284,7 +350,8 @@ const SalesLedgerPage = () => {
       .gte("open_date", startDate)
       .lte("open_date", endDate)
       .in("status", ["개통완료", "설치완료"]);
-    if (managerFilter !== "all") q = q.eq("manager", managerFilter);
+    if (managerFilter === "__none__") q = q.or("manager.is.null,manager.eq.");
+    else if (managerFilter !== "all") q = q.eq("manager", managerFilter);
     if (storeFilter !== "all") q = q.eq("channel", storeFilter);
     if (productFilter !== "all") q = q.eq("product", productFilter);
     if (moyoFilter === "applied") {
@@ -706,6 +773,7 @@ const SalesLedgerPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">직원 전체</SelectItem>
+                  <SelectItem value="__none__">⚠ 담당자 없음</SelectItem>
                   {managers.map((m) => (
                     <SelectItem key={m} value={m}>{UUID_RE.test(m) && managerNameMap[m] ? managerNameMap[m] : m}</SelectItem>
                   ))}
@@ -914,6 +982,22 @@ const SalesLedgerPage = () => {
         <div className="ml-auto flex items-center gap-2">
           <Badge className="bg-primary/15 text-primary-glow border-primary/30">총 {dbSummary.count.toLocaleString()}건</Badge>
           {isAdmin && selected.size > 0 && (
+            <div className="flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-50 dark:bg-amber-500/10 px-2 py-1">
+              <span className="text-[11px] font-medium text-amber-700 dark:text-amber-300">담당자 일괄지정({selected.size})</span>
+              <Select value={bulkManager} onValueChange={setBulkManager}>
+                <SelectTrigger className="h-7 w-[140px] text-xs"><SelectValue placeholder="직원 선택" /></SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {staffList.map((s) => (
+                    <SelectItem key={s.user_id} value={s.user_id}>{s.display_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button size="sm" className="h-7 px-2 text-xs" disabled={!bulkManager || bulkBusy} onClick={bulkAssignManager}>
+                {bulkBusy ? "적용중…" : "적용"}
+              </Button>
+            </div>
+          )}
+          {isAdmin && selected.size > 0 && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" size="sm"
@@ -1025,6 +1109,7 @@ const SalesLedgerPage = () => {
                   <tr key={r.id} className={cn(
                     "border-b border-border/20 hover:bg-muted/30 cursor-pointer transition-colors",
                     isMoyoExcluded && "text-muted-foreground",
+                    isManagerMissing(r) && "bg-amber-50/60 dark:bg-amber-500/10",
                   )}
                   onClick={handleRowClick}
                   >
@@ -1057,7 +1142,13 @@ const SalesLedgerPage = () => {
                       </div>
                     </td>
                     <td className="px-3 py-2.5 whitespace-nowrap font-medium">
-                      {resolveManager(r.manager, (r as any).created_by)}
+                      {isManagerMissing(r) ? (
+                        <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-300">
+                          <AlertTriangle className="size-3.5" /> 미지정
+                        </span>
+                      ) : (
+                        resolveManager(r.manager, (r as any).created_by)
+                      )}
                       <ResignedTag userId={r.created_by} ids={resignedIds} />
                     </td>
                     <td className="px-3 py-2.5">{r.product ?? "-"}</td>
