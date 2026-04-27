@@ -444,12 +444,23 @@ const ActivitiesPage = () => {
   const [searchParams] = useSearchParams();
   const wantPending = searchParams.get("pending") === "1";
   const tabParam = searchParams.get("tab");
-  const initialTab = tabParam || (wantPending ? "search" : (isAdmin ? "super" : "search"));
+  const statusParam = searchParams.get("status");
+  const initialTab =
+    tabParam ||
+    (statusParam === "청약완료,택배발송,예약"
+      ? "pending-activation"
+      : statusParam === "청약완료,택배발송"
+        ? "subscribed"
+        : wantPending
+          ? "search"
+          : (isAdmin ? "super" : "search"));
   const [tab, setTab] = useState<string>(initialTab);
   useEffect(() => {
-    if (wantPending) setTab("search");
-    else if (tabParam) setTab(tabParam);
-  }, [wantPending, tabParam]);
+    if (tabParam) setTab(tabParam);
+    else if (statusParam === "청약완료,택배발송,예약") setTab("pending-activation");
+    else if (statusParam === "청약완료,택배발송") setTab("subscribed");
+    else if (wantPending) setTab("search");
+  }, [wantPending, tabParam, statusParam]);
 
   return (
     <>
