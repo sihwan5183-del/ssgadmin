@@ -971,34 +971,34 @@ const SalesLedgerPage = () => {
       {/* 테이블 */}
       <section className="glass-strong rounded-2xl p-5 md:p-6 shadow-card-elevated">
         <div className="overflow-x-auto -mx-2">
-          <table className="w-full text-xs min-w-[1100px]">
+          <table className="w-full text-[13px] min-w-[1400px] font-sans [font-feature-settings:'tnum']">
             <thead>
-              <tr className="text-[11px] text-muted-foreground border-b border-border/40">
+              <tr className="text-[12px] text-muted-foreground border-b border-border/40 bg-muted/30">
                 {isAdmin && (
                   <th className="px-3 py-2 w-8">
                     <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="전체 선택" />
                   </th>
                 )}
-                <th className="text-left px-3 py-2 font-medium">개통일</th>
-                <th className="text-left px-3 py-2 font-medium">경로</th>
-                <th className="text-left px-3 py-2 font-medium whitespace-nowrap">담당</th>
-                <th className="text-left px-3 py-2 font-medium">상품</th>
-                <th className="text-left px-3 py-2 font-medium">고객</th>
-                <th className="text-left px-3 py-2 font-medium">연락처</th>
-                <th className="text-left px-3 py-2 font-medium">단말</th>
-                <th className="text-left px-3 py-2 font-medium">요금제</th>
-                <th className="text-left px-3 py-2 font-medium">약정</th>
-                <th className="text-center px-2 py-2 font-medium">할부</th>
-                <th className="text-center px-2 py-2 font-medium">동판</th>
-                <th className="text-center px-2 py-2 font-medium">오퍼</th>
-                <th className="text-right px-3 py-2 font-semibold text-sky-600 dark:text-sky-400">리베이트 단가</th>
-                <th className="text-right px-3 py-2 font-semibold text-rose-600 dark:text-rose-400">오퍼(지원금)</th>
-                <th className="text-right px-3 py-2 font-semibold">최종 수익</th>
-                <th className="text-right px-3 py-2 font-semibold text-sky-600 dark:text-sky-400">미수금</th>
-                <th className="text-right px-3 py-2 font-semibold text-rose-600 dark:text-rose-400">고객지원</th>
-                <th className="text-right px-3 py-2 font-semibold text-rose-600 dark:text-rose-400">법인카드</th>
-                <th className="text-right px-3 py-2 font-semibold text-sky-600 dark:text-sky-400">중고폰</th>
-                <th className="text-right px-3 py-2 font-medium">관리</th>
+                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">개통일</th>
+                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">경로</th>
+                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">담당</th>
+                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">상품</th>
+                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">고객</th>
+                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">연락처</th>
+                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">단말</th>
+                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">요금제</th>
+                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">약정</th>
+                <th className="text-center px-2 py-2.5 font-medium whitespace-nowrap">할부</th>
+                <th className="text-center px-2 py-2.5 font-medium whitespace-nowrap">동판</th>
+                <th className="text-center px-2 py-2.5 font-medium whitespace-nowrap">오퍼</th>
+                <th className="text-right px-3 py-2.5 font-semibold whitespace-nowrap text-foreground">리베이트 단가</th>
+                <th className="text-right px-3 py-2.5 font-semibold whitespace-nowrap text-destructive">오퍼(지원금)</th>
+                <th className="text-right px-3 py-2.5 font-semibold whitespace-nowrap text-foreground">최종 수익</th>
+                <th className="text-right px-3 py-2.5 font-semibold whitespace-nowrap text-foreground">미수금</th>
+                <th className="text-right px-3 py-2.5 font-semibold whitespace-nowrap text-destructive">고객지원</th>
+                <th className="text-right px-3 py-2.5 font-semibold whitespace-nowrap text-destructive">법인카드</th>
+                <th className="text-right px-3 py-2.5 font-semibold whitespace-nowrap text-foreground">중고폰</th>
+                <th className="text-right px-3 py-2.5 font-medium whitespace-nowrap">관리</th>
               </tr>
             </thead>
             <tbody>
@@ -1023,9 +1023,7 @@ const SalesLedgerPage = () => {
                 };
                 return (
                   <tr key={r.id} className={cn(
-                    "border-b border-border/20 hover:bg-white/[0.03] cursor-pointer transition-colors",
-                    mine && "bg-primary/[0.04]",
-                    hasPending && "bg-amber-50/70 hover:bg-amber-500/[0.12]",
+                    "border-b border-border/20 hover:bg-muted/30 cursor-pointer transition-colors",
                     isMoyoExcluded && "text-muted-foreground",
                   )}
                   onClick={handleRowClick}
@@ -1099,18 +1097,17 @@ const SalesLedgerPage = () => {
                         ? <Badge variant="secondary" className="text-[9px] px-1.5 py-0">무오퍼</Badge>
                         : <Badge variant="outline" className="text-[9px] px-1.5 py-0">오퍼</Badge>}
                     </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-sky-600 dark:text-sky-400">
+                    <td className="px-3 py-3 text-right tabular-nums font-bold text-foreground">
                       {(r.unit_price ?? 0).toLocaleString("ko-KR")}
                     </td>
                     <td className={cn(
-                      "px-3 py-2.5 text-right tabular-nums font-semibold",
-                      offer < 0 ? "text-destructive" : "text-rose-600 dark:text-rose-400"
+                      "px-3 py-3 text-right tabular-nums font-bold text-destructive"
                     )}>
                       {offer.toLocaleString("ko-KR")}
                     </td>
                     <td className={cn(
-                      "px-3 py-2.5 text-right tabular-nums font-semibold",
-                      negative ? "text-destructive" : hasDeductions(r) ? "text-warning" : "text-revenue"
+                      "px-3 py-3 text-right tabular-nums font-bold",
+                      negative ? "text-destructive" : "text-foreground"
                     )}>
                       <TooltipProvider delayDuration={200}>
                         <Tooltip>
@@ -1134,38 +1131,32 @@ const SalesLedgerPage = () => {
                         </Tooltip>
                       </TooltipProvider>
                     </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums">
+                    <td className="px-3 py-3 text-right tabular-nums">
                       {(r.receivable_amount ?? 0) > 0 ? (
                         <span className={
                           r.receivable_paid === "완료"
                             ? "text-muted-foreground line-through"
                             : (r.receivable_amount ?? 0) < 0
-                              ? "text-destructive font-semibold"
-                              : "text-sky-600 dark:text-sky-400 font-semibold"
+                              ? "text-destructive font-bold"
+                              : "text-foreground font-bold"
                         }>
                           {(r.receivable_amount ?? 0).toLocaleString("ko-KR")}
                         </span>
                       ) : <span className="text-muted-foreground">-</span>}
                     </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums">
+                    <td className="px-3 py-3 text-right tabular-nums">
                       {(r.customer_support_amount ?? 0) > 0
-                        ? <span className={cn(
-                            "font-semibold",
-                            (r.customer_support_amount ?? 0) < 0 ? "text-destructive" : "text-rose-600 dark:text-rose-400"
-                          )}>{(r.customer_support_amount ?? 0).toLocaleString("ko-KR")}</span>
+                        ? <span className="font-bold text-destructive">{(r.customer_support_amount ?? 0).toLocaleString("ko-KR")}</span>
                         : <span className="text-muted-foreground">-</span>}
                     </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums">
+                    <td className="px-3 py-3 text-right tabular-nums">
                       {(r.corp_card_amount ?? 0) > 0
-                        ? <span className={cn(
-                            "font-semibold",
-                            (r.corp_card_amount ?? 0) < 0 ? "text-destructive" : "text-rose-600 dark:text-rose-400"
-                          )}>{(r.corp_card_amount ?? 0).toLocaleString("ko-KR")}</span>
+                        ? <span className="font-bold text-destructive">{(r.corp_card_amount ?? 0).toLocaleString("ko-KR")}</span>
                         : <span className="text-muted-foreground">-</span>}
                     </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums">
+                    <td className="px-3 py-3 text-right tabular-nums">
                       {r.trade_in_enabled ? (
-                        <span className="text-sky-600 dark:text-sky-400 font-semibold" title={r.trade_in_model ?? ""}>
+                        <span className="text-foreground font-bold" title={r.trade_in_model ?? ""}>
                           {(r.trade_in_confirmed ?? 0) > 0
                             ? `₩${(r.trade_in_confirmed ?? 0).toLocaleString("ko-KR")}`
                             : "대기"}
