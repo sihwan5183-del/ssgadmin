@@ -120,6 +120,14 @@ const APPROVAL_META: Record<ApprovalStatus, { className: string; icon: typeof Ch
 const SELECT_COLS =
   "id, created_by, customer_name, phone, birth_date, device_serial, device_model, channel, product, rate_plan, sale_type, open_method, bundle, status, open_date, manager, unit_price, vas_fee, extra_subsidy, moyo_excluded, net_fee, note, approval_status, locked, approved_at, pending_items, pending_note, pending_resolved, approval_override_reason, distributor_amount, cash_support_amount, cash_open, receivable_amount, receivable_paid, revision_fields, revision_reason, revision_requested_at, re_review_requested_at, custom_fields";
 
+const PENDING_ACTIVATION_STATUSES = ["청약완료", "택배발송"] as const;
+const PENDING_ACTIVATION_STATUS_SET = new Set<string>(PENDING_ACTIVATION_STATUSES);
+const PENDING_ACTIVATION_STATUS_OR =
+  "status.eq.청약완료,status.eq.택배발송,status.ilike.청약*완료,status.ilike.택배*발송";
+const normalizeStatusValue = (value: string | null | undefined) => (value ?? "").replace(/\s+/g, "").trim();
+const matchesPendingActivationStatus = (value: string | null | undefined) =>
+  PENDING_ACTIVATION_STATUS_SET.has(normalizeStatusValue(value));
+
 const SALE_STATUS_BADGE: Record<string, string> = {
   청약완료: "border-sky-400 text-sky-700 bg-sky-50 dark:bg-sky-500/15 dark:text-sky-300 dark:border-sky-500/30",
   택배발송: "border-indigo-400 text-indigo-700 bg-indigo-50 dark:bg-indigo-500/15 dark:text-indigo-300 dark:border-indigo-500/30",
@@ -246,8 +254,12 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
     const onlyPending = pendingOverride ?? pendingOnly;
     const onlyUnhandled = unhandledOverride ?? unhandledOnly;
     const onlyAbnormal = abnormalOverride ?? abnormalOnly;
-    const stStatus = statusOverride !== undefined ? statusOverride : statusFilter;
+    const stStatus = presetStatus ?? (statusOverride !== undefined ? statusOverride : statusFilter);
     const stApproval = approvalOverride !== undefined ? approvalOverride : approvalFilter;
+    const statusList = stStatus?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
+    const normalizedStatusList = statusList.map(normalizeStatusValue);
+    const isPendingActivationFilter =
+      normalizedStatusList.length > 0 && normalizedStatusList.every((s) => PENDING_ACTIVATION_STATUS_SET.has(s));
 
     setSearching(true);
     let query = supabase.from("sales").select(SELECT_COLS);
@@ -262,9 +274,9 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
     if (onlyUnhandled) query = query.eq("pending_resolved", false);
     if (onlyAbnormal) query = query.contains("custom_fields", { final_verdict: "비정상" });
     if (stStatus) {
-      const list = stStatus.split(",").map((s) => s.trim()).filter(Boolean);
-      if (list.length > 1) query = query.in("status", list);
-      else if (list.length === 1) query = query.eq("status", list[0]);
+      if (isPendingActivationFilter) query = query.or(PENDING_ACTIVATION_STATUS_OR);
+      else if (statusList.length > 1) query = query.in("status", statusList);
+      else if (statusList.length === 1) query = query.eq("status", statusList[0]);
     }
     if (stApproval) {
       const list = stApproval.split(",").map((s) => s.trim()).filter(Boolean);
@@ -272,8 +284,12 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
       else if (list.length === 1) query = query.eq("approval_status", list[0]);
     }
     // 기간 필터 적용 (검색어 없이 기간만으로도 조회 가능)
-    // ※ presetStatus 모드(미완료 항목 탭 등)에서는 open_date 가 NULL 인 청약완료 건도 포함하도록 기간 필터를 생략
-    if (!bypassPeriod) {
+    // 미완료 항목은 open_date가 비어있는 청약완료 건을 위해 created_at을 보조 기간 기준으로 사용
+    if (isPendingActivationFilter) {
+      query = query.or(
+        `and(open_date.gte.${startDate},open_date.lte.${endDate}),and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`,
+      );
+    } else if (!bypassPeriod) {
       query = query.gte("open_date", startDate).lte("open_date", endDate);
     }
 
@@ -283,7 +299,9 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
       .limit(200);
     setSearching(false);
     if (error) return toast.error(error.message);
-    const rows = (data ?? []) as SaleHit[];
+    const rows = ((data ?? []) as SaleHit[]).filter((row) =>
+      !isPendingActivationFilter || matchesPendingActivationStatus(row.status),
+    );
     setResults(rows);
     if (autoOpenIfSingle && rows.length === 1) {
       openDetail(rows[0]);
