@@ -104,7 +104,7 @@ const RATE_GOALS = [
 ] as const;
 
 // Mix chart products (detailed breakdown)
-const MIX_PRODUCTS = ["모바일", "인터넷", "TV프리", "스마트홈", "부가서비스"];
+const MIX_PRODUCTS = ["모바일", "2ND", "인터넷", "TV프리", "스마트홈", "부가서비스"];
 
 // Buckets for product breakdown
 function productBucket(p: string | null): string {
@@ -126,7 +126,7 @@ function isWiredOrSolution(p: string | null) {
 
 function categorize(sale: SaleRow): "모바일" | "결합/인터넷·TV" | "기타 오퍼" {
   const p = (sale.product ?? "").toLowerCase();
-  if (/(인터넷|tv|결합|iot|기가)/i.test(sale.product ?? "")) return "결합/인터넷·TV";
+  if (/(인터넷|tv|결합|스마트홈|기가)/i.test(sale.product ?? "")) return "결합/인터넷·TV";
   if (sale.device_model || /모바일|mobile/.test(p)) return "모바일";
   return "기타 오퍼";
 }

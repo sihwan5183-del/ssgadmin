@@ -22,7 +22,8 @@ const DEFAULT_PRODUCT_CATEGORIES: ProductCategoryConfig[] = [
   { label: "모바일", keywords: ["모바일", "USIM MNP", "세컨"], visible: true, order: 0 },
   { label: "홈", keywords: ["인터넷", "TV프리", "홈"], visible: true, order: 1 },
   { label: "업셀", keywords: ["대명"], visible: true, order: 2 },
-  { label: "IoT", keywords: ["IOT", "iot"], visible: true, order: 3 },
+  { label: "스마트홈", keywords: ["스마트홈", "IOT", "iot", "홈IOT", "홈안심"], visible: true, order: 3 },
+  { label: "2nd", keywords: ["2nd", "세컨", "워치", "태블릿"], visible: true, order: 4 },
 ];
 
 const matchesProductDynamic = (

@@ -42,7 +42,7 @@ export const channelActivationStats = [
 export const strategyProductStats = [
   { label: "인터넷", count: 0 },
   { label: "TV프리", count: 0 },
-  { label: "IOT", count: 0 },
+  { label: "스마트홈", count: 0 },
   { label: "대명", count: 0 },
 ];
 
@@ -83,7 +83,7 @@ export const teamRanking: {
 
 export const inflowChannels = ["당근", "모요", "도그마루", "오프라인", "지인소개", "기타"] as const;
 export const planTiers = ["5G 시그니처", "5G 프리미어", "5G 스탠다드", "LTE 프리미엄", "LTE 베이직"] as const;
-export const strategyProducts = ["TV프리", "IOT", "대명"] as const;
+export const strategyProducts = ["TV프리", "스마트홈", "대명"] as const;
 export const addonServices = ["넷플릭스팩", "디즈니+팩", "유튜브 프리미엄", "AI케어", "보험"] as const;
 
 export const formatKRW = (n: number) => "₩" + n.toLocaleString("ko-KR");

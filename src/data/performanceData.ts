@@ -21,7 +21,7 @@ export const usimStats = {
 export const strategyProductsDetail = [
   { name: "인터넷", current: 0, target: 80, color: "hsl(195 90% 60%)" },
   { name: "TV프리", current: 0, target: 60, color: "hsl(270 90% 65%)" },
-  { name: "IOT", current: 0, target: 50, color: "hsl(320 90% 65%)" },
+  { name: "스마트홈", current: 0, target: 50, color: "hsl(320 90% 65%)" },
   { name: "대명", current: 0, target: 30, color: "hsl(35 95% 60%)" },
 ];
 
