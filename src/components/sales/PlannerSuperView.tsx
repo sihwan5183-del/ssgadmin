@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { useViewScope } from "@/contexts/ViewScopeContext";
 import { sumRevenue, sumOffer } from "@/hooks/useNetFeeFormula";
+import { useResignedUsers, ResignedTag } from "@/hooks/useResignedUsers";
 
 type Tab = "submitted" | "revision" | "approved";
 
@@ -83,6 +84,7 @@ export const PlannerSuperView = () => {
   const isCEO = roles.includes("ceo") || roles.includes("admin");
   const isPlanner = roles.includes("planner") || isCEO;
   const { startImpersonation } = useViewScope();
+  const resignedIds = useResignedUsers();
 
   const [tab, setTab] = useState<Tab>("submitted");
   const [rows, setRows] = useState<Row[]>([]);
@@ -522,6 +524,7 @@ export const PlannerSuperView = () => {
                             <Eye className="size-3" />
                           </button>
                         ) : "-"}
+                        <ResignedTag userId={r.created_by} ids={resignedIds} />
                         <div className="text-[10px] text-muted-foreground">{r.channel ?? "-"}</div>
                       </td>
                       {isPlanner && (
