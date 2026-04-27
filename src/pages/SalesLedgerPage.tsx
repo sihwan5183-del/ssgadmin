@@ -1064,6 +1064,15 @@ const SalesLedgerPage = () => {
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span>{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
+                        {(() => {
+                          const w = (r.custom_fields as any)?.welfare_discount;
+                          if (!w || w === "해당없음") return null;
+                          return (
+                            <Badge variant="outline" className="text-[9px] gap-0.5 border-blue-400 text-blue-700 bg-blue-50 px-1.5 py-0">
+                              ♿ {w}
+                            </Badge>
+                          );
+                        })()}
                         {isInspected && (
                           <Badge variant="outline" className="text-[9px] gap-0.5 border-emerald-500/50 text-emerald-700 bg-emerald-50 px-1.5 py-0">
                             <CheckCircle2 className="size-2.5" /> 검수 완료
