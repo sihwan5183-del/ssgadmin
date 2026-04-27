@@ -14,9 +14,13 @@ export const CashTodayCard = () => {
       const todayISO = new Date().toISOString().slice(0, 10);
       const { data } = await supabase
         .from("sales")
-        .select("cash_support_amount, receivable_amount, receivable_paid")
+        .select("cash_support_amount, receivable_amount, receivable_paid, voucher, voucher_returned")
         .eq("open_date", todayISO);
-      const rows = data ?? [];
+      const all = data ?? [];
+      // 상품권 미반납 건은 정산 합계에서 제외
+      const rows = all.filter(
+        (r: any) => !(r.voucher && String(r.voucher).trim() !== "" && r.voucher_returned !== "유"),
+      );
       const cash = rows.reduce((s, r: any) => s + Number(r.cash_support_amount ?? 0), 0);
       const receivable = rows
         .filter((r: any) => r.receivable_paid === "입금완료")
