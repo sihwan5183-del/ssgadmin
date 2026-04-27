@@ -334,7 +334,7 @@ const SalesLedgerPage = () => {
       if (qDigits && phone.includes(qDigits)) return true;
       return false;
     });
-  }, [rows, debouncedSearchQ, quickFilter, bundleFilter, noOfferFilter, storeFilter]);
+  }, [rows, debouncedSearchQ, quickFilter, bundleFilter, noOfferFilter]);
 
   const allSelected = filteredRows.length > 0 && filteredRows.every((r) => selected.has(r.id));
   const toggleAll = () => {
