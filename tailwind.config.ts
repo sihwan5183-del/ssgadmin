@@ -42,6 +42,10 @@ export default {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
         },
+        notice: {
+          DEFAULT: "hsl(var(--notice))",
+          foreground: "hsl(var(--notice-foreground))",
+        },
         revenue: "hsl(var(--revenue))",
         expense: "hsl(var(--expense))",
         muted: {
