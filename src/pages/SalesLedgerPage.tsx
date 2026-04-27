@@ -705,7 +705,10 @@ const SalesLedgerPage = () => {
                     )}
                     <td className="px-3 py-2.5">{r.open_date ?? "-"}</td>
                     <td className="px-3 py-2.5">{r.channel ?? "-"}</td>
-                    <td className="px-3 py-2.5">{r.manager ?? "-"}</td>
+                    <td className="px-3 py-2.5">
+                      {r.manager ?? "-"}
+                      <ResignedTag userId={r.created_by} ids={resignedIds} />
+                    </td>
                     <td className="px-3 py-2.5">{r.product ?? "-"}</td>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1.5 flex-wrap">
