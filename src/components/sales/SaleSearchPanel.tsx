@@ -128,6 +128,16 @@ const normalizeStatusValue = (value: string | null | undefined) => (value ?? "")
 const matchesPendingActivationStatus = (value: string | null | undefined) =>
   PENDING_ACTIVATION_STATUS_SET.has(normalizeStatusValue(value));
 
+// 상품군에 따라 완료 버튼 라벨/저장값 결정
+const isHomeProduct = (product: string | null | undefined) => {
+  const p = (product ?? "").toString();
+  return /홈|인터넷|TV|IOT|스마트홈/i.test(p);
+};
+const completionStatusFor = (product: string | null | undefined) =>
+  isHomeProduct(product) ? "설치완료" : "개통완료";
+const completionLabelFor = (product: string | null | undefined) =>
+  isHomeProduct(product) ? "설치 완료" : "개통 완료";
+
 const SALE_STATUS_BADGE: Record<string, string> = {
   청약완료: "border-sky-400 text-sky-700 bg-sky-50 dark:bg-sky-500/15 dark:text-sky-300 dark:border-sky-500/30",
   택배발송: "border-indigo-400 text-indigo-700 bg-indigo-50 dark:bg-indigo-500/15 dark:text-indigo-300 dark:border-indigo-500/30",
