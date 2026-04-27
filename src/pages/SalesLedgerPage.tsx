@@ -543,6 +543,12 @@ const SalesLedgerPage = () => {
         <SummaryCard icon={Banknote} label="미수금 건" value={`${unpaidCount}건`} accent={unpaidCount > 0 ? "destructive" : "primary"} />
         <SummaryCard icon={Gift} label="상품권 미반납" value={`${unreturnedCount}건`} accent={unreturnedCount > 0 ? "destructive" : "primary"} />
       </div>
+      {dbSummary.excludedCount > 0 && (
+        <div className="-mt-3 mb-4 text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+          <AlertTriangle className="size-3" />
+          상품권 미반납 {dbSummary.excludedCount}건은 합계에서 제외되었습니다 (반납 완료 시 자동 반영)
+        </div>
+      )}
 
       {/* 액션 바 */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
