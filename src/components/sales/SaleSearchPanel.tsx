@@ -128,6 +128,16 @@ const normalizeStatusValue = (value: string | null | undefined) => (value ?? "")
 const matchesPendingActivationStatus = (value: string | null | undefined) =>
   PENDING_ACTIVATION_STATUS_SET.has(normalizeStatusValue(value));
 
+// 상품군에 따라 완료 버튼 라벨/저장값 결정
+const isHomeProduct = (product: string | null | undefined) => {
+  const p = (product ?? "").toString();
+  return /홈|인터넷|TV|IOT|스마트홈/i.test(p);
+};
+const completionStatusFor = (product: string | null | undefined) =>
+  isHomeProduct(product) ? "설치완료" : "개통완료";
+const completionLabelFor = (product: string | null | undefined) =>
+  isHomeProduct(product) ? "설치 완료" : "개통 완료";
+
 const SALE_STATUS_BADGE: Record<string, string> = {
   청약완료: "border-sky-400 text-sky-700 bg-sky-50 dark:bg-sky-500/15 dark:text-sky-300 dark:border-sky-500/30",
   택배발송: "border-indigo-400 text-indigo-700 bg-indigo-50 dark:bg-indigo-500/15 dark:text-indigo-300 dark:border-indigo-500/30",
@@ -178,6 +188,44 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [purgeOpen, setPurgeOpen] = useState(false);
+  // 개통/설치 완료 처리 중인 행(부드러운 사라짐 애니메이션용)
+  const [completingIds, setCompletingIds] = useState<Set<string>>(new Set());
+
+  const markCompletion = async (row: SaleHit, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const nextStatus = completionStatusFor(row.product);
+    // 1) 애니메이션 트리거
+    setCompletingIds((prev) => {
+      const n = new Set(prev);
+      n.add(row.id);
+      return n;
+    });
+    // 2) DB 업데이트
+    const { error } = await supabase
+      .from("sales")
+      .update({ status: nextStatus })
+      .eq("id", row.id);
+    if (error) {
+      toast.error("완료 처리 실패: " + error.message);
+      setCompletingIds((prev) => {
+        const n = new Set(prev);
+        n.delete(row.id);
+        return n;
+      });
+      return;
+    }
+    toast.success(`${row.customer_name ?? "고객"} · ${nextStatus} 처리됨`);
+    // 3) 애니메이션 후 리스트에서 제거
+    setTimeout(() => {
+      setResults((prev) => prev.filter((r) => r.id !== row.id));
+      setCompletingIds((prev) => {
+        const n = new Set(prev);
+        n.delete(row.id);
+        return n;
+      });
+      refreshCounts();
+    }, 320);
+  };
 
   const purgeFilter: PurgeFilter = useMemo(() => ({
     table: "sales",
@@ -615,7 +663,11 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
                         return (
                           <div
                             key={r.id}
-                            className={`flex items-stretch ${sel ? "bg-primary/5" : ""} ${
+                            className={`flex items-stretch transition-all duration-300 ease-out overflow-hidden ${
+                              completingIds.has(r.id)
+                                ? "opacity-0 -translate-x-4 max-h-0 py-0 my-0 border-transparent"
+                                : "opacity-100 max-h-40"
+                            } ${sel ? "bg-primary/5" : ""} ${
                               isAbnormal ? "bg-destructive/5"
                               : installOverdue ? "bg-orange-50/80"
                               : hasUnhandled ? "bg-yellow-100/80" : ""
@@ -684,6 +736,21 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
                               </div>
                             </div>
                             </button>
+                            {/* 전용 완료 버튼: 모바일=개통완료 / 홈=설치완료 */}
+                            {matchesPendingActivationStatus(r.status) && (
+                              <div className="self-center pr-3 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                <Button
+                                  size="sm"
+                                  onClick={(e) => markCompletion(r, e)}
+                                  disabled={completingIds.has(r.id)}
+                                  className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+                                  title={`${completionLabelFor(r.product)} 처리 (리스트에서 제거)`}
+                                >
+                                  <CheckCircle2 className="size-3.5" />
+                                  {completionLabelFor(r.product)}
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
