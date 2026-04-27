@@ -130,12 +130,13 @@ const productBucket = (p: string | null): "모바일" | "인터넷" | "TV프리"
 };
 
 /* ─── TABS ─── */
-type TabKey = "sales" | "profit" | "strategy" | "voucher";
+type TabKey = "sales" | "profit" | "strategy" | "voucher" | "achievement";
 const TABS: { key: TabKey; label: string; icon: typeof Crown; sortFn: (a: RankedUser, b: RankedUser) => number }[] = [
   { key: "sales", label: "판매 왕", icon: Crown, sortFn: (a, b) => b.count - a.count },
   { key: "profit", label: "수익 왕", icon: TrendingUp, sortFn: (a, b) => b.profit - a.profit },
   { key: "strategy", label: "전략 모델 마스터", icon: Zap, sortFn: (a, b) => b.strategyCount - a.strategyCount },
   { key: "voucher", label: "상품권 킬러", icon: Gift, sortFn: (a, b) => b.voucherReturned - a.voucherReturned },
+  { key: "achievement", label: "달성률 챔피언", icon: Target, sortFn: (a, b) => b.achievement - a.achievement || b.count - a.count },
 ];
 
 const PODIUM_STYLES = [
