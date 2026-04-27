@@ -7,7 +7,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { Inquiry, INQUIRY_STATUSES } from "@/hooks/useInquiries";
+import { Inquiry } from "@/hooks/useInquiries";
+import { useInquiryStatuses } from "@/hooks/useInquiryStatuses";
+import { inquiryStatusClass } from "@/lib/inquiryStatus";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ArrowRight, Trash2, CheckCircle2, Phone } from "lucide-react";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
@@ -22,16 +25,10 @@ interface Props {
   onChange: () => void;
 }
 
-const statusVariant = (s: string): "default" | "secondary" | "destructive" | "outline" => {
-  if (s === "개통완료") return "default";
-  if (s === "방문예약") return "secondary";
-  if (s === "종료") return "destructive";
-  return "outline";
-};
-
 export const InquiryList = ({ rows, loading, onChange }: Props) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { statuses } = useInquiryStatuses();
   const [busyId, setBusyId] = useState<string | null>(null);
   const ids = useMemo(() => rows.map((r) => r.id), [rows]);
   const bulk = useBulkSelection<string>(ids);
@@ -200,10 +197,18 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
                   <TableCell>
                     <Select value={r.status} onValueChange={(v) => updateStatus(r, v)} disabled={busyId === r.id || !!r.converted_sale_id}>
                       <SelectTrigger className="h-8 text-xs">
-                        <Badge variant={statusVariant(r.status)} className="text-xs">{r.status}</Badge>
+                        <Badge variant="outline" className={cn("text-xs", inquiryStatusClass(r.status))}>
+                          {r.status}
+                        </Badge>
                       </SelectTrigger>
                       <SelectContent>
-                        {INQUIRY_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        {statuses.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            <Badge variant="outline" className={cn("text-xs", inquiryStatusClass(s))}>
+                              {s}
+                            </Badge>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </TableCell>
@@ -230,7 +235,7 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
             <SelectValue placeholder="상태 일괄 변경" />
           </SelectTrigger>
           <SelectContent>
-            {INQUIRY_STATUSES.map((s) => (
+            {statuses.map((s) => (
               <SelectItem key={s} value={s}>{s}</SelectItem>
             ))}
           </SelectContent>
