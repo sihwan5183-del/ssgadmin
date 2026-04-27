@@ -156,6 +156,7 @@ export default function StaffStatusPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [allSales, setAllSales] = useState<SaleRow[]>([]);
   const [allInquiries, setAllInquiries] = useState<InquiryRow[]>([]);
+  const [prevSales, setPrevSales] = useState<SaleRow[]>([]);
   const [goals, setGoals] = useState<GoalRow[]>([]);
   const [loading, setLoading] = useState(false);
   const { rates: incentiveRates } = useIncentiveRates();
