@@ -397,13 +397,36 @@ export default function AdCalendarPage() {
           </Button>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
+          {/* 필터 */}
+          <div className="flex items-center gap-1.5">
+            <Filter className="size-3.5 text-muted-foreground" />
+            <Select value={filterMedia} onValueChange={setFilterMedia}>
+              <SelectTrigger className="h-8 text-xs w-[110px]"><SelectValue placeholder="매체" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 매체</SelectItem>
+                {MEDIA_OPTIONS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterChannel} onValueChange={setFilterChannel}>
+              <SelectTrigger className="h-8 text-xs w-[120px]"><SelectValue placeholder="인입경로" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 경로</SelectItem>
+                {channelOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {(filterMedia !== "all" || filterChannel !== "all") && (
+              <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={() => { setFilterMedia("all"); setFilterChannel("all"); }}>
+                <X className="size-3" /> 초기화
+              </Button>
+            )}
+          </div>
           <div className="text-sm">
             <span className="text-muted-foreground">월 집행 합계 </span>
             <span className="font-bold text-revenue tabular-nums">₩{monthTotal.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</span>
           </div>
           <div className="text-sm">
             <span className="text-muted-foreground">캠페인 </span>
-            <span className="font-bold tabular-nums">{campaigns.length}개</span>
+            <span className="font-bold tabular-nums">{filteredCampaigns.length}개</span>
           </div>
           {/* 매체 범례 */}
           <div className="flex items-center gap-2 flex-wrap">
