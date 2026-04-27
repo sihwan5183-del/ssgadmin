@@ -619,7 +619,11 @@ const RankingPage = () => {
               <p className="text-sm font-bold">
                 {risingStar.name}
                 {risingStar.store && <span className="text-xs text-muted-foreground font-normal ml-1.5">({risingStar.store})</span>}
-                <span className="text-xs text-primary-glow ml-2">어제 대비 +{risingStar.yesterdayDelta}건 급증! 🚀</span>
+                <span className="text-xs text-primary-glow ml-2">
+                  {risingStar.rankDelta > 0
+                    ? `어제 대비 순위 ▲${risingStar.rankDelta}계단 상승! 🚀`
+                    : `어제 대비 +${risingStar.yesterdayDelta}건 급증! 🚀`}
+                </span>
               </p>
             </div>
           </div>
