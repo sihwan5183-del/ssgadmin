@@ -117,7 +117,7 @@ export function useFinanceData(): FinanceData {
         supabase
           .from("sales")
           .select(
-            "channel, product, open_date, unit_price, distributor_amount, cash_support_amount, extra_subsidy, receivable_amount, moyo_excluded, vas_fee, net_fee",
+            "channel, product, open_date, unit_price, distributor_amount, cash_support_amount, extra_subsidy, receivable_amount, moyo_excluded, vas_fee, net_fee, voucher, voucher_returned",
           )
           .gte("open_date", startDate)
           .lte("open_date", endDate)
@@ -140,6 +140,10 @@ export function useFinanceData(): FinanceData {
   }, [startDate, endDate]);
 
   return useMemo<FinanceData>(() => {
+    // 정산 제외 규칙: 상품권이 있고 반납 미완료('유' 아님) → 합계 제외
+    const isVoucherExcluded = (r: any) =>
+      r.voucher && String(r.voucher).trim() !== "" && r.voucher_returned !== "유";
+    const settledSalesRows = salesRows.filter((r) => !isVoucherExcluded(r));
     // ---------- 합계 ----------
     let totalRevenue = 0;
     let totalDistributor = 0;
@@ -149,7 +153,7 @@ export function useFinanceData(): FinanceData {
     let totalSuccess = 0;
     let moyoAppliedCount = 0;
     let moyoExcludedCount = 0;
-    for (const r of salesRows) {
+    for (const r of settledSalesRows) {
       totalSuccess += 1;
       totalRevenue += Number(r.unit_price ?? 0);
       totalDistributor += Number(r.distributor_amount ?? 0);
@@ -174,9 +178,9 @@ export function useFinanceData(): FinanceData {
     );
 
     // --- 항목별 세부 금액 (field_mapping 기반) ---
-    const totalVasFee = salesRows.reduce((s, r) => s + Number(r.vas_fee ?? 0), 0);
-    const totalNetFee = salesRows.reduce((s, r) => s + Number(r.net_fee ?? 0), 0);
-    const totalExtraSubsidy = salesRows.reduce((s, r) => s + Number(r.extra_subsidy ?? 0), 0);
+    const totalVasFee = settledSalesRows.reduce((s, r) => s + Number(r.vas_fee ?? 0), 0);
+    const totalNetFee = settledSalesRows.reduce((s, r) => s + Number(r.net_fee ?? 0), 0);
+    const totalExtraSubsidy = settledSalesRows.reduce((s, r) => s + Number(r.extra_subsidy ?? 0), 0);
 
     const fieldAmountMap: Record<string, number> = {
       unit_price: totalRevenue,
@@ -226,7 +230,7 @@ export function useFinanceData(): FinanceData {
         channelMap.set(name, { spend: 0, successCount: 0, rebate: 0, offer: 0 });
       return channelMap.get(name)!;
     };
-    for (const r of salesRows) {
+    for (const r of settledSalesRows) {
       const ch = (r.channel ?? "기타").toString().trim() || "기타";
       const row = ensure(ch);
       row.successCount += 1;
@@ -291,7 +295,7 @@ export function useFinanceData(): FinanceData {
 
     // ---------- 상품별 수익 구성 ----------
     const productMap = new Map<string, number>();
-    for (const r of salesRows) {
+    for (const r of settledSalesRows) {
       const key = (r.product ?? "기타").toString().trim() || "기타";
       productMap.set(key, (productMap.get(key) ?? 0) + Number(r.unit_price ?? 0));
     }
@@ -306,7 +310,7 @@ export function useFinanceData(): FinanceData {
 
     // ---------- 주차별 채널별 평균 오퍼 ----------
     const offerMap = new Map<string, Map<string, { sum: number; cnt: number }>>();
-    for (const r of salesRows) {
+    for (const r of settledSalesRows) {
       if (!r.open_date) continue;
       const wk = isoWeekKey(r.open_date);
       const ch = (r.channel ?? "기타").toString();
