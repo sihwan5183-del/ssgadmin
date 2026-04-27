@@ -336,6 +336,13 @@ export const SaleSearchPanel = ({ presetStatus = null }: SaleSearchPanelProps = 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate]);
 
+  // 외부 탭에서 전달받은 상태 프리셋(개통대기/청약완료 등) 적용
+  useEffect(() => {
+    setStatusFilter(presetStatus ?? null);
+    search(undefined, undefined, undefined, undefined, presetStatus ?? null, undefined, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetStatus]);
+
   const openDetail = (sale: SaleHit) => {
     setSelected(sale);
     setEditForm(sale);
