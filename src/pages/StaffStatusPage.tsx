@@ -1520,32 +1520,93 @@ function GoalDialog({
   currentGoals: GoalRow[];
   onSaved: () => void;
 }) {
-  const [values, setValues] = useState<Record<string, string>>({});
+  // Count goal rows: keyed as `${product}|${sale_type}`
+  const [counts, setCounts] = useState<Record<string, string>>({});
+  // Rate goal rows: keyed by RATE_GOALS.key
+  const [rates, setRates] = useState<Record<string, string>>({});
+  // Inflow count for the month
+  const [inflow, setInflow] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const init: Record<string, string> = {};
-    GOAL_PRODUCTS.forEach((p) => {
-      const g = currentGoals.find((x) => x.product === p);
-      init[p] = g ? String(g.goal_count) : "";
+    if (!open) return;
+    const c: Record<string, string> = {};
+    const r: Record<string, string> = {};
+    currentGoals.forEach((g) => {
+      const val = String(Number(g.goal_value || g.goal_count) || "");
+      if (g.goal_type === "count") c[`${g.product}|${g.sale_type}`] = val;
+      else if (g.goal_type === "rate") r[g.product] = val;
     });
-    setValues(init);
-  }, [currentGoals, open]);
+    setCounts(c);
+    setRates(r);
+    // Load inflow for the month
+    (async () => {
+      const { data } = await supabase
+        .from("staff_monthly_inquiries")
+        .select("inflow_count")
+        .eq("user_id", user.user_id)
+        .eq("year_month", yearMonth)
+        .maybeSingle();
+      setInflow(data?.inflow_count != null ? String(data.inflow_count) : "");
+    })();
+  }, [currentGoals, open, user.user_id, yearMonth]);
+
+  const setCount = (product: string, saleType: string, v: string) => {
+    setCounts((prev) => ({ ...prev, [`${product}|${saleType}`]: v }));
+  };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const rows = GOAL_PRODUCTS
-        .map((p) => ({
+      // Build count rows: 모바일 (전체 + 신규/번이/기변) + 인터넷/TV프리/스마트홈/2ND
+      const countRows: any[] = [];
+      const pushCount = (product: string, saleType: string) => {
+        const key = `${product}|${saleType}`;
+        const num = Math.max(0, parseInt(counts[key] || "0", 10) || 0);
+        countRows.push({
           user_id: user.user_id,
-          product: p,
+          product,
+          sale_type: saleType,
+          goal_type: "count",
           year_month: yearMonth,
-          goal_count: Math.max(0, parseInt(values[p] || "0", 10) || 0),
-        }));
-      const { error } = await supabase
+          goal_count: num,
+          goal_value: num,
+        });
+      };
+      pushCount("모바일", "__all");
+      MOBILE_SALE_TYPES.forEach((st) => pushCount("모바일", st));
+      ["인터넷", "TV프리", "스마트홈", "2ND"].forEach((p) => pushCount(p, "__all"));
+
+      // Rate goal rows
+      const rateRows = RATE_GOALS.map((r) => {
+        const num = Math.max(0, parseFloat(rates[r.key] || "0") || 0);
+        return {
+          user_id: user.user_id,
+          product: r.key,
+          sale_type: "__all",
+          goal_type: "rate",
+          year_month: yearMonth,
+          goal_count: 0,
+          goal_value: num,
+        };
+      });
+
+      const { error: gErr } = await supabase
         .from("staff_product_goals")
-        .upsert(rows, { onConflict: "user_id,product,year_month" });
-      if (error) throw error;
+        .upsert([...countRows, ...rateRows], { onConflict: "user_id,product,sale_type,goal_type,year_month" });
+      if (gErr) throw gErr;
+
+      // Save inflow
+      const inflowVal = Math.max(0, parseInt(inflow || "0", 10) || 0);
+      const { error: iErr } = await supabase
+        .from("staff_monthly_inquiries")
+        .upsert({
+          user_id: user.user_id,
+          year_month: yearMonth,
+          inflow_count: inflowVal,
+        }, { onConflict: "user_id,year_month" });
+      if (iErr) throw iErr;
+
       toast.success("월간 목표가 저장되었습니다");
       onSaved();
       onOpenChange(false);
@@ -1558,26 +1619,73 @@ function GoalDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{user.display_name} · {yearMonth} 월간 목표</DialogTitle>
+          <DialogTitle>{user.display_name} · {yearMonth} 월간 목표 설정</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3 py-2">
-          {GOAL_PRODUCTS.map((p) => (
-            <div key={p} className="flex items-center gap-3">
-              <div className="w-24 text-sm font-medium">{p}</div>
-              <Input
-                type="number"
-                min={0}
-                placeholder="0"
-                value={values[p] ?? ""}
-                onChange={(e) => setValues((v) => ({ ...v, [p]: e.target.value }))}
-                className="flex-1"
-              />
-              <span className="text-xs text-muted-foreground">대</span>
+
+        <div className="space-y-5 py-2">
+          {/* 건수 목표 */}
+          <section>
+            <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+              <Package className="size-4 text-primary-glow" /> 건수 기준 목표 (대/건)
+            </h4>
+            <div className="space-y-2 rounded-lg border border-border/40 p-3 bg-muted/20">
+              <div className="text-xs font-semibold text-muted-foreground">모바일</div>
+              <div className="grid grid-cols-4 gap-2">
+                <div>
+                  <div className="text-[10px] text-muted-foreground mb-0.5">전체</div>
+                  <Input type="number" min={0} placeholder="0" value={counts[`모바일|__all`] ?? ""} onChange={(e) => setCount("모바일", "__all", e.target.value)} />
+                </div>
+                {MOBILE_SALE_TYPES.map((st) => (
+                  <div key={st}>
+                    <div className="text-[10px] text-muted-foreground mb-0.5">{st}</div>
+                    <Input type="number" min={0} placeholder="0" value={counts[`모바일|${st}`] ?? ""} onChange={(e) => setCount("모바일", st, e.target.value)} />
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+              {["인터넷", "TV프리", "스마트홈", "2ND"].map((p) => (
+                <div key={p}>
+                  <div className="text-[10px] text-muted-foreground mb-0.5">{p}</div>
+                  <Input type="number" min={0} placeholder="0" value={counts[`${p}|__all`] ?? ""} onChange={(e) => setCount(p, "__all", e.target.value)} />
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* 비율 목표 */}
+          <section>
+            <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+              <Target className="size-4 text-amber-500" /> 비율 기준 목표 (모바일 대비 %)
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {RATE_GOALS.map((r) => (
+                <div key={r.key}>
+                  <div className="text-[10px] text-muted-foreground mb-0.5">{r.label}</div>
+                  <div className="relative">
+                    <Input type="number" min={0} max={200} step={1} placeholder="0" value={rates[r.key] ?? ""} onChange={(e) => setRates((v) => ({ ...v, [r.key]: e.target.value }))} className="pr-7" />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{r.unit}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* 인입 건수 */}
+          <section>
+            <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+              <PhoneCall className="size-4 text-primary-glow" /> 상담 인입 건수 ({yearMonth})
+            </h4>
+            <div className="flex items-center gap-3">
+              <Input type="number" min={0} placeholder="0" value={inflow} onChange={(e) => setInflow(e.target.value)} className="max-w-[200px]" />
+              <span className="text-xs text-muted-foreground">건 — 인입 대비 성공률(전환율) 산출에 사용됩니다</span>
+            </div>
+          </section>
         </div>
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>취소</Button>
           <Button onClick={handleSave} disabled={saving}>{saving ? "저장 중..." : "저장"}</Button>
