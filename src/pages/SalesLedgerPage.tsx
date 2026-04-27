@@ -1009,7 +1009,7 @@ const SalesLedgerPage = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-3 py-2.5 whitespace-nowrap font-medium">
                       {r.manager ?? "-"}
                       <ResignedTag userId={r.created_by} ids={resignedIds} />
                     </td>
@@ -1058,8 +1058,15 @@ const SalesLedgerPage = () => {
                         ? <Badge variant="secondary" className="text-[9px] px-1.5 py-0">무오퍼</Badge>
                         : <Badge variant="outline" className="text-[9px] px-1.5 py-0">오퍼</Badge>}
                     </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums">{(r.unit_price ?? 0).toLocaleString("ko-KR")}</td>
-                    <td className="px-3 py-2.5 text-right tabular-nums text-warning">{offer.toLocaleString("ko-KR")}</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-sky-600 dark:text-sky-400">
+                      {(r.unit_price ?? 0).toLocaleString("ko-KR")}
+                    </td>
+                    <td className={cn(
+                      "px-3 py-2.5 text-right tabular-nums font-semibold",
+                      offer < 0 ? "text-destructive" : "text-rose-600 dark:text-rose-400"
+                    )}>
+                      {offer.toLocaleString("ko-KR")}
+                    </td>
                     <td className={cn(
                       "px-3 py-2.5 text-right tabular-nums font-semibold",
                       negative ? "text-destructive" : hasDeductions(r) ? "text-warning" : "text-revenue"
@@ -1088,24 +1095,36 @@ const SalesLedgerPage = () => {
                     </td>
                     <td className="px-3 py-2.5 text-right tabular-nums">
                       {(r.receivable_amount ?? 0) > 0 ? (
-                        <span className={r.receivable_paid === "완료" ? "text-muted-foreground line-through" : "text-warning font-medium"}>
+                        <span className={
+                          r.receivable_paid === "완료"
+                            ? "text-muted-foreground line-through"
+                            : (r.receivable_amount ?? 0) < 0
+                              ? "text-destructive font-semibold"
+                              : "text-sky-600 dark:text-sky-400 font-semibold"
+                        }>
                           {(r.receivable_amount ?? 0).toLocaleString("ko-KR")}
                         </span>
                       ) : <span className="text-muted-foreground">-</span>}
                     </td>
                     <td className="px-3 py-2.5 text-right tabular-nums">
                       {(r.customer_support_amount ?? 0) > 0
-                        ? <span className="text-warning">{(r.customer_support_amount ?? 0).toLocaleString("ko-KR")}</span>
+                        ? <span className={cn(
+                            "font-semibold",
+                            (r.customer_support_amount ?? 0) < 0 ? "text-destructive" : "text-rose-600 dark:text-rose-400"
+                          )}>{(r.customer_support_amount ?? 0).toLocaleString("ko-KR")}</span>
                         : <span className="text-muted-foreground">-</span>}
                     </td>
                     <td className="px-3 py-2.5 text-right tabular-nums">
                       {(r.corp_card_amount ?? 0) > 0
-                        ? <span className="text-warning">{(r.corp_card_amount ?? 0).toLocaleString("ko-KR")}</span>
+                        ? <span className={cn(
+                            "font-semibold",
+                            (r.corp_card_amount ?? 0) < 0 ? "text-destructive" : "text-rose-600 dark:text-rose-400"
+                          )}>{(r.corp_card_amount ?? 0).toLocaleString("ko-KR")}</span>
                         : <span className="text-muted-foreground">-</span>}
                     </td>
                     <td className="px-3 py-2.5 text-right tabular-nums">
                       {r.trade_in_enabled ? (
-                        <span className="text-primary" title={r.trade_in_model ?? ""}>
+                        <span className="text-sky-600 dark:text-sky-400 font-semibold" title={r.trade_in_model ?? ""}>
                           {(r.trade_in_confirmed ?? 0) > 0
                             ? `₩${(r.trade_in_confirmed ?? 0).toLocaleString("ko-KR")}`
                             : "대기"}
