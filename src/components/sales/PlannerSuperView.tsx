@@ -12,7 +12,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Building2, Download, Search, Eye, Lock, Unlock, ShieldCheck, FileWarning,
-  Inbox, ClipboardCheck, RotateCcw, ChevronRight,
+  Inbox, ClipboardCheck, RotateCcw, ChevronRight, CalendarDays, ChevronLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useViewScope } from "@/contexts/ViewScopeContext";
