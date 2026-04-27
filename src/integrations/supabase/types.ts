@@ -1934,6 +1934,42 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_product_goals: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          goal_count: number
+          id: string
+          note: string | null
+          product: string
+          updated_at: string
+          user_id: string
+          year_month: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          goal_count?: number
+          id?: string
+          note?: string | null
+          product: string
+          updated_at?: string
+          user_id: string
+          year_month: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          goal_count?: number
+          id?: string
+          note?: string | null
+          product?: string
+          updated_at?: string
+          user_id?: string
+          year_month?: string
+        }
+        Relationships: []
+      }
       stores: {
         Row: {
           active: boolean
