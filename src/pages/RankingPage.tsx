@@ -618,7 +618,12 @@ const RankingPage = () => {
     if (storeFilter !== "all") list = list.filter((u) => u.store === storeFilter);
     if (hideExcluded) list = list.filter((u) => !u.excluded);
     if (tab === "achievement") list = list.filter((u) => u.goalCount > 0);
-    if (tab === "combo" || tab === "vas") list = list.filter((u) => u.productCounts.모바일 > 0);
+    if (tab === "vas") list = list.filter((u) => u.productCounts.모바일 > 0);
+    // 상품별 판매왕 / 제휴카드: 0건은 의미 없음
+    if (tab === "internet") list = list.filter((u) => u.internetCount > 0);
+    if (tab === "tvfree") list = list.filter((u) => u.tvfreeCount > 0);
+    if (tab === "iot") list = list.filter((u) => u.iotCount > 0);
+    if (tab === "partnerCard") list = list.filter((u) => u.partnerCardCount > 0);
     if (tab === "clean") list = list.filter((u) => u.count > 0);
     return list.sort(activeTab.sortFn);
   }, [users, storeFilter, activeTab, hideExcluded, tab]);
