@@ -985,7 +985,7 @@ const SalesLedgerPage = () => {
                     "border-b border-border/20 hover:bg-white/[0.03] cursor-pointer transition-colors",
                     mine && "bg-primary/[0.04]",
                     hasPending && "bg-amber-50/70 hover:bg-amber-500/[0.12]",
-                    isMoyoExcluded && "text-muted-foreground/80 [&_td]:line-through",
+                    isMoyoExcluded && "text-muted-foreground",
                   )}
                   onClick={handleRowClick}
                   >
@@ -999,11 +999,11 @@ const SalesLedgerPage = () => {
                       </td>
                     )}
                     <td className="px-3 py-2.5">{r.open_date ?? "-"}</td>
-                    <td className="px-3 py-2.5 no-underline">
-                      <div className="flex items-center gap-1.5 no-underline">
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-1.5">
                         <span>{r.channel ?? "-"}</span>
                         {isMoyoExcluded && (
-                          <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-muted-foreground/40 text-muted-foreground no-underline">
+                          <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-muted-foreground/40 text-muted-foreground">
                             모요 미적용
                           </Badge>
                         )}
