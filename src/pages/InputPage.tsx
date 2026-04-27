@@ -126,6 +126,25 @@ const InputPage = () => {
   const { isAdmin } = useRole();
   const [searchParams, setSearchParams] = useSearchParams();
   const [linkedInquiryId, setLinkedInquiryId] = useState<string | null>(null);
+  // === 담당자 후보: 시스템에 등록된 active 직원 ===
+  const [staffOptions, setStaffOptions] = useState<{ user_id: string; display_name: string; store: string | null }[]>([]);
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("user_id, display_name, store")
+        .eq("status", "active")
+        .order("display_name", { ascending: true });
+      const list = (data ?? []) as { user_id: string; display_name: string; store: string | null }[];
+      setStaffOptions(list);
+      // 신규 입력일 때 본인 이름 자동 세팅
+      setForm((f) => {
+        if (f.manager || !user) return f;
+        const me = list.find((p) => p.user_id === user.id);
+        return me ? { ...f, manager: me.display_name } : f;
+      });
+    })();
+  }, [user]);
   // 인입 → 실적 자동 채움 (URL 파라미터)
   useEffect(() => {
     const fromInquiry = searchParams.get("from_inquiry");
