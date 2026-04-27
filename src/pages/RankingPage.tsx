@@ -474,18 +474,25 @@ const RankingPage = () => {
   const sorted = useMemo(() => {
     let list = [...users];
     if (storeFilter !== "all") list = list.filter((u) => u.store === storeFilter);
+    if (hideExcluded) list = list.filter((u) => !u.excluded);
     return list.sort(activeTab.sortFn);
-  }, [users, storeFilter, activeTab, cleanMap]);
+  }, [users, storeFilter, activeTab, hideExcluded]);
 
   const top10 = sorted.slice(0, 10);
   const podium = top10.slice(0, 3);
   const rest = top10.slice(3);
 
   // Rising star: highest yesterdayDelta
+  // Rising star: 어제 대비 순위가 가장 많이 상승한 직원 (rankDelta) — 동률이면 yesterdayDelta 순위
   const risingStar = useMemo(() => {
-    const candidates = users.filter((u) => u.yesterdayDelta > 0);
-    if (candidates.length === 0) return null;
-    return candidates.sort((a, b) => b.yesterdayDelta - a.yesterdayDelta)[0];
+    const pool = users.filter((u) => !u.excluded);
+    const climbers = pool.filter((u) => u.rankDelta > 0);
+    if (climbers.length > 0) {
+      return [...climbers].sort((a, b) => b.rankDelta - a.rankDelta || b.yesterdayDelta - a.yesterdayDelta)[0];
+    }
+    const grew = pool.filter((u) => u.yesterdayDelta > 0);
+    if (grew.length > 0) return [...grew].sort((a, b) => b.yesterdayDelta - a.yesterdayDelta)[0];
+    return null;
   }, [users]);
 
   // My rank
