@@ -911,6 +911,15 @@ const SalesLedgerPage = () => {
                     </td>
                     <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{isAdmin ? (r.phone ?? "-") : maskPhone(r.phone) || "-"}</td>
                     <td className="px-3 py-2.5 text-muted-foreground">{r.device_model ?? "-"}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{r.rate_plan ?? "-"}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">
+                      {(r.custom_fields as any)?.contract_type ?? "-"}
+                    </td>
+                    <td className="px-2 py-2.5 text-center text-muted-foreground tabular-nums">
+                      {(r.custom_fields as any)?.installment_months
+                        ? `${(r.custom_fields as any).installment_months}개월`
+                        : "-"}
+                    </td>
                     <td className="px-2 py-2.5 text-center">
                       {r.bundle === "Y" ? <Badge variant="outline" className="text-[9px] border-primary/40 text-primary px-1.5 py-0">동판</Badge> : <span className="text-muted-foreground text-[10px]">-</span>}
                     </td>
