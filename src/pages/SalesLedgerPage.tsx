@@ -1128,15 +1128,12 @@ const SalesLedgerPage = () => {
                               </button>
                             )}
                           </div>
-                          {isLocked && adminOverride && (
-                            <span className="text-[9px] text-destructive/80 flex items-center gap-0.5 leading-tight max-w-[140px] text-right">
-                              <AlertTriangle className="size-2.5 shrink-0" />
-                              확정 실적 수정 — 정산 영향 주의
+                          {isInspected && (
+                            <span className="text-[9px] text-emerald-700 flex items-center gap-0.5 leading-tight">
+                              <CheckCircle2 className="size-2.5 shrink-0" /> 검수 완료
                             </span>
                           )}
                         </div>
-                      ) : isLocked ? (
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-1 justify-end"><Lock className="size-3" /> 잠금</span>
                       ) : (
                         <span className="text-[10px] text-muted-foreground">읽기전용</span>
                       )}
