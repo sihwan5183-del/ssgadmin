@@ -17,7 +17,7 @@ import {
 import {
   Download, Search, Trash2, Pencil, ShieldAlert, Hash,
   Wallet as WalletIcon, Gift, TrendingUp, Banknote, FileText,
-  AlertTriangle, Filter, X, Loader2, ChevronDown, ChevronUp, CheckCircle2,
+  AlertTriangle, Filter, X, Loader2, ChevronDown, ChevronUp, CheckCircle2, Ban,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -1039,12 +1039,20 @@ const SalesLedgerPage = () => {
                     )}
                     <td className="px-3 py-2.5">{r.open_date ?? "-"}</td>
                     <td className="px-3 py-3 align-middle whitespace-nowrap">
-                      <div className="flex flex-col items-start gap-1 leading-tight">
+                      <div className="flex items-center gap-1.5 leading-tight">
                         <span className="no-underline">{r.channel ?? "-"}</span>
                         {isMoyoExcluded && (
-                          <span className="inline-flex items-center rounded-md bg-muted px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground no-underline">
-                            미적용
-                          </span>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className="inline-flex items-center justify-center rounded-full bg-destructive/10 text-destructive p-0.5"
+                                aria-label="모요 미적용"
+                              >
+                                <Ban className="size-3.5" strokeWidth={2.5} />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>모요 미적용</TooltipContent>
+                          </Tooltip>
                         )}
                       </div>
                     </td>
