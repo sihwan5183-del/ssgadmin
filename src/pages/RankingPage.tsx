@@ -33,6 +33,10 @@ type RankedUser = {
   excluded?: boolean;
   achievement: number;           // 평균 목표 달성률 (%)
   goalCount: number;             // 설정된 목표 개수
+  comboRate: number;             // (인터넷+TV프리)/모바일 *100
+  vasAttach: number;             // 부가서비스/모바일 *100
+  cleanScore: number;            // 0~100, 누락/미해결 적을수록 높음
+  cleanPenalty: number;          // 누락+미해결 합계 (낮을수록 좋음)
 };
 type ModelRank = { model: string; count: number; isStrategy: boolean };
 
@@ -453,7 +457,7 @@ const RankingPage = () => {
     // === Yesterday-snapshot rankings (per current tab metric) for rank delta ===
     const yAgg = new Map<string, { count: number; profit: number; strategyCount: number; voucherReturned: number }>();
     yPeriodSales.forEach((s: any) => {
-      const uid = s.created_by;
+      const uid = ownerOf(s);
       if (!yAgg.has(uid)) yAgg.set(uid, { count: 0, profit: 0, strategyCount: 0, voucherReturned: 0 });
       const u = yAgg.get(uid)!;
       u.count++;
@@ -480,7 +484,7 @@ const RankingPage = () => {
     // Clean status: missing docs & unresolved pending items
     const { data: allSalesClean } = await supabase
       .from("sales")
-      .select("id, created_by, pending_resolved")
+      .select("id, created_by, manager, pending_resolved")
       .gte("open_date", start)
       .lte("open_date", end);
     const { data: allDocs } = await supabase
@@ -488,9 +492,10 @@ const RankingPage = () => {
       .select("sale_id");
     const docSet = new Set((allDocs ?? []).map((d) => d.sale_id));
     const cleanCalc = new Map<string, { missingDocs: number; pendingItems: number }>();
-    (allSalesClean ?? []).forEach((s) => {
-      if (!cleanCalc.has(s.created_by)) cleanCalc.set(s.created_by, { missingDocs: 0, pendingItems: 0 });
-      const c = cleanCalc.get(s.created_by)!;
+    (allSalesClean ?? []).forEach((s: any) => {
+      const uid = ownerOf(s);
+      if (!cleanCalc.has(uid)) cleanCalc.set(uid, { missingDocs: 0, pendingItems: 0 });
+      const c = cleanCalc.get(uid)!;
       if (!docSet.has(s.id)) c.missingDocs++;
       if (!s.pending_resolved) c.pendingItems++;
     });
@@ -507,6 +512,12 @@ const RankingPage = () => {
       const p = pMap[uid];
       if (!p) return;
       const clean = cMap.get(uid);
+      const mob = v.productCounts.모바일;
+      const comboRate = mob > 0 ? Math.round(((v.productCounts.인터넷 + v.productCounts.TV프리) / mob) * 100) : 0;
+      const vasAttach = mob > 0 ? Math.round((v.productCounts.부가서비스 / mob) * 100) : 0;
+      const penalty = (cleanCalc.get(uid)?.missingDocs ?? 0) + (cleanCalc.get(uid)?.pendingItems ?? 0);
+      const total = v.count || 1;
+      const cleanScore = Math.max(0, Math.round((1 - penalty / total) * 100));
       ranked.push({
         user_id: uid,
         name: p.display_name,
@@ -524,6 +535,10 @@ const RankingPage = () => {
         excluded: excludedIds.has(uid),
         achievement: Math.round(achMap.get(uid)?.avg ?? 0),
         goalCount: achMap.get(uid)?.cnt ?? 0,
+        comboRate,
+        vasAttach,
+        cleanScore,
+        cleanPenalty: penalty,
       });
     });
 
