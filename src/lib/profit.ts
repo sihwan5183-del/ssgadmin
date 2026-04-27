@@ -28,6 +28,11 @@ export const calcMoyoFee = (row: ProfitSource): number => {
   return !excluded && (channel === "모요" || channel.includes("moyo")) ? MOYO_FEE_PER_ACTIVATION : 0;
 };
 
+const isSettled = (value: unknown, positiveValues: string[]) => {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return positiveValues.some((v) => normalized === v.toLowerCase());
+};
+
 /**
  * 신규 정산 로직 (대표님 정의 기준)
  *
@@ -49,13 +54,13 @@ export const calcDashboardProfit = (row: ProfitSource) => {
   // 수익
   const salesCommission = pickAmount(row, "unit_price", "sales_commission", "commission", "net_fee");
   const vasFee = pickAmount(row, "vas_fee");
-  const receivablePaid = String(row?.receivable_paid ?? "").trim() === "유";
+  const receivablePaid = isSettled(row?.receivable_paid, ["완료", "수급완료", "입금완료", "유", "yes", "true"]);
   const receivableAmount = receivablePaid ? pickAmount(row, "receivable_amount") : 0;
-  const voucherReturned = String(row?.voucher_returned ?? "").trim() === "유";
+  const voucherReturned = isSettled(row?.voucher_returned, ["유", "완료", "반납완료", "yes", "true"]);
   const voucherAmount = voucherReturned
     ? pickAmount(row, "voucher_amount", "gift_certificate_amount", "voucher")
     : 0;
-  const tradeInConfirmed = pickAmount(row, "trade_in_confirmed");
+  const tradeInConfirmed = row?.trade_in_enabled === false ? 0 : pickAmount(row, "trade_in_confirmed");
 
   // 지출
   const distributor = pickAmount(row, "distributor_amount");
@@ -63,7 +68,7 @@ export const calcDashboardProfit = (row: ProfitSource) => {
   const cashSupport = cashOpen ? pickAmount(row, "cash_support_amount") : 0;
   const offerSubsidy = pickAmount(row, "extra_subsidy", "offer_subsidy");
   const customerSupport = pickAmount(row, "customer_support_amount");
-  const cardSubsidy = pickAmount(row, "corp_card_amount", "card_amount", "card_payment_amount");
+  const cardSubsidy = pickAmount(row, "corp_card_amount", "corp_card_payment_amount", "corporate_card_amount");
   const moyoFee = calcMoyoFee(row);
 
   const revenue =
