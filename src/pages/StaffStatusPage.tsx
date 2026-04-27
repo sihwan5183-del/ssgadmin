@@ -355,6 +355,34 @@ export default function StaffStatusPage() {
     return rows;
   }, [salesByOwner, filteredProfiles, incentiveRates]);
 
+  // Achievement-rate ranking — average % across all configured count goals
+  const achievementLeaderboard = useMemo(() => {
+    const rows = filteredProfiles.map((p) => {
+      const myGoals = goals.filter((g) => g.user_id === p.user_id && g.goal_type === "count" && Number(g.goal_value || g.goal_count) > 0);
+      const list = (salesByOwner.get(p.user_id) ?? []).filter(isSuccess);
+      if (myGoals.length === 0) return { profile: p, avgPct: 0, goalCount: 0, hits: 0 };
+      const prodCount = (prod: string) => list.filter((s) => productBucket(s.product) === prod).length;
+      let totalPct = 0;
+      let hits = 0;
+      myGoals.forEach((g) => {
+        const goalVal = Number(g.goal_value || g.goal_count);
+        let achieved = 0;
+        if (g.product === "모바일") {
+          if (g.sale_type === "__all") achieved = prodCount("모바일");
+          else achieved = list.filter((s) => productBucket(s.product) === "모바일" && mobileSaleTypeBucket(s.sale_type) === g.sale_type).length;
+        } else {
+          achieved = prodCount(g.product);
+        }
+        const pct = Math.min(150, Math.round((achieved / goalVal) * 100));
+        totalPct += pct;
+        if (pct >= 100) hits += 1;
+      });
+      return { profile: p, avgPct: Math.round(totalPct / myGoals.length), goalCount: myGoals.length, hits };
+    }).filter((r) => r.goalCount > 0);
+    rows.sort((a, b) => b.avgPct - a.avgPct || b.hits - a.hits);
+    return rows;
+  }, [filteredProfiles, goals, salesByOwner]);
+
   // Selected staff data (filtered)
   const sales = useMemo(() => {
     if (!selected) return [];
