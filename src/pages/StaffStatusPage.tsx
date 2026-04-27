@@ -602,18 +602,103 @@ export default function StaffStatusPage() {
     };
   }, [sales, prevSalesForSelected]);
 
-  // Goals for selected
+  // Goals for selected — count goals (per product, including mobile sub-types) + rate goals
   const selectedGoals = useMemo(() => {
-    if (!selected) return [] as { product: string; goal: number; achieved: number; pct: number }[];
-    const map = new Map<string, number>();
-    goals.filter((g) => g.user_id === selected.user_id).forEach((g) => map.set(g.product, g.goal_count));
-    return GOAL_PRODUCTS.map((p) => {
-      const goal = map.get(p) ?? 0;
-      const achieved = analytics.productStats.find((x) => x.name === p)?.count ?? 0;
-      const pct = goal > 0 ? Math.min(100, Math.round((achieved / goal) * 100)) : 0;
-      return { product: p, goal, achieved, pct };
+    if (!selected) return [] as { product: string; goal: number; achieved: number; pct: number; saleType: string }[];
+    const myGoals = goals.filter((g) => g.user_id === selected.user_id && g.goal_type === "count");
+    const success = sales.filter(isSuccess);
+
+    const out: { product: string; goal: number; achieved: number; pct: number; saleType: string }[] = [];
+
+    // Mobile broken down by sale_type, plus aggregate
+    const mobileSuccess = success.filter((s) => productBucket(s.product) === "모바일");
+    const mobileGoalAll = myGoals.find((g) => g.product === "모바일" && g.sale_type === "__all");
+    const mobileGoalAllVal = mobileGoalAll ? Number(mobileGoalAll.goal_value || mobileGoalAll.goal_count) : 0;
+    out.push({
+      product: "모바일",
+      saleType: "__all",
+      goal: mobileGoalAllVal,
+      achieved: mobileSuccess.length,
+      pct: mobileGoalAllVal > 0 ? Math.min(100, Math.round((mobileSuccess.length / mobileGoalAllVal) * 100)) : 0,
     });
-  }, [selected, goals, analytics.productStats]);
+    MOBILE_SALE_TYPES.forEach((st) => {
+      const g = myGoals.find((x) => x.product === "모바일" && x.sale_type === st);
+      const goalVal = g ? Number(g.goal_value || g.goal_count) : 0;
+      const achieved = mobileSuccess.filter((s) => mobileSaleTypeBucket(s.sale_type) === st).length;
+      if (goalVal > 0 || achieved > 0) {
+        out.push({
+          product: `모바일·${st}`,
+          saleType: st,
+          goal: goalVal,
+          achieved,
+          pct: goalVal > 0 ? Math.min(100, Math.round((achieved / goalVal) * 100)) : 0,
+        });
+      }
+    });
+
+    // Other products
+    ["인터넷", "TV프리", "스마트홈", "2ND"].forEach((p) => {
+      const g = myGoals.find((x) => x.product === p && x.sale_type === "__all");
+      const goalVal = g ? Number(g.goal_value || g.goal_count) : 0;
+      const achieved = analytics.productStats.find((x) => x.name === p)?.count ?? 0;
+      out.push({
+        product: p,
+        saleType: "__all",
+        goal: goalVal,
+        achieved,
+        pct: goalVal > 0 ? Math.min(100, Math.round((achieved / goalVal) * 100)) : 0,
+      });
+    });
+
+    return out;
+  }, [selected, goals, analytics.productStats, sales]);
+
+  // Rate-based goals for selected
+  const selectedRateGoals = useMemo(() => {
+    if (!selected) return [] as { key: string; label: string; goal: number; current: number; pct: number }[];
+    const myRate = goals.filter((g) => g.user_id === selected.user_id && g.goal_type === "rate");
+    const currentMap: Record<string, number> = {
+      vas_rate: productivity.attach.vas,
+      internet_rate: productivity.attach.internet,
+      tvfree_rate: productivity.attach.tvfree,
+    };
+    return RATE_GOALS.map((r) => {
+      const g = myRate.find((x) => x.product === r.key);
+      const goalVal = g ? Number(g.goal_value) : 0;
+      const current = currentMap[r.key] ?? 0;
+      return {
+        key: r.key,
+        label: r.label,
+        goal: goalVal,
+        current,
+        pct: goalVal > 0 ? Math.min(150, Math.round((current / goalVal) * 100)) : 0,
+      };
+    });
+  }, [selected, goals, productivity]);
+
+  // Inflow & conversion rate for selected
+  const selectedConversion = useMemo(() => {
+    if (!selected) return { inflow: 0, success: 0, rate: 0 };
+    const inflow = inquiryCounts.find((r) => r.user_id === selected.user_id)?.inflow_count ?? 0;
+    const success = sales.filter(isSuccess).length;
+    const rate = inflow > 0 ? Math.round((success / inflow) * 100) : 0;
+    return { inflow, success, rate };
+  }, [selected, inquiryCounts, sales]);
+
+  // Confetti when any goal hits 100%
+  const confettiFired = useMemo(() => new Set<string>(), []);
+  useEffect(() => {
+    if (!selected) return;
+    const hits = selectedGoals.filter((g) => g.goal > 0 && g.pct >= 100);
+    hits.forEach((g) => {
+      const key = `${selected.user_id}-${g.product}-${yearMonth}`;
+      if (confettiFired.has(key)) return;
+      confettiFired.add(key);
+      setTimeout(() => {
+        confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 }, colors: ["#FFD700", "#10B981", "#3B82F6"] });
+      }, 200);
+    });
+  }, [selectedGoals, selected, yearMonth, confettiFired]);
 
   // Simulator
   const distinctSaleTypes = useMemo(() => Array.from(new Set(incentiveRates.map((r) => r.match_sale_type).filter(Boolean) as string[])), [incentiveRates]);
