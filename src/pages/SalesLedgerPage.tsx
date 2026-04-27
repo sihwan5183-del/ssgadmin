@@ -873,27 +873,6 @@ const SalesLedgerPage = () => {
 
         <div className="ml-auto flex items-center gap-2">
           <Badge className="bg-primary/15 text-primary-glow border-primary/30">총 {dbSummary.count.toLocaleString()}건</Badge>
-          {isAdmin && (
-            <div className={cn(
-              "flex items-center gap-2 rounded-xl border px-3 py-1.5 transition-colors",
-              forceUnlock
-                ? "border-destructive/50 bg-destructive/10 text-destructive"
-                : "border-border/40 bg-muted/30 text-muted-foreground"
-            )}>
-              {forceUnlock ? <Unlock className="size-3.5" /> : <Lock className="size-3.5" />}
-              <span className="text-xs font-medium">수정 잠금 강제 해제</span>
-              <Switch
-                checked={forceUnlock}
-                onCheckedChange={(v) => {
-                  setForceUnlock(v);
-                  if (v) toast.warning("확정 실적 잠금이 해제되었습니다", {
-                    description: "수정 시 정산 데이터에 영향을 줄 수 있습니다. 모든 변경 이력은 자동 기록됩니다.",
-                  });
-                }}
-                aria-label="확정 실적 잠금 강제 해제"
-              />
-            </div>
-          )}
           {isAdmin && selected.size > 0 && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
