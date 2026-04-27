@@ -491,6 +491,12 @@ const ActivitiesPage = () => {
           <TabsTrigger value="pending" className="gap-2">
             <ClipboardList className="size-4" /> 미처리 항목
           </TabsTrigger>
+          <TabsTrigger value="pending-activation" className="gap-2">
+            <Clock className="size-4" /> 개통 대기
+          </TabsTrigger>
+          <TabsTrigger value="subscribed" className="gap-2">
+            <PackageCheck className="size-4" /> 청약/택배 완료
+          </TabsTrigger>
         </TabsList>
 
         {isAdmin && (
@@ -511,6 +517,14 @@ const ActivitiesPage = () => {
 
         <TabsContent value="pending">
           <PendingItemsSection />
+        </TabsContent>
+
+        <TabsContent value="pending-activation" className="space-y-6">
+          <SaleSearchPanel presetStatus="청약완료,택배발송,예약" />
+        </TabsContent>
+
+        <TabsContent value="subscribed" className="space-y-6">
+          <SaleSearchPanel presetStatus="청약완료,택배발송" />
         </TabsContent>
       </Tabs>
     </>
