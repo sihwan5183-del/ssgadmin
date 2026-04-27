@@ -346,6 +346,8 @@ const InputPage = () => {
       pending_resolved: pendingItems.length === 0 ? true : pendingResolved,
       trade_in_enabled: !!form.trade_in_enabled,
       trade_in_model: form.trade_in_enabled ? (form.trade_in_model || null) : null,
+      // 개통년월은 개통일자에서 자동 추출 (YYYY-MM)
+      open_month: form.open_date ? String(form.open_date).slice(0, 7) : null,
     };
     try {
       if (editingId) {
