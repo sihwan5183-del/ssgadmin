@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
 import {
   Crown, Medal, Trophy, Star, TrendingUp, Flame, Zap,
   Award, BarChart3, Smartphone, Gift, ChevronDown, CheckCircle2, Sparkles,
-  Wifi, Tv, ArrowUp, ArrowDown, Minus, UserX, Target, Link2, ShieldCheck,
+  Wifi, Tv, ArrowUp, ArrowDown, Minus, UserX, Target, ShieldCheck,
+  Home, CreditCard, Monitor,
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -33,10 +34,13 @@ type RankedUser = {
   excluded?: boolean;
   achievement: number;           // 평균 목표 달성률 (%)
   goalCount: number;             // 설정된 목표 개수
-  comboRate: number;             // (인터넷+TV프리)/모바일 *100
   vasAttach: number;             // 부가서비스/모바일 *100
   cleanScore: number;            // 0~100, 누락/미해결 적을수록 높음
   cleanPenalty: number;          // 누락+미해결 합계 (낮을수록 좋음)
+  internetCount: number;         // 인터넷 가입 건수
+  tvfreeCount: number;           // TV프리 가입 건수
+  iotCount: number;              // 홈IOT/스마트홈 건수
+  partnerCardCount: number;      // 제휴카드 결제 건수
 };
 type ModelRank = { model: string; count: number; isStrategy: boolean };
 
@@ -118,30 +122,39 @@ const periodUpToYesterday = (period: string) => {
   return { start, end: yISO };
 };
 
-/** 개통완료/반납완료만 집계 (취소·반려 제외) — 판매원장 실시간 데이터와 정합 */
-const COUNTED_STATUSES = ["개통완료", "반납완료"];
+/** 개통완료만 집계 — 취소·반납·반려는 실시간 차감 */
+const COUNTED_STATUSES = ["개통완료"];
 /** 집계에서 제외할 승인 상태 */
 const EXCLUDED_APPROVAL = ["취소", "반려"];
 
 /** 상품 버킷 — staff 페이지와 동일 규칙 */
-const productBucket = (p: string | null): "모바일" | "인터넷" | "TV프리" | "기타" => {
+const productBucket = (p: string | null): "모바일" | "인터넷" | "TV프리" | "스마트홈" | "기타" => {
   const s = (p ?? "").toLowerCase();
   if (!s) return "기타";
+  // TV프리 우선 매칭 (일반 TV는 기타)
   if (/tv\s*프리|프리tv|tv프리/i.test(p ?? "") || (p ?? "").includes("TV프리")) return "TV프리";
+  // 스마트홈 / 홈IOT / IOT / 홈안심 등
+  if (/스마트홈|smart\s*home|홈\s*iot|^iot$|홈안심|허브|구글홈|애플홈/i.test(p ?? "")) return "스마트홈";
   if (/인터넷|기가|wifi/i.test(p ?? "")) return "인터넷";
   if (/모바일|mobile|usim|mnp|재약정|업셀/i.test(p ?? "")) return "모바일";
   return "기타";
 };
 
 /* ─── TABS ─── */
-type TabKey = "sales" | "profit" | "strategy" | "voucher" | "achievement" | "combo" | "vas" | "clean";
+type TabKey =
+  | "sales" | "profit" | "strategy" | "voucher" | "achievement"
+  | "internet" | "tvfree" | "iot" | "partnerCard"
+  | "vas" | "clean";
 const TABS: { key: TabKey; label: string; icon: typeof Crown; sortFn: (a: RankedUser, b: RankedUser) => number }[] = [
   { key: "sales", label: "판매 왕", icon: Crown, sortFn: (a, b) => b.count - a.count },
   { key: "profit", label: "수익 왕", icon: TrendingUp, sortFn: (a, b) => b.profit - a.profit },
   { key: "strategy", label: "전략 모델 마스터", icon: Zap, sortFn: (a, b) => b.strategyCount - a.strategyCount },
   { key: "voucher", label: "상품권 킬러", icon: Gift, sortFn: (a, b) => b.voucherReturned - a.voucherReturned },
   { key: "achievement", label: "달성률 챔피언", icon: Target, sortFn: (a, b) => b.achievement - a.achievement || b.count - a.count },
-  { key: "combo", label: "결합의 신", icon: Link2, sortFn: (a, b) => b.comboRate - a.comboRate || b.count - a.count },
+  { key: "internet", label: "인터넷 판매왕", icon: Wifi, sortFn: (a, b) => b.internetCount - a.internetCount },
+  { key: "tvfree", label: "TV프리 판매왕", icon: Monitor, sortFn: (a, b) => b.tvfreeCount - a.tvfreeCount },
+  { key: "iot", label: "홈IOT 판매왕", icon: Home, sortFn: (a, b) => b.iotCount - a.iotCount },
+  { key: "partnerCard", label: "제휴카드 판매왕", icon: CreditCard, sortFn: (a, b) => b.partnerCardCount - a.partnerCardCount },
   { key: "vas", label: "부가서비스 사냥꾼", icon: Sparkles, sortFn: (a, b) => b.vasAttach - a.vasAttach || b.count - a.count },
   { key: "clean", label: "클린 검수왕", icon: ShieldCheck, sortFn: (a, b) => b.cleanScore - a.cleanScore || a.cleanPenalty - b.cleanPenalty },
 ];
@@ -233,6 +246,7 @@ const RankDeltaPill = ({ delta }: { delta: number }) => {
 const RankingPage = () => {
   const { user } = useAuth();
   const confettiFired = useRef(false);
+  const firstPlaceFiredFor = useRef<string>("");
   const [period, setPeriod] = useState("month");
   const [storeFilter, setStoreFilter] = useState("all");
   const [tab, setTab] = useState<TabKey>("sales");
@@ -301,7 +315,7 @@ const RankingPage = () => {
     // 개통완료/반납완료 실적 (취소·반려 제외) — 판매원장 실시간 반영
     const { data: sales } = await supabase
       .from("sales")
-      .select("id, created_by, manager, device_model, product, sale_type, status, approval_status, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned, vas1, vas2, open_date")
+      .select("id, created_by, manager, device_model, product, sale_type, status, approval_status, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned, vas1, vas2, open_date, custom_fields")
       .in("status", COUNTED_STATUSES)
       .not("approval_status", "in", `(${EXCLUDED_APPROVAL.join(",")})`)
       .gte("open_date", start)
@@ -336,6 +350,8 @@ const RankingPage = () => {
       count: number; profit: number; strategyCount: number; voucherReturned: number;
       dateCounts: Map<string, number>;
       productCounts: { 모바일: number; 인터넷: number; TV프리: number; 부가서비스: number };
+      iotCount: number;
+      partnerCardCount: number;
     }>();
     const mMap = new Map<string, { count: number; isStrategy: boolean }>();
     const seenSaleIds = new Set<string>();
@@ -349,6 +365,8 @@ const RankingPage = () => {
         count: 0, profit: 0, strategyCount: 0, voucherReturned: 0,
         dateCounts: new Map(),
         productCounts: { 모바일: 0, 인터넷: 0, TV프리: 0, 부가서비스: 0 },
+        iotCount: 0,
+        partnerCardCount: 0,
       });
       const u = uMap.get(uid)!;
       u.count++;
@@ -358,12 +376,18 @@ const RankingPage = () => {
       if (s.voucher && s.voucher_returned === "유") u.voucherReturned++;
       if (s.open_date) u.dateCounts.set(s.open_date, (u.dateCounts.get(s.open_date) ?? 0) + 1);
 
-      // 상품별 카운트
+      // 상품별 카운트 (product 필드 매핑된 행만 정확히 합산)
       const b = productBucket(s.product);
       if (b !== "기타") u.productCounts[b]++;
+      // 스마트홈/홈IOT는 별도 카운트
+      if (b === "스마트홈") u.iotCount++;
       if ((s.vas1 && String(s.vas1).trim() && s.vas1 !== "없음") || (s.vas2 && String(s.vas2).trim() && s.vas2 !== "없음")) {
         u.productCounts.부가서비스++;
       }
+
+      // 제휴카드: custom_fields.partner_card_enabled === true
+      const cf = (s as any).custom_fields ?? {};
+      if (cf && cf.partner_card_enabled) u.partnerCardCount++;
 
       // Model ranking
       if (s.device_model) {
@@ -516,7 +540,6 @@ const RankingPage = () => {
       if (!p) return;
       const clean = cMap.get(uid);
       const mob = v.productCounts.모바일;
-      const comboRate = mob > 0 ? Math.round(((v.productCounts.인터넷 + v.productCounts.TV프리) / mob) * 100) : 0;
       const vasAttach = mob > 0 ? Math.round((v.productCounts.부가서비스 / mob) * 100) : 0;
       const penalty = (cleanCalc.get(uid)?.missingDocs ?? 0) + (cleanCalc.get(uid)?.pendingItems ?? 0);
       const total = v.count || 1;
@@ -538,10 +561,13 @@ const RankingPage = () => {
         excluded: excludedIds.has(uid),
         achievement: Math.round(achMap.get(uid)?.avg ?? 0),
         goalCount: achMap.get(uid)?.cnt ?? 0,
-        comboRate,
         vasAttach,
         cleanScore,
         cleanPenalty: penalty,
+        internetCount: v.productCounts.인터넷,
+        tvfreeCount: v.productCounts.TV프리,
+        iotCount: v.iotCount,
+        partnerCardCount: v.partnerCardCount,
       });
     });
 
@@ -593,7 +619,12 @@ const RankingPage = () => {
     if (storeFilter !== "all") list = list.filter((u) => u.store === storeFilter);
     if (hideExcluded) list = list.filter((u) => !u.excluded);
     if (tab === "achievement") list = list.filter((u) => u.goalCount > 0);
-    if (tab === "combo" || tab === "vas") list = list.filter((u) => u.productCounts.모바일 > 0);
+    if (tab === "vas") list = list.filter((u) => u.productCounts.모바일 > 0);
+    // 상품별 판매왕 / 제휴카드: 0건은 의미 없음
+    if (tab === "internet") list = list.filter((u) => u.internetCount > 0);
+    if (tab === "tvfree") list = list.filter((u) => u.tvfreeCount > 0);
+    if (tab === "iot") list = list.filter((u) => u.iotCount > 0);
+    if (tab === "partnerCard") list = list.filter((u) => u.partnerCardCount > 0);
     if (tab === "clean") list = list.filter((u) => u.count > 0);
     return list.sort(activeTab.sortFn);
   }, [users, storeFilter, activeTab, hideExcluded, tab]);
@@ -639,6 +670,27 @@ const RankingPage = () => {
     }
   }, [cleanMap, user]);
 
+  // 본인이 현재 탭의 1위에 등극하면 풀스크린 축하 이펙트 (탭별 1회)
+  useEffect(() => {
+    if (!user || !myRank || myRank.rank !== 1) return;
+    const key = `${tab}:${user.id}`;
+    if (firstPlaceFiredFor.current === key) return;
+    firstPlaceFiredFor.current = key;
+    const tabLabel = TABS.find((t) => t.key === tab)?.label ?? "";
+    const burst = (origin: { x: number; y: number }) =>
+      confetti({
+        particleCount: 120, spread: 80, origin, ticks: 220,
+        colors: ["#FFD700", "#FF6B6B", "#4ECDC4", "#A78BFA", "#F59E0B", "#10B981"],
+      });
+    setTimeout(() => burst({ x: 0.15, y: 0.6 }), 0);
+    setTimeout(() => burst({ x: 0.85, y: 0.6 }), 200);
+    setTimeout(() => burst({ x: 0.5, y: 0.4 }), 400);
+    setTimeout(() => burst({ x: 0.5, y: 0.7 }), 700);
+    import("sonner").then(({ toast }) => {
+      toast.success(`🏆 [${tabLabel}] 1위 등극! 축하합니다!`, { duration: 6000 });
+    });
+  }, [myRank, tab, user]);
+
   const getValue = (u: RankedUser) => {
     switch (tab) {
       case "sales": return `${u.count}건`;
@@ -646,6 +698,12 @@ const RankingPage = () => {
       case "strategy": return `${u.strategyCount}건`;
       case "voucher": return `${u.voucherReturned}건`;
       case "achievement": return u.goalCount > 0 ? `${u.achievement}%` : "목표 미설정";
+      case "internet": return `${u.internetCount}건`;
+      case "tvfree": return `${u.tvfreeCount}건`;
+      case "iot": return `${u.iotCount}건`;
+      case "partnerCard": return `${u.partnerCardCount}건`;
+      case "vas": return `${u.vasAttach}%`;
+      case "clean": return `${u.cleanScore}점`;
     }
   };
 
