@@ -926,6 +926,7 @@ const SalesLedgerPage = () => {
                 const offer = offerOf(r);
                 const profit = profitOf(r);
                 const negative = profit < 0;
+                const isMoyoExcluded = r.channel === "모요" && r.moyo_excluded === true;
                 const handleRowClick = () => {
                   if (isLocked && !adminOverride) {
                     if (isAdmin) {
@@ -949,6 +950,7 @@ const SalesLedgerPage = () => {
                     mine && "bg-primary/[0.04]",
                     hasPending && "bg-amber-50/70 hover:bg-amber-500/[0.12]",
                     isLocked && "opacity-80",
+                    isMoyoExcluded && "text-muted-foreground/80 [&_td]:line-through",
                   )}
                   onClick={handleRowClick}
                   >
@@ -962,7 +964,16 @@ const SalesLedgerPage = () => {
                       </td>
                     )}
                     <td className="px-3 py-2.5">{r.open_date ?? "-"}</td>
-                    <td className="px-3 py-2.5">{r.channel ?? "-"}</td>
+                    <td className="px-3 py-2.5 no-underline">
+                      <div className="flex items-center gap-1.5 no-underline">
+                        <span>{r.channel ?? "-"}</span>
+                        {isMoyoExcluded && (
+                          <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-muted-foreground/40 text-muted-foreground no-underline">
+                            모요 미적용
+                          </Badge>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-3 py-2.5">
                       {r.manager ?? "-"}
                       <ResignedTag userId={r.created_by} ids={resignedIds} />
