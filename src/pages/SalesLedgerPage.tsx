@@ -773,6 +773,7 @@ const SalesLedgerPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">직원 전체</SelectItem>
+                  <SelectItem value="__none__">⚠ 담당자 없음</SelectItem>
                   {managers.map((m) => (
                     <SelectItem key={m} value={m}>{UUID_RE.test(m) && managerNameMap[m] ? managerNameMap[m] : m}</SelectItem>
                   ))}
