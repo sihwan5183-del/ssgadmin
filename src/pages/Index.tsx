@@ -23,9 +23,8 @@ import { CashTodayCard } from "@/components/dashboard/CashTodayCard";
 import { MyReviewAlerts } from "@/components/dashboard/MyReviewAlerts";
 import { UntreatedLeadsCard } from "@/components/dashboard/UntreatedLeadsCard";
 import { MyIncentiveWidget } from "@/components/dashboard/MyIncentiveWidget";
-import { summaryStats, formatShortKRW } from "@/data/mockData";
-import { TrendingUp, Wallet, Megaphone, Target } from "lucide-react";
-import { useMarketingSpend } from "@/hooks/useMarketingSpend";
+import { formatShortKRW } from "@/data/mockData";
+import { TrendingUp, TrendingDown, Sparkles, Target } from "lucide-react";
 import { useBudgetCategories } from "@/hooks/useBudgetCategories";
 import { EyeOff } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -33,18 +32,16 @@ import { useDashboardLayout } from "@/hooks/useDashboardLayout";
 import { DashboardLayoutManager } from "@/components/dashboard/DashboardLayoutManager";
 import { useRole } from "@/hooks/useRole";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { useFinanceData } from "@/hooks/useFinanceData";
 
 const Index = () => {
-  const marketing = useMarketingSpend();
+  const finance = useFinanceData();
   const { excludedLabels } = useBudgetCategories();
   const { isAdmin } = useRole();
   const { isSuperAdmin } = useSuperAdmin();
   const canSeeAdminWidgets = isAdmin || isSuperAdmin;
   const { widgets, isVisible, toggle, move, resetToDefault } = useDashboardLayout();
-  const liveRoi =
-    marketing.current > 0
-      ? Math.round((summaryStats.netProfit / marketing.current) * 100)
-      : summaryStats.roi;
+  const liveRoi = Math.round(finance.roi);
   return (
     <>
       <Header
@@ -112,35 +109,32 @@ const Index = () => {
       {isVisible("stat_cards") && (
       <section className="grid grid-cols-2 lg:grid-cols-7 gap-1.5 mb-1.5">
         <StatCard
-          label="당월 순이익"
-          value={formatShortKRW(summaryStats.netProfit)}
-          delta={summaryStats.netProfitDelta}
-          icon={Wallet}
-          accent="primary"
-          hint="리베이트 − 오퍼 − 마케팅비"
-        />
-        <StatCard
-          label="총 리베이트"
-          value={formatShortKRW(summaryStats.totalRebate)}
-          delta={summaryStats.totalRebateDelta}
+          label="총 수익"
+          value={finance.loading ? "…" : formatShortKRW(finance.totalRevenue)}
           icon={TrendingUp}
-          accent="success"
+          accent="primary"
+          hint="단가표 수수료 + 부가서비스 + 수급완료 미수금 + 반납완료 상품권 + 확정 중고폰"
         />
         <StatCard
-          label="마케팅 비용"
-          value={marketing.loading ? "…" : formatShortKRW(marketing.current)}
-          delta={marketing.loading ? undefined : Number(marketing.delta.toFixed(1))}
-          icon={Megaphone}
+          label="총 지출"
+          value={finance.loading ? "…" : formatShortKRW(finance.totalExpense)}
+          icon={TrendingDown}
           accent="warning"
-          hint="광고 캘린더 + 지출입력 합산 (실시간)"
+          hint="지원금 + 5번 법인카드 + 광고비/기타지출 + 모요 수수료"
         />
         <StatCard
-          label="마케팅 ROI"
+          label="순수익"
+          value={finance.loading ? "…" : formatShortKRW(finance.netMargin)}
+          icon={Sparkles}
+          accent="success"
+          hint="총 수익 − 총 지출"
+        />
+        <StatCard
+          label="정산 ROI"
           value={`${liveRoi}%`}
-          delta={summaryStats.roiDelta}
           icon={Target}
           accent="secondary"
-          hint="순이익 ÷ 마케팅 비용"
+          hint="순수익 ÷ 총 지출"
         />
         <CashTodayCard />
         <PendingItemsCard />
