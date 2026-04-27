@@ -276,6 +276,17 @@ const RankingPage = () => {
     setProfiles(pMap);
     setStores(Array.from(storeSet).sort());
 
+    // === user_id 통합 매칭: manager(이름) → user_id 우선, 없으면 created_by ===
+    const nameToUid = new Map<string, string>();
+    (profs ?? []).forEach((p) => {
+      if (p.display_name) nameToUid.set(p.display_name.trim().toLowerCase(), p.user_id);
+    });
+    const ownerOf = (s: { manager?: string | null; created_by: string }) => {
+      const m = (s.manager ?? "").trim().toLowerCase();
+      if (m && nameToUid.has(m)) return nameToUid.get(m)!;
+      return s.created_by;
+    };
+
     // Fetch strategy model names
     const { data: stratModels } = await supabase.from("device_models").select("model_name").eq("is_strategy", true).eq("active", true);
     const stratSet = new Set((stratModels ?? []).map((m) => m.model_name));
@@ -283,7 +294,7 @@ const RankingPage = () => {
     // 개통완료/반납완료 실적 (취소·반려 제외) — 판매원장 실시간 반영
     const { data: sales } = await supabase
       .from("sales")
-      .select("id, created_by, manager, device_model, product, status, approval_status, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned, vas1, vas2, open_date")
+      .select("id, created_by, manager, device_model, product, sale_type, status, approval_status, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned, vas1, vas2, open_date")
       .in("status", COUNTED_STATUSES)
       .not("approval_status", "in", `(${EXCLUDED_APPROVAL.join(",")})`)
       .gte("open_date", start)
@@ -293,7 +304,7 @@ const RankingPage = () => {
     // Yesterday daily delta (count change)
     const { data: ySales } = await supabase
       .from("sales")
-      .select("created_by")
+      .select("created_by, manager")
       .in("status", COUNTED_STATUSES)
       .not("approval_status", "in", `(${EXCLUDED_APPROVAL.join(",")})`)
       .gte("open_date", yd.start)
@@ -304,7 +315,7 @@ const RankingPage = () => {
     if (yPeriod) {
       const { data: yps } = await supabase
         .from("sales")
-        .select("created_by, device_model, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned")
+        .select("created_by, manager, device_model, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned")
         .in("status", COUNTED_STATUSES)
         .not("approval_status", "in", `(${EXCLUDED_APPROVAL.join(",")})`)
         .gte("open_date", yPeriod.start)
@@ -326,7 +337,7 @@ const RankingPage = () => {
       // 중복 집계 방지
       if (seenSaleIds.has(s.id)) return;
       seenSaleIds.add(s.id);
-      const uid = s.created_by;
+      const uid = ownerOf(s as any);
       if (!uMap.has(uid)) uMap.set(uid, {
         count: 0, profit: 0, strategyCount: 0, voucherReturned: 0,
         dateCounts: new Map(),
@@ -356,7 +367,10 @@ const RankingPage = () => {
 
     // Yesterday per-user counts
     const yMap = new Map<string, number>();
-    (ySales ?? []).forEach((s) => yMap.set(s.created_by, (yMap.get(s.created_by) ?? 0) + 1));
+    (ySales ?? []).forEach((s: any) => {
+      const uid = ownerOf(s);
+      yMap.set(uid, (yMap.get(uid) ?? 0) + 1);
+    });
 
     // === 목표 달성률 (당월 staff_product_goals 기준) ===
     const yearMonth = new Date().toISOString().slice(0, 7);
@@ -381,7 +395,7 @@ const RankingPage = () => {
       mobileBySaleType: Record<string, number>;
     }>();
     (sales ?? []).forEach((s: any) => {
-      const uid = s.created_by;
+      const uid = ownerOf(s);
       if (!realByUser.has(uid)) realByUser.set(uid, {
         mobile: 0, internet: 0, tvfree: 0, smarthome: 0, vas: 0,
         mobileBySaleType: {},
