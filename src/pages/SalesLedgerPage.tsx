@@ -142,6 +142,19 @@ const SalesLedgerPage = () => {
   const [returnFilter, setReturnFilter] = useState<"all" | "returned" | "unreturned">("all");
   const [inspectionFilter, setInspectionFilter] = useState<"all" | "inspected" | "uninspected">("all");
 
+  // URL 쿼리 파라미터로 진입 시 초기 필터 적용 (직원별 현황 → 비중 차트 클릭 등)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    const p = sp.get("product");
+    const m = sp.get("manager");
+    if (p) setProductFilter(p);
+    if (m) setManagerFilter(m);
+    // vas=1 인 경우 별도 필터 컬럼이 없어서 검색어로 표시
+    if (sp.get("vas") === "1") setSearchQ("부가서비스");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const isMobile = useIsMobile();
   const [filterOpen, setFilterOpen] = useState(false);
 

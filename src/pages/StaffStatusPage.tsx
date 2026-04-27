@@ -72,7 +72,10 @@ const DONUT_COLORS = [
 ];
 
 // Standard products tracked for goals
-const GOAL_PRODUCTS = ["모바일", "인터넷", "TV", "스마트홈", "2ND"];
+const GOAL_PRODUCTS = ["모바일", "인터넷", "TV프리", "스마트홈", "2ND"];
+
+// Mix chart products (detailed breakdown)
+const MIX_PRODUCTS = ["모바일", "인터넷", "TV프리", "스마트홈", "부가서비스"];
 
 // Buckets for product breakdown
 function productBucket(p: string | null): string {
@@ -80,7 +83,8 @@ function productBucket(p: string | null): string {
   if (!s) return "기타";
   if (/2nd|세컨|워치|태블릿|tablet|watch/i.test(p ?? "")) return "2ND";
   if (/스마트홈|iot|홈/i.test(p ?? "")) return "스마트홈";
-  if (/tv/i.test(p ?? "")) return "TV";
+  // TV프리만 별도 집계 (일반 TV는 기타로 분류)
+  if (/tv\s*프리|프리tv|tv프리/i.test(p ?? "") || (p ?? "").includes("TV프리")) return "TV프리";
   if (/인터넷|기가|wifi/i.test(p ?? "")) return "인터넷";
   if (/모바일|mobile|usim|mnp|재약정|업셀/i.test(p ?? "")) return "모바일";
   return "기타";
@@ -88,7 +92,7 @@ function productBucket(p: string | null): string {
 
 function isWiredOrSolution(p: string | null) {
   const b = productBucket(p);
-  return b === "인터넷" || b === "TV" || b === "스마트홈" || b === "2ND";
+  return b === "인터넷" || b === "TV프리" || b === "스마트홈" || b === "2ND";
 }
 
 function categorize(sale: SaleRow): "모바일" | "결합/인터넷·TV" | "기타 오퍼" {
@@ -333,25 +337,38 @@ export default function StaffStatusPage() {
   const analytics = useMemo(() => {
     const successSales = sales.filter(isSuccess);
 
-    // Channel inquiries vs success
+    // Channel: 인입 = 문의 / 성공 = (전환된 문의) + (해당 채널의 직접 성공 실적)
+    // 문의에 없는 채널이라도 sales에 있으면 채널로 노출 (실무: 워크인/오프라인 등)
     const chanMap = new Map<string, { inflow: number; success: number }>();
     inquiries.forEach((q) => {
-      const c = q.channel || "기타";
+      const c = (q.channel || "기타").trim() || "기타";
       const r = chanMap.get(c) ?? { inflow: 0, success: 0 };
       r.inflow += 1;
-      if (q.converted_sale_id || q.status === "전환") r.success += 1;
+      if (q.converted_sale_id) r.success += 1;
+      chanMap.set(c, r);
+    });
+    // 전환 문의가 가리키는 sale ID 셋 (중복 카운트 방지)
+    const convertedSaleIds = new Set(
+      inquiries.map((q) => q.converted_sale_id).filter(Boolean) as string[]
+    );
+    successSales.forEach((s) => {
+      if (convertedSaleIds.has(s.id)) return; // already counted via inquiry
+      const c = (s.channel || "기타").trim() || "기타";
+      const r = chanMap.get(c) ?? { inflow: 0, success: 0 };
+      // 문의 없이 직접 들어온 실적도 인입(=직접유입) + 성공으로 카운트
+      r.inflow += 1;
+      r.success += 1;
       chanMap.set(c, r);
     });
     const channelStats = Array.from(chanMap.entries())
       .map(([channel, v]) => ({ channel, ...v, rate: v.inflow > 0 ? Math.round((v.success / v.inflow) * 100) : 0 }))
       .sort((a, b) => b.inflow - a.inflow);
 
-    // Total inflow / success / rate
-    const totalInflow = inquiries.length;
-    const totalConverted = inquiries.filter((q) => q.converted_sale_id || q.status === "전환").length;
+    const totalInflow = channelStats.reduce((a, c) => a + c.inflow, 0);
+    const totalConverted = channelStats.reduce((a, c) => a + c.success, 0);
     const overallRate = totalInflow > 0 ? Math.round((totalConverted / totalInflow) * 100) : 0;
 
-    // Product breakdown
+    // Product breakdown (TV프리 분리)
     const prodMap = new Map<string, number>();
     successSales.forEach((s) => {
       const b = productBucket(s.product);
@@ -359,12 +376,20 @@ export default function StaffStatusPage() {
     });
     const productStats = GOAL_PRODUCTS.map((name) => ({ name, count: prodMap.get(name) ?? 0 }));
 
-    // VAS counts: vas1 + vas2 non-empty units sold
+    // VAS counts: vas1 + vas2 non-empty
     let vasCount = 0;
     successSales.forEach((s) => {
       if (s.vas1 && s.vas1.trim() && s.vas1 !== "없음") vasCount += 1;
       if (s.vas2 && s.vas2.trim() && s.vas2 !== "없음") vasCount += 1;
     });
+
+    // 부가서비스 유치율 = (모바일 개통 중 VAS 1개 이상 가입) / 모바일 개통수
+    const mobileSales = successSales.filter((s) => productBucket(s.product) === "모바일");
+    const mobileWithVas = mobileSales.filter((s) =>
+      (s.vas1 && s.vas1.trim() && s.vas1 !== "없음") || (s.vas2 && s.vas2.trim() && s.vas2 !== "없음")
+    );
+    const mobileVasRate = mobileSales.length > 0
+      ? Math.round((mobileWithVas.length / mobileSales.length) * 100) : 0;
 
     // 2nd device VAS attach rate: among 2ND-bucket sales, how many have any vas
     const second = successSales.filter((s) => productBucket(s.product) === "2ND");
@@ -373,21 +398,22 @@ export default function StaffStatusPage() {
     );
     const secondVasRate = second.length > 0 ? Math.round((secondWithVas.length / second.length) * 100) : 0;
 
-    // Mobile vs wired/solution share
-    const mobileCount = successSales.filter((s) => productBucket(s.product) === "모바일").length;
-    const wiredCount = successSales.filter((s) => isWiredOrSolution(s.product)).length;
-    const otherCount = successSales.length - mobileCount - wiredCount;
+    // 5종 비중 분석 (모바일 / 인터넷 / TV프리 / 스마트홈 / 부가서비스)
     const mixData = [
-      { name: "모바일", value: mobileCount },
-      { name: "유선/솔루션", value: wiredCount },
-      ...(otherCount > 0 ? [{ name: "기타", value: otherCount }] : []),
+      { name: "모바일", value: mobileSales.length, key: "모바일" },
+      { name: "인터넷", value: prodMap.get("인터넷") ?? 0, key: "인터넷" },
+      { name: "TV프리", value: prodMap.get("TV프리") ?? 0, key: "TV프리" },
+      { name: "스마트홈", value: prodMap.get("스마트홈") ?? 0, key: "스마트홈" },
+      { name: "부가서비스", value: vasCount, key: "부가서비스" },
     ].filter((d) => d.value > 0);
+    const mobileCount = mobileSales.length;
+    const wiredCount = successSales.filter((s) => isWiredOrSolution(s.product)).length;
 
     return {
       channelStats, totalInflow, totalConverted, overallRate,
-      productStats, vasCount,
+      productStats, vasCount, mobileVasRate, mobileCount: mobileSales.length,
       secondCount: second.length, secondVasRate,
-      mixData, mobileCount, wiredCount,
+      mixData, wiredCount,
     };
   }, [sales, inquiries]);
 
@@ -673,50 +699,81 @@ export default function StaffStatusPage() {
               </Card>
             </section>
 
-            {/* === 부가서비스 / 2nd / 판매비중 === */}
-            <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            {/* === 부가서비스 유치율 / 2nd 디바이스 / 5종 판매비중 === */}
+            <section className="grid grid-cols-1 lg:grid-cols-4 gap-5">
               <Card className="p-6 glass">
                 <div className="text-sm font-semibold flex items-center gap-2 mb-2">
-                  <Gift className="size-4 text-primary-glow" /> 부가서비스 유치
+                  <Gift className="size-4 text-primary-glow" /> 부가서비스 유치율
                 </div>
-                <div className="text-4xl font-extrabold text-amber-700 tabular-nums">{analytics.vasCount}<span className="text-base font-normal text-muted-foreground ml-1">건</span></div>
-                <p className="text-xs text-muted-foreground mt-2">VAS1·VAS2 합산. 성공 실적 기준</p>
+                <div className="text-4xl font-extrabold text-amber-700 tabular-nums">
+                  {analytics.mobileVasRate}<span className="text-base font-normal text-muted-foreground ml-1">%</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  모바일 {analytics.mobileCount}건 중 부가 포함 · 총 {analytics.vasCount}건
+                </p>
               </Card>
 
               <Card className="p-6 glass">
                 <div className="text-sm font-semibold flex items-center gap-2 mb-2">
-                  <Smartphone className="size-4 text-primary-glow" /> 모바일 2nd 부가 유치율
+                  <Smartphone className="size-4 text-primary-glow" /> 2nd 디바이스 판매
                 </div>
-                <div className="text-4xl font-extrabold text-emerald-300 tabular-nums">{analytics.secondVasRate}<span className="text-base font-normal text-muted-foreground ml-1">%</span></div>
-                <p className="text-xs text-muted-foreground mt-2">2ND 디바이스 {analytics.secondCount}건 중 부가 포함 건 비율</p>
+                <div className="text-4xl font-extrabold text-emerald-300 tabular-nums">
+                  {analytics.secondCount}<span className="text-base font-normal text-muted-foreground ml-1">대</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  워치·태블릿 등 · 부가 부착률 {analytics.secondVasRate}%
+                </p>
               </Card>
 
-              <Card className="p-6 glass">
+              <Card className="p-6 glass lg:col-span-2">
                 <div className="text-sm font-semibold flex items-center gap-2 mb-3">
-                  <Wifi className="size-4 text-primary-glow" /> 모바일 vs 유선/솔루션 비중
+                  <Wifi className="size-4 text-primary-glow" /> 가입상품 5종 판매비중
+                  <span className="text-[10px] text-muted-foreground ml-1">· 항목 클릭 시 실적 리스트로 이동</span>
                 </div>
                 {analytics.mixData.length === 0 ? (
                   <div className="h-32 grid place-items-center text-xs text-muted-foreground">데이터 없음</div>
                 ) : (
-                  <div className="h-36">
-                    <ResponsiveContainer>
-                      <PieChart>
-                        <Pie data={analytics.mixData} dataKey="value" nameKey="name" innerRadius={42} outerRadius={66} paddingAngle={3} stroke="none">
-                          {analytics.mixData.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />)}
-                        </Pie>
-                        <RTooltip contentStyle={{ background: "hsl(0 0% 100% / 0.96)", color: "#374151", border: "1px solid hsl(0 0% 88%)", borderRadius: 12, fontSize: 12 }} />
-                      </PieChart>
-                    </ResponsiveContainer>
+                  <div className="grid grid-cols-2 gap-3 items-center">
+                    <div className="h-40">
+                      <ResponsiveContainer>
+                        <PieChart>
+                          <Pie data={analytics.mixData} dataKey="value" nameKey="name" innerRadius={45} outerRadius={72} paddingAngle={3} stroke="none">
+                            {analytics.mixData.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />)}
+                          </Pie>
+                          <RTooltip contentStyle={{ background: "hsl(0 0% 100% / 0.96)", color: "#374151", border: "1px solid hsl(0 0% 88%)", borderRadius: 12, fontSize: 12 }} formatter={(v: any, n: any) => [`${v}건`, n]} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="space-y-1.5">
+                      {analytics.mixData.map((d, i) => {
+                        const total = analytics.mixData.reduce((a, x) => a + x.value, 0);
+                        const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
+                        const handleClick = () => {
+                          const params = new URLSearchParams();
+                          if (d.key === "부가서비스") {
+                            params.set("vas", "1");
+                          } else {
+                            params.set("product", d.key);
+                          }
+                          if (selected) params.set("manager", selected.display_name);
+                          window.location.href = `/sales-ledger?${params.toString()}`;
+                        };
+                        return (
+                          <button
+                            key={d.name}
+                            onClick={handleClick}
+                            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/40 transition-colors text-left"
+                          >
+                            <span className="size-2.5 rounded-full shrink-0" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                            <span className="text-xs font-medium flex-1 truncate">{d.name}</span>
+                            <span className="text-xs tabular-nums text-muted-foreground">{d.value}건</span>
+                            <span className="text-[10px] tabular-nums text-emerald-300 font-semibold w-9 text-right">{pct}%</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
-                <div className="flex flex-wrap justify-center gap-2 text-[10px] mt-1">
-                  {analytics.mixData.map((d, i) => (
-                    <span key={d.name} className="flex items-center gap-1">
-                      <span className="size-2 rounded-full" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
-                      {d.name} {d.value}건
-                    </span>
-                  ))}
-                </div>
               </Card>
             </section>
 
