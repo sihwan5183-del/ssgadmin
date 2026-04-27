@@ -375,6 +375,33 @@ const SalesLedgerPage = () => {
     return Array.from(set).sort();
   }, [rows]);
 
+  // 담당자가 UUID 형태로 저장된 행이 있으면 profiles에서 실명을 조회해 매핑
+  useEffect(() => {
+    const uids = new Set<string>();
+    rows.forEach((r) => {
+      const m = (r.manager ?? "").trim();
+      if (m && UUID_RE.test(m) && !managerNameMap[m]) uids.add(m);
+      const cb = (r as any).created_by as string | undefined;
+      if (cb && !managerNameMap[cb] && (!m || UUID_RE.test(m))) uids.add(cb);
+    });
+    if (uids.size === 0) return;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("user_id, display_name")
+        .in("user_id", Array.from(uids));
+      if (!data || data.length === 0) return;
+      setManagerNameMap((prev) => {
+        const next = { ...prev };
+        data.forEach((p: any) => {
+          if (p.user_id && p.display_name) next[p.user_id] = p.display_name;
+        });
+        return next;
+      });
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows]);
+
   const filteredRows = useMemo(() => {
     const q = debouncedSearchQ.trim().toLowerCase().replace(/\s+/g, "");
     let result = rows;
