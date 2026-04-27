@@ -539,7 +539,6 @@ const RankingPage = () => {
       if (!p) return;
       const clean = cMap.get(uid);
       const mob = v.productCounts.모바일;
-      const comboRate = mob > 0 ? Math.round(((v.productCounts.인터넷 + v.productCounts.TV프리) / mob) * 100) : 0;
       const vasAttach = mob > 0 ? Math.round((v.productCounts.부가서비스 / mob) * 100) : 0;
       const penalty = (cleanCalc.get(uid)?.missingDocs ?? 0) + (cleanCalc.get(uid)?.pendingItems ?? 0);
       const total = v.count || 1;
@@ -561,10 +560,13 @@ const RankingPage = () => {
         excluded: excludedIds.has(uid),
         achievement: Math.round(achMap.get(uid)?.avg ?? 0),
         goalCount: achMap.get(uid)?.cnt ?? 0,
-        comboRate,
         vasAttach,
         cleanScore,
         cleanPenalty: penalty,
+        internetCount: v.productCounts.인터넷,
+        tvfreeCount: v.productCounts.TV프리,
+        iotCount: v.iotCount,
+        partnerCardCount: v.partnerCardCount,
       });
     });
 
