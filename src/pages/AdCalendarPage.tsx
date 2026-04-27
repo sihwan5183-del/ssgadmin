@@ -15,6 +15,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   ChevronLeft,
   ChevronRight,
@@ -29,6 +31,7 @@ import {
   TrendingUp,
   X,
   Loader2,
+  Filter,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -122,6 +125,9 @@ export default function AdCalendarPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  // 필터: 매체 / 인입경로
+  const [filterMedia, setFilterMedia] = useState<string>("all");
+  const [filterChannel, setFilterChannel] = useState<string>("all");
 
   // 월 단위 조회 (선택 월과 겹치는 모든 캠페인)
   const monthStart = useMemo(() => {
@@ -174,10 +180,25 @@ export default function AdCalendarPage() {
 
   const grid = useMemo(() => buildMonthGrid(year, activeMonth), [year, activeMonth]);
 
+  // 필터 적용된 캠페인
+  const filteredCampaigns = useMemo(() => {
+    return campaigns.filter((c) => {
+      if (filterMedia !== "all" && c.media !== filterMedia) return false;
+      if (filterChannel !== "all" && (c.channel ?? "") !== filterChannel) return false;
+      return true;
+    });
+  }, [campaigns, filterMedia, filterChannel]);
+
+  const channelOptions = useMemo(() => {
+    const set = new Set<string>();
+    campaigns.forEach((c) => c.channel && set.add(c.channel));
+    return Array.from(set);
+  }, [campaigns]);
+
   // 날짜 → 캠페인 매핑 (그 날짜에 진행 중인 모든 캠페인)
   const campaignsByDate = useMemo(() => {
     const map = new Map<string, Campaign[]>();
-    for (const c of campaigns) {
+    for (const c of filteredCampaigns) {
       const start = new Date(c.start_date);
       const end = new Date(c.end_date);
       const cur = new Date(start);
@@ -189,12 +210,12 @@ export default function AdCalendarPage() {
       }
     }
     return map;
-  }, [campaigns]);
+  }, [filteredCampaigns]);
 
   // 일자별 지출 = 캠페인 일할 계산 (총예산 ÷ 기간일수)
   const dailySpend = useMemo(() => {
     const m = new Map<string, number>();
-    for (const c of campaigns) {
+    for (const c of filteredCampaigns) {
       const start = new Date(c.start_date);
       const end = new Date(c.end_date);
       const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
@@ -207,7 +228,7 @@ export default function AdCalendarPage() {
       }
     }
     return m;
-  }, [campaigns]);
+  }, [filteredCampaigns]);
 
   const monthTotal = useMemo(() => {
     let total = 0;
@@ -376,13 +397,36 @@ export default function AdCalendarPage() {
           </Button>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
+          {/* 필터 */}
+          <div className="flex items-center gap-1.5">
+            <Filter className="size-3.5 text-muted-foreground" />
+            <Select value={filterMedia} onValueChange={setFilterMedia}>
+              <SelectTrigger className="h-8 text-xs w-[110px]"><SelectValue placeholder="매체" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 매체</SelectItem>
+                {MEDIA_OPTIONS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterChannel} onValueChange={setFilterChannel}>
+              <SelectTrigger className="h-8 text-xs w-[120px]"><SelectValue placeholder="인입경로" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 경로</SelectItem>
+                {channelOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {(filterMedia !== "all" || filterChannel !== "all") && (
+              <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={() => { setFilterMedia("all"); setFilterChannel("all"); }}>
+                <X className="size-3" /> 초기화
+              </Button>
+            )}
+          </div>
           <div className="text-sm">
             <span className="text-muted-foreground">월 집행 합계 </span>
             <span className="font-bold text-revenue tabular-nums">₩{monthTotal.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</span>
           </div>
           <div className="text-sm">
             <span className="text-muted-foreground">캠페인 </span>
-            <span className="font-bold tabular-nums">{campaigns.length}개</span>
+            <span className="font-bold tabular-nums">{filteredCampaigns.length}개</span>
           </div>
           {/* 매체 범례 */}
           <div className="flex items-center gap-2 flex-wrap">
@@ -399,6 +443,7 @@ export default function AdCalendarPage() {
       </section>
 
       {/* 캘린더 그리드 */}
+      <TooltipProvider delayDuration={200}>
       <Card className="glass-strong border-border/40 overflow-hidden">
         <div className="grid grid-cols-7 border-b border-border/40">
           {WEEKDAYS.map((d, i) => (
@@ -471,35 +516,83 @@ export default function AdCalendarPage() {
                     const isStart = c.start_date === key;
                     const isEnd = c.end_date === key;
                     return (
-                      <button
-                        key={c.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpenDetail(c);
-                        }}
-                        onMouseEnter={() => c.image_url && setHoverPreview({ url: c.image_url, topic: c.topic })}
-                        onMouseLeave={() => setHoverPreview(null)}
-                        className={cn(
-                          "w-full text-left px-1.5 py-1 text-[10px] leading-tight border-l-2",
-                          p.bg,
-                          p.border,
-                          p.text,
-                          "hover:brightness-125 transition",
-                          isStart && "rounded-l-md",
-                          isEnd && "rounded-r-md",
-                        )}
-                      >
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="font-semibold truncate">{c.media}</span>
-                          {c.image_url && <ImageIcon className="size-2.5 opacity-70 shrink-0" />}
-                        </div>
-                        <div className="truncate text-foreground/90">{c.topic}</div>
-                        <div className="tabular-nums opacity-80">₩{fmtKRW(c.total_budget || 0)}</div>
-                      </button>
+                      <Tooltip key={c.id}>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenDetail(c);
+                            }}
+                            onMouseEnter={() => c.image_url && setHoverPreview({ url: c.image_url, topic: c.topic })}
+                            onMouseLeave={() => setHoverPreview(null)}
+                            className={cn(
+                              "w-full text-left px-1.5 py-1 text-[10px] leading-tight border-l-2",
+                              p.bg,
+                              p.border,
+                              p.text,
+                              "hover:brightness-125 transition",
+                              isStart && "rounded-l-md",
+                              isEnd && "rounded-r-md",
+                            )}
+                          >
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="font-semibold truncate">{c.media}</span>
+                              {c.image_url && <ImageIcon className="size-2.5 opacity-70 shrink-0" />}
+                            </div>
+                            <div className="truncate text-foreground/90">{c.topic}</div>
+                            <div className="tabular-nums opacity-80">₩{fmtKRW(c.total_budget || 0)}</div>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <div className="space-y-0.5 text-xs">
+                            <div className="font-semibold">{c.topic}</div>
+                            <div className="text-muted-foreground">{c.media}{c.channel ? ` · ${c.channel}` : ""}</div>
+                            <div className="text-muted-foreground">{c.start_date} ~ {c.end_date}</div>
+                            <div className="tabular-nums">총 예산 ₩{(c.total_budget || 0).toLocaleString("ko-KR")}</div>
+                            {c.note && <div className="text-muted-foreground line-clamp-3 mt-1">{c.note}</div>}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
                     );
                   })}
                   {dayItems.length > 3 && (
-                    <div className="text-[10px] text-muted-foreground px-1.5">+ {dayItems.length - 3}개 더</div>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-full text-[10px] font-medium text-primary-glow hover:text-primary px-1.5 py-0.5 rounded-md hover:bg-primary/10 text-left"
+                        >
+                          + {dayItems.length - 3}개 더보기
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent align="start" className="w-72 p-2 max-h-80 overflow-y-auto">
+                        <div className="text-[11px] text-muted-foreground px-2 py-1 font-medium">
+                          {key} · 총 {dayItems.length}건
+                        </div>
+                        <div className="space-y-1">
+                          {dayItems.map((c) => {
+                            const pp = getMediaPalette(c.media);
+                            return (
+                              <button
+                                key={c.id}
+                                onClick={(e) => { e.stopPropagation(); setOpenDetail(c); }}
+                                className={cn(
+                                  "w-full text-left px-2 py-1.5 rounded-md border-l-2 text-xs",
+                                  pp.bg, pp.border, pp.text,
+                                  "hover:brightness-125 transition",
+                                )}
+                              >
+                                <div className="font-semibold flex items-center justify-between gap-2">
+                                  <span>{c.media}</span>
+                                  <span className="tabular-nums opacity-80">₩{fmtKRW(c.total_budget || 0)}</span>
+                                </div>
+                                <div className="text-foreground/90 truncate">{c.topic}</div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   )}
                 </div>
 
@@ -532,6 +625,7 @@ export default function AdCalendarPage() {
           })}
         </div>
       </Card>
+      </TooltipProvider>
 
       {loading && (
         <div className="text-center py-6 text-sm text-muted-foreground">
