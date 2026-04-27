@@ -817,6 +817,9 @@ const SalesLedgerPage = () => {
                 <th className="text-left px-3 py-2 font-medium">고객</th>
                 <th className="text-left px-3 py-2 font-medium">연락처</th>
                 <th className="text-left px-3 py-2 font-medium">단말</th>
+                <th className="text-left px-3 py-2 font-medium">요금제</th>
+                <th className="text-left px-3 py-2 font-medium">약정</th>
+                <th className="text-center px-2 py-2 font-medium">할부</th>
                 <th className="text-center px-2 py-2 font-medium">동판</th>
                 <th className="text-center px-2 py-2 font-medium">오퍼</th>
                 <th className="text-right px-3 py-2 font-medium">리베이트 단가</th>
@@ -908,6 +911,15 @@ const SalesLedgerPage = () => {
                     </td>
                     <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{isAdmin ? (r.phone ?? "-") : maskPhone(r.phone) || "-"}</td>
                     <td className="px-3 py-2.5 text-muted-foreground">{r.device_model ?? "-"}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">{r.rate_plan ?? "-"}</td>
+                    <td className="px-3 py-2.5 text-muted-foreground">
+                      {(r.custom_fields as any)?.contract_type ?? "-"}
+                    </td>
+                    <td className="px-2 py-2.5 text-center text-muted-foreground tabular-nums">
+                      {(r.custom_fields as any)?.installment_months
+                        ? `${(r.custom_fields as any).installment_months}개월`
+                        : "-"}
+                    </td>
                     <td className="px-2 py-2.5 text-center">
                       {r.bundle === "Y" ? <Badge variant="outline" className="text-[9px] border-primary/40 text-primary px-1.5 py-0">동판</Badge> : <span className="text-muted-foreground text-[10px]">-</span>}
                     </td>
@@ -1002,7 +1014,7 @@ const SalesLedgerPage = () => {
                 );
               })}
               {filteredRows.length === 0 && (
-                <tr><td colSpan={isAdmin ? 18 : 17} className="text-center py-10 text-muted-foreground">
+                <tr><td colSpan={isAdmin ? 21 : 20} className="text-center py-10 text-muted-foreground">
                   {searchQ ? "검색 결과가 없습니다." : "선택한 기간에 데이터가 없습니다."}
                 </td></tr>
               )}

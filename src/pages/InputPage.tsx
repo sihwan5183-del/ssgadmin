@@ -922,8 +922,9 @@ const InputPage = () => {
               </div>
             </Field>
           </Grid>
-          <Grid cols={2}>
-            <Field label="개통요금제">
+          <Grid cols={3}>
+            <div className="md:col-span-2">
+              <Field label="개통요금제">
               {(() => {
                 const mapped = getPlansForProduct(form.product);
                 const plans = mapped.length > 0 ? mapped : RATE_PLANS;
@@ -945,6 +946,20 @@ const InputPage = () => {
                   </Select>
                 );
               })()}
+              </Field>
+            </div>
+            <Field label="할부 개월">
+              <Input
+                type="text"
+                inputMode="numeric"
+                placeholder="예: 24"
+                className="h-9 bg-input/60 text-xs"
+                value={customFields.installment_months ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^\d]/g, "").slice(0, 3);
+                  setCustomFields((f) => ({ ...f, installment_months: v }));
+                }}
+              />
             </Field>
             <Field label="동판/번들">
               <div className="flex items-center gap-2 h-9">
@@ -1175,6 +1190,29 @@ const InputPage = () => {
               </div>
             );
           })()}
+
+          {/* 약정 정보 */}
+          <div className="border border-border/30 rounded-xl p-3 mt-2 bg-muted/10">
+            <div className="flex items-center gap-2 mb-2">
+              <Banknote className="size-3.5 text-primary" />
+              <span className="text-xs font-semibold">약정 정보</span>
+              <span className="text-[10px] text-muted-foreground">할인 방식 선택</span>
+            </div>
+            <Field label="약정 유형">
+              <Select
+                value={customFields.contract_type ?? ""}
+                onValueChange={(v) => setCustomFields((f) => ({ ...f, contract_type: v }))}
+              >
+                <SelectTrigger className="h-9 bg-input/60 text-xs">
+                  <SelectValue placeholder="약정 유형 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="선택약정">선택약정</SelectItem>
+                  <SelectItem value="이통사지원금">이통사지원금(공시지원금)</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
 
           {/* 자동이체 정보 */}
           <div className="border border-border/30 rounded-xl p-3 mt-2 bg-muted/10">
