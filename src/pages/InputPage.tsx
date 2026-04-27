@@ -585,19 +585,23 @@ const InputPage = () => {
 
       const records = json
         .filter((r) => pick(r, "고객명", "인입경로", "담당자"))
-        .map((r) => ({
+        .map((r) => {
+          const _openDate = toDate(pick(r, "개통일자"));
+          return ({
           created_by: user.id,
           seq: pick(r, "번호", "No", "no") ? Number(pick(r, "번호", "No", "no")) : null,
           channel: pick(r, "인입경로") as string | null,
           moyo_excluded: toBool(pick(r, "모요\n미적용", "모요 미적용", "모요미적용")),
           manager: pick(r, "담당자") as string | null,
-          open_month: pick(r, "개통년월") ? String(pick(r, "개통년월")) : null,
+          open_month: _openDate
+            ? _openDate.slice(0, 7)
+            : (pick(r, "개통년월") ? String(pick(r, "개통년월")) : null),
           product: pick(r, "가입상품") as string | null,
           sale_type: pick(r, "판매유형") as string | null,
           bundle: pick(r, "동판/번들") as string | null,
           open_method: pick(r, "개통방식") as string | null,
           status: (pick(r, "최종상태") as string) || "개통완료",
-          open_date: toDate(pick(r, "개통일자")),
+          open_date: _openDate,
           customer_name: pick(r, "고객명") as string | null,
           birth_date: pick(r, "생년월일") ? String(pick(r, "생년월일")) : null,
           phone: pick(r, "연락처") as string | null,
