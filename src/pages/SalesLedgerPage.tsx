@@ -128,12 +128,21 @@ const SalesLedgerPage = () => {
   const [debouncedSearchQ, setDebouncedSearchQ] = useState("");
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [quickFilter, setQuickFilter] = useState<"unpaid" | "unreturned" | null>(null);
   const [bundleFilter, setBundleFilter] = useState(false);
   const [noOfferFilter, setNoOfferFilter] = useState(false);
   const [managerFilter, setManagerFilter] = useState<string>("all");
   const [storeFilter, setStoreFilter] = useState<string>("all");
+  const [productFilter, setProductFilter] = useState<string>("all");
+  // 반납/검수 필터
+  // returnFilter: all | returned(반납완료) | unreturned(미반납)
+  // inspectionFilter: all | inspected(검수완료=확정) | uninspected(미검수)
+  const [returnFilter, setReturnFilter] = useState<"all" | "returned" | "unreturned">("all");
+  const [inspectionFilter, setInspectionFilter] = useState<"all" | "inspected" | "uninspected">("all");
+
+  const isMobile = useIsMobile();
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const [dbSummary, setDbSummary] = useState({ count: 0, totalRebate: 0, totalOffer: 0, totalProfit: 0, excludedCount: 0 });
   const [unpaidCount, setUnpaidCount] = useState(0);
