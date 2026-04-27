@@ -275,10 +275,10 @@ export function useFinanceData(): FinanceData {
     for (const r of settledSalesRows) {
       const ch = (r.channel ?? "기타").toString().trim() || "기타";
       const row = ensure(ch);
+      const p = calcDashboardProfit(r);
       row.successCount += 1;
-      row.rebate += Number(r.unit_price ?? 0);
-      row.offer +=
-        Number(r.cash_support_amount ?? 0) + Number(r.extra_subsidy ?? 0);
+      row.rebate += p.revenue;
+      row.offer += p.expense;
     }
     for (const r of spendRows) {
       const ch = (r.channel ?? r.media ?? "기타").toString().trim() || "기타";
@@ -339,7 +339,7 @@ export function useFinanceData(): FinanceData {
     const productMap = new Map<string, number>();
     for (const r of settledSalesRows) {
       const key = (r.product ?? "기타").toString().trim() || "기타";
-      productMap.set(key, (productMap.get(key) ?? 0) + Number(r.unit_price ?? 0));
+      productMap.set(key, (productMap.get(key) ?? 0) + calcDashboardProfit(r).revenue);
     }
     const products: FinanceProductRow[] = Array.from(productMap.entries())
       .filter(([, v]) => v > 0)
@@ -360,8 +360,7 @@ export function useFinanceData(): FinanceData {
       const w = offerMap.get(wk)!;
       if (!w.has(ch)) w.set(ch, { sum: 0, cnt: 0 });
       const cell = w.get(ch)!;
-      cell.sum +=
-        Number(r.cash_support_amount ?? 0) + Number(r.extra_subsidy ?? 0);
+      cell.sum += calcDashboardProfit(r).expense;
       cell.cnt += 1;
     }
     const channelNames = channels.map((c) => c.channel);
