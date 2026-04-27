@@ -56,6 +56,7 @@ interface SaleSnapshot {
   pending_note?: string | null;
   pending_resolved: boolean | null;
   product?: string | null;
+  status?: string | null;
   custom_fields?: Record<string, any> | null;
 }
 
@@ -131,6 +132,22 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
   const isHomeProduct = (sale.product ?? "").includes("인터넷")
     || (sale.product ?? "").includes("TV")
     || (sale.product ?? "").includes("홈");
+
+  // 모바일/2nd 상품 + 상태가 '택배발송'이면 → 우측에 [개통완료] 토큰 노출
+  const normalizedStatus = (sale.status ?? "").replace(/\s+/g, "").trim();
+  const canMarkActivated = !isHomeProduct && normalizedStatus === "택배발송";
+  const [marking, setMarking] = useState(false);
+  const markActivated = async () => {
+    setMarking(true);
+    const { error } = await supabase
+      .from("sales")
+      .update({ status: "개통완료" } as never)
+      .eq("id", sale.id);
+    setMarking(false);
+    if (error) return toast.error(error.message);
+    toast.success("개통완료로 변경되었습니다");
+    onChanged();
+  };
 
   // 신규 메타 저장 helpers
   const patchCustom = async (patch: Record<string, any>) => {
@@ -409,7 +426,20 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
                 <Gavel className="size-3.5 text-primary-glow" />
                 최종 판정
               </span>
-              <div className="flex rounded-md border border-border/40 overflow-hidden text-[11px]">
+              <div className="flex items-center gap-2">
+                {canMarkActivated && (
+                  <button
+                    type="button"
+                    onClick={markActivated}
+                    disabled={marking}
+                    className="inline-flex items-center gap-1 rounded-md border border-emerald-400/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 px-2.5 py-1 text-[11px] font-semibold transition-colors disabled:opacity-50"
+                    title="택배발송 → 개통완료로 변경"
+                  >
+                    <CheckCircle2 className="size-3" />
+                    개통완료
+                  </button>
+                )}
+                <div className="flex rounded-md border border-border/40 overflow-hidden text-[11px]">
                 <button
                   type="button"
                   className={`px-3 py-1 ${finalVerdict === "정상" ? "bg-emerald-500/20 text-emerald-200" : "hover:bg-muted/40"}`}
@@ -427,6 +457,7 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
                     patchCustom({ final_verdict: "비정상", verdict_at: new Date().toISOString(), verdict_by: user?.id ?? null });
                   }}
                 >비정상</button>
+                </div>
               </div>
             </div>
 
