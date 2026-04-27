@@ -568,16 +568,32 @@ const ChannelIntakePage = () => {
           ))}
         </div>
 
-        {/* Search + New */}
-        <div className="flex gap-3 items-center">
-          <div className="relative flex-1 max-w-md">
+        {/* Toolbar: Search + Bulk actions (responsive) */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="고객명 · 전화번호 · 채널 · 담당자 검색…"
-              className="h-9 pl-9 bg-input/60"
+              placeholder="고객명 · 전화번호 · 담당자 검색…"
+              className="h-9 pl-9 bg-input/60 w-full"
             />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {selectedIds.size > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {selectedIds.size}건 선택됨
+              </span>
+            )}
+            <Button
+              size="sm"
+              variant="destructive"
+              className="h-9 gap-1.5"
+              disabled={selectedIds.size === 0}
+              onClick={() => setBulkConfirmOpen(true)}
+            >
+              <Trash2 className="size-3.5" /> 일괄 삭제
+            </Button>
           </div>
         </div>
 
