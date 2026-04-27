@@ -443,6 +443,7 @@ export default function AdCalendarPage() {
       </section>
 
       {/* 캘린더 그리드 */}
+      <TooltipProvider delayDuration={200}>
       <Card className="glass-strong border-border/40 overflow-hidden">
         <div className="grid grid-cols-7 border-b border-border/40">
           {WEEKDAYS.map((d, i) => (
@@ -515,35 +516,83 @@ export default function AdCalendarPage() {
                     const isStart = c.start_date === key;
                     const isEnd = c.end_date === key;
                     return (
-                      <button
-                        key={c.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpenDetail(c);
-                        }}
-                        onMouseEnter={() => c.image_url && setHoverPreview({ url: c.image_url, topic: c.topic })}
-                        onMouseLeave={() => setHoverPreview(null)}
-                        className={cn(
-                          "w-full text-left px-1.5 py-1 text-[10px] leading-tight border-l-2",
-                          p.bg,
-                          p.border,
-                          p.text,
-                          "hover:brightness-125 transition",
-                          isStart && "rounded-l-md",
-                          isEnd && "rounded-r-md",
-                        )}
-                      >
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="font-semibold truncate">{c.media}</span>
-                          {c.image_url && <ImageIcon className="size-2.5 opacity-70 shrink-0" />}
-                        </div>
-                        <div className="truncate text-foreground/90">{c.topic}</div>
-                        <div className="tabular-nums opacity-80">₩{fmtKRW(c.total_budget || 0)}</div>
-                      </button>
+                      <Tooltip key={c.id}>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenDetail(c);
+                            }}
+                            onMouseEnter={() => c.image_url && setHoverPreview({ url: c.image_url, topic: c.topic })}
+                            onMouseLeave={() => setHoverPreview(null)}
+                            className={cn(
+                              "w-full text-left px-1.5 py-1 text-[10px] leading-tight border-l-2",
+                              p.bg,
+                              p.border,
+                              p.text,
+                              "hover:brightness-125 transition",
+                              isStart && "rounded-l-md",
+                              isEnd && "rounded-r-md",
+                            )}
+                          >
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="font-semibold truncate">{c.media}</span>
+                              {c.image_url && <ImageIcon className="size-2.5 opacity-70 shrink-0" />}
+                            </div>
+                            <div className="truncate text-foreground/90">{c.topic}</div>
+                            <div className="tabular-nums opacity-80">₩{fmtKRW(c.total_budget || 0)}</div>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <div className="space-y-0.5 text-xs">
+                            <div className="font-semibold">{c.topic}</div>
+                            <div className="text-muted-foreground">{c.media}{c.channel ? ` · ${c.channel}` : ""}</div>
+                            <div className="text-muted-foreground">{c.start_date} ~ {c.end_date}</div>
+                            <div className="tabular-nums">총 예산 ₩{(c.total_budget || 0).toLocaleString("ko-KR")}</div>
+                            {c.note && <div className="text-muted-foreground line-clamp-3 mt-1">{c.note}</div>}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
                     );
                   })}
                   {dayItems.length > 3 && (
-                    <div className="text-[10px] text-muted-foreground px-1.5">+ {dayItems.length - 3}개 더</div>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-full text-[10px] font-medium text-primary-glow hover:text-primary px-1.5 py-0.5 rounded-md hover:bg-primary/10 text-left"
+                        >
+                          + {dayItems.length - 3}개 더보기
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent align="start" className="w-72 p-2 max-h-80 overflow-y-auto">
+                        <div className="text-[11px] text-muted-foreground px-2 py-1 font-medium">
+                          {key} · 총 {dayItems.length}건
+                        </div>
+                        <div className="space-y-1">
+                          {dayItems.map((c) => {
+                            const pp = getMediaPalette(c.media);
+                            return (
+                              <button
+                                key={c.id}
+                                onClick={(e) => { e.stopPropagation(); setOpenDetail(c); }}
+                                className={cn(
+                                  "w-full text-left px-2 py-1.5 rounded-md border-l-2 text-xs",
+                                  pp.bg, pp.border, pp.text,
+                                  "hover:brightness-125 transition",
+                                )}
+                              >
+                                <div className="font-semibold flex items-center justify-between gap-2">
+                                  <span>{c.media}</span>
+                                  <span className="tabular-nums opacity-80">₩{fmtKRW(c.total_budget || 0)}</span>
+                                </div>
+                                <div className="text-foreground/90 truncate">{c.topic}</div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   )}
                 </div>
 
@@ -576,6 +625,7 @@ export default function AdCalendarPage() {
           })}
         </div>
       </Card>
+      </TooltipProvider>
 
       {loading && (
         <div className="text-center py-6 text-sm text-muted-foreground">
