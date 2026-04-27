@@ -817,6 +817,9 @@ const SalesLedgerPage = () => {
                 <th className="text-left px-3 py-2 font-medium">고객</th>
                 <th className="text-left px-3 py-2 font-medium">연락처</th>
                 <th className="text-left px-3 py-2 font-medium">단말</th>
+                <th className="text-left px-3 py-2 font-medium">요금제</th>
+                <th className="text-left px-3 py-2 font-medium">약정</th>
+                <th className="text-center px-2 py-2 font-medium">할부</th>
                 <th className="text-center px-2 py-2 font-medium">동판</th>
                 <th className="text-center px-2 py-2 font-medium">오퍼</th>
                 <th className="text-right px-3 py-2 font-medium">리베이트 단가</th>
