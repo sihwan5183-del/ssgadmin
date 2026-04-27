@@ -28,6 +28,7 @@ import {
   Coins,
   Sparkles,
 } from "lucide-react";
+import { Crown } from "lucide-react";
 import { DynamicFieldsManager } from "@/components/admin/DynamicFieldsManager";
 import { FormulaEditor } from "@/components/admin/FormulaEditor";
 import { DeviceModelsManager } from "@/components/admin/DeviceModelsManager";
@@ -37,6 +38,7 @@ import { IncentiveRatesManager } from "@/components/admin/IncentiveRatesManager"
 import { ReviewChecklistManager } from "@/components/admin/ReviewChecklistManager";
 import { StrategyConfigManager } from "@/components/admin/StrategyConfigManager";
 import { UserManagementPanel } from "@/components/admin/UserManagementPanel";
+import { RankingConfigManager } from "@/components/admin/RankingConfigManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole, type AppRole } from "@/hooks/useRole";
@@ -187,7 +189,14 @@ export default function AdminPage() {
           <TabsTrigger value="audit" className="gap-2">
             <History className="size-4" /> 시스템 로그
           </TabsTrigger>
+          <TabsTrigger value="ranking" className="gap-2">
+            <Crown className="size-4" /> 랭킹 설정
+          </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="ranking">
+          <RankingConfigManager />
+        </TabsContent>
 
         <TabsContent value="staff">
           <UserManagementPanel />
