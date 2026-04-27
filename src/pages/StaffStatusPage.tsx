@@ -17,7 +17,8 @@ import {
   Smartphone, Wifi, Gift, Calculator, CheckCircle2, Clock, XCircle, ChevronDown,
   PhoneCall, Package, Settings2, Plus,
 } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RTooltip, RadialBarChart, RadialBar, PolarAngleAxis, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import { ArrowUp, ArrowDown, Minus, Activity, Wallet, AlertTriangle, Lightbulb } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RTooltip, RadialBarChart, RadialBar, PolarAngleAxis, BarChart, Bar, XAxis, YAxis, CartesianGrid, RadarChart, Radar, PolarGrid, PolarRadiusAxis } from "recharts";
 import { formatKRWShort } from "@/data/financeData";
 import { useIncentiveRates } from "@/hooks/useIncentiveRates";
 import { calcTotalIncentive, forecastIncentive, calcIncentiveForSale } from "@/lib/incentiveEngine";
@@ -155,6 +156,7 @@ export default function StaffStatusPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [allSales, setAllSales] = useState<SaleRow[]>([]);
   const [allInquiries, setAllInquiries] = useState<InquiryRow[]>([]);
+  const [prevSales, setPrevSales] = useState<SaleRow[]>([]);
   const [goals, setGoals] = useState<GoalRow[]>([]);
   const [loading, setLoading] = useState(false);
   const { rates: incentiveRates } = useIncentiveRates();
@@ -168,6 +170,16 @@ export default function StaffStatusPage() {
 
   const canViewAll = isAdmin || isManager;
   const yearMonth = useMemo(() => (endDate || new Date().toISOString().slice(0, 10)).slice(0, 7), [endDate]);
+
+  // Previous-period range (same length as current, immediately before startDate)
+  const prevRange = useMemo(() => {
+    const s = new Date(startDate);
+    const e = new Date(endDate);
+    const lenMs = e.getTime() - s.getTime();
+    const prevEnd = new Date(s.getTime() - 24 * 3600 * 1000);
+    const prevStart = new Date(prevEnd.getTime() - lenMs);
+    return { start: prevStart.toISOString().slice(0, 10), end: prevEnd.toISOString().slice(0, 10) };
+  }, [startDate, endDate]);
 
   // Load profiles
   useEffect(() => {
@@ -208,7 +220,7 @@ export default function StaffStatusPage() {
     const ids = profiles.map((p) => p.user_id);
     const names = profiles.map((p) => p.display_name);
     // Sales: rows where created_by in ids OR manager in names — fetch via two queries to avoid OR complexity
-    const [{ data: byCreator }, { data: byManager }, { data: inq }, { data: goalRows }] = await Promise.all([
+    const [{ data: byCreator }, { data: byManager }, { data: inq }, { data: goalRows }, { data: prevByCreator }, { data: prevByManager }] = await Promise.all([
       supabase.from("sales")
         .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, status, approval_status, pending_resolved, pending_items, distributor_amount, net_fee, vas1, vas2")
         .in("created_by", ids)
@@ -233,15 +245,30 @@ export default function StaffStatusPage() {
         .select("id, user_id, product, year_month, goal_count")
         .in("user_id", ids)
         .eq("year_month", yearMonth),
+      supabase.from("sales")
+        .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, status, approval_status, pending_resolved, pending_items, distributor_amount, net_fee, vas1, vas2")
+        .in("created_by", ids)
+        .gte("open_date", prevRange.start)
+        .lte("open_date", prevRange.end)
+        .limit(5000),
+      supabase.from("sales")
+        .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, status, approval_status, pending_resolved, pending_items, distributor_amount, net_fee, vas1, vas2")
+        .in("manager", names)
+        .gte("open_date", prevRange.start)
+        .lte("open_date", prevRange.end)
+        .limit(5000),
     ]);
     // Merge & dedupe
     const map = new Map<string, SaleRow>();
     [...(byCreator ?? []), ...(byManager ?? [])].forEach((r: any) => map.set(r.id, r as SaleRow));
     setAllSales(Array.from(map.values()));
+    const prevMap = new Map<string, SaleRow>();
+    [...(prevByCreator ?? []), ...(prevByManager ?? [])].forEach((r: any) => prevMap.set(r.id, r as SaleRow));
+    setPrevSales(Array.from(prevMap.values()));
     setAllInquiries((inq ?? []) as InquiryRow[]);
     setGoals((goalRows ?? []) as GoalRow[]);
     setLoading(false);
-  }, [profiles, startDate, endDate, yearMonth, roleLoading]);
+  }, [profiles, startDate, endDate, yearMonth, roleLoading, prevRange.start, prevRange.end]);
 
   useEffect(() => { reloadData(); }, [reloadData]);
 
@@ -416,6 +443,130 @@ export default function StaffStatusPage() {
       mixData, wiredCount,
     };
   }, [sales, inquiries]);
+
+  // === Previous-period sales for selected (for trend deltas) ===
+  const prevSalesForSelected = useMemo(() => {
+    if (!selected) return [] as SaleRow[];
+    const m = new Map<string, SaleRow[]>();
+    prevSales.forEach((s) => {
+      const id = ownerOf(s);
+      const arr = m.get(id) ?? [];
+      arr.push(s);
+      m.set(id, arr);
+    });
+    return m.get(selected.user_id) ?? [];
+  }, [prevSales, selected, ownerOf]);
+
+  // === Productivity analytics: attach rates, ARPU, unsettled, bundle, deltas, summary ===
+  const productivity = useMemo(() => {
+    const success = sales.filter(isSuccess);
+    const counts = { 모바일: 0, 인터넷: 0, TV프리: 0, 스마트홈: 0, "2ND": 0 } as Record<string, number>;
+    success.forEach((s) => {
+      const b = productBucket(s.product);
+      if (b in counts) counts[b] += 1;
+    });
+    const mobile = counts["모바일"];
+    let vasCount = 0;
+    success.forEach((s) => {
+      if (s.vas1 && s.vas1.trim() && s.vas1 !== "없음") vasCount += 1;
+      if (s.vas2 && s.vas2.trim() && s.vas2 !== "없음") vasCount += 1;
+    });
+    const rate = (n: number) => (mobile > 0 ? Math.round((n / mobile) * 100) : 0);
+    const attach = {
+      internet: rate(counts["인터넷"]),
+      tvfree: rate(counts["TV프리"]),
+      vas: rate(vasCount),
+      smarthome: rate(counts["스마트홈"]),
+      second: rate(counts["2ND"]),
+    };
+
+    // ARPU: total revenue (distributor + net_fee) / total open count
+    const totalRevenue = success.reduce(
+      (a, s) => a + Number(s.distributor_amount ?? 0) + Number(s.net_fee ?? 0),
+      0
+    );
+    const arpu = success.length > 0 ? Math.round(totalRevenue / success.length) : 0;
+
+    // 미반납/미검수 잔여율 = pending_resolved=false / 전체
+    const unresolved = sales.filter((s) => s.pending_resolved === false).length;
+    const unresolvedRate = sales.length > 0 ? Math.round((unresolved / sales.length) * 100) : 0;
+
+    // === Previous-month attach for delta ===
+    const prevSuccess = prevSalesForSelected.filter(isSuccess);
+    const prevCounts = { 모바일: 0, 인터넷: 0, TV프리: 0, 스마트홈: 0, "2ND": 0 } as Record<string, number>;
+    prevSuccess.forEach((s) => {
+      const b = productBucket(s.product);
+      if (b in prevCounts) prevCounts[b] += 1;
+    });
+    let prevVas = 0;
+    prevSuccess.forEach((s) => {
+      if (s.vas1 && s.vas1.trim() && s.vas1 !== "없음") prevVas += 1;
+      if (s.vas2 && s.vas2.trim() && s.vas2 !== "없음") prevVas += 1;
+    });
+    const prevMobile = prevCounts["모바일"];
+    const prevRate = (n: number) => (prevMobile > 0 ? Math.round((n / prevMobile) * 100) : 0);
+    const prevAttach = {
+      internet: prevRate(prevCounts["인터넷"]),
+      tvfree: prevRate(prevCounts["TV프리"]),
+      vas: prevRate(prevVas),
+      smarthome: prevRate(prevCounts["스마트홈"]),
+      second: prevRate(prevCounts["2ND"]),
+    };
+    const delta = {
+      internet: attach.internet - prevAttach.internet,
+      tvfree: attach.tvfree - prevAttach.tvfree,
+      vas: attach.vas - prevAttach.vas,
+      smarthome: attach.smarthome - prevAttach.smarthome,
+      second: attach.second - prevAttach.second,
+    };
+
+    // Bar/Radar data
+    const attachBars = [
+      { name: "인터넷", value: attach.internet, prev: prevAttach.internet, delta: delta.internet, fill: "hsl(195 90% 60%)" },
+      { name: "TV프리", value: attach.tvfree, prev: prevAttach.tvfree, delta: delta.tvfree, fill: "hsl(280 80% 70%)" },
+      { name: "부가서비스", value: attach.vas, prev: prevAttach.vas, delta: delta.vas, fill: "hsl(45 95% 60%)" },
+      { name: "스마트홈", value: attach.smarthome, prev: prevAttach.smarthome, delta: delta.smarthome, fill: "hsl(155 75% 55%)" },
+      { name: "2nd 디바이스", value: attach.second, prev: prevAttach.second, delta: delta.second, fill: "hsl(15 85% 65%)" },
+    ];
+    const radarData = attachBars.map((b) => ({
+      metric: b.name,
+      value: Math.min(b.value, 150),
+      fullMark: 100,
+    }));
+
+    // === 영업 성향 진단 (모바일 집중형 vs 결합 만능형) ===
+    const totalSales = success.length || 1;
+    const mobileShare = (mobile / totalSales) * 100;
+    const wiredShare = ((counts["인터넷"] + counts["TV프리"] + counts["스마트홈"]) / totalSales) * 100;
+    let salesType = "균형형";
+    if (mobileShare > 70) salesType = "모바일 집중형";
+    else if (wiredShare > 35 && attach.internet >= 30) salesType = "결합 만능형";
+    else if (attach.vas >= 80) salesType = "부가서비스 강화형";
+
+    // === 강점/약점 한 줄 요약 ===
+    const strengths: string[] = [];
+    const weaknesses: string[] = [];
+    if (attach.internet >= 30) strengths.push("인터넷 유치율 우수");
+    else if (attach.internet < 10 && mobile > 0) weaknesses.push("인터넷 유치율 낮음");
+    if (attach.tvfree >= 20) strengths.push("TV프리 결합 우수");
+    else if (attach.tvfree < 5 && mobile > 0) weaknesses.push("TV프리 결합 부족");
+    if (attach.vas >= 80) strengths.push("부가서비스 우수");
+    else if (attach.vas < 50 && mobile > 0) weaknesses.push("부가서비스 유치율 평균 대비 낮음");
+    if (attach.second >= 15) strengths.push("2nd 디바이스 번들 우수");
+    if (unresolvedRate >= 30) weaknesses.push("미정산/미검수 비율 높음");
+    let summary = "";
+    if (mobile === 0 && success.length === 0) summary = "분석할 실적이 부족합니다.";
+    else if (strengths.length && weaknesses.length) summary = `${strengths[0]}, 그러나 ${weaknesses[0]}.`;
+    else if (strengths.length) summary = `${strengths.join(" · ")}.`;
+    else if (weaknesses.length) summary = `${weaknesses.join(" · ")} — 개선 필요.`;
+    else summary = "전반적으로 평이한 실적 분포입니다.";
+
+    return {
+      attach, attachBars, radarData, arpu, totalRevenue,
+      unresolved, unresolvedRate, salesType, summary, strengths, weaknesses,
+      mobileShare: Math.round(mobileShare), wiredShare: Math.round(wiredShare),
+    };
+  }, [sales, prevSalesForSelected]);
 
   // Goals for selected
   const selectedGoals = useMemo(() => {
@@ -777,6 +928,147 @@ export default function StaffStatusPage() {
               </Card>
             </section>
 
+            {/* === 영업 생산성 분석 (Attach Rate / ARPU / Trend / Radar) === */}
+            <section className="space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Activity className="size-4 text-primary-glow" /> 영업 생산성 분석
+                  <Badge variant="outline" className="text-[10px] ml-1">{productivity.salesType}</Badge>
+                </h3>
+                <div className="text-[11px] text-muted-foreground">
+                  기준: 모바일 {analytics.mobileCount}건 · 전기 비교 ({prevRange.start} ~ {prevRange.end})
+                </div>
+              </div>
+
+              {/* Strength / Weakness 한줄 요약 */}
+              <Card className="p-4 glass border-primary/20 bg-gradient-to-r from-primary/[0.06] via-transparent to-transparent">
+                <div className="flex items-start gap-3">
+                  <div className="size-9 rounded-lg bg-primary/15 grid place-items-center text-primary-glow shrink-0">
+                    <Lightbulb className="size-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[11px] text-muted-foreground">AI 한줄 요약</div>
+                    <div className="text-sm font-semibold mt-0.5">{productivity.summary}</div>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {productivity.strengths.map((s) => (
+                        <Badge key={s} variant="outline" className="text-[10px] border-emerald-400/40 text-emerald-300 bg-emerald-500/10">
+                          + {s}
+                        </Badge>
+                      ))}
+                      {productivity.weaknesses.map((w) => (
+                        <Badge key={w} variant="outline" className="text-[10px] border-amber-400/40 text-amber-700 bg-amber-50">
+                          ! {w}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
+              {/* 핵심 지표 4종 */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <Card className="p-4 glass">
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                    <Wallet className="size-3.5 text-amber-500" /> 건당 평균 수익 (ARPU)
+                  </div>
+                  <div className="text-2xl font-extrabold tabular-nums text-amber-700 mt-1">
+                    {formatKRWShort(productivity.arpu)}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-1">
+                    총수익 {formatKRWShort(productivity.totalRevenue)}
+                  </div>
+                </Card>
+                <Card className="p-4 glass">
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                    <AlertTriangle className="size-3.5 text-orange-500" /> 미반납·미검수 잔여율
+                  </div>
+                  <div className={`text-2xl font-extrabold tabular-nums mt-1 ${productivity.unresolvedRate >= 30 ? "text-destructive" : "text-foreground"}`}>
+                    {productivity.unresolvedRate}<span className="text-sm font-normal text-muted-foreground ml-0.5">%</span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-1">
+                    미정산 {productivity.unresolved}건 / 전체 {sales.length}건
+                  </div>
+                </Card>
+                <Card className="p-4 glass">
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                    <Smartphone className="size-3.5 text-emerald-500" /> 2nd 디바이스 번들율
+                  </div>
+                  <div className="text-2xl font-extrabold tabular-nums text-emerald-300 mt-1">
+                    {productivity.attach.second}<span className="text-sm font-normal text-muted-foreground ml-0.5">%</span>
+                  </div>
+                  <DeltaPill delta={productivity.attachBars[4].delta} />
+                </Card>
+                <Card className="p-4 glass">
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                    <Activity className="size-3.5 text-primary-glow" /> 영업 성향
+                  </div>
+                  <div className="text-lg font-bold mt-1.5">{productivity.salesType}</div>
+                  <div className="text-[10px] text-muted-foreground mt-1">
+                    모바일 {productivity.mobileShare}% · 결합 {productivity.wiredShare}%
+                  </div>
+                </Card>
+              </div>
+
+              {/* Attach Rate Bar + Radar */}
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                <Card className="p-5 glass lg:col-span-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold">모바일 대비 항목별 유치율 (Attach Rate)</h4>
+                    <span className="text-[10px] text-muted-foreground">▲▼ 전기 대비</span>
+                  </div>
+                  {analytics.mobileCount === 0 ? (
+                    <div className="h-48 grid place-items-center text-xs text-muted-foreground">모바일 개통 데이터 없음</div>
+                  ) : (
+                    <>
+                      <div className="h-48">
+                        <ResponsiveContainer>
+                          <BarChart data={productivity.attachBars} margin={{ top: 8, right: 8, left: -16, bottom: 4 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.4)" />
+                            <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                            <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} unit="%" />
+                            <RTooltip
+                              contentStyle={{ background: "hsl(0 0% 100% / 0.96)", color: "#374151", border: "1px solid hsl(0 0% 88%)", borderRadius: 12, fontSize: 12 }}
+                              formatter={(v: any) => [`${v}%`, "유치율"]}
+                            />
+                            <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                              {productivity.attachBars.map((b, i) => <Cell key={i} fill={b.fill} />)}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="grid grid-cols-5 gap-1.5 mt-2">
+                        {productivity.attachBars.map((b) => (
+                          <div key={b.name} className="text-center p-1.5 rounded-md bg-card/40 border border-border/40">
+                            <div className="text-[10px] text-muted-foreground truncate">{b.name}</div>
+                            <div className="text-sm font-bold tabular-nums">{b.value}%</div>
+                            <DeltaPill delta={b.delta} compact />
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </Card>
+
+                <Card className="p-5 glass lg:col-span-2">
+                  <h4 className="text-sm font-semibold mb-2">영업 성향 레이더</h4>
+                  <div className="h-56">
+                    <ResponsiveContainer>
+                      <RadarChart data={productivity.radarData} outerRadius="78%">
+                        <PolarGrid stroke="hsl(var(--border) / 0.5)" />
+                        <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                        <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+                        <Radar name="유치율" dataKey="value" stroke="hsl(45 95% 60%)" fill="hsl(45 95% 60%)" fillOpacity={0.45} />
+                        <RTooltip
+                          contentStyle={{ background: "hsl(0 0% 100% / 0.96)", color: "#374151", border: "1px solid hsl(0 0% 88%)", borderRadius: 12, fontSize: 12 }}
+                          formatter={(v: any) => [`${v}%`, "유치율"]}
+                        />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+              </div>
+            </section>
+
             {/* Donut + Simulator (existing) */}
             <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               <Card className="p-6 glass lg:col-span-2">
@@ -1005,5 +1297,25 @@ function GoalDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function DeltaPill({ delta, compact = false }: { delta: number; compact?: boolean }) {
+  const Icon = delta > 0 ? ArrowUp : delta < 0 ? ArrowDown : Minus;
+  const cls =
+    delta > 0
+      ? "text-emerald-300 bg-emerald-500/10 border-emerald-400/30"
+      : delta < 0
+      ? "text-destructive bg-destructive/10 border-destructive/30"
+      : "text-muted-foreground bg-muted/30 border-border/40";
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full border tabular-nums ${cls} ${
+        compact ? "text-[9px] mt-0.5" : "text-[10px] mt-1"
+      }`}
+    >
+      <Icon className="size-2.5" />
+      {Math.abs(delta)}%p
+    </span>
   );
 }
