@@ -358,6 +358,84 @@ const RankingPage = () => {
     const yMap = new Map<string, number>();
     (ySales ?? []).forEach((s) => yMap.set(s.created_by, (yMap.get(s.created_by) ?? 0) + 1));
 
+    // === 목표 달성률 (당월 staff_product_goals 기준) ===
+    const yearMonth = new Date().toISOString().slice(0, 7);
+    const { data: goalRows } = await supabase
+      .from("staff_product_goals")
+      .select("user_id, product, sale_type, goal_type, goal_count, goal_value")
+      .eq("year_month", yearMonth);
+
+    const productBucketLoose = (p?: string | null): "모바일" | "인터넷" | "TV프리" | "스마트홈" | "부가서비스" | "기타" => {
+      const v = (p ?? "").toString();
+      if (/TV ?프리|티비프리|tvfree|tv free/i.test(v)) return "TV프리";
+      if (/스마트홈|smart ?home|허브|구글홈|애플홈/i.test(v)) return "스마트홈";
+      if (/인터넷|기가|wifi/i.test(v)) return "인터넷";
+      if (/모바일|mobile|usim|mnp|재약정|업셀/i.test(v)) return "모바일";
+      if (/부가|vas/i.test(v)) return "부가서비스";
+      return "기타";
+    };
+
+    // per-user 실측 집계 (목표 달성률 계산용)
+    const realByUser = new Map<string, {
+      mobile: number; internet: number; tvfree: number; smarthome: number; vas: number;
+      mobileBySaleType: Record<string, number>;
+    }>();
+    (sales ?? []).forEach((s: any) => {
+      const uid = s.created_by;
+      if (!realByUser.has(uid)) realByUser.set(uid, {
+        mobile: 0, internet: 0, tvfree: 0, smarthome: 0, vas: 0,
+        mobileBySaleType: {},
+      });
+      const r = realByUser.get(uid)!;
+      const b = productBucketLoose(s.product);
+      if (b === "모바일") {
+        r.mobile++;
+        const st = String((s as any).sale_type ?? "").trim();
+        if (st) r.mobileBySaleType[st] = (r.mobileBySaleType[st] ?? 0) + 1;
+      } else if (b === "인터넷") r.internet++;
+      else if (b === "TV프리") r.tvfree++;
+      else if (b === "스마트홈") r.smarthome++;
+      if ((s.vas1 && String(s.vas1).trim() && s.vas1 !== "없음") || (s.vas2 && String(s.vas2).trim() && s.vas2 !== "없음")) {
+        r.vas++;
+      }
+    });
+
+    const achMap = new Map<string, { avg: number; cnt: number }>();
+    (goalRows ?? []).forEach((g: any) => {
+      const uid = g.user_id;
+      const real = realByUser.get(uid) ?? { mobile: 0, internet: 0, tvfree: 0, smarthome: 0, vas: 0, mobileBySaleType: {} };
+      const product = String(g.product ?? "");
+      const goalType = String(g.goal_type ?? "count");
+      let actual = 0;
+      let target = Number(g.goal_value ?? g.goal_count ?? 0);
+      if (!target) return;
+      const b = productBucketLoose(product);
+      const baseCount = b === "모바일" ? real.mobile
+        : b === "인터넷" ? real.internet
+        : b === "TV프리" ? real.tvfree
+        : b === "스마트홈" ? real.smarthome
+        : b === "부가서비스" ? real.vas
+        : 0;
+      if (b === "모바일" && g.sale_type) {
+        actual = real.mobileBySaleType[String(g.sale_type)] ?? 0;
+      } else {
+        actual = baseCount;
+      }
+      let pct = 0;
+      if (goalType === "rate") {
+        // 모바일 대비 유치율 목표
+        const rate = real.mobile > 0 ? (baseCount / real.mobile) * 100 : 0;
+        pct = target > 0 ? (rate / target) * 100 : 0;
+      } else {
+        pct = target > 0 ? (actual / target) * 100 : 0;
+      }
+      pct = Math.max(0, Math.min(200, pct)); // 200% 상한
+      const cur = achMap.get(uid) ?? { avg: 0, cnt: 0 };
+      cur.avg = (cur.avg * cur.cnt + pct) / (cur.cnt + 1);
+      cur.cnt += 1;
+      achMap.set(uid, cur);
+    });
+
     // === Yesterday-snapshot rankings (per current tab metric) for rank delta ===
     const yAgg = new Map<string, { count: number; profit: number; strategyCount: number; voucherReturned: number }>();
     yPeriodSales.forEach((s: any) => {
@@ -430,6 +508,8 @@ const RankingPage = () => {
         isClean: clean?.isClean ?? false,
         cleanDays: clean?.cleanDays ?? 0,
         excluded: excludedIds.has(uid),
+        achievement: Math.round(achMap.get(uid)?.avg ?? 0),
+        goalCount: achMap.get(uid)?.cnt ?? 0,
       });
     });
 
