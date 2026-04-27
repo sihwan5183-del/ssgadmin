@@ -105,6 +105,7 @@ export const FULL_SALES_COLUMNS: FullCol[] = [
   ["rate_plan", "개통요금제"],
   ["vas1", "부가서비스1"],
   ["vas2", "부가서비스2"],
+  ["welfare_discount", "복지할인", (r: any) => pickCustom(r, "welfare_discount") ?? "해당없음"],
   // ===== 수익 항목 =====
   ["unit_price", "단가표 수수료(₩)", undefined, "#,##0;(#,##0);-"],
   ["vas_fee", "부가서비스 수수료(₩)", undefined, "#,##0;(#,##0);-"],
