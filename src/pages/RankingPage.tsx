@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   Crown, Medal, Trophy, Star, TrendingUp, Flame, Zap,
   Award, BarChart3, Smartphone, Gift, ChevronDown, CheckCircle2, Sparkles,
-  Wifi, Tv, ArrowUp, ArrowDown, Minus, UserX, Target,
+  Wifi, Tv, ArrowUp, ArrowDown, Minus, UserX, Target, Link2, ShieldCheck,
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -134,13 +134,16 @@ const productBucket = (p: string | null): "모바일" | "인터넷" | "TV프리"
 };
 
 /* ─── TABS ─── */
-type TabKey = "sales" | "profit" | "strategy" | "voucher" | "achievement";
+type TabKey = "sales" | "profit" | "strategy" | "voucher" | "achievement" | "combo" | "vas" | "clean";
 const TABS: { key: TabKey; label: string; icon: typeof Crown; sortFn: (a: RankedUser, b: RankedUser) => number }[] = [
   { key: "sales", label: "판매 왕", icon: Crown, sortFn: (a, b) => b.count - a.count },
   { key: "profit", label: "수익 왕", icon: TrendingUp, sortFn: (a, b) => b.profit - a.profit },
   { key: "strategy", label: "전략 모델 마스터", icon: Zap, sortFn: (a, b) => b.strategyCount - a.strategyCount },
   { key: "voucher", label: "상품권 킬러", icon: Gift, sortFn: (a, b) => b.voucherReturned - a.voucherReturned },
   { key: "achievement", label: "달성률 챔피언", icon: Target, sortFn: (a, b) => b.achievement - a.achievement || b.count - a.count },
+  { key: "combo", label: "결합의 신", icon: Link2, sortFn: (a, b) => b.comboRate - a.comboRate || b.count - a.count },
+  { key: "vas", label: "부가서비스 사냥꾼", icon: Sparkles, sortFn: (a, b) => b.vasAttach - a.vasAttach || b.count - a.count },
+  { key: "clean", label: "클린 검수왕", icon: ShieldCheck, sortFn: (a, b) => b.cleanScore - a.cleanScore || a.cleanPenalty - b.cleanPenalty },
 ];
 
 const PODIUM_STYLES = [
