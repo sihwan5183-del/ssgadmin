@@ -17,7 +17,7 @@ import {
 import {
   Download, Search, Trash2, Pencil, ShieldAlert, Hash,
   Wallet as WalletIcon, Gift, TrendingUp, Banknote, FileText,
-  AlertTriangle, Filter, X, Lock, Unlock, Loader2,
+  AlertTriangle, Filter, X, Lock, Unlock, Loader2, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +34,8 @@ import { toast } from "sonner";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useFieldOptions } from "@/hooks/useFieldOptions";
 
 const PAGE_SIZE = 25;
 
@@ -127,12 +129,25 @@ const SalesLedgerPage = () => {
   const [debouncedSearchQ, setDebouncedSearchQ] = useState("");
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [quickFilter, setQuickFilter] = useState<"unpaid" | "unreturned" | null>(null);
   const [bundleFilter, setBundleFilter] = useState(false);
   const [noOfferFilter, setNoOfferFilter] = useState(false);
   const [managerFilter, setManagerFilter] = useState<string>("all");
   const [storeFilter, setStoreFilter] = useState<string>("all");
+  const [productFilter, setProductFilter] = useState<string>("all");
+  // 반납/검수 필터
+  // returnFilter: all | returned(반납완료) | unreturned(미반납)
+  // inspectionFilter: all | inspected(검수완료=확정) | uninspected(미검수)
+  const [returnFilter, setReturnFilter] = useState<"all" | "returned" | "unreturned">("all");
+  const [inspectionFilter, setInspectionFilter] = useState<"all" | "inspected" | "uninspected">("all");
+
+  const isMobile = useIsMobile();
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  const { options: channelOptions } = useFieldOptions("channel");
+  const { options: productOptions } = useFieldOptions("product");
+  const { options: statusOptions } = useFieldOptions("status");
 
   const [dbSummary, setDbSummary] = useState({ count: 0, totalRebate: 0, totalOffer: 0, totalProfit: 0, excludedCount: 0 });
   const [unpaidCount, setUnpaidCount] = useState(0);
@@ -176,11 +191,27 @@ const SalesLedgerPage = () => {
       .select("*", { count: "exact" })
       .gte("open_date", startDate)
       .lte("open_date", endDate);
-    if (statusFilter) {
-      query = query.eq("status", statusFilter);
+    if (statusFilter.length > 0) {
+      query = query.in("status", statusFilter);
     }
     if (managerFilter !== "all") {
       query = query.eq("manager", managerFilter);
+    }
+    if (storeFilter !== "all") {
+      query = query.eq("channel", storeFilter);
+    }
+    if (productFilter !== "all") {
+      query = query.eq("product", productFilter);
+    }
+    if (returnFilter === "returned") {
+      query = query.eq("voucher_returned", "유");
+    } else if (returnFilter === "unreturned") {
+      query = query.not("voucher", "is", null).neq("voucher", "").neq("voucher_returned", "유");
+    }
+    if (inspectionFilter === "inspected") {
+      query = query.eq("approval_status", "확정");
+    } else if (inspectionFilter === "uninspected") {
+      query = query.neq("approval_status", "확정");
     }
     const sq = debouncedSearchQ.trim();
     if (sq) {
@@ -207,7 +238,7 @@ const SalesLedgerPage = () => {
     setRows((data ?? []) as SaleRow[]);
     setTotal(count ?? 0);
     setSearching(false);
-  }, [page, startDate, endDate, statusFilter, managerFilter, debouncedSearchQ]);
+  }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, debouncedSearchQ]);
 
   const loadSummary = useCallback(async () => {
     const { data } = await supabase
@@ -263,9 +294,9 @@ const SalesLedgerPage = () => {
     load();
     loadSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, startDate, endDate, statusFilter, managerFilter, debouncedSearchQ]);
+  }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, debouncedSearchQ]);
 
-  useEffect(() => { setPage(0); }, [startDate, endDate, statusFilter, managerFilter, debouncedSearchQ]);
+  useEffect(() => { setPage(0); }, [startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, debouncedSearchQ]);
 
   // 디바운스 (300ms) — 입력 중에는 스피너 표시
   useEffect(() => {
@@ -291,7 +322,6 @@ const SalesLedgerPage = () => {
     }
     if (bundleFilter) result = result.filter((r) => r.bundle === "Y");
     if (noOfferFilter) result = result.filter((r) => (r.custom_fields as any)?.has_offer === false);
-    if (storeFilter !== "all") result = result.filter((r) => (r.channel ?? "") === storeFilter);
     if (!q) return result;
     const qDigits = q.replace(/[^0-9]/g, "");
     return result.filter((r) => {
@@ -304,7 +334,7 @@ const SalesLedgerPage = () => {
       if (qDigits && phone.includes(qDigits)) return true;
       return false;
     });
-  }, [rows, debouncedSearchQ, quickFilter, bundleFilter, noOfferFilter, storeFilter]);
+  }, [rows, debouncedSearchQ, quickFilter, bundleFilter, noOfferFilter]);
 
   const allSelected = filteredRows.length > 0 && filteredRows.every((r) => selected.has(r.id));
   const toggleAll = () => {
@@ -405,7 +435,39 @@ const SalesLedgerPage = () => {
   const animOffer = useAnimatedNumber(dbSummary.totalOffer);
   const animProfit = useAnimatedNumber(dbSummary.totalProfit);
 
-  const hasActiveFilter = statusFilter || quickFilter || managerFilter !== "all";
+  const hasActiveFilter =
+    statusFilter.length > 0 ||
+    quickFilter !== null ||
+    managerFilter !== "all" ||
+    storeFilter !== "all" ||
+    productFilter !== "all" ||
+    returnFilter !== "all" ||
+    inspectionFilter !== "all" ||
+    bundleFilter ||
+    noOfferFilter;
+
+  const resetAllFilters = () => {
+    setStatusFilter([]);
+    setQuickFilter(null);
+    setManagerFilter("all");
+    setStoreFilter("all");
+    setProductFilter("all");
+    setReturnFilter("all");
+    setInspectionFilter("all");
+    setBundleFilter(false);
+    setNoOfferFilter(false);
+  };
+
+  const toggleStatus = (s: string) => {
+    setStatusFilter((prev) =>
+      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s],
+    );
+  };
+
+  const fallbackStatuses = ["청약완료", "택배발송", "개통완료", "예약", "보류", "취소"];
+  const statusList = statusOptions.length > 0 ? statusOptions : fallbackStatuses;
+
+  const showFilterBody = !isMobile || filterOpen;
 
   return (
     <>
@@ -418,99 +480,30 @@ const SalesLedgerPage = () => {
 
       {/* 필터 바 */}
       <section className="glass rounded-2xl p-4 mb-4 shadow-card-elevated">
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
           <Filter className="size-4 text-primary" />
-          <span className="text-sm font-semibold">필터</span>
+          <span className="text-sm font-semibold">스마트 필터</span>
+          {hasActiveFilter && (
+            <Badge variant="outline" className="h-6 px-2 text-[10px] border-primary/40 text-primary">
+              필터 적용중
+            </Badge>
+          )}
           {hasActiveFilter && (
             <button
-              onClick={() => { setStatusFilter(null); setQuickFilter(null); setManagerFilter("all"); }}
-              className="ml-2 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+              onClick={resetAllFilters}
+              className="ml-1 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
             >
               <X className="size-3" /> 초기화
             </button>
           )}
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Select value={managerFilter} onValueChange={setManagerFilter}>
-            <SelectTrigger className="h-9 w-[160px]">
-              <SelectValue placeholder="직원 전체" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">직원 전체</SelectItem>
-              {managers.map((m) => (
-                <SelectItem key={m} value={m}>{m}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
 
-          <Select value={statusFilter ?? "all"} onValueChange={(v) => setStatusFilter(v === "all" ? null : v)}>
-            <SelectTrigger className="h-9 w-[160px]">
-              <SelectValue placeholder="상태 전체" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">상태 전체</SelectItem>
-              <SelectItem value="개통완료">개통완료</SelectItem>
-              <SelectItem value="예약">예약</SelectItem>
-              <SelectItem value="보류">보류</SelectItem>
-              <SelectItem value="취소">취소</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Badge
-            variant="outline"
-            className={cn(
-              "gap-1 cursor-pointer transition-colors h-9 px-3",
-              quickFilter === "unpaid"
-                ? "border-destructive/60 text-destructive bg-destructive/15"
-                : "border-border/40 text-muted-foreground hover:bg-muted/40"
-            )}
-            onClick={() => setQuickFilter(quickFilter === "unpaid" ? null : "unpaid")}
-          >
-            💰 미수금 {unpaidCount > 0 && `(${unpaidCount})`}
-          </Badge>
-          <Badge
-            variant="outline"
-            className={cn(
-              "gap-1 cursor-pointer transition-colors h-9 px-3",
-              quickFilter === "unreturned"
-                ? "border-destructive/60 text-destructive bg-destructive/15"
-                : "border-border/40 text-muted-foreground hover:bg-muted/40"
-            )}
-            onClick={() => setQuickFilter(quickFilter === "unreturned" ? null : "unreturned")}
-          >
-            🎫 상품권 미반납 {unreturnedCount > 0 && `(${unreturnedCount})`}
-          </Badge>
-          <Badge
-            variant="outline"
-            className={cn(
-              "gap-1 cursor-pointer transition-colors h-9 px-3",
-              bundleFilter
-                ? "border-primary/60 text-primary bg-primary/15"
-                : "border-border/40 text-muted-foreground hover:bg-muted/40"
-            )}
-            onClick={() => setBundleFilter(!bundleFilter)}
-          >
-            📦 동판 건만
-          </Badge>
-          <Badge
-            variant="outline"
-            className={cn(
-              "gap-1 cursor-pointer transition-colors h-9 px-3",
-              noOfferFilter
-                ? "border-primary/60 text-primary bg-primary/15"
-                : "border-border/40 text-muted-foreground hover:bg-muted/40"
-            )}
-            onClick={() => setNoOfferFilter(!noOfferFilter)}
-          >
-            🚫 무오퍼 건만
-          </Badge>
-
+          {/* 통합 검색 — 항상 보임 */}
           <div className="relative flex-1 min-w-[200px] max-w-md ml-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
               value={searchQ}
               onChange={(e) => setSearchQ(e.target.value)}
-              placeholder="고객명·연락처·모델·담당자·매장 검색…"
+              placeholder="고객명·연락처 뒷자리·모델명 검색…"
               className="h-9 pl-9 pr-9 bg-input/60"
             />
             {searching ? (
@@ -526,7 +519,163 @@ const SalesLedgerPage = () => {
               </button>
             ) : null}
           </div>
+
+          {isMobile && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 gap-1"
+              onClick={() => setFilterOpen((v) => !v)}
+            >
+              필터 상세 {filterOpen ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+            </Button>
+          )}
         </div>
+
+        {showFilterBody && (
+          <>
+            <div className="grid grid-cols-2 md:flex md:flex-wrap md:items-center gap-2">
+              {/* 매장(채널) 필터 */}
+              <Select value={storeFilter} onValueChange={setStoreFilter}>
+                <SelectTrigger className="h-9 md:w-[150px]">
+                  <SelectValue placeholder="매장 전체" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  <SelectItem value="all">매장 전체</SelectItem>
+                  {channelOptions.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* 상품 필터 */}
+              <Select value={productFilter} onValueChange={setProductFilter}>
+                <SelectTrigger className="h-9 md:w-[140px]">
+                  <SelectValue placeholder="상품 전체" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">상품 전체</SelectItem>
+                  {productOptions.map((p) => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* 직원 필터 */}
+              <Select value={managerFilter} onValueChange={setManagerFilter}>
+                <SelectTrigger className="h-9 md:w-[140px]">
+                  <SelectValue placeholder="직원 전체" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">직원 전체</SelectItem>
+                  {managers.map((m) => (
+                    <SelectItem key={m} value={m}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* 반납 필터 */}
+              <Select value={returnFilter} onValueChange={(v) => setReturnFilter(v as any)}>
+                <SelectTrigger className="h-9 md:w-[140px]">
+                  <SelectValue placeholder="반납 전체" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">반납 전체</SelectItem>
+                  <SelectItem value="returned">반납완료</SelectItem>
+                  <SelectItem value="unreturned">미반납</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* 검수 필터 */}
+              <Select value={inspectionFilter} onValueChange={(v) => setInspectionFilter(v as any)}>
+                <SelectTrigger className="h-9 md:w-[140px]">
+                  <SelectValue placeholder="검수 전체" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">검수 전체</SelectItem>
+                  <SelectItem value="inspected">검수완료(확정)</SelectItem>
+                  <SelectItem value="uninspected">미검수</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 상태 멀티셀렉트 (칩) */}
+            <div className="flex flex-wrap items-center gap-1.5 mt-3">
+              <span className="text-[11px] text-muted-foreground mr-1">상태:</span>
+              {statusList.map((s) => {
+                const active = statusFilter.includes(s);
+                return (
+                  <Badge
+                    key={s}
+                    variant="outline"
+                    className={cn(
+                      "cursor-pointer transition-colors h-7 px-2.5",
+                      active
+                        ? "border-primary/60 text-primary bg-primary/15"
+                        : "border-border/40 text-muted-foreground hover:bg-muted/40",
+                    )}
+                    onClick={() => toggleStatus(s)}
+                  >
+                    {s}
+                  </Badge>
+                );
+              })}
+            </div>
+
+            {/* 빠른 필터 */}
+            <div className="flex flex-wrap items-center gap-1.5 mt-2">
+              <span className="text-[11px] text-muted-foreground mr-1">빠른:</span>
+              <Badge
+                variant="outline"
+                className={cn(
+                  "gap-1 cursor-pointer transition-colors h-7 px-2.5",
+                  quickFilter === "unpaid"
+                    ? "border-destructive/60 text-destructive bg-destructive/15"
+                    : "border-border/40 text-muted-foreground hover:bg-muted/40",
+                )}
+                onClick={() => setQuickFilter(quickFilter === "unpaid" ? null : "unpaid")}
+              >
+                💰 미수금 {unpaidCount > 0 && `(${unpaidCount})`}
+              </Badge>
+              <Badge
+                variant="outline"
+                className={cn(
+                  "gap-1 cursor-pointer transition-colors h-7 px-2.5",
+                  quickFilter === "unreturned"
+                    ? "border-destructive/60 text-destructive bg-destructive/15"
+                    : "border-border/40 text-muted-foreground hover:bg-muted/40",
+                )}
+                onClick={() => setQuickFilter(quickFilter === "unreturned" ? null : "unreturned")}
+              >
+                🎫 상품권 미반납 {unreturnedCount > 0 && `(${unreturnedCount})`}
+              </Badge>
+              <Badge
+                variant="outline"
+                className={cn(
+                  "gap-1 cursor-pointer transition-colors h-7 px-2.5",
+                  bundleFilter
+                    ? "border-primary/60 text-primary bg-primary/15"
+                    : "border-border/40 text-muted-foreground hover:bg-muted/40",
+                )}
+                onClick={() => setBundleFilter(!bundleFilter)}
+              >
+                📦 동판 건만
+              </Badge>
+              <Badge
+                variant="outline"
+                className={cn(
+                  "gap-1 cursor-pointer transition-colors h-7 px-2.5",
+                  noOfferFilter
+                    ? "border-primary/60 text-primary bg-primary/15"
+                    : "border-border/40 text-muted-foreground hover:bg-muted/40",
+                )}
+                onClick={() => setNoOfferFilter(!noOfferFilter)}
+              >
+                🚫 무오퍼 건만
+              </Badge>
+            </div>
+          </>
+        )}
       </section>
 
       {/* 요약 카드 */}
