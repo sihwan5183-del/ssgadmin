@@ -40,6 +40,12 @@ const matchSegment = (product: string | null, seg: Segment) => {
   return classifyProduct(product) === seg;
 };
 
+const PENDING_ACTIVATION_STATUS_OR =
+  "status.eq.청약완료,status.eq.택배발송,status.ilike.청약*완료,status.ilike.택배*발송";
+const normalizeStatusValue = (value: string | null | undefined) => (value ?? "").replace(/\s+/g, "").trim();
+const isPendingActivationStatus = (value: string | null | undefined) =>
+  normalizeStatusValue(value) === "청약완료" || normalizeStatusValue(value) === "택배발송";
+
 type SegMap = Record<Segment, number>;
 const countAll = (rows: { product: string | null }[]): SegMap => {
   const m: SegMap = { all: 0, "모바일": 0, "USIM MNP": 0, "2nd": 0, "홈": 0, "TV프리": 0, "스마트홈": 0, "대명": 0, "맞춤제안": 0, "기타": 0 };
@@ -104,7 +110,7 @@ export const HeroPerformance = () => {
   const [ydayRows, setYdayRows] = useState<{ product: string | null }[]>([]);
   const [currentRows, setCurrentRows] = useState<{ product: string | null }[]>([]);
   const [prevRows, setPrevRows] = useState<{ product: string | null }[]>([]);
-  const [pendingRows, setPendingRows] = useState<{ product: string | null; created_at: string }[]>([]);
+  const [pendingRows, setPendingRows] = useState<{ product: string | null; created_at: string; open_date: string | null; status: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -117,21 +123,22 @@ export const HeroPerformance = () => {
       ydate.setDate(ydate.getDate() - 1);
       const ydayISO = ydate.toISOString().slice(0, 10);
 
-      // 개통대기 = 청약완료 + 택배발송 (현장 개통 전 단계 통합 카운트)
-      const PENDING_STATUSES = ["청약완료", "택배발송"];
       const [a, b, c, d, e] = await Promise.all([
         supabase.from("sales").select("product").gte("open_date", startDate).lte("open_date", endDate).in("status", ["개통완료", "설치완료"]).limit(10000),
         supabase.from("sales").select("product").gte("open_date", prevStartDate).lte("open_date", prevEndDate).in("status", ["개통완료", "설치완료"]).limit(10000),
         supabase.from("sales").select("product").eq("open_date", todayISO).in("status", ["개통완료", "설치완료"]).limit(5000),
         supabase.from("sales").select("product").eq("open_date", ydayISO).in("status", ["개통완료", "설치완료"]).limit(5000),
-        supabase.from("sales").select("product, created_at").in("status", PENDING_STATUSES).limit(5000),
+        supabase.from("sales").select("product, created_at, open_date, status")
+          .or(PENDING_ACTIVATION_STATUS_OR)
+          .or(`and(open_date.gte.${startDate},open_date.lte.${endDate}),and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`)
+          .limit(5000),
       ]);
       if (!alive) return;
       setCurrentRows(a.data ?? []);
       setPrevRows(b.data ?? []);
       setTodayRows(c.data ?? []);
       setYdayRows(d.data ?? []);
-      setPendingRows(e.data ?? []);
+      setPendingRows((e.data ?? []).filter((row) => isPendingActivationStatus(row.status)));
       setLoading(false);
     })();
     return () => { alive = false; };
