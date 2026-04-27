@@ -928,6 +928,147 @@ export default function StaffStatusPage() {
               </Card>
             </section>
 
+            {/* === 영업 생산성 분석 (Attach Rate / ARPU / Trend / Radar) === */}
+            <section className="space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Activity className="size-4 text-primary-glow" /> 영업 생산성 분석
+                  <Badge variant="outline" className="text-[10px] ml-1">{productivity.salesType}</Badge>
+                </h3>
+                <div className="text-[11px] text-muted-foreground">
+                  기준: 모바일 {analytics.mobileCount}건 · 전기 비교 ({prevRange.start} ~ {prevRange.end})
+                </div>
+              </div>
+
+              {/* Strength / Weakness 한줄 요약 */}
+              <Card className="p-4 glass border-primary/20 bg-gradient-to-r from-primary/[0.06] via-transparent to-transparent">
+                <div className="flex items-start gap-3">
+                  <div className="size-9 rounded-lg bg-primary/15 grid place-items-center text-primary-glow shrink-0">
+                    <Lightbulb className="size-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[11px] text-muted-foreground">AI 한줄 요약</div>
+                    <div className="text-sm font-semibold mt-0.5">{productivity.summary}</div>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {productivity.strengths.map((s) => (
+                        <Badge key={s} variant="outline" className="text-[10px] border-emerald-400/40 text-emerald-300 bg-emerald-500/10">
+                          + {s}
+                        </Badge>
+                      ))}
+                      {productivity.weaknesses.map((w) => (
+                        <Badge key={w} variant="outline" className="text-[10px] border-amber-400/40 text-amber-700 bg-amber-50">
+                          ! {w}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
+              {/* 핵심 지표 4종 */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <Card className="p-4 glass">
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                    <Wallet className="size-3.5 text-amber-500" /> 건당 평균 수익 (ARPU)
+                  </div>
+                  <div className="text-2xl font-extrabold tabular-nums text-amber-700 mt-1">
+                    {formatKRWShort(productivity.arpu)}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-1">
+                    총수익 {formatKRWShort(productivity.totalRevenue)}
+                  </div>
+                </Card>
+                <Card className="p-4 glass">
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                    <AlertTriangle className="size-3.5 text-orange-500" /> 미반납·미검수 잔여율
+                  </div>
+                  <div className={`text-2xl font-extrabold tabular-nums mt-1 ${productivity.unresolvedRate >= 30 ? "text-destructive" : "text-foreground"}`}>
+                    {productivity.unresolvedRate}<span className="text-sm font-normal text-muted-foreground ml-0.5">%</span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-1">
+                    미정산 {productivity.unresolved}건 / 전체 {sales.length}건
+                  </div>
+                </Card>
+                <Card className="p-4 glass">
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                    <Smartphone className="size-3.5 text-emerald-500" /> 2nd 디바이스 번들율
+                  </div>
+                  <div className="text-2xl font-extrabold tabular-nums text-emerald-300 mt-1">
+                    {productivity.attach.second}<span className="text-sm font-normal text-muted-foreground ml-0.5">%</span>
+                  </div>
+                  <DeltaPill delta={productivity.attachBars[4].delta} />
+                </Card>
+                <Card className="p-4 glass">
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                    <Activity className="size-3.5 text-primary-glow" /> 영업 성향
+                  </div>
+                  <div className="text-lg font-bold mt-1.5">{productivity.salesType}</div>
+                  <div className="text-[10px] text-muted-foreground mt-1">
+                    모바일 {productivity.mobileShare}% · 결합 {productivity.wiredShare}%
+                  </div>
+                </Card>
+              </div>
+
+              {/* Attach Rate Bar + Radar */}
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                <Card className="p-5 glass lg:col-span-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold">모바일 대비 항목별 유치율 (Attach Rate)</h4>
+                    <span className="text-[10px] text-muted-foreground">▲▼ 전기 대비</span>
+                  </div>
+                  {analytics.mobileCount === 0 ? (
+                    <div className="h-48 grid place-items-center text-xs text-muted-foreground">모바일 개통 데이터 없음</div>
+                  ) : (
+                    <>
+                      <div className="h-48">
+                        <ResponsiveContainer>
+                          <BarChart data={productivity.attachBars} margin={{ top: 8, right: 8, left: -16, bottom: 4 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.4)" />
+                            <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                            <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} unit="%" />
+                            <RTooltip
+                              contentStyle={{ background: "hsl(0 0% 100% / 0.96)", color: "#374151", border: "1px solid hsl(0 0% 88%)", borderRadius: 12, fontSize: 12 }}
+                              formatter={(v: any) => [`${v}%`, "유치율"]}
+                            />
+                            <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                              {productivity.attachBars.map((b, i) => <Cell key={i} fill={b.fill} />)}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="grid grid-cols-5 gap-1.5 mt-2">
+                        {productivity.attachBars.map((b) => (
+                          <div key={b.name} className="text-center p-1.5 rounded-md bg-card/40 border border-border/40">
+                            <div className="text-[10px] text-muted-foreground truncate">{b.name}</div>
+                            <div className="text-sm font-bold tabular-nums">{b.value}%</div>
+                            <DeltaPill delta={b.delta} compact />
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </Card>
+
+                <Card className="p-5 glass lg:col-span-2">
+                  <h4 className="text-sm font-semibold mb-2">영업 성향 레이더</h4>
+                  <div className="h-56">
+                    <ResponsiveContainer>
+                      <RadarChart data={productivity.radarData} outerRadius="78%">
+                        <PolarGrid stroke="hsl(var(--border) / 0.5)" />
+                        <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                        <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+                        <Radar name="유치율" dataKey="value" stroke="hsl(45 95% 60%)" fill="hsl(45 95% 60%)" fillOpacity={0.45} />
+                        <RTooltip
+                          contentStyle={{ background: "hsl(0 0% 100% / 0.96)", color: "#374151", border: "1px solid hsl(0 0% 88%)", borderRadius: 12, fontSize: 12 }}
+                          formatter={(v: any) => [`${v}%`, "유치율"]}
+                        />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+              </div>
+            </section>
+
             {/* Donut + Simulator (existing) */}
             <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               <Card className="p-6 glass lg:col-span-2">
