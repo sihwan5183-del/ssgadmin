@@ -458,7 +458,12 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
                   <Input
                     type="date"
                     value={installDate}
-                    onChange={(e) => setInstallDate(e.target.value)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setInstallDate(v);
+                      // 즉시 서버 반영 — onBlur 누락으로 인한 저장 실패 방지
+                      patchCustom({ install_date: v || null });
+                    }}
                     onBlur={() => patchCustom({ install_date: installDate || null })}
                     className="h-7 text-xs bg-input/60"
                   />
