@@ -982,6 +982,22 @@ const SalesLedgerPage = () => {
         <div className="ml-auto flex items-center gap-2">
           <Badge className="bg-primary/15 text-primary-glow border-primary/30">총 {dbSummary.count.toLocaleString()}건</Badge>
           {isAdmin && selected.size > 0 && (
+            <div className="flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-50 dark:bg-amber-500/10 px-2 py-1">
+              <span className="text-[11px] font-medium text-amber-700 dark:text-amber-300">담당자 일괄지정({selected.size})</span>
+              <Select value={bulkManager} onValueChange={setBulkManager}>
+                <SelectTrigger className="h-7 w-[140px] text-xs"><SelectValue placeholder="직원 선택" /></SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {staffList.map((s) => (
+                    <SelectItem key={s.user_id} value={s.user_id}>{s.display_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button size="sm" className="h-7 px-2 text-xs" disabled={!bulkManager || bulkBusy} onClick={bulkAssignManager}>
+                {bulkBusy ? "적용중…" : "적용"}
+              </Button>
+            </div>
+          )}
+          {isAdmin && selected.size > 0 && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" size="sm"
