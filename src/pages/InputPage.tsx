@@ -983,7 +983,7 @@ const InputPage = () => {
               </Field>
             </div>
             <div className="col-span-12 md:col-span-3">
-              <Field label={<span>약정 정보 <span className="text-destructive">*</span></span>}>
+              <Field label="약정 정보 *">
                 <div className={cn(
                   "inline-flex h-9 w-full rounded-md border bg-input/60 p-0.5 text-xs",
                   customFields.contract_type ? "border-border/40" : "border-destructive/60"
