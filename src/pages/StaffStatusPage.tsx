@@ -220,7 +220,7 @@ export default function StaffStatusPage() {
     const ids = profiles.map((p) => p.user_id);
     const names = profiles.map((p) => p.display_name);
     // Sales: rows where created_by in ids OR manager in names — fetch via two queries to avoid OR complexity
-    const [{ data: byCreator }, { data: byManager }, { data: inq }, { data: goalRows }] = await Promise.all([
+    const [{ data: byCreator }, { data: byManager }, { data: inq }, { data: goalRows }, { data: prevByCreator }, { data: prevByManager }] = await Promise.all([
       supabase.from("sales")
         .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, status, approval_status, pending_resolved, pending_items, distributor_amount, net_fee, vas1, vas2")
         .in("created_by", ids)
@@ -245,15 +245,30 @@ export default function StaffStatusPage() {
         .select("id, user_id, product, year_month, goal_count")
         .in("user_id", ids)
         .eq("year_month", yearMonth),
+      supabase.from("sales")
+        .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, status, approval_status, pending_resolved, pending_items, distributor_amount, net_fee, vas1, vas2")
+        .in("created_by", ids)
+        .gte("open_date", prevRange.start)
+        .lte("open_date", prevRange.end)
+        .limit(5000),
+      supabase.from("sales")
+        .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, status, approval_status, pending_resolved, pending_items, distributor_amount, net_fee, vas1, vas2")
+        .in("manager", names)
+        .gte("open_date", prevRange.start)
+        .lte("open_date", prevRange.end)
+        .limit(5000),
     ]);
     // Merge & dedupe
     const map = new Map<string, SaleRow>();
     [...(byCreator ?? []), ...(byManager ?? [])].forEach((r: any) => map.set(r.id, r as SaleRow));
     setAllSales(Array.from(map.values()));
+    const prevMap = new Map<string, SaleRow>();
+    [...(prevByCreator ?? []), ...(prevByManager ?? [])].forEach((r: any) => prevMap.set(r.id, r as SaleRow));
+    setPrevSales(Array.from(prevMap.values()));
     setAllInquiries((inq ?? []) as InquiryRow[]);
     setGoals((goalRows ?? []) as GoalRow[]);
     setLoading(false);
-  }, [profiles, startDate, endDate, yearMonth, roleLoading]);
+  }, [profiles, startDate, endDate, yearMonth, roleLoading, prevRange.start, prevRange.end]);
 
   useEffect(() => { reloadData(); }, [reloadData]);
 
