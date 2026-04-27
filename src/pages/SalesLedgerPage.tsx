@@ -1158,12 +1158,13 @@ const SalesLedgerPage = () => {
 };
 
 const SummaryCard = ({
-  icon: Icon, label, value, accent,
+  icon: Icon, label, value, accent, tooltip,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: string;
   accent: "primary" | "secondary" | "success" | "warning" | "destructive";
+  tooltip?: React.ReactNode;
 }) => {
   const tone: Record<string, string> = {
     primary: "from-primary/20 to-primary-glow/5 text-primary-glow border-primary/20",
@@ -1172,8 +1173,8 @@ const SummaryCard = ({
     warning: "from-warning/20 to-warning/5 text-warning border-warning/20",
     destructive: "from-destructive/25 to-destructive/5 text-destructive border-destructive/30",
   };
-  return (
-    <div className={cn("rounded-2xl border bg-gradient-to-br p-4", tone[accent])}>
+  const card = (
+    <div className={cn("rounded-2xl border bg-gradient-to-br p-4 cursor-help", tone[accent])}>
       <div className="flex items-center gap-2 text-[11px] font-medium opacity-90 text-primary">
         <Icon className="size-3.5" /> {label}
       </div>
@@ -1181,6 +1182,17 @@ const SummaryCard = ({
         {value}
       </div>
     </div>
+  );
+  if (!tooltip) return card;
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>{card}</TooltipTrigger>
+        <TooltipContent side="bottom" className="max-w-xs text-[11px] leading-relaxed whitespace-pre-line">
+          {tooltip}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 
