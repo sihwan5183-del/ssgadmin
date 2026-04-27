@@ -25,7 +25,11 @@ export const pickAmount = (row: ProfitSource, ...keys: string[]): number => {
 export const calcMoyoFee = (row: ProfitSource): number => {
   const channel = String(row?.channel ?? "").trim().toLowerCase();
   const excluded = row?.moyo_excluded === true;
-  return !excluded && (channel === "모요" || channel.includes("moyo")) ? MOYO_FEE_PER_ACTIVATION : 0;
+  // 모요 수수료는 [모바일] 가입 상품에 한해서만 차감 (인터넷/TV/스마트홈 등 제외)
+  const product = String(row?.product ?? "").trim().toLowerCase();
+  const isMobile = product === "모바일" || product === "mobile";
+  const isMoyoChannel = channel === "모요" || channel.includes("moyo");
+  return !excluded && isMoyoChannel && isMobile ? MOYO_FEE_PER_ACTIVATION : 0;
 };
 
 const isSettled = (value: unknown, positiveValues: string[]) => {

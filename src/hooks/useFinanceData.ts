@@ -196,9 +196,10 @@ export function useFinanceData(): FinanceData {
       totalCustomerDeposit += Number(r.receivable_amount ?? 0);
       totalOffer +=
         Number(r.cash_support_amount ?? 0) + Number(r.extra_subsidy ?? 0);
-      // 모요 채널 건 분류
+      // 모요 채널 분류 (모바일 가입 건만 카운트)
       const ch = (r.channel ?? "").toString().trim();
-      if (ch === "모요") {
+      const prod = (r.product ?? "").toString().trim();
+      if (ch === "모요" && prod === "모바일") {
         if (r.moyo_excluded) {
           moyoExcludedCount += 1;
         } else {
