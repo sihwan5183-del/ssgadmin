@@ -28,6 +28,7 @@ import { PaginationBar } from "@/components/ui/pagination-bar";
 import { exportToExcel, SALES_COLUMNS, OFFER_COLUMNS } from "@/lib/excelExport";
 import { useQuickExport, useLastUpdated } from "@/hooks/useQuickExport";
 import { maskPhone, maskName } from "@/lib/maskPii";
+import { useResignedUsers, ResignedTag } from "@/hooks/useResignedUsers";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -117,6 +118,7 @@ const SalesLedgerPage = () => {
   const { startDate, endDate, label: periodLabel } = usePeriod();
   const navigate = useNavigate();
   const quickExport = useQuickExport();
+  const resignedIds = useResignedUsers();
 
   const [rows, setRows] = useState<SaleRow[]>([]);
   const [page, setPage] = useState(0);
@@ -705,7 +707,10 @@ const SalesLedgerPage = () => {
                     )}
                     <td className="px-3 py-2.5">{r.open_date ?? "-"}</td>
                     <td className="px-3 py-2.5">{r.channel ?? "-"}</td>
-                    <td className="px-3 py-2.5">{r.manager ?? "-"}</td>
+                    <td className="px-3 py-2.5">
+                      {r.manager ?? "-"}
+                      <ResignedTag userId={r.created_by} ids={resignedIds} />
+                    </td>
                     <td className="px-3 py-2.5">{r.product ?? "-"}</td>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1.5 flex-wrap">

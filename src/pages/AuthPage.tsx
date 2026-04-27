@@ -52,8 +52,10 @@ const AuthPage = () => {
             .update({ team: team || null, phone: phone || null })
             .eq("user_id", data.user.id);
         }
+        // 가입 즉시 로그아웃 (관리자 승인 필요)
+        await supabase.auth.signOut().catch(() => {});
         toast.success("가입 신청 완료", {
-          description: "이메일 인증 후 관리자 승인이 완료되어야 로그인할 수 있습니다.",
+          description: "관리자(슈퍼관리자) 승인 후 로그인할 수 있습니다.",
         });
         setMode("login");
       } else {

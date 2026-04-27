@@ -9,6 +9,13 @@ import { StaffDetailDialog } from "@/components/admin/accounts/StaffDetailDialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStores } from "@/hooks/useStores";
 import { ROLE_LABELS, type AppRole } from "@/hooks/useRole";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Row {
   user_id: string;
@@ -40,6 +47,9 @@ export default function AccountStaffPage() {
   const [storeFilter, setStoreFilter] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [selected, setSelected] = useState<{ id: string; email: string | null } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const { isSuperAdmin } = useSuperAdmin();
   const { stores } = useStores();
 
   const refresh = useCallback(async () => {
@@ -68,6 +78,28 @@ export default function AccountStaffPage() {
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  const performSoftDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-user-management", {
+        body: { action: "delete_user", user_id: deleteTarget.user_id },
+      });
+      if (error || (data as any)?.error) {
+        throw new Error((data as any)?.error ?? error?.message);
+      }
+      toast.success(`${deleteTarget.display_name} 님을 퇴사 처리했습니다`, {
+        description: "기존 실적 데이터는 그대로 보존됩니다.",
+      });
+      setDeleteTarget(null);
+      refresh();
+    } catch (e) {
+      toast.error("삭제 실패", { description: (e as Error).message });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const filtered = useMemo(() => {
     const ql = q.trim().toLowerCase();
@@ -164,7 +196,20 @@ export default function AccountStaffPage() {
                       <td className="px-3 py-2 text-muted-foreground">{r.hire_date ?? "-"}</td>
                       <td className="px-3 py-2"><Badge variant={s.variant}>{s.label}</Badge></td>
                       <td className="px-3 py-2 text-right">
-                        <Button size="sm" variant="ghost" onClick={() => setSelected({ id: r.user_id, email: emails[r.user_id] ?? null })}>상세</Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button size="sm" variant="ghost" onClick={() => setSelected({ id: r.user_id, email: emails[r.user_id] ?? null })}>상세</Button>
+                          {isSuperAdmin && r.status !== "resigned" && r.status !== "deleted" && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => setDeleteTarget(r)}
+                              title="계정 삭제 (퇴사 처리)"
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -185,6 +230,31 @@ export default function AccountStaffPage() {
         onOpenChange={(v) => { if (!v) setSelected(null); }}
         onChanged={refresh}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v && !deleting) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>계정 삭제(퇴사 처리)</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{deleteTarget?.display_name}</strong> 님의 계정을 삭제(퇴사 처리)하시겠습니까?
+              <br />
+              삭제 후에도 기존 실적 데이터는 보존되며, 작성자 이름 옆에 <em>(퇴사자)</em> 표기가 자동으로 붙습니다.
+              <br />
+              해당 계정은 즉시 로그인이 차단되고 모든 세션이 종료됩니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); performSoftDelete(); }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "처리 중…" : "삭제(퇴사 처리)"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1202,6 +1202,27 @@ export type Database = {
         }
         Relationships: []
       }
+      permission_catalog: {
+        Row: {
+          category: string
+          label: string
+          permission_key: string
+          sort_order: number
+        }
+        Insert: {
+          category?: string
+          label: string
+          permission_key: string
+          sort_order?: number
+        }
+        Update: {
+          category?: string
+          label?: string
+          permission_key?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       positions: {
         Row: {
           active: boolean
@@ -1295,6 +1316,8 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           display_name: string
           hire_date: string | null
           id: string
@@ -1308,6 +1331,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           display_name: string
           hire_date?: string | null
           id?: string
@@ -1321,6 +1346,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           display_name?: string
           hire_date?: string | null
           id?: string
@@ -1415,6 +1442,33 @@ export type Database = {
           phone?: string | null
           registered_date?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      role_permissions: {
+        Row: {
+          allowed: boolean
+          id: string
+          permission_key: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          allowed?: boolean
+          id?: string
+          permission_key: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          allowed?: boolean
+          id?: string
+          permission_key?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -2031,6 +2085,7 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_ceo: { Args: { _user_id: string }; Returns: boolean }
       is_planner: { Args: { _user_id: string }; Returns: boolean }
+      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       is_user_active: { Args: { _user_id: string }; Returns: boolean }
       normalize_device_model: { Args: { _raw: string }; Returns: string }
       normalize_serial_no: { Args: { _raw: string }; Returns: string }

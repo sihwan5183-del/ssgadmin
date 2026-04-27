@@ -75,11 +75,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (data) {
       setProfileStatus(data.status);
       setProfileName(data.display_name);
-      if (data.status === "leave" || data.status === "resigned") {
+      if (data.status === "leave" || data.status === "resigned" || data.status === "deleted") {
         toast.error(
           data.status === "leave"
             ? "휴직 상태입니다. 관리자에게 문의하세요."
-            : "비활성화된 계정입니다. 관리자에게 문의하세요."
+            : data.status === "deleted"
+            ? "삭제된 계정입니다. 관리자에게 문의하세요."
+            : "퇴사 처리된 계정입니다. 관리자에게 문의하세요."
         );
         await supabase.auth.signOut();
       }
