@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldDefinitions } from "@/hooks/useFieldDefinitions";
 import { DynamicFieldRenderer } from "@/components/admin/DynamicFieldRenderer";
+import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { useInquiryStatuses } from "@/hooks/useInquiryStatuses";
 import { inquiryStatusClass, INQUIRY_DEFAULT_STATUS } from "@/lib/inquiryStatus";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ const NATIVE_KEYS = new Set([
 export const InquiryForm = ({ onSaved }: Props) => {
   const { user } = useAuth();
   const { fields, loading } = useFieldDefinitions("inquiries");
+  const { options: channelOptions } = useFieldOptions("inquiry_channel");
   const { statuses } = useInquiryStatuses();
   const [busy, setBusy] = useState(false);
   const [inquiryDate, setInquiryDate] = useState(today());
@@ -52,6 +54,13 @@ export const InquiryForm = ({ onSaved }: Props) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statuses]);
+
+  // 동적 필드의 'channel' 옵션을 어드민 [인입 채널] 설정과 100% 동일하게 강제 동기화
+  const syncedFields = fields.map((f) =>
+    f.field_key === "channel"
+      ? { ...f, field_type: "select" as const, options: channelOptions }
+      : f,
+  );
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,7 +146,7 @@ export const InquiryForm = ({ onSaved }: Props) => {
 
         {/* 관리자가 정의한 동적 필드 */}
         {!loading && (
-          <DynamicFieldRenderer fields={fields} values={values} onChange={setValues} />
+          <DynamicFieldRenderer fields={syncedFields} values={values} onChange={setValues} />
         )}
 
         <div className="col-span-2 md:col-span-4 flex justify-end">
