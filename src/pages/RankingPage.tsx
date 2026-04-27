@@ -230,11 +230,35 @@ const RankingPage = () => {
   const [stores, setStores] = useState<string[]>([]);
   const [cleanMap, setCleanMap] = useState<Map<string, { isClean: boolean; cleanDays: number }>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
+  const [hideExcluded, setHideExcluded] = useState(true);
+  const [configLoaded, setConfigLoaded] = useState(false);
+
+  // Load ranking config from app_settings (default period + excluded users)
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "ranking.config")
+        .maybeSingle();
+      if (data?.value) {
+        const cfg: any = data.value;
+        if (cfg.default_period && ["today", "week", "month", "quarter"].includes(cfg.default_period)) {
+          setPeriod(cfg.default_period);
+        }
+        if (Array.isArray(cfg.excluded_user_ids)) setExcludedIds(new Set(cfg.excluded_user_ids));
+        if (typeof cfg.hide_excluded === "boolean") setHideExcluded(cfg.hide_excluded);
+      }
+      setConfigLoaded(true);
+    })();
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
     const { start, end } = dateRange(period);
     const yd = yesterdayRange();
+    const yPeriod = periodUpToYesterday(period);
 
     // Fetch profiles
     const { data: profs } = await supabase.from("profiles").select("user_id, display_name, store").eq("status", "active");
@@ -251,27 +275,58 @@ const RankingPage = () => {
     const { data: stratModels } = await supabase.from("device_models").select("model_name").eq("is_strategy", true).eq("active", true);
     const stratSet = new Set((stratModels ?? []).map((m) => m.model_name));
 
-    // Fetch sales in period
+    // Fetch confirmed + 개통완료/반납완료 sales only — 판매원장 확정 데이터와 일치
     const { data: sales } = await supabase
       .from("sales")
-      .select("created_by, device_model, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned, open_date")
+      .select("id, created_by, manager, device_model, product, status, approval_status, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned, vas1, vas2, open_date")
+      .eq("approval_status", "확정")
+      .in("status", COUNTED_STATUSES)
       .gte("open_date", start)
-      .lte("open_date", end);
+      .lte("open_date", end)
+      .limit(20000);
 
-    // Yesterday sales for delta
+    // Yesterday daily delta (count change)
     const { data: ySales } = await supabase
       .from("sales")
       .select("created_by")
+      .eq("approval_status", "확정")
+      .in("status", COUNTED_STATUSES)
       .gte("open_date", yd.start)
       .lte("open_date", yd.end);
 
+    // Period-up-to-yesterday sales for rank-delta snapshot
+    let yPeriodSales: any[] = [];
+    if (yPeriod) {
+      const { data: yps } = await supabase
+        .from("sales")
+        .select("created_by, device_model, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned")
+        .eq("approval_status", "확정")
+        .in("status", COUNTED_STATUSES)
+        .gte("open_date", yPeriod.start)
+        .lte("open_date", yPeriod.end)
+        .limit(20000);
+      yPeriodSales = yps ?? [];
+    }
+
     // Build per-user aggregates
-    const uMap = new Map<string, { count: number; profit: number; strategyCount: number; voucherReturned: number; dateCounts: Map<string, number> }>();
+    const uMap = new Map<string, {
+      count: number; profit: number; strategyCount: number; voucherReturned: number;
+      dateCounts: Map<string, number>;
+      productCounts: { 모바일: number; 인터넷: number; TV프리: number; 부가서비스: number };
+    }>();
     const mMap = new Map<string, { count: number; isStrategy: boolean }>();
+    const seenSaleIds = new Set<string>();
 
     (sales ?? []).forEach((s) => {
+      // 중복 집계 방지
+      if (seenSaleIds.has(s.id)) return;
+      seenSaleIds.add(s.id);
       const uid = s.created_by;
-      if (!uMap.has(uid)) uMap.set(uid, { count: 0, profit: 0, strategyCount: 0, voucherReturned: 0, dateCounts: new Map() });
+      if (!uMap.has(uid)) uMap.set(uid, {
+        count: 0, profit: 0, strategyCount: 0, voucherReturned: 0,
+        dateCounts: new Map(),
+        productCounts: { 모바일: 0, 인터넷: 0, TV프리: 0, 부가서비스: 0 },
+      });
       const u = uMap.get(uid)!;
       u.count++;
       const offer = (s.distributor_amount ?? 0) + (s.extra_subsidy ?? 0) + (s.cash_support_amount ?? 0);
@@ -279,6 +334,13 @@ const RankingPage = () => {
       if (s.device_model && stratSet.has(s.device_model)) u.strategyCount++;
       if (s.voucher && s.voucher_returned === "유") u.voucherReturned++;
       if (s.open_date) u.dateCounts.set(s.open_date, (u.dateCounts.get(s.open_date) ?? 0) + 1);
+
+      // 상품별 카운트
+      const b = productBucket(s.product);
+      if (b !== "기타") u.productCounts[b]++;
+      if ((s.vas1 && String(s.vas1).trim() && s.vas1 !== "없음") || (s.vas2 && String(s.vas2).trim() && s.vas2 !== "없음")) {
+        u.productCounts.부가서비스++;
+      }
 
       // Model ranking
       if (s.device_model) {
@@ -290,6 +352,19 @@ const RankingPage = () => {
     // Yesterday per-user counts
     const yMap = new Map<string, number>();
     (ySales ?? []).forEach((s) => yMap.set(s.created_by, (yMap.get(s.created_by) ?? 0) + 1));
+
+    // === Yesterday-snapshot rankings (per current tab metric) for rank delta ===
+    const yAgg = new Map<string, { count: number; profit: number; strategyCount: number; voucherReturned: number }>();
+    yPeriodSales.forEach((s: any) => {
+      const uid = s.created_by;
+      if (!yAgg.has(uid)) yAgg.set(uid, { count: 0, profit: 0, strategyCount: 0, voucherReturned: 0 });
+      const u = yAgg.get(uid)!;
+      u.count++;
+      const offer = (s.distributor_amount ?? 0) + (s.extra_subsidy ?? 0) + (s.cash_support_amount ?? 0);
+      u.profit += (s.unit_price ?? 0) - offer;
+      if (s.device_model && stratSet.has(s.device_model)) u.strategyCount++;
+      if (s.voucher && s.voucher_returned === "유") u.voucherReturned++;
+    });
 
     // Calculate streak (consecutive days with sales ending today)
     const calcStreak = (dateCounts: Map<string, number>) => {
@@ -345,9 +420,42 @@ const RankingPage = () => {
         voucherReturned: v.voucherReturned,
         streak: calcStreak(v.dateCounts),
         yesterdayDelta: v.count - (yMap.get(uid) ?? 0),
+        rankDelta: 0,
+        productCounts: v.productCounts,
         isClean: clean?.isClean ?? false,
         cleanDays: clean?.cleanDays ?? 0,
+        excluded: excludedIds.has(uid),
       });
+    });
+
+    // === rank delta vs yesterday: compute by sorting both snapshots by current tab metric ===
+    const metricFor = (m: { count: number; profit: number; strategyCount: number; voucherReturned: number }) => {
+      switch (tab) {
+        case "profit": return m.profit;
+        case "strategy": return m.strategyCount;
+        case "voucher": return m.voucherReturned;
+        default: return m.count;
+      }
+    };
+    const todayMetric = ranked.map((r) => ({ uid: r.user_id, v: metricFor(r) }));
+    todayMetric.sort((a, b) => b.v - a.v);
+    const todayRank = new Map<string, number>();
+    todayMetric.forEach((r, i) => todayRank.set(r.uid, i + 1));
+
+    const yMetric: { uid: string; v: number }[] = [];
+    yAgg.forEach((m, uid) => yMetric.push({ uid, v: metricFor(m) }));
+    // Include users with 0 in yesterday so they have a baseline rank
+    ranked.forEach((r) => {
+      if (!yAgg.has(r.user_id)) yMetric.push({ uid: r.user_id, v: 0 });
+    });
+    yMetric.sort((a, b) => b.v - a.v);
+    const yRank = new Map<string, number>();
+    yMetric.forEach((r, i) => yRank.set(r.uid, i + 1));
+
+    ranked.forEach((r) => {
+      const t = todayRank.get(r.user_id) ?? 0;
+      const y = yRank.get(r.user_id) ?? 0;
+      r.rankDelta = y && t ? y - t : 0; // positive = climbed
     });
 
     setUsers(ranked);
@@ -358,9 +466,9 @@ const RankingPage = () => {
         .slice(0, 5)
     );
     setLoading(false);
-  }, [period]);
+  }, [period, tab, excludedIds]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { if (configLoaded) load(); }, [load, configLoaded]);
 
   const activeTab = TABS.find((t) => t.key === tab)!;
   const sorted = useMemo(() => {
