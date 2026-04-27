@@ -165,7 +165,19 @@ const SalesLedgerPage = () => {
   const { options: productOptions } = useFieldOptions("product");
   const { options: statusOptions } = useFieldOptions("status");
 
-  const [dbSummary, setDbSummary] = useState({ count: 0, totalRebate: 0, totalOffer: 0, totalProfit: 0, excludedCount: 0 });
+  const [dbSummary, setDbSummary] = useState({
+    count: 0,
+    totalRebate: 0,
+    totalOffer: 0,
+    totalProfit: 0,
+    excludedCount: 0,
+    moyoCount: 0,
+    moyoFeeTotal: 0,
+    totalReceivable: 0,
+    totalVoucher: 0,
+    totalTradeIn: 0,
+    totalVas: 0,
+  });
   const [unpaidCount, setUnpaidCount] = useState(0);
   const [unreturnedCount, setUnreturnedCount] = useState(0);
 
@@ -279,21 +291,43 @@ const SalesLedgerPage = () => {
     const { data } = await q;
     const all = data ?? [];
     // ✅ 단일 공식 (calcDashboardProfit) — 대시보드/엑셀과 1원도 어긋나지 않게 통일
-    let totalRevenue = 0;
-    let totalExpense = 0;
-    let totalRebate = 0;
+    // ※ 모요 수수료는 [총 리베이트/총 오퍼]에서 분리. 마지막 [최종 수익]에서만 차감.
+    let totalCommission = 0;
+    let totalVas = 0;
+    let totalReceivable = 0;
+    let totalVoucher = 0;
+    let totalTradeIn = 0;
+    let totalOfferExpense = 0; // 모요 수수료 제외한 순수 지출 합계
+    let moyoFeeTotal = 0;
+    let moyoCount = 0;
     for (const r of all) {
       const p = calcDashboardProfit(r as any);
-      totalRevenue += p.revenue;
-      totalExpense += p.expense;
-      totalRebate += p.salesCommission;
+      totalCommission += p.salesCommission;
+      totalVas += p.vasFee;
+      totalReceivable += p.receivableAmount;
+      totalVoucher += p.voucherAmount;
+      totalTradeIn += p.tradeInConfirmed;
+      // 지출에서 모요 수수료 제외 → 순수 오퍼/지출 항목만
+      totalOfferExpense += p.expense - p.moyoFee;
+      moyoFeeTotal += p.moyoFee;
+      if (p.moyoFee > 0) moyoCount += 1;
     }
+    const totalRebate = totalCommission + totalVas; // 단가표 + 부가서비스 (순수 영업)
+    const totalRevenuePure = totalRebate + totalReceivable + totalVoucher + totalTradeIn;
+    // 최종 수익 = (순수 수익) - (순수 지출) - (모요 수수료) ← 마지막에 차감
+    const totalProfit = totalRevenuePure - totalOfferExpense - moyoFeeTotal;
     setDbSummary({
       count: all.length,
       totalRebate,
-      totalOffer: totalExpense,
-      totalProfit: totalRevenue - totalExpense,
+      totalOffer: totalOfferExpense,
+      totalProfit,
       excludedCount: 0,
+      moyoCount,
+      moyoFeeTotal,
+      totalReceivable,
+      totalVoucher,
+      totalTradeIn,
+      totalVas,
     });
 
     const { count: uc } = await supabase
@@ -766,16 +800,56 @@ const SalesLedgerPage = () => {
       {/* 요약 카드 */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
         <SummaryCard icon={Hash} label="총 판매 건수" value={`${animCount.toLocaleString()}건`} accent="primary" />
-        <SummaryCard icon={WalletIcon} label="총 리베이트" value={`${animRebate.toLocaleString("ko-KR")}원`} accent="secondary" />
-        <SummaryCard icon={Gift} label="총 오퍼(지원금)" value={`${animOffer.toLocaleString("ko-KR")}원`} accent="warning" />
+        <SummaryCard
+          icon={WalletIcon}
+          label="총 리베이트"
+          value={`${animRebate.toLocaleString("ko-KR")}원`}
+          accent="secondary"
+          tooltip={`= 단가표 수수료 + 부가서비스 수수료\n(모요 수수료 미포함 · 순수 영업 수치)`}
+        />
+        <SummaryCard
+          icon={Gift}
+          label="총 오퍼(지원금)"
+          value={`${animOffer.toLocaleString("ko-KR")}원`}
+          accent="warning"
+          tooltip={`= 유통망지원금 + 현금개통 + 추가지원금\n  + 고객지원금 + 법인카드 결제\n(모요 수수료 별도 관리 · 미포함)`}
+        />
         <SummaryCard
           icon={TrendingUp}
           label="총 최종 수익"
           value={`${animProfit.toLocaleString("ko-KR")}원`}
           accent={animProfit >= 0 ? "success" : "destructive"}
+          tooltip={`= (총 리베이트 + 미수금 + 상품권 + 중고폰)\n   − 총 오퍼(지원금)\n   − 모요 수수료 합계\n\n모요 수수료는 마지막 단계에서만 차감됩니다.`}
         />
-        <SummaryCard icon={Banknote} label="미수금 건" value={`${unpaidCount}건`} accent={unpaidCount > 0 ? "destructive" : "primary"} />
-        <SummaryCard icon={Gift} label="상품권 미반납" value={`${unreturnedCount}건`} accent={unreturnedCount > 0 ? "destructive" : "primary"} />
+        <SummaryCard
+          icon={Banknote}
+          label="미수금 건"
+          value={`${unpaidCount}건`}
+          accent={unpaidCount > 0 ? "destructive" : "primary"}
+          tooltip={`수급 미완료 미수금 건수\n(수수료와 무관 · 순수 미수 액수 관리)`}
+        />
+        <SummaryCard
+          icon={Gift}
+          label="상품권 미반납"
+          value={`${unreturnedCount}건`}
+          accent={unreturnedCount > 0 ? "destructive" : "primary"}
+          tooltip={`반납 미완료 상품권 건수\n(수수료와 무관 · 순수 미반납 관리)`}
+        />
+      </div>
+      {/* 모요 정산 정보 (별도 라인) */}
+      <div className="-mt-2 mb-5 rounded-xl border border-fuchsia-300/40 bg-gradient-to-r from-fuchsia-50/80 to-pink-50/40 dark:from-fuchsia-950/30 dark:to-pink-950/20 px-4 py-2.5 flex flex-wrap items-center gap-x-6 gap-y-1.5">
+        <div className="flex items-center gap-2 text-xs font-semibold text-fuchsia-700 dark:text-fuchsia-300">
+          <Filter className="size-3.5" /> 모요 정산 정보 (별도 지출 관리)
+        </div>
+        <div className="text-xs text-muted-foreground">
+          모요 정산 대상: <span className="font-bold tabular-nums text-foreground">{dbSummary.moyoCount.toLocaleString()}건</span>
+        </div>
+        <div className="text-xs text-muted-foreground">
+          모요 수수료 합계: <span className="font-bold tabular-nums text-fuchsia-700 dark:text-fuchsia-300">{dbSummary.moyoFeeTotal.toLocaleString("ko-KR")}원</span>
+        </div>
+        <div className="text-[10px] text-muted-foreground/80 ml-auto">
+          ※ 모바일 상품 한정 · 토글 OFF 건만 합산 · 최종 수익에서만 차감
+        </div>
       </div>
       {dbSummary.excludedCount > 0 && (
         <div className="-mt-3 mb-4 text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
@@ -1124,12 +1198,13 @@ const SalesLedgerPage = () => {
 };
 
 const SummaryCard = ({
-  icon: Icon, label, value, accent,
+  icon: Icon, label, value, accent, tooltip,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: string;
   accent: "primary" | "secondary" | "success" | "warning" | "destructive";
+  tooltip?: React.ReactNode;
 }) => {
   const tone: Record<string, string> = {
     primary: "from-primary/20 to-primary-glow/5 text-primary-glow border-primary/20",
@@ -1138,8 +1213,8 @@ const SummaryCard = ({
     warning: "from-warning/20 to-warning/5 text-warning border-warning/20",
     destructive: "from-destructive/25 to-destructive/5 text-destructive border-destructive/30",
   };
-  return (
-    <div className={cn("rounded-2xl border bg-gradient-to-br p-4", tone[accent])}>
+  const card = (
+    <div className={cn("rounded-2xl border bg-gradient-to-br p-4 cursor-help", tone[accent])}>
       <div className="flex items-center gap-2 text-[11px] font-medium opacity-90 text-primary">
         <Icon className="size-3.5" /> {label}
       </div>
@@ -1147,6 +1222,17 @@ const SummaryCard = ({
         {value}
       </div>
     </div>
+  );
+  if (!tooltip) return card;
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>{card}</TooltipTrigger>
+        <TooltipContent side="bottom" className="max-w-xs text-[11px] leading-relaxed whitespace-pre-line">
+          {tooltip}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 
