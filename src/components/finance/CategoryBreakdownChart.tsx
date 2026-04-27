@@ -11,18 +11,21 @@ const COLORS = [
 const formatKRW = (n: number) => "₩" + Math.round(n).toLocaleString("ko-KR");
 
 export function CategoryBreakdownChart({ type }: { type: "지출" | "수익" }) {
-  const { categoryBreakdown, loading } = useFinanceData();
+  const { categoryBreakdown, revenueBreakdown, expenseBreakdown, loading } = useFinanceData();
 
-  const items = categoryBreakdown
-    .filter((c) => c.type === type && c.amount > 0)
-    .sort((a, b) => b.amount - a.amount);
+  const formulaItems = type === "수익" ? revenueBreakdown : expenseBreakdown;
+  const items = formulaItems.length > 0
+    ? formulaItems.map((i) => ({ label: i.label, amount: i.amount, included: true }))
+    : categoryBreakdown
+      .filter((c) => c.type === type && c.amount > 0)
+      .sort((a, b) => b.amount - a.amount);
 
   const total = items.reduce((s, i) => s + i.amount, 0);
 
   if (loading || items.length === 0) {
     return (
       <Card className="p-5 glass">
-        <h3 className="text-sm font-semibold mb-2">{type} 항목별 구성</h3>
+        <h3 className="text-sm font-semibold mb-2">{type} 현황 그래프</h3>
         <p className="text-xs text-muted-foreground py-8 text-center">
           {loading ? "로딩 중…" : "데이터 없음"}
         </p>
@@ -39,9 +42,9 @@ export function CategoryBreakdownChart({ type }: { type: "지출" | "수익" }) 
 
   return (
     <Card className="p-5 glass">
-      <h3 className="text-sm font-semibold mb-1">{type} 항목별 구성</h3>
+      <h3 className="text-sm font-semibold mb-1">{type} 현황 그래프</h3>
       <p className="text-[11px] text-muted-foreground mb-3">
-        합계 {formatKRW(total)} · {items.length}개 항목
+        0원 항목 제외 · 합계 {formatKRW(total)} · {items.length}개 항목
       </p>
       <div className="h-[260px]">
         <ResponsiveContainer width="100%" height="100%">

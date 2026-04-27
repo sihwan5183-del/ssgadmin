@@ -121,7 +121,7 @@ export function useFinanceData(): FinanceData {
         supabase
           .from("sales")
           .select(
-            "channel, product, open_date, unit_price, distributor_amount, cash_support_amount, cash_open, extra_subsidy, customer_support_amount, corp_card_amount, receivable_amount, receivable_paid, moyo_excluded, vas_fee, net_fee, voucher, voucher_returned, trade_in_confirmed, custom_fields",
+            "created_by, manager, channel, product, open_date, unit_price, distributor_amount, cash_support_amount, cash_open, extra_subsidy, customer_support_amount, corp_card_amount, receivable_amount, receivable_paid, moyo_excluded, vas_fee, net_fee, voucher, voucher_returned, trade_in_enabled, trade_in_confirmed, custom_fields",
           )
           .gte("open_date", startDate)
           .lte("open_date", endDate)
@@ -129,7 +129,7 @@ export function useFinanceData(): FinanceData {
           .limit(10000),
         supabase
           .from("ad_spend")
-          .select("media, channel, amount, spend_date")
+          .select("media, channel, category, amount, spend_date")
           .gte("spend_date", startDate)
           .lte("spend_date", endDate)
           .limit(10000),
@@ -148,6 +148,10 @@ export function useFinanceData(): FinanceData {
     // ※ 모든 행은 status=개통완료 (쿼리에서 필터됨).
     //    상품권/미수금/중고폰은 '확정 상태'에서만 수익으로 잡히므로 정산 제외 필터 불필요.
     const settledSalesRows = salesRows;
+    const effectiveSpendRows = spendRows.filter((r) => {
+      const category = String(r.category ?? "광고비").trim();
+      return category === "광고비" || category === "기타지출";
+    });
 
     // ---------- 신규 합산 (대표님 정의 정확 매칭) ----------
     let sumCommission = 0;
@@ -203,7 +207,7 @@ export function useFinanceData(): FinanceData {
       }
     }
     const moyoFee = sumMoyoFee;
-    const totalAdSpend = spendRows.reduce(
+    const totalAdSpend = effectiveSpendRows.reduce(
       (s, r) => s + Number(r.amount ?? 0),
       0,
     );
@@ -214,13 +218,17 @@ export function useFinanceData(): FinanceData {
     const totalExtraSubsidy = settledSalesRows.reduce((s, r) => s + Number(r.extra_subsidy ?? 0), 0);
 
     const fieldAmountMap: Record<string, number> = {
-      unit_price: totalRevenue,
+      unit_price: sumCommission,
       vas_fee: totalVasFee,
       net_fee: totalNetFee,
       distributor_amount: totalDistributor,
       cash_support_amount: totalCashOpen,
       extra_subsidy: totalExtraSubsidy,
-      receivable_amount: totalCustomerDeposit,
+      receivable_amount: sumReceivable,
+      voucher_amount: sumVoucher,
+      trade_in_confirmed: sumTradeIn,
+      customer_support_amount: sumCustomerSupport,
+      corp_card_amount: sumCorpCard,
       moyo_fee: moyoFee,
       ad_spend: totalAdSpend,
     };
@@ -240,16 +248,16 @@ export function useFinanceData(): FinanceData {
       { key: "receivable", label: "미수금 (수급완료)", amount: sumReceivable },
       { key: "voucher", label: "상품권 (반납완료)", amount: sumVoucher },
       { key: "trade_in", label: "중고폰 (확정 반납)", amount: sumTradeIn },
-    ];
+    ].filter((item) => item.amount > 0);
     const expenseBreakdown = [
       { key: "distributor", label: "유통망 지원금", amount: sumDistributor },
       { key: "cash_open", label: "현금개통 금액", amount: sumCashOpen },
       { key: "extra_subsidy", label: "추가 지원금", amount: sumExtraSubsidy },
       { key: "customer_support", label: "고객 지원금", amount: sumCustomerSupport },
-      { key: "corp_card", label: "법인카드 결제(오퍼/카드)", amount: sumCorpCard },
-      { key: "moyo_fee", label: "모요 수수료", amount: sumMoyoFee },
+      { key: "corp_card", label: "5번 법인카드 결제금액", amount: sumCorpCard },
       { key: "ad_spend", label: "광고비 / 기타지출", amount: totalAdSpend },
-    ];
+      { key: "moyo_fee", label: "모요 수수료", amount: sumMoyoFee },
+    ].filter((item) => item.amount > 0);
 
     const computedRevenue = revenueBreakdown.reduce((s, r) => s + r.amount, 0);
     const totalExpense = expenseBreakdown.reduce((s, r) => s + r.amount, 0);
@@ -271,12 +279,12 @@ export function useFinanceData(): FinanceData {
     for (const r of settledSalesRows) {
       const ch = (r.channel ?? "기타").toString().trim() || "기타";
       const row = ensure(ch);
+      const p = calcDashboardProfit(r);
       row.successCount += 1;
-      row.rebate += Number(r.unit_price ?? 0);
-      row.offer +=
-        Number(r.cash_support_amount ?? 0) + Number(r.extra_subsidy ?? 0);
+      row.rebate += p.revenue;
+      row.offer += p.expense;
     }
-    for (const r of spendRows) {
+    for (const r of effectiveSpendRows) {
       const ch = (r.channel ?? r.media ?? "기타").toString().trim() || "기타";
       ensure(ch).spend += Number(r.amount ?? 0);
     }
@@ -313,7 +321,7 @@ export function useFinanceData(): FinanceData {
       });
     }
     const mediaTotalsMap = new Map<string, number>();
-    for (const r of spendRows) {
+    for (const r of effectiveSpendRows) {
       const m = (r.media ?? "기타").toString();
       mediaSet.add(m);
       mediaTotalsMap.set(m, (mediaTotalsMap.get(m) ?? 0) + Number(r.amount ?? 0));
@@ -335,7 +343,7 @@ export function useFinanceData(): FinanceData {
     const productMap = new Map<string, number>();
     for (const r of settledSalesRows) {
       const key = (r.product ?? "기타").toString().trim() || "기타";
-      productMap.set(key, (productMap.get(key) ?? 0) + Number(r.unit_price ?? 0));
+      productMap.set(key, (productMap.get(key) ?? 0) + calcDashboardProfit(r).revenue);
     }
     const products: FinanceProductRow[] = Array.from(productMap.entries())
       .filter(([, v]) => v > 0)
@@ -356,8 +364,7 @@ export function useFinanceData(): FinanceData {
       const w = offerMap.get(wk)!;
       if (!w.has(ch)) w.set(ch, { sum: 0, cnt: 0 });
       const cell = w.get(ch)!;
-      cell.sum +=
-        Number(r.cash_support_amount ?? 0) + Number(r.extra_subsidy ?? 0);
+      cell.sum += calcDashboardProfit(r).expense;
       cell.cnt += 1;
     }
     const channelNames = channels.map((c) => c.channel);

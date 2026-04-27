@@ -18,7 +18,7 @@ interface StaffRow {
 
 /**
  * 개인별 순수익 랭킹 (전사 통합)
- * 순수익 = (판매수수료 + 상품권 금액) - (오퍼 추가지원금 + 카드결제 추가지원금 + 모요 수수료)
+ * 순수익 = 확정 수익 항목 - 실질 지출 항목
  */
 export const StoreRevenueRanking = () => {
   const { startDate, endDate } = usePeriod();
@@ -33,7 +33,7 @@ export const StoreRevenueRanking = () => {
       const [salesRes, profilesRes] = await Promise.all([
         supabase
           .from("sales")
-          .select("created_by, manager, channel, unit_price, net_fee, extra_subsidy, corp_card_amount, custom_fields, moyo_excluded")
+          .select("created_by, manager, channel, unit_price, vas_fee, receivable_amount, receivable_paid, voucher, voucher_returned, trade_in_enabled, trade_in_confirmed, distributor_amount, cash_support_amount, cash_open, extra_subsidy, customer_support_amount, corp_card_amount, custom_fields, moyo_excluded")
           .gte("open_date", startDate)
           .lte("open_date", endDate)
           .eq("status", "개통완료")
@@ -100,7 +100,7 @@ export const StoreRevenueRanking = () => {
             <Trophy className="size-5 text-primary" />
             개인별 순수익 랭킹
           </h3>
-          <p className="text-xs text-muted-foreground mt-1">전사 통합 · (판매수수료+상품권) − 추가지원금 − 카드 − 모요수수료</p>
+          <p className="text-xs text-muted-foreground mt-1">전사 통합 · 수익(수수료/수급/반납/중고폰) − 지출(지원금/5번 법인카드/모요)</p>
         </div>
         <span className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-primary/10 text-primary border border-primary/30 font-bold">
           TOP 10

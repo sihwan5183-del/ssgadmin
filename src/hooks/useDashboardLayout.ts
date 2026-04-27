@@ -16,6 +16,7 @@ export const WIDGET_REGISTRY: { id: string; label: string }[] = [
   { id: "channel_activation", label: "채널별 개통 현황" },
   { id: "activation_breakdown", label: "모바일 유형별 건수" },
   { id: "stat_cards", label: "수익 요약 카드 (순이익/리베이트/마케팅)" },
+  { id: "settlement_charts", label: "수익/지출 현황 차트" },
   { id: "untreated_leads", label: "신규 미처리 건수" },
   { id: "performance_chart", label: "실적 추이 차트" },
   { id: "channel_donut", label: "인입 경로별 비중 (도넛)" },
