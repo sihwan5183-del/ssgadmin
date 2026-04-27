@@ -985,7 +985,7 @@ const SalesLedgerPage = () => {
                     "border-b border-border/20 hover:bg-white/[0.03] cursor-pointer transition-colors",
                     mine && "bg-primary/[0.04]",
                     hasPending && "bg-amber-50/70 hover:bg-amber-500/[0.12]",
-                    isMoyoExcluded && "text-muted-foreground/80 [&_td]:line-through",
+                    isMoyoExcluded && "text-muted-foreground",
                   )}
                   onClick={handleRowClick}
                   >
