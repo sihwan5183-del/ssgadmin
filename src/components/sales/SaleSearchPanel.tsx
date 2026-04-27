@@ -622,11 +622,6 @@ export const SaleSearchPanel = () => {
                                     <CalendarX2 className="size-3" /> 설치지연
                                   </Badge>
                                 )}
-                                {r.locked && (
-                                  <Badge variant="outline" className="text-[10px] gap-1 border-border/60">
-                                    <Lock className="size-3" /> 잠금
-                                  </Badge>
-                                )}
                                 {(r as any).custom_fields?.fraud_suspect && (
                                   <Badge variant="outline" className="text-[10px] gap-1 border-destructive/60 text-destructive bg-destructive/10 animate-pulse">
                                     <AlertTriangle className="size-3" /> 이상영업
