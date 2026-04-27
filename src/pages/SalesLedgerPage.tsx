@@ -194,6 +194,70 @@ const SalesLedgerPage = () => {
     [managerNameMap],
   );
 
+  // === 일괄 담당자 지정용: 활성 직원 목록 ===
+  const [staffList, setStaffList] = useState<{ user_id: string; display_name: string }[]>([]);
+  const [bulkManager, setBulkManager] = useState<string>("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+  useEffect(() => {
+    if (!isAdmin) return;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("user_id, display_name")
+        .eq("status", "active")
+        .order("display_name", { ascending: true });
+      const list = (data ?? []) as { user_id: string; display_name: string }[];
+      setStaffList(list);
+      setManagerNameMap((prev) => {
+        const next = { ...prev };
+        list.forEach((p) => { if (p.user_id && p.display_name) next[p.user_id] = p.display_name; });
+        return next;
+      });
+    })();
+  }, [isAdmin]);
+
+  // 담당자 비어있는지 헬퍼
+  const isManagerMissing = (r: SaleRow) => {
+    const v = (r.manager ?? "").trim();
+    if (!v) return true;
+    // UUID인데 매핑이 없거나 활성 직원에 없는 경우는 표시상 비어보이지 않음 — 빈 값만 강조
+    return false;
+  };
+
+  const bulkAssignManager = async () => {
+    if (!isAdmin || selected.size === 0 || !bulkManager) return;
+    const ids = Array.from(selected);
+    setBulkBusy(true);
+    try {
+      const { error } = await supabase
+        .from("sales")
+        .update({ manager: bulkManager })
+        .in("id", ids);
+      if (error) throw error;
+      // 더블체크: 실제로 반영되었는지 다시 SELECT
+      const { data: verify, error: verr } = await supabase
+        .from("sales")
+        .select("id, manager")
+        .in("id", ids);
+      if (verr) throw verr;
+      const ok = (verify ?? []).filter((v: any) => v.manager === bulkManager).length;
+      if (ok !== ids.length) {
+        toast.error(`반영 검증 실패: ${ok}/${ids.length}건만 저장됨`);
+      } else {
+        const nm = staffList.find((s) => s.user_id === bulkManager)?.display_name ?? bulkManager;
+        toast.success(`${ids.length}건 담당자 [${nm}] 지정 완료`);
+      }
+      setSelected(new Set());
+      setBulkManager("");
+      load();
+      loadSummary();
+    } catch (e) {
+      toast.error("담당자 일괄 지정 실패", { description: (e as Error).message });
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   // ※ 확정 잠금 정책 폐지 — 직원이 자유롭게 수정 가능. 변경 이력은 sales_audit_log 트리거에 자동 기록됨.
 
   // 5대 오퍼 + 카드결제 + 제휴카드 할인
