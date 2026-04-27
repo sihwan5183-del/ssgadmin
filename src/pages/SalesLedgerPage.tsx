@@ -212,10 +212,15 @@ const SalesLedgerPage = () => {
   const loadSummary = useCallback(async () => {
     const { data } = await supabase
       .from("sales")
-      .select("unit_price, vas_fee, distributor_amount, extra_subsidy, cash_support_amount, receivable_amount, trade_in_enabled, trade_in_confirmed")
+      .select("unit_price, vas_fee, distributor_amount, extra_subsidy, cash_support_amount, receivable_amount, trade_in_enabled, trade_in_confirmed, voucher, voucher_returned, customer_support_amount, corp_card_amount, custom_fields")
       .gte("open_date", startDate)
       .lte("open_date", endDate);
-    const rows = data ?? [];
+    const all = data ?? [];
+    // 정산 제외 규칙: 상품권이 있고 반납 미완료('유' 아님) → 합계 제외
+    const isExcluded = (r: any) =>
+      r.voucher && String(r.voucher).trim() !== "" && r.voucher_returned !== "유";
+    const rows = all.filter((r) => !isExcluded(r));
+    const excludedCount = all.length - rows.length;
     const totalRebate = rows.reduce((s, r) => s + (r.unit_price ?? 0), 0);
     const totalOffer = rows.reduce((s, r) => s + (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0), 0);
     const totalCustomerSupport = rows.reduce((s, r) => s + ((r as any).customer_support_amount ?? 0), 0);
@@ -223,8 +228,17 @@ const SalesLedgerPage = () => {
     const totalOfferAll = totalOffer + totalCustomerSupport + totalCorpCard;
     const totalVas = rows.reduce((s, r) => s + (r.vas_fee ?? 0), 0);
     const totalTradeIn = rows.reduce((s, r) => s + (r.trade_in_enabled ? (r.trade_in_confirmed ?? 0) : 0), 0);
-    const totalReceivable = rows.reduce((s, r) => s + (r.receivable_amount ?? 0), 0);
-    setDbSummary({ count: rows.length, totalRebate, totalOffer: totalOfferAll, totalProfit: totalRebate + totalVas + totalTradeIn - totalOfferAll });
+    const totalVoucher = rows.reduce(
+      (s, r) => s + Number(((r as any).custom_fields?.voucher_amount) ?? 0),
+      0,
+    );
+    setDbSummary({
+      count: all.length,
+      totalRebate,
+      totalOffer: totalOfferAll,
+      totalProfit: totalRebate + totalVas + totalTradeIn + totalVoucher - totalOfferAll,
+      excludedCount,
+    });
 
     const { count: uc } = await supabase
       .from("sales")
