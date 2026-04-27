@@ -1051,7 +1051,7 @@ const SalesLedgerPage = () => {
                       </div>
                     </td>
                     <td className="px-3 py-2.5 whitespace-nowrap font-medium">
-                      {r.manager ?? "-"}
+                      {resolveManager(r.manager, (r as any).created_by)}
                       <ResignedTag userId={r.created_by} ids={resignedIds} />
                     </td>
                     <td className="px-3 py-2.5">{r.product ?? "-"}</td>
