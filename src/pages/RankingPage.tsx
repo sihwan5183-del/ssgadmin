@@ -610,6 +610,7 @@ const RankingPage = () => {
       case "profit": return `${fmtKRW(u.profit)}원`;
       case "strategy": return `${u.strategyCount}건`;
       case "voucher": return `${u.voucherReturned}건`;
+      case "achievement": return u.goalCount > 0 ? `${u.achievement}%` : "목표 미설정";
     }
   };
 
