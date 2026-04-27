@@ -606,6 +606,13 @@ const ChannelIntakePage = () => {
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-xs text-muted-foreground">
                 <tr>
+                  <th className="text-left px-3 py-2 w-10">
+                    <Checkbox
+                      checked={allVisibleSelected}
+                      onCheckedChange={(c) => toggleAllVisible(!!c)}
+                      aria-label="전체 선택"
+                    />
+                  </th>
                   <th className="text-left px-3 py-2">날짜</th>
                   <th className="text-left px-3 py-2">채널</th>
                   <th className="text-left px-3 py-2">고객</th>
@@ -619,9 +626,9 @@ const ChannelIntakePage = () => {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={9} className="text-center py-10 text-muted-foreground">불러오는 중…</td></tr>
+                  <tr><td colSpan={10} className="text-center py-10 text-muted-foreground">불러오는 중…</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={9} className="text-center py-10 text-muted-foreground">데이터 없음</td></tr>
+                  <tr><td colSpan={10} className="text-center py-10 text-muted-foreground">데이터 없음</td></tr>
                 ) : (
                   filtered.map((r) => {
                     const newLead = isNewLead(r);
@@ -633,6 +640,13 @@ const ChannelIntakePage = () => {
                         newLead && "bg-orange-50 dark:bg-orange-950/20",
                         abandoned && !newLead && "bg-destructive/5"
                       )}>
+                        <td className="px-3 py-2">
+                          <Checkbox
+                            checked={selectedIds.has(r.id)}
+                            onCheckedChange={() => toggleOne(r.id)}
+                            aria-label="선택"
+                          />
+                        </td>
                         <td className="px-3 py-2 text-xs tabular-nums">{r.inquiry_date}</td>
                         <td className="px-3 py-2">
                           <Badge variant="outline" className="text-[10px]">{r.channel}</Badge>
@@ -692,8 +706,11 @@ const ChannelIntakePage = () => {
                           <Button size="sm" variant="ghost" className="h-7 text-xs mr-1" onClick={() => setSelectedInquiry(r)}>
                             <MessageSquare className="size-3 mr-1" /> 기록
                           </Button>
-                          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => openStatusEditor(r)}>
+                          <Button size="sm" variant="outline" className="h-7 text-xs mr-1" onClick={() => openStatusEditor(r)}>
                             상태변경
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => openDetailEditor(r)}>
+                            <Pencil className="size-3" /> 수정
                           </Button>
                         </td>
                       </tr>
