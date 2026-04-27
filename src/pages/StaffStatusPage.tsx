@@ -337,25 +337,38 @@ export default function StaffStatusPage() {
   const analytics = useMemo(() => {
     const successSales = sales.filter(isSuccess);
 
-    // Channel inquiries vs success
+    // Channel: 인입 = 문의 / 성공 = (전환된 문의) + (해당 채널의 직접 성공 실적)
+    // 문의에 없는 채널이라도 sales에 있으면 채널로 노출 (실무: 워크인/오프라인 등)
     const chanMap = new Map<string, { inflow: number; success: number }>();
     inquiries.forEach((q) => {
-      const c = q.channel || "기타";
+      const c = (q.channel || "기타").trim() || "기타";
       const r = chanMap.get(c) ?? { inflow: 0, success: 0 };
       r.inflow += 1;
-      if (q.converted_sale_id || q.status === "전환") r.success += 1;
+      if (q.converted_sale_id) r.success += 1;
+      chanMap.set(c, r);
+    });
+    // 전환 문의가 가리키는 sale ID 셋 (중복 카운트 방지)
+    const convertedSaleIds = new Set(
+      inquiries.map((q) => q.converted_sale_id).filter(Boolean) as string[]
+    );
+    successSales.forEach((s) => {
+      if (convertedSaleIds.has(s.id)) return; // already counted via inquiry
+      const c = (s.channel || "기타").trim() || "기타";
+      const r = chanMap.get(c) ?? { inflow: 0, success: 0 };
+      // 문의 없이 직접 들어온 실적도 인입(=직접유입) + 성공으로 카운트
+      r.inflow += 1;
+      r.success += 1;
       chanMap.set(c, r);
     });
     const channelStats = Array.from(chanMap.entries())
       .map(([channel, v]) => ({ channel, ...v, rate: v.inflow > 0 ? Math.round((v.success / v.inflow) * 100) : 0 }))
       .sort((a, b) => b.inflow - a.inflow);
 
-    // Total inflow / success / rate
-    const totalInflow = inquiries.length;
-    const totalConverted = inquiries.filter((q) => q.converted_sale_id || q.status === "전환").length;
+    const totalInflow = channelStats.reduce((a, c) => a + c.inflow, 0);
+    const totalConverted = channelStats.reduce((a, c) => a + c.success, 0);
     const overallRate = totalInflow > 0 ? Math.round((totalConverted / totalInflow) * 100) : 0;
 
-    // Product breakdown
+    // Product breakdown (TV프리 분리)
     const prodMap = new Map<string, number>();
     successSales.forEach((s) => {
       const b = productBucket(s.product);
@@ -363,12 +376,20 @@ export default function StaffStatusPage() {
     });
     const productStats = GOAL_PRODUCTS.map((name) => ({ name, count: prodMap.get(name) ?? 0 }));
 
-    // VAS counts: vas1 + vas2 non-empty units sold
+    // VAS counts: vas1 + vas2 non-empty
     let vasCount = 0;
     successSales.forEach((s) => {
       if (s.vas1 && s.vas1.trim() && s.vas1 !== "없음") vasCount += 1;
       if (s.vas2 && s.vas2.trim() && s.vas2 !== "없음") vasCount += 1;
     });
+
+    // 부가서비스 유치율 = (모바일 개통 중 VAS 1개 이상 가입) / 모바일 개통수
+    const mobileSales = successSales.filter((s) => productBucket(s.product) === "모바일");
+    const mobileWithVas = mobileSales.filter((s) =>
+      (s.vas1 && s.vas1.trim() && s.vas1 !== "없음") || (s.vas2 && s.vas2.trim() && s.vas2 !== "없음")
+    );
+    const mobileVasRate = mobileSales.length > 0
+      ? Math.round((mobileWithVas.length / mobileSales.length) * 100) : 0;
 
     // 2nd device VAS attach rate: among 2ND-bucket sales, how many have any vas
     const second = successSales.filter((s) => productBucket(s.product) === "2ND");
@@ -377,21 +398,22 @@ export default function StaffStatusPage() {
     );
     const secondVasRate = second.length > 0 ? Math.round((secondWithVas.length / second.length) * 100) : 0;
 
-    // Mobile vs wired/solution share
-    const mobileCount = successSales.filter((s) => productBucket(s.product) === "모바일").length;
-    const wiredCount = successSales.filter((s) => isWiredOrSolution(s.product)).length;
-    const otherCount = successSales.length - mobileCount - wiredCount;
+    // 5종 비중 분석 (모바일 / 인터넷 / TV프리 / 스마트홈 / 부가서비스)
     const mixData = [
-      { name: "모바일", value: mobileCount },
-      { name: "유선/솔루션", value: wiredCount },
-      ...(otherCount > 0 ? [{ name: "기타", value: otherCount }] : []),
+      { name: "모바일", value: mobileSales.length, key: "모바일" },
+      { name: "인터넷", value: prodMap.get("인터넷") ?? 0, key: "인터넷" },
+      { name: "TV프리", value: prodMap.get("TV프리") ?? 0, key: "TV프리" },
+      { name: "스마트홈", value: prodMap.get("스마트홈") ?? 0, key: "스마트홈" },
+      { name: "부가서비스", value: vasCount, key: "부가서비스" },
     ].filter((d) => d.value > 0);
+    const mobileCount = mobileSales.length;
+    const wiredCount = successSales.filter((s) => isWiredOrSolution(s.product)).length;
 
     return {
       channelStats, totalInflow, totalConverted, overallRate,
-      productStats, vasCount,
+      productStats, vasCount, mobileVasRate, mobileCount: mobileSales.length,
       secondCount: second.length, secondVasRate,
-      mixData, mobileCount, wiredCount,
+      mixData, wiredCount,
     };
   }, [sales, inquiries]);
 
