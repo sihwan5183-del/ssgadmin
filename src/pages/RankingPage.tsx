@@ -246,6 +246,7 @@ const RankDeltaPill = ({ delta }: { delta: number }) => {
 const RankingPage = () => {
   const { user } = useAuth();
   const confettiFired = useRef(false);
+  const firstPlaceFiredFor = useRef<string>("");
   const [period, setPeriod] = useState("month");
   const [storeFilter, setStoreFilter] = useState("all");
   const [tab, setTab] = useState<TabKey>("sales");
@@ -668,6 +669,27 @@ const RankingPage = () => {
       }, 500);
     }
   }, [cleanMap, user]);
+
+  // 본인이 현재 탭의 1위에 등극하면 풀스크린 축하 이펙트 (탭별 1회)
+  useEffect(() => {
+    if (!user || !myRank || myRank.rank !== 1) return;
+    const key = `${tab}:${user.id}`;
+    if (firstPlaceFiredFor.current === key) return;
+    firstPlaceFiredFor.current = key;
+    const tabLabel = TABS.find((t) => t.key === tab)?.label ?? "";
+    const burst = (origin: { x: number; y: number }) =>
+      confetti({
+        particleCount: 120, spread: 80, origin, ticks: 220,
+        colors: ["#FFD700", "#FF6B6B", "#4ECDC4", "#A78BFA", "#F59E0B", "#10B981"],
+      });
+    setTimeout(() => burst({ x: 0.15, y: 0.6 }), 0);
+    setTimeout(() => burst({ x: 0.85, y: 0.6 }), 200);
+    setTimeout(() => burst({ x: 0.5, y: 0.4 }), 400);
+    setTimeout(() => burst({ x: 0.5, y: 0.7 }), 700);
+    import("sonner").then(({ toast }) => {
+      toast.success(`🏆 [${tabLabel}] 1위 등극! 축하합니다!`, { duration: 6000 });
+    });
+  }, [myRank, tab, user]);
 
   const getValue = (u: RankedUser) => {
     switch (tab) {
