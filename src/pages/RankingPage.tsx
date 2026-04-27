@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   Crown, Medal, Trophy, Star, TrendingUp, Flame, Zap,
   Award, BarChart3, Smartphone, Gift, ChevronDown, CheckCircle2, Sparkles,
-  Wifi, Tv, ArrowUp, ArrowDown, Minus, UserX,
+  Wifi, Tv, ArrowUp, ArrowDown, Minus, UserX, Target,
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -31,6 +31,8 @@ type RankedUser = {
   isClean: boolean;
   cleanDays: number;
   excluded?: boolean;
+  achievement: number;           // 평균 목표 달성률 (%)
+  goalCount: number;             // 설정된 목표 개수
 };
 type ModelRank = { model: string; count: number; isStrategy: boolean };
 
