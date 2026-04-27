@@ -593,6 +593,8 @@ const RankingPage = () => {
     if (storeFilter !== "all") list = list.filter((u) => u.store === storeFilter);
     if (hideExcluded) list = list.filter((u) => !u.excluded);
     if (tab === "achievement") list = list.filter((u) => u.goalCount > 0);
+    if (tab === "combo" || tab === "vas") list = list.filter((u) => u.productCounts.모바일 > 0);
+    if (tab === "clean") list = list.filter((u) => u.count > 0);
     return list.sort(activeTab.sortFn);
   }, [users, storeFilter, activeTab, hideExcluded, tab]);
 
