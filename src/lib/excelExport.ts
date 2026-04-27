@@ -127,7 +127,13 @@ export const FULL_SALES_COLUMNS: FullCol[] = [
   ["cash_holder", "예금주"],
   ["corp_card_amount", "법인카드 결제금액(₩)", undefined, "#,##0;(#,##0);-"],
   // ===== 토글/옵션 명문화 =====
-  ["moyo_excluded", "모요 적용 여부", (r) => (r.moyo_excluded === true ? "적용안함" : "적용함")],
+  ["moyo_excluded", "모요 적용 여부", (r) => {
+    const ch = String(r?.channel ?? "").trim().toLowerCase();
+    const isMoyo = ch === "모요" || ch.includes("moyo");
+    const isMobile = String(r?.product ?? "").trim() === "모바일";
+    if (!isMoyo || !isMobile) return "해당없음";
+    return r.moyo_excluded === true ? "적용안함" : "적용함";
+  }],
   ["partner_card_enabled", "제휴카드 사용 여부", (r) => yn(pickCustom(r, "partner_card_enabled"), "사용함", "사용 안 함")],
   ["partner_card_company", "제휴카드 카드사", (r) => pickCustom(r, "partner_card_company") ?? ""],
   ["partner_card_number", "제휴카드 번호", (r) => pickCustom(r, "partner_card_number") ?? ""],
