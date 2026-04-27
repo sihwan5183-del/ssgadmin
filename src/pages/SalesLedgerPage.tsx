@@ -141,6 +141,8 @@ const SalesLedgerPage = () => {
   // inspectionFilter: all | inspected(검수완료=확정) | uninspected(미검수)
   const [returnFilter, setReturnFilter] = useState<"all" | "returned" | "unreturned">("all");
   const [inspectionFilter, setInspectionFilter] = useState<"all" | "inspected" | "uninspected">("all");
+  // 모요 적용 구분: all | applied(모요+토글OFF) | excluded(모요+토글ON)
+  const [moyoFilter, setMoyoFilter] = useState<"all" | "applied" | "excluded">("all");
 
   // URL 쿼리 파라미터로 진입 시 초기 필터 적용 (직원별 현황 → 비중 차트 클릭 등)
   useEffect(() => {
@@ -226,6 +228,11 @@ const SalesLedgerPage = () => {
     } else if (inspectionFilter === "uninspected") {
       query = query.neq("approval_status", "확정");
     }
+    if (moyoFilter === "applied") {
+      query = query.eq("channel", "모요").or("moyo_excluded.is.null,moyo_excluded.eq.false");
+    } else if (moyoFilter === "excluded") {
+      query = query.eq("channel", "모요").eq("moyo_excluded", true);
+    }
     const sq = debouncedSearchQ.trim();
     if (sq) {
       const digits = sq.replace(/[^0-9]/g, "");
@@ -251,14 +258,23 @@ const SalesLedgerPage = () => {
     setRows((data ?? []) as SaleRow[]);
     setTotal(count ?? 0);
     setSearching(false);
-  }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, debouncedSearchQ]);
+  }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
 
   const loadSummary = useCallback(async () => {
-    const { data } = await supabase
+    let q = supabase
       .from("sales")
-      .select("unit_price, vas_fee, distributor_amount, extra_subsidy, cash_support_amount, receivable_amount, trade_in_enabled, trade_in_confirmed, voucher, voucher_returned, customer_support_amount, corp_card_amount, custom_fields")
+      .select("unit_price, vas_fee, distributor_amount, extra_subsidy, cash_support_amount, receivable_amount, trade_in_enabled, trade_in_confirmed, voucher, voucher_returned, customer_support_amount, corp_card_amount, custom_fields, channel, moyo_excluded, manager, product, approval_status")
       .gte("open_date", startDate)
       .lte("open_date", endDate);
+    if (managerFilter !== "all") q = q.eq("manager", managerFilter);
+    if (storeFilter !== "all") q = q.eq("channel", storeFilter);
+    if (productFilter !== "all") q = q.eq("product", productFilter);
+    if (moyoFilter === "applied") {
+      q = q.eq("channel", "모요").or("moyo_excluded.is.null,moyo_excluded.eq.false");
+    } else if (moyoFilter === "excluded") {
+      q = q.eq("channel", "모요").eq("moyo_excluded", true);
+    }
+    const { data } = await q;
     const all = data ?? [];
     // 정산 제외 규칙: 상품권이 있고 반납 미완료('유' 아님) → 합계 제외
     const isExcluded = (r: any) =>
@@ -301,15 +317,15 @@ const SalesLedgerPage = () => {
       .not("voucher", "is", null)
       .neq("voucher_returned", "유");
     setUnreturnedCount(urc ?? 0);
-  }, [startDate, endDate]);
+  }, [startDate, endDate, managerFilter, storeFilter, productFilter, moyoFilter]);
 
   useEffect(() => {
     load();
     loadSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, debouncedSearchQ]);
+  }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
 
-  useEffect(() => { setPage(0); }, [startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, debouncedSearchQ]);
+  useEffect(() => { setPage(0); }, [startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
 
   // 디바운스 (300ms) — 입력 중에는 스피너 표시
   useEffect(() => {
@@ -467,6 +483,7 @@ const SalesLedgerPage = () => {
     productFilter !== "all" ||
     returnFilter !== "all" ||
     inspectionFilter !== "all" ||
+    moyoFilter !== "all" ||
     bundleFilter ||
     noOfferFilter;
 
@@ -478,6 +495,7 @@ const SalesLedgerPage = () => {
     setProductFilter("all");
     setReturnFilter("all");
     setInspectionFilter("all");
+    setMoyoFilter("all");
     setBundleFilter(false);
     setNoOfferFilter(false);
   };
