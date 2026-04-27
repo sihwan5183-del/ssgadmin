@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
+import { calcDashboardProfit } from "@/lib/profit";
 
 const PAGE_SIZE = 25;
 
@@ -265,7 +266,8 @@ const SalesLedgerPage = () => {
       .from("sales")
       .select("unit_price, vas_fee, distributor_amount, extra_subsidy, cash_support_amount, receivable_amount, trade_in_enabled, trade_in_confirmed, voucher, voucher_returned, customer_support_amount, corp_card_amount, custom_fields, channel, moyo_excluded, manager, product, approval_status")
       .gte("open_date", startDate)
-      .lte("open_date", endDate);
+      .lte("open_date", endDate)
+      .in("status", ["개통완료", "설치완료"]);
     if (managerFilter !== "all") q = q.eq("manager", managerFilter);
     if (storeFilter !== "all") q = q.eq("channel", storeFilter);
     if (productFilter !== "all") q = q.eq("product", productFilter);
@@ -276,28 +278,22 @@ const SalesLedgerPage = () => {
     }
     const { data } = await q;
     const all = data ?? [];
-    // 정산 제외 규칙: 상품권이 있고 반납 미완료('유' 아님) → 합계 제외
-    const isExcluded = (r: any) =>
-      r.voucher && String(r.voucher).trim() !== "" && r.voucher_returned !== "유";
-    const rows = all.filter((r) => !isExcluded(r));
-    const excludedCount = all.length - rows.length;
-    const totalRebate = rows.reduce((s, r) => s + (r.unit_price ?? 0), 0);
-    const totalOffer = rows.reduce((s, r) => s + (r.distributor_amount ?? 0) + (r.extra_subsidy ?? 0) + (r.cash_support_amount ?? 0), 0);
-    const totalCustomerSupport = rows.reduce((s, r) => s + ((r as any).customer_support_amount ?? 0), 0);
-    const totalCorpCard = rows.reduce((s, r) => s + ((r as any).corp_card_amount ?? 0), 0);
-    const totalOfferAll = totalOffer + totalCustomerSupport + totalCorpCard;
-    const totalVas = rows.reduce((s, r) => s + (r.vas_fee ?? 0), 0);
-    const totalTradeIn = rows.reduce((s, r) => s + (r.trade_in_enabled ? (r.trade_in_confirmed ?? 0) : 0), 0);
-    const totalVoucher = rows.reduce(
-      (s, r) => s + Number(((r as any).custom_fields?.voucher_amount) ?? 0),
-      0,
-    );
+    // ✅ 단일 공식 (calcDashboardProfit) — 대시보드/엑셀과 1원도 어긋나지 않게 통일
+    let totalRevenue = 0;
+    let totalExpense = 0;
+    let totalRebate = 0;
+    for (const r of all) {
+      const p = calcDashboardProfit(r as any);
+      totalRevenue += p.revenue;
+      totalExpense += p.expense;
+      totalRebate += p.salesCommission;
+    }
     setDbSummary({
       count: all.length,
       totalRebate,
-      totalOffer: totalOfferAll,
-      totalProfit: totalRebate + totalVas + totalTradeIn + totalVoucher - totalOfferAll,
-      excludedCount,
+      totalOffer: totalExpense,
+      totalProfit: totalRevenue - totalExpense,
+      excludedCount: 0,
     });
 
     const { count: uc } = await supabase
@@ -391,7 +387,12 @@ const SalesLedgerPage = () => {
       .select("*")
       .gte("open_date", startDate)
       .lte("open_date", endDate);
-    if (statusFilter.length > 0) q = q.in("status", statusFilter);
+    if (statusFilter.length > 0) {
+      q = q.in("status", statusFilter);
+    } else {
+      // 기본: 대시보드와 동일하게 [개통완료, 설치완료]만
+      q = q.in("status", ["개통완료", "설치완료"]);
+    }
     if (managerFilter !== "all") q = q.eq("manager", managerFilter);
     if (storeFilter !== "all") q = q.eq("channel", storeFilter);
     if (productFilter !== "all") q = q.eq("product", productFilter);
