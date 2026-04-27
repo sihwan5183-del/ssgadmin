@@ -912,7 +912,11 @@ export default function ExpenseInputPage() {
                       <td className="py-2 pr-3">{r.spend_date}</td>
                       <td className="py-2 pr-3">
                         <Badge variant="outline"
-                          className={`text-[10px] ${r.category === "광고비" ? "border-primary/40 text-primary" : "border-muted-foreground/40"}`}>
+                          className={`text-[10px] ${
+                            r.category === "광고비" ? "border-primary/40 text-primary"
+                            : r.category === "고정지출" ? "border-revenue/40 text-revenue"
+                            : "border-muted-foreground/40"
+                          }`}>
                           {r.category}
                         </Badge>
                       </td>
@@ -965,6 +969,7 @@ export default function ExpenseInputPage() {
             { column: "spend_date", op: "lte", value: endDate },
             ...(tab === "광고비" ? [{ column: "category", op: "eq" as const, value: "광고비" }] : []),
             ...(tab === "기타지출" ? [{ column: "category", op: "eq" as const, value: "기타지출" }] : []),
+            ...(tab === "고정지출" ? [{ column: "category", op: "eq" as const, value: "고정지출" }] : []),
           ],
           summary: `집행일 ${startDate} ~ ${endDate} · 분류=${tab}`,
         }}
