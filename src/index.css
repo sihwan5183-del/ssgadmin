@@ -46,6 +46,9 @@
     --warning: 38 92% 50%;
     --warning-foreground: 24 80% 30%;
 
+    --notice: 45 35% 96%;
+    --notice-foreground: 0 0% 0%;
+
     /* 수익/지출 시맨틱 */
     --revenue: 158 65% 42%;
     --revenue-soft: 158 65% 42% / 0.12;
