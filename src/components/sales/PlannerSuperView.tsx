@@ -315,6 +315,77 @@ export const PlannerSuperView = () => {
         </div>
       </Card>
 
+      {/* 캘린더 보기 */}
+      <Card className="p-4 glass border-border/40">
+        <div className="flex items-center gap-2 mb-3">
+          <CalendarDays className="size-4 text-primary-glow" />
+          <span className="font-semibold text-sm">캘린더 보기</span>
+          <span className="text-[11px] text-muted-foreground">개통일자 클릭 시 하단 리스트가 즉시 필터링됩니다</span>
+          <div className="ml-auto flex items-center gap-1">
+            <Button size="sm" variant="ghost" onClick={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1))}>
+              <ChevronLeft className="size-3.5" />
+            </Button>
+            <span className="text-sm font-semibold tabular-nums min-w-[88px] text-center">
+              {calMonth.getFullYear()}.{String(calMonth.getMonth() + 1).padStart(2, "0")}
+            </span>
+            <Button size="sm" variant="ghost" onClick={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1))}>
+              <ChevronRight className="size-3.5" />
+            </Button>
+            {dateFilter && (
+              <Button size="sm" variant="outline" className="ml-2 h-7 text-[11px]" onClick={() => setDateFilter(null)}>
+                날짜 필터 해제 ({dateFilter})
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" className="ml-1 h-7 text-[11px]" onClick={() => setShowCalendar((v) => !v)}>
+              {showCalendar ? "접기" : "펴기"}
+            </Button>
+          </div>
+        </div>
+        {showCalendar && (
+          <div>
+            <div className="grid grid-cols-7 gap-1 text-[10px] text-muted-foreground mb-1">
+              {["일", "월", "화", "수", "목", "금", "토"].map((w) => (
+                <div key={w} className="text-center py-1">{w}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {calendarGrid.map((c, i) => {
+                if (!c.date) return <div key={i} className="h-14" />;
+                const cnt = calendarCounts.get(c.date) ?? 0;
+                const isSel = dateFilter === c.date;
+                const isToday = c.date === new Date().toISOString().slice(0, 10);
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setDateFilter(isSel ? null : c.date!)}
+                    className={
+                      "h-14 rounded-md border px-1.5 py-1 flex flex-col items-start justify-between transition-colors text-left " +
+                      (isSel
+                        ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                        : isToday
+                          ? "border-primary/40 bg-primary/5 hover:bg-primary/10"
+                          : "border-border/40 hover:bg-muted/40")
+                    }
+                  >
+                    <span className={"text-[11px] font-medium tabular-nums " + (isToday ? "text-primary" : "")}>
+                      {c.day}
+                    </span>
+                    {cnt > 0 ? (
+                      <span className="text-[11px] font-bold tabular-nums text-primary">{cnt}건</span>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground/50">·</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 text-[11px] text-muted-foreground">
+              ※ 현재 탭({TAB_META[tab].label}) 데이터 기준 · 숫자는 해당 날짜 개통 건수
+            </div>
+          </div>
+        )}
+      </Card>
+
       {/* 탭 + 액션바 */}
       <div className="flex flex-wrap items-center gap-3 justify-between">
         <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
