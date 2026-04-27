@@ -121,9 +121,11 @@ export default function ExpenseInputPage() {
 
   const [adForm, setAdForm] = useState({
     spend_date: todayISO(),
+    end_date: todayISO(),
     media: "",
     channel: "",
-    amount: "",
+    amount: "",          // 입력 금액 (모드에 따라 일별 또는 총액)
+    amount_mode: "total" as "daily" | "total", // 입력 모드
     campaign: "",
     note: "",
   });
@@ -200,22 +202,51 @@ export default function ExpenseInputPage() {
       toast.error("집행일·매체·금액은 필수입니다");
       return;
     }
+    if (adForm.end_date && adForm.end_date < adForm.spend_date) {
+      toast.error("종료일은 집행일 이후여야 합니다");
+      return;
+    }
+    const start = new Date(adForm.spend_date + "T00:00:00");
+    const end = new Date((adForm.end_date || adForm.spend_date) + "T00:00:00");
+    const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
+    const inputAmount = Number(adForm.amount.replace(/[^0-9.-]/g, "")) || 0;
+    const dailyAmount =
+      adForm.amount_mode === "daily" ? inputAmount : Math.round(inputAmount / days);
+    const totalAmount =
+      adForm.amount_mode === "total" ? inputAmount : inputAmount * days;
+
+    // 기간 동안 매일 ad_spend 행을 생성하여 일자별로 자동 분산
+    const inserts = [] as any[];
+    for (let i = 0; i < days; i++) {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      const dateISO = d.toISOString().slice(0, 10);
+      inserts.push({
+        created_by: user.id,
+        category: "광고비",
+        spend_date: dateISO,
+        spend_month: dateISO.slice(0, 7),
+        media: adForm.media,
+        channel: adForm.channel || null,
+        amount: dailyAmount,
+        campaign: adForm.campaign || null,
+        note:
+          (adForm.note ? adForm.note + " · " : "") +
+          (days > 1
+            ? `[기간분산 ${adForm.spend_date}~${adForm.end_date} · 일${dailyAmount.toLocaleString()}원 / 총${totalAmount.toLocaleString()}원]`
+            : ""),
+      });
+    }
     setSaving(true);
-    const { error } = await supabase.from("ad_spend").insert({
-      created_by: user.id,
-      category: "광고비",
-      spend_date: adForm.spend_date,
-      spend_month: adForm.spend_date.slice(0, 7),
-      media: adForm.media,
-      channel: adForm.channel || null,
-      amount: Number(adForm.amount.replace(/[^0-9.-]/g, "")) || 0,
-      campaign: adForm.campaign || null,
-      note: adForm.note || null,
-    });
+    const { error } = await supabase.from("ad_spend").insert(inserts);
     setSaving(false);
     if (error) return toast.error("저장 실패: " + error.message);
-    toast.success("광고비가 저장되었습니다");
-    setAdForm({ spend_date: todayISO(), media: "", channel: "", amount: "", campaign: "", note: "" });
+    toast.success(
+      days > 1
+        ? `${days}일에 걸쳐 일별 ${dailyAmount.toLocaleString()}원씩 자동 분산 저장됨 (총 ${totalAmount.toLocaleString()}원)`
+        : "광고비가 저장되었습니다",
+    );
+    setAdForm({ spend_date: todayISO(), end_date: todayISO(), media: "", channel: "", amount: "", amount_mode: "total", campaign: "", note: "" });
     fetchRows();
   };
 
