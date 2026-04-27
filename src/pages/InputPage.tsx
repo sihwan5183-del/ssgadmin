@@ -294,6 +294,10 @@ const InputPage = () => {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    if (!customFields.contract_type) {
+      toast.error("약정 정보를 선택해주세요", { description: "선택약정 또는 이통사지원금 중 하나를 선택해야 합니다." });
+      return;
+    }
     setBusy(true);
     const baseNumeric = {
       unit_price: num(form.unit_price),
