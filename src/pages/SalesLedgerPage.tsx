@@ -17,7 +17,7 @@ import {
 import {
   Download, Search, Trash2, Pencil, ShieldAlert, Hash,
   Wallet as WalletIcon, Gift, TrendingUp, Banknote, FileText,
-  AlertTriangle, Filter, X, Lock, Unlock, Loader2,
+  AlertTriangle, Filter, X, Lock, Unlock, Loader2, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const PAGE_SIZE = 25;
 
