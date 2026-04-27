@@ -12,13 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import confetti from "canvas-confetti";
 import {
   Search, Users, TrendingUpIcon, Coins, Target, Sparkles, Info,
   Smartphone, Wifi, Gift, Calculator, CheckCircle2, Clock, XCircle, ChevronDown,
-  PhoneCall, Package, Settings2, Plus,
+  PhoneCall, Package, Settings2, Plus, Trophy,
 } from "lucide-react";
 import { ArrowUp, ArrowDown, Minus, Activity, Wallet, AlertTriangle, Lightbulb } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RTooltip, RadialBarChart, RadialBar, PolarAngleAxis, BarChart, Bar, XAxis, YAxis, CartesianGrid, RadarChart, Radar, PolarGrid, PolarRadiusAxis } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RTooltip, RadialBarChart, RadialBar, PolarAngleAxis, BarChart, Bar, XAxis, YAxis, CartesianGrid, RadarChart, Radar, PolarGrid, PolarRadiusAxis, ReferenceLine } from "recharts";
 import { formatKRWShort } from "@/data/financeData";
 import { useIncentiveRates } from "@/hooks/useIncentiveRates";
 import { calcTotalIncentive, forecastIncentive, calcIncentiveForSale } from "@/lib/incentiveEngine";
@@ -65,6 +66,15 @@ interface GoalRow {
   product: string;
   year_month: string;
   goal_count: number;
+  sale_type: string;
+  goal_type: string;   // 'count' | 'rate'
+  goal_value: number;
+}
+
+interface InquiryCountRow {
+  user_id: string;
+  year_month: string;
+  inflow_count: number;
 }
 
 const DONUT_COLORS = [
@@ -74,6 +84,24 @@ const DONUT_COLORS = [
 
 // Standard products tracked for goals
 const GOAL_PRODUCTS = ["모바일", "인터넷", "TV프리", "스마트홈", "2ND"];
+
+// Mobile sale-type buckets for granular goals
+const MOBILE_SALE_TYPES = ["신규", "번이", "기변"] as const;
+function mobileSaleTypeBucket(t: string | null): "신규" | "번이" | "기변" | null {
+  if (!t) return null;
+  const s = t.trim();
+  if (/신규/.test(s)) return "신규";
+  if (/MNP|번이|이동/i.test(s)) return "번이";
+  if (/기변|재약정|업셀/i.test(s)) return "기변";
+  return null;
+}
+
+// Rate-based goals (e.g., attach rates relative to mobile)
+const RATE_GOALS = [
+  { key: "vas_rate", label: "부가서비스 유치율", unit: "%" },
+  { key: "internet_rate", label: "인터넷 유치율", unit: "%" },
+  { key: "tvfree_rate", label: "TV프리 유치율", unit: "%" },
+] as const;
 
 // Mix chart products (detailed breakdown)
 const MIX_PRODUCTS = ["모바일", "인터넷", "TV프리", "스마트홈", "부가서비스"];
@@ -158,6 +186,7 @@ export default function StaffStatusPage() {
   const [allInquiries, setAllInquiries] = useState<InquiryRow[]>([]);
   const [prevSales, setPrevSales] = useState<SaleRow[]>([]);
   const [goals, setGoals] = useState<GoalRow[]>([]);
+  const [inquiryCounts, setInquiryCounts] = useState<InquiryCountRow[]>([]);
   const [loading, setLoading] = useState(false);
   const { rates: incentiveRates } = useIncentiveRates();
   const [showDetail, setShowDetail] = useState(false);
@@ -220,7 +249,7 @@ export default function StaffStatusPage() {
     const ids = profiles.map((p) => p.user_id);
     const names = profiles.map((p) => p.display_name);
     // Sales: rows where created_by in ids OR manager in names — fetch via two queries to avoid OR complexity
-    const [{ data: byCreator }, { data: byManager }, { data: inq }, { data: goalRows }, { data: prevByCreator }, { data: prevByManager }] = await Promise.all([
+    const [{ data: byCreator }, { data: byManager }, { data: inq }, { data: goalRows }, { data: prevByCreator }, { data: prevByManager }, { data: inquiryRows }] = await Promise.all([
       supabase.from("sales")
         .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, status, approval_status, pending_resolved, pending_items, distributor_amount, net_fee, vas1, vas2")
         .in("created_by", ids)
@@ -242,7 +271,7 @@ export default function StaffStatusPage() {
         .lte("inquiry_date", endDate)
         .limit(5000),
       supabase.from("staff_product_goals")
-        .select("id, user_id, product, year_month, goal_count")
+        .select("id, user_id, product, year_month, goal_count, sale_type, goal_type, goal_value")
         .in("user_id", ids)
         .eq("year_month", yearMonth),
       supabase.from("sales")
@@ -257,6 +286,10 @@ export default function StaffStatusPage() {
         .gte("open_date", prevRange.start)
         .lte("open_date", prevRange.end)
         .limit(5000),
+      supabase.from("staff_monthly_inquiries")
+        .select("user_id, year_month, inflow_count")
+        .in("user_id", ids)
+        .eq("year_month", yearMonth),
     ]);
     // Merge & dedupe
     const map = new Map<string, SaleRow>();
@@ -267,6 +300,7 @@ export default function StaffStatusPage() {
     setPrevSales(Array.from(prevMap.values()));
     setAllInquiries((inq ?? []) as InquiryRow[]);
     setGoals((goalRows ?? []) as GoalRow[]);
+    setInquiryCounts((inquiryRows ?? []) as InquiryCountRow[]);
     setLoading(false);
   }, [profiles, startDate, endDate, yearMonth, roleLoading, prevRange.start, prevRange.end]);
 
@@ -320,6 +354,34 @@ export default function StaffStatusPage() {
     rows.sort((a, b) => b.incentive - a.incentive || b.salesCount - a.salesCount);
     return rows;
   }, [salesByOwner, filteredProfiles, incentiveRates]);
+
+  // Achievement-rate ranking — average % across all configured count goals
+  const achievementLeaderboard = useMemo(() => {
+    const rows = filteredProfiles.map((p) => {
+      const myGoals = goals.filter((g) => g.user_id === p.user_id && g.goal_type === "count" && Number(g.goal_value || g.goal_count) > 0);
+      const list = (salesByOwner.get(p.user_id) ?? []).filter(isSuccess);
+      if (myGoals.length === 0) return { profile: p, avgPct: 0, goalCount: 0, hits: 0 };
+      const prodCount = (prod: string) => list.filter((s) => productBucket(s.product) === prod).length;
+      let totalPct = 0;
+      let hits = 0;
+      myGoals.forEach((g) => {
+        const goalVal = Number(g.goal_value || g.goal_count);
+        let achieved = 0;
+        if (g.product === "모바일") {
+          if (g.sale_type === "__all") achieved = prodCount("모바일");
+          else achieved = list.filter((s) => productBucket(s.product) === "모바일" && mobileSaleTypeBucket(s.sale_type) === g.sale_type).length;
+        } else {
+          achieved = prodCount(g.product);
+        }
+        const pct = Math.min(150, Math.round((achieved / goalVal) * 100));
+        totalPct += pct;
+        if (pct >= 100) hits += 1;
+      });
+      return { profile: p, avgPct: Math.round(totalPct / myGoals.length), goalCount: myGoals.length, hits };
+    }).filter((r) => r.goalCount > 0);
+    rows.sort((a, b) => b.avgPct - a.avgPct || b.hits - a.hits);
+    return rows;
+  }, [filteredProfiles, goals, salesByOwner]);
 
   // Selected staff data (filtered)
   const sales = useMemo(() => {
@@ -568,18 +630,103 @@ export default function StaffStatusPage() {
     };
   }, [sales, prevSalesForSelected]);
 
-  // Goals for selected
+  // Goals for selected — count goals (per product, including mobile sub-types) + rate goals
   const selectedGoals = useMemo(() => {
-    if (!selected) return [] as { product: string; goal: number; achieved: number; pct: number }[];
-    const map = new Map<string, number>();
-    goals.filter((g) => g.user_id === selected.user_id).forEach((g) => map.set(g.product, g.goal_count));
-    return GOAL_PRODUCTS.map((p) => {
-      const goal = map.get(p) ?? 0;
-      const achieved = analytics.productStats.find((x) => x.name === p)?.count ?? 0;
-      const pct = goal > 0 ? Math.min(100, Math.round((achieved / goal) * 100)) : 0;
-      return { product: p, goal, achieved, pct };
+    if (!selected) return [] as { product: string; goal: number; achieved: number; pct: number; saleType: string }[];
+    const myGoals = goals.filter((g) => g.user_id === selected.user_id && g.goal_type === "count");
+    const success = sales.filter(isSuccess);
+
+    const out: { product: string; goal: number; achieved: number; pct: number; saleType: string }[] = [];
+
+    // Mobile broken down by sale_type, plus aggregate
+    const mobileSuccess = success.filter((s) => productBucket(s.product) === "모바일");
+    const mobileGoalAll = myGoals.find((g) => g.product === "모바일" && g.sale_type === "__all");
+    const mobileGoalAllVal = mobileGoalAll ? Number(mobileGoalAll.goal_value || mobileGoalAll.goal_count) : 0;
+    out.push({
+      product: "모바일",
+      saleType: "__all",
+      goal: mobileGoalAllVal,
+      achieved: mobileSuccess.length,
+      pct: mobileGoalAllVal > 0 ? Math.min(100, Math.round((mobileSuccess.length / mobileGoalAllVal) * 100)) : 0,
     });
-  }, [selected, goals, analytics.productStats]);
+    MOBILE_SALE_TYPES.forEach((st) => {
+      const g = myGoals.find((x) => x.product === "모바일" && x.sale_type === st);
+      const goalVal = g ? Number(g.goal_value || g.goal_count) : 0;
+      const achieved = mobileSuccess.filter((s) => mobileSaleTypeBucket(s.sale_type) === st).length;
+      if (goalVal > 0 || achieved > 0) {
+        out.push({
+          product: `모바일·${st}`,
+          saleType: st,
+          goal: goalVal,
+          achieved,
+          pct: goalVal > 0 ? Math.min(100, Math.round((achieved / goalVal) * 100)) : 0,
+        });
+      }
+    });
+
+    // Other products
+    ["인터넷", "TV프리", "스마트홈", "2ND"].forEach((p) => {
+      const g = myGoals.find((x) => x.product === p && x.sale_type === "__all");
+      const goalVal = g ? Number(g.goal_value || g.goal_count) : 0;
+      const achieved = analytics.productStats.find((x) => x.name === p)?.count ?? 0;
+      out.push({
+        product: p,
+        saleType: "__all",
+        goal: goalVal,
+        achieved,
+        pct: goalVal > 0 ? Math.min(100, Math.round((achieved / goalVal) * 100)) : 0,
+      });
+    });
+
+    return out;
+  }, [selected, goals, analytics.productStats, sales]);
+
+  // Rate-based goals for selected
+  const selectedRateGoals = useMemo(() => {
+    if (!selected) return [] as { key: string; label: string; goal: number; current: number; pct: number }[];
+    const myRate = goals.filter((g) => g.user_id === selected.user_id && g.goal_type === "rate");
+    const currentMap: Record<string, number> = {
+      vas_rate: productivity.attach.vas,
+      internet_rate: productivity.attach.internet,
+      tvfree_rate: productivity.attach.tvfree,
+    };
+    return RATE_GOALS.map((r) => {
+      const g = myRate.find((x) => x.product === r.key);
+      const goalVal = g ? Number(g.goal_value) : 0;
+      const current = currentMap[r.key] ?? 0;
+      return {
+        key: r.key,
+        label: r.label,
+        goal: goalVal,
+        current,
+        pct: goalVal > 0 ? Math.min(150, Math.round((current / goalVal) * 100)) : 0,
+      };
+    });
+  }, [selected, goals, productivity]);
+
+  // Inflow & conversion rate for selected
+  const selectedConversion = useMemo(() => {
+    if (!selected) return { inflow: 0, success: 0, rate: 0 };
+    const inflow = inquiryCounts.find((r) => r.user_id === selected.user_id)?.inflow_count ?? 0;
+    const success = sales.filter(isSuccess).length;
+    const rate = inflow > 0 ? Math.round((success / inflow) * 100) : 0;
+    return { inflow, success, rate };
+  }, [selected, inquiryCounts, sales]);
+
+  // Confetti when any goal hits 100%
+  const confettiFired = useMemo(() => new Set<string>(), []);
+  useEffect(() => {
+    if (!selected) return;
+    const hits = selectedGoals.filter((g) => g.goal > 0 && g.pct >= 100);
+    hits.forEach((g) => {
+      const key = `${selected.user_id}-${g.product}-${yearMonth}`;
+      if (confettiFired.has(key)) return;
+      confettiFired.add(key);
+      setTimeout(() => {
+        confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 }, colors: ["#FFD700", "#10B981", "#3B82F6"] });
+      }, 200);
+    });
+  }, [selectedGoals, selected, yearMonth, confettiFired]);
 
   // Simulator
   const distinctSaleTypes = useMemo(() => Array.from(new Set(incentiveRates.map((r) => r.match_sale_type).filter(Boolean) as string[])), [incentiveRates]);
@@ -711,6 +858,56 @@ export default function StaffStatusPage() {
                 })}
               </div>
             )}
+          </section>
+        )}
+
+        {/* Achievement-rate leaderboard (전 직원 목표 달성률 순위) */}
+        {canViewAll && achievementLeaderboard.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Trophy className="size-4 text-amber-500" />
+                전 직원 목표 달성률 순위
+                <Badge variant="outline" className="text-[10px] ml-1">매장 무관</Badge>
+              </h3>
+            </div>
+            <Card className="glass overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border/40 bg-muted/40 text-[11px] text-muted-foreground">
+                      <th className="text-left px-3 py-2 w-14">순위</th>
+                      <th className="text-left px-3 py-2">직원</th>
+                      <th className="text-right px-3 py-2">평균 달성률</th>
+                      <th className="text-right px-3 py-2">달성 / 목표 항목</th>
+                      <th className="px-3 py-2 w-48">진행도</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {achievementLeaderboard.slice(0, 20).map((r, i) => (
+                      <tr key={r.profile.user_id} className="border-b border-border/30 hover:bg-muted/30 cursor-pointer" onClick={() => setSelectedId(r.profile.user_id)}>
+                        <td className="px-3 py-2 font-bold tabular-nums">
+                          <span className={`inline-flex items-center justify-center size-6 rounded-md text-xs ${
+                            i === 0 ? "bg-amber-100 text-amber-700" :
+                            i === 1 ? "bg-slate-200 text-slate-700" :
+                            i === 2 ? "bg-orange-100 text-orange-700" :
+                            "bg-muted/50 text-muted-foreground"}`}>{i + 1}</span>
+                        </td>
+                        <td className="px-3 py-2 font-medium">
+                          {r.profile.display_name}
+                          {r.profile.team && <span className="text-[10px] text-muted-foreground ml-1.5">{r.profile.team}</span>}
+                        </td>
+                        <td className="px-3 py-2 text-right tabular-nums">
+                          <span className={r.avgPct >= 100 ? "text-emerald-600 font-bold" : "text-foreground font-semibold"}>{r.avgPct}%</span>
+                        </td>
+                        <td className="px-3 py-2 text-right text-xs text-muted-foreground tabular-nums">{r.hits} / {r.goalCount}</td>
+                        <td className="px-3 py-2"><Progress value={Math.min(100, r.avgPct)} className="h-1.5" /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
           </section>
         )}
 
@@ -1009,6 +1206,38 @@ export default function StaffStatusPage() {
                 </Card>
               </div>
 
+              {/* 인입 대비 전환율 + 비율 목표 */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                <Card className="p-4 glass border-primary/30 bg-gradient-to-br from-primary/[0.08] to-transparent">
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                    <PhoneCall className="size-3.5 text-primary-glow" /> 인입 대비 성공률(전환율)
+                  </div>
+                  <div className="text-3xl font-extrabold tabular-nums text-primary-glow mt-1">
+                    {selectedConversion.rate}<span className="text-sm font-normal text-muted-foreground ml-0.5">%</span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-1">
+                    상담 인입 {selectedConversion.inflow}건 / 개통 {selectedConversion.success}건
+                  </div>
+                </Card>
+                {selectedRateGoals.map((r) => (
+                  <Card key={r.key} className="p-4 glass">
+                    <div className="text-[11px] text-muted-foreground flex items-center justify-between">
+                      <span className="flex items-center gap-1.5"><Target className="size-3.5 text-amber-500" /> {r.label} 목표</span>
+                      {r.goal > 0 && r.current >= r.goal && (
+                        <Badge variant="outline" className="text-[9px] border-emerald-400 text-emerald-700 bg-emerald-50">달성!</Badge>
+                      )}
+                    </div>
+                    <div className="flex items-baseline gap-1.5 mt-1">
+                      <div className="text-2xl font-extrabold tabular-nums text-foreground">{r.current}%</div>
+                      <div className="text-xs text-muted-foreground">
+                        / {r.goal > 0 ? `${r.goal}%` : "미설정"}
+                      </div>
+                    </div>
+                    <Progress value={r.goal > 0 ? Math.min(100, r.pct) : 0} className="h-1.5 mt-1.5" />
+                  </Card>
+                ))}
+              </div>
+
               {/* Attach Rate (전 상품) + 월간 목표 달성률 + Radar */}
               <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
                 {/* 전 상품 모바일 대비 유치율 — 가로형 멀티 막대 */}
@@ -1035,6 +1264,15 @@ export default function StaffStatusPage() {
                               contentStyle={{ background: "hsl(0 0% 100% / 0.96)", color: "#374151", border: "1px solid hsl(0 0% 88%)", borderRadius: 12, fontSize: 12 }}
                               formatter={(v: any, _n: any, p: any) => [`${v}% (전월 ${p?.payload?.prev ?? 0}%)`, "유치율"]}
                             />
+                            {selectedRateGoals.filter((r) => r.goal > 0).map((r) => (
+                              <ReferenceLine
+                                key={r.key}
+                                x={r.goal}
+                                stroke="hsl(45 95% 55%)"
+                                strokeDasharray="4 4"
+                                label={{ value: `목표 ${r.goal}%`, position: "top", fill: "hsl(45 95% 35%)", fontSize: 10 }}
+                              />
+                            ))}
                             <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={22}>
                               {productivity.attachBars.filter((b) => b.name !== "2nd 디바이스").map((b, i) => <Cell key={i} fill={b.fill} />)}
                             </Bar>
@@ -1282,32 +1520,93 @@ function GoalDialog({
   currentGoals: GoalRow[];
   onSaved: () => void;
 }) {
-  const [values, setValues] = useState<Record<string, string>>({});
+  // Count goal rows: keyed as `${product}|${sale_type}`
+  const [counts, setCounts] = useState<Record<string, string>>({});
+  // Rate goal rows: keyed by RATE_GOALS.key
+  const [rates, setRates] = useState<Record<string, string>>({});
+  // Inflow count for the month
+  const [inflow, setInflow] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const init: Record<string, string> = {};
-    GOAL_PRODUCTS.forEach((p) => {
-      const g = currentGoals.find((x) => x.product === p);
-      init[p] = g ? String(g.goal_count) : "";
+    if (!open) return;
+    const c: Record<string, string> = {};
+    const r: Record<string, string> = {};
+    currentGoals.forEach((g) => {
+      const val = String(Number(g.goal_value || g.goal_count) || "");
+      if (g.goal_type === "count") c[`${g.product}|${g.sale_type}`] = val;
+      else if (g.goal_type === "rate") r[g.product] = val;
     });
-    setValues(init);
-  }, [currentGoals, open]);
+    setCounts(c);
+    setRates(r);
+    // Load inflow for the month
+    (async () => {
+      const { data } = await supabase
+        .from("staff_monthly_inquiries")
+        .select("inflow_count")
+        .eq("user_id", user.user_id)
+        .eq("year_month", yearMonth)
+        .maybeSingle();
+      setInflow(data?.inflow_count != null ? String(data.inflow_count) : "");
+    })();
+  }, [currentGoals, open, user.user_id, yearMonth]);
+
+  const setCount = (product: string, saleType: string, v: string) => {
+    setCounts((prev) => ({ ...prev, [`${product}|${saleType}`]: v }));
+  };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const rows = GOAL_PRODUCTS
-        .map((p) => ({
+      // Build count rows: 모바일 (전체 + 신규/번이/기변) + 인터넷/TV프리/스마트홈/2ND
+      const countRows: any[] = [];
+      const pushCount = (product: string, saleType: string) => {
+        const key = `${product}|${saleType}`;
+        const num = Math.max(0, parseInt(counts[key] || "0", 10) || 0);
+        countRows.push({
           user_id: user.user_id,
-          product: p,
+          product,
+          sale_type: saleType,
+          goal_type: "count",
           year_month: yearMonth,
-          goal_count: Math.max(0, parseInt(values[p] || "0", 10) || 0),
-        }));
-      const { error } = await supabase
+          goal_count: num,
+          goal_value: num,
+        });
+      };
+      pushCount("모바일", "__all");
+      MOBILE_SALE_TYPES.forEach((st) => pushCount("모바일", st));
+      ["인터넷", "TV프리", "스마트홈", "2ND"].forEach((p) => pushCount(p, "__all"));
+
+      // Rate goal rows
+      const rateRows = RATE_GOALS.map((r) => {
+        const num = Math.max(0, parseFloat(rates[r.key] || "0") || 0);
+        return {
+          user_id: user.user_id,
+          product: r.key,
+          sale_type: "__all",
+          goal_type: "rate",
+          year_month: yearMonth,
+          goal_count: 0,
+          goal_value: num,
+        };
+      });
+
+      const { error: gErr } = await supabase
         .from("staff_product_goals")
-        .upsert(rows, { onConflict: "user_id,product,year_month" });
-      if (error) throw error;
+        .upsert([...countRows, ...rateRows], { onConflict: "user_id,product,sale_type,goal_type,year_month" });
+      if (gErr) throw gErr;
+
+      // Save inflow
+      const inflowVal = Math.max(0, parseInt(inflow || "0", 10) || 0);
+      const { error: iErr } = await supabase
+        .from("staff_monthly_inquiries")
+        .upsert({
+          user_id: user.user_id,
+          year_month: yearMonth,
+          inflow_count: inflowVal,
+        }, { onConflict: "user_id,year_month" });
+      if (iErr) throw iErr;
+
       toast.success("월간 목표가 저장되었습니다");
       onSaved();
       onOpenChange(false);
@@ -1320,26 +1619,73 @@ function GoalDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{user.display_name} · {yearMonth} 월간 목표</DialogTitle>
+          <DialogTitle>{user.display_name} · {yearMonth} 월간 목표 설정</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3 py-2">
-          {GOAL_PRODUCTS.map((p) => (
-            <div key={p} className="flex items-center gap-3">
-              <div className="w-24 text-sm font-medium">{p}</div>
-              <Input
-                type="number"
-                min={0}
-                placeholder="0"
-                value={values[p] ?? ""}
-                onChange={(e) => setValues((v) => ({ ...v, [p]: e.target.value }))}
-                className="flex-1"
-              />
-              <span className="text-xs text-muted-foreground">대</span>
+
+        <div className="space-y-5 py-2">
+          {/* 건수 목표 */}
+          <section>
+            <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+              <Package className="size-4 text-primary-glow" /> 건수 기준 목표 (대/건)
+            </h4>
+            <div className="space-y-2 rounded-lg border border-border/40 p-3 bg-muted/20">
+              <div className="text-xs font-semibold text-muted-foreground">모바일</div>
+              <div className="grid grid-cols-4 gap-2">
+                <div>
+                  <div className="text-[10px] text-muted-foreground mb-0.5">전체</div>
+                  <Input type="number" min={0} placeholder="0" value={counts[`모바일|__all`] ?? ""} onChange={(e) => setCount("모바일", "__all", e.target.value)} />
+                </div>
+                {MOBILE_SALE_TYPES.map((st) => (
+                  <div key={st}>
+                    <div className="text-[10px] text-muted-foreground mb-0.5">{st}</div>
+                    <Input type="number" min={0} placeholder="0" value={counts[`모바일|${st}`] ?? ""} onChange={(e) => setCount("모바일", st, e.target.value)} />
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+              {["인터넷", "TV프리", "스마트홈", "2ND"].map((p) => (
+                <div key={p}>
+                  <div className="text-[10px] text-muted-foreground mb-0.5">{p}</div>
+                  <Input type="number" min={0} placeholder="0" value={counts[`${p}|__all`] ?? ""} onChange={(e) => setCount(p, "__all", e.target.value)} />
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* 비율 목표 */}
+          <section>
+            <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+              <Target className="size-4 text-amber-500" /> 비율 기준 목표 (모바일 대비 %)
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {RATE_GOALS.map((r) => (
+                <div key={r.key}>
+                  <div className="text-[10px] text-muted-foreground mb-0.5">{r.label}</div>
+                  <div className="relative">
+                    <Input type="number" min={0} max={200} step={1} placeholder="0" value={rates[r.key] ?? ""} onChange={(e) => setRates((v) => ({ ...v, [r.key]: e.target.value }))} className="pr-7" />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{r.unit}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* 인입 건수 */}
+          <section>
+            <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+              <PhoneCall className="size-4 text-primary-glow" /> 상담 인입 건수 ({yearMonth})
+            </h4>
+            <div className="flex items-center gap-3">
+              <Input type="number" min={0} placeholder="0" value={inflow} onChange={(e) => setInflow(e.target.value)} className="max-w-[200px]" />
+              <span className="text-xs text-muted-foreground">건 — 인입 대비 성공률(전환율) 산출에 사용됩니다</span>
+            </div>
+          </section>
         </div>
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>취소</Button>
           <Button onClick={handleSave} disabled={saving}>{saving ? "저장 중..." : "저장"}</Button>
