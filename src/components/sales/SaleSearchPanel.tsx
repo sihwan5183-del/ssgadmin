@@ -676,12 +676,7 @@ export const SaleSearchPanel = () => {
                   </Badge>
                 );
               })()}
-              {isLocked && (
-                <Badge variant="outline" className="text-[10px] flex items-center gap-1">
-                  <Lock className="size-3" /> 잠금됨
-                </Badge>
-              )}
-              {!canEdit && !isLocked && (
+              {!canEdit && (
                 <Badge variant="outline" className="text-[10px] flex items-center gap-1">
                   <Lock className="size-3" /> 읽기 전용
                 </Badge>
@@ -713,11 +708,10 @@ export const SaleSearchPanel = () => {
               </TabsList>
 
               <TabsContent value="edit" className="mt-4">
-                {isLocked && (
-                  <div className="mb-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-200 flex items-center gap-2">
-                    <Lock className="size-3.5" />
-                    이 실적은 '확정' 상태로 잠겨 있어 수정/삭제할 수 없습니다.
-                    {isAdmin && " (관리자는 검수 탭에서 상태를 되돌릴 수 있습니다)"}
+                {isInspected && (
+                  <div className="mb-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 flex items-center gap-2">
+                    <CheckCircle2 className="size-3.5" />
+                    이 실적은 [검수 완료] 처리되었습니다. 수정 시 변경 이력이 자동으로 기록됩니다.
                   </div>
                 )}
                 {/* === 검수 핵심 요약 (번들·동판·TV·VAS) === */}
