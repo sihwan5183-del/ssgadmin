@@ -15,6 +15,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   ChevronLeft,
   ChevronRight,
@@ -29,6 +31,7 @@ import {
   TrendingUp,
   X,
   Loader2,
+  Filter,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -122,6 +125,9 @@ export default function AdCalendarPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  // 필터: 매체 / 인입경로
+  const [filterMedia, setFilterMedia] = useState<string>("all");
+  const [filterChannel, setFilterChannel] = useState<string>("all");
 
   // 월 단위 조회 (선택 월과 겹치는 모든 캠페인)
   const monthStart = useMemo(() => {
@@ -174,10 +180,25 @@ export default function AdCalendarPage() {
 
   const grid = useMemo(() => buildMonthGrid(year, activeMonth), [year, activeMonth]);
 
+  // 필터 적용된 캠페인
+  const filteredCampaigns = useMemo(() => {
+    return campaigns.filter((c) => {
+      if (filterMedia !== "all" && c.media !== filterMedia) return false;
+      if (filterChannel !== "all" && (c.channel ?? "") !== filterChannel) return false;
+      return true;
+    });
+  }, [campaigns, filterMedia, filterChannel]);
+
+  const channelOptions = useMemo(() => {
+    const set = new Set<string>();
+    campaigns.forEach((c) => c.channel && set.add(c.channel));
+    return Array.from(set);
+  }, [campaigns]);
+
   // 날짜 → 캠페인 매핑 (그 날짜에 진행 중인 모든 캠페인)
   const campaignsByDate = useMemo(() => {
     const map = new Map<string, Campaign[]>();
-    for (const c of campaigns) {
+    for (const c of filteredCampaigns) {
       const start = new Date(c.start_date);
       const end = new Date(c.end_date);
       const cur = new Date(start);
@@ -189,12 +210,12 @@ export default function AdCalendarPage() {
       }
     }
     return map;
-  }, [campaigns]);
+  }, [filteredCampaigns]);
 
   // 일자별 지출 = 캠페인 일할 계산 (총예산 ÷ 기간일수)
   const dailySpend = useMemo(() => {
     const m = new Map<string, number>();
-    for (const c of campaigns) {
+    for (const c of filteredCampaigns) {
       const start = new Date(c.start_date);
       const end = new Date(c.end_date);
       const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
@@ -207,7 +228,7 @@ export default function AdCalendarPage() {
       }
     }
     return m;
-  }, [campaigns]);
+  }, [filteredCampaigns]);
 
   const monthTotal = useMemo(() => {
     let total = 0;
