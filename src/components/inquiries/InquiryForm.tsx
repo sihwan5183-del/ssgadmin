@@ -1,14 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldDefinitions } from "@/hooks/useFieldDefinitions";
 import { DynamicFieldRenderer } from "@/components/admin/DynamicFieldRenderer";
-import { INQUIRY_STATUSES } from "@/hooks/useInquiries";
+import { useInquiryStatuses } from "@/hooks/useInquiryStatuses";
+import { inquiryStatusClass, INQUIRY_DEFAULT_STATUS } from "@/lib/inquiryStatus";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
@@ -31,10 +34,24 @@ const NATIVE_KEYS = new Set([
 export const InquiryForm = ({ onSaved }: Props) => {
   const { user } = useAuth();
   const { fields, loading } = useFieldDefinitions("inquiries");
+  const { statuses } = useInquiryStatuses();
   const [busy, setBusy] = useState(false);
   const [inquiryDate, setInquiryDate] = useState(today());
-  const [status, setStatus] = useState<string>("문의중");
+  const [status, setStatus] = useState<string>(INQUIRY_DEFAULT_STATUS);
   const [values, setValues] = useState<Record<string, any>>({});
+
+  // 관리자 상태 목록이 로드되면 기본값('상담전')이 목록에 있으면 유지,
+  // 없으면 첫 번째 항목을 기본값으로 사용.
+  useEffect(() => {
+    if (statuses.length === 0) return;
+    if (!statuses.includes(status)) {
+      const next = statuses.includes(INQUIRY_DEFAULT_STATUS)
+        ? INQUIRY_DEFAULT_STATUS
+        : statuses[0];
+      setStatus(next);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statuses]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,7 +100,7 @@ export const InquiryForm = ({ onSaved }: Props) => {
     }
     toast.success("인입 등록 완료");
     setValues({});
-    setStatus("문의중");
+    setStatus(statuses.includes(INQUIRY_DEFAULT_STATUS) ? INQUIRY_DEFAULT_STATUS : (statuses[0] ?? INQUIRY_DEFAULT_STATUS));
     setInquiryDate(today());
     onSaved();
   };
@@ -99,9 +116,21 @@ export const InquiryForm = ({ onSaved }: Props) => {
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">상태</Label>
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue asChild>
+                <Badge variant="outline" className={cn("text-xs", inquiryStatusClass(status))}>
+                  {status}
+                </Badge>
+              </SelectValue>
+            </SelectTrigger>
             <SelectContent>
-              {INQUIRY_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              {statuses.map((s) => (
+                <SelectItem key={s} value={s}>
+                  <Badge variant="outline" className={cn("text-xs", inquiryStatusClass(s))}>
+                    {s}
+                  </Badge>
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
