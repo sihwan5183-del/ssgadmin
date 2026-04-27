@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   Crown, Medal, Trophy, Star, TrendingUp, Flame, Zap,
   Award, BarChart3, Smartphone, Gift, ChevronDown, CheckCircle2, Sparkles,
+  Wifi, Tv, ArrowUp, ArrowDown, Minus, UserX,
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -24,9 +25,12 @@ type RankedUser = {
   strategyCount: number;
   voucherReturned: number;
   streak: number;
-  yesterdayDelta: number;
+  yesterdayDelta: number;        // count delta vs yesterday
+  rankDelta: number;             // rank position change vs yesterday (positive = climbed)
+  productCounts: { 모바일: number; 인터넷: number; TV프리: number; 부가서비스: number };
   isClean: boolean;
   cleanDays: number;
+  excluded?: boolean;
 };
 type ModelRank = { model: string; count: number; isStrategy: boolean };
 
@@ -72,6 +76,7 @@ const PERIOD_OPTIONS = [
   { value: "today", label: "오늘" },
   { value: "week", label: "이번 주" },
   { value: "month", label: "이번 달" },
+  { value: "quarter", label: "이번 분기" },
 ];
 
 const dateRange = (period: string) => {
@@ -84,6 +89,10 @@ const dateRange = (period: string) => {
     const mon = new Date(y, m, d - (day === 0 ? 6 : day - 1));
     return { start: toISO(mon), end: toISO(now) };
   }
+  if (period === "quarter") {
+    const qStartMonth = Math.floor(m / 3) * 3;
+    return { start: `${y}-${String(qStartMonth + 1).padStart(2, "0")}-01`, end: toISO(now) };
+  }
   return { start: `${y}-${String(m + 1).padStart(2, "0")}-01`, end: toISO(now) };
 };
 const yesterdayRange = () => {
@@ -91,6 +100,29 @@ const yesterdayRange = () => {
   y.setDate(y.getDate() - 1);
   const s = y.toISOString().slice(0, 10);
   return { start: s, end: s };
+};
+/** 어제까지 누적된 같은 기간 (period 시작 ~ 어제) — 어제 시점 순위 계산용 */
+const periodUpToYesterday = (period: string) => {
+  const { start } = dateRange(period);
+  const today = new Date();
+  const yest = new Date(today.getTime() - 86400000);
+  const yISO = yest.toISOString().slice(0, 10);
+  // start might be after yISO if period=today — return null then
+  if (yISO < start) return null;
+  return { start, end: yISO };
+};
+
+/** 확정·개통완료/반납완료만 집계 */
+const COUNTED_STATUSES = ["개통완료", "반납완료"];
+
+/** 상품 버킷 — staff 페이지와 동일 규칙 */
+const productBucket = (p: string | null): "모바일" | "인터넷" | "TV프리" | "기타" => {
+  const s = (p ?? "").toLowerCase();
+  if (!s) return "기타";
+  if (/tv\s*프리|프리tv|tv프리/i.test(p ?? "") || (p ?? "").includes("TV프리")) return "TV프리";
+  if (/인터넷|기가|wifi/i.test(p ?? "")) return "인터넷";
+  if (/모바일|mobile|usim|mnp|재약정|업셀/i.test(p ?? "")) return "모바일";
+  return "기타";
 };
 
 /* ─── TABS ─── */
@@ -103,10 +135,87 @@ const TABS: { key: TabKey; label: string; icon: typeof Crown; sortFn: (a: Ranked
 ];
 
 const PODIUM_STYLES = [
-  { bg: "bg-gradient-to-br from-amber-100 to-orange-100 ring-amber-400", icon: Crown, color: "text-amber-700" },
-  { bg: "bg-gradient-to-br from-slate-300/25 to-slate-500/5 ring-slate-300/40", icon: Trophy, color: "text-slate-200" },
-  { bg: "bg-gradient-to-br from-orange-100 to-amber-100 ring-orange-400", icon: Medal, color: "text-orange-400" },
+  {
+    bg: "bg-gradient-to-br from-amber-200 via-yellow-100 to-orange-200",
+    ring: "ring-2 ring-amber-400 shadow-[0_0_24px_-4px_hsl(45_100%_60%/0.6)]",
+    icon: Crown,
+    color: "text-amber-700",
+    halo: "from-amber-300/40 via-yellow-300/30 to-transparent",
+  },
+  {
+    bg: "bg-gradient-to-br from-slate-200 via-slate-100 to-slate-300",
+    ring: "ring-2 ring-slate-400 shadow-[0_0_18px_-4px_hsl(220_15%_70%/0.5)]",
+    icon: Trophy,
+    color: "text-slate-700",
+    halo: "from-slate-300/40 to-transparent",
+  },
+  {
+    bg: "bg-gradient-to-br from-orange-200 via-amber-100 to-orange-300",
+    ring: "ring-2 ring-orange-400 shadow-[0_0_18px_-4px_hsl(25_95%_60%/0.5)]",
+    icon: Medal,
+    color: "text-orange-700",
+    halo: "from-orange-300/40 to-transparent",
+  },
 ];
+
+/** 미니 게이지 색상 */
+const PRODUCT_COLORS = {
+  모바일: "from-cyan-400 to-cyan-500",
+  인터넷: "from-violet-400 to-violet-500",
+  TV프리: "from-pink-400 to-pink-500",
+  부가서비스: "from-amber-400 to-amber-500",
+} as const;
+
+const ProductMiniGauges = ({ counts, big = false }: { counts: RankedUser["productCounts"]; big?: boolean }) => {
+  const max = Math.max(1, counts.모바일, counts.인터넷, counts.TV프리, counts.부가서비스);
+  const items: { key: keyof typeof PRODUCT_COLORS; icon: any }[] = [
+    { key: "모바일", icon: Smartphone },
+    { key: "인터넷", icon: Wifi },
+    { key: "TV프리", icon: Tv },
+    { key: "부가서비스", icon: Gift },
+  ];
+  return (
+    <div className={cn("space-y-1", big && "space-y-1.5")}>
+      {items.map(({ key, icon: Icon }) => {
+        const v = counts[key];
+        const pct = Math.round((v / max) * 100);
+        return (
+          <div key={key} className="flex items-center gap-1.5">
+            <Icon className={cn("text-muted-foreground shrink-0", big ? "size-3" : "size-2.5")} />
+            <div className={cn("flex-1 rounded-full bg-muted/50 overflow-hidden", big ? "h-1.5" : "h-1")}>
+              <div
+                className={cn("h-full rounded-full bg-gradient-to-r transition-all", PRODUCT_COLORS[key])}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <span className={cn("text-muted-foreground tabular-nums shrink-0 text-right", big ? "text-[10px] w-6" : "text-[9px] w-5")}>{v}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const RankDeltaPill = ({ delta }: { delta: number }) => {
+  if (delta === 0)
+    return (
+      <span className="inline-flex items-center gap-0.5 text-[9px] text-muted-foreground bg-muted/30 border border-border/40 px-1.5 py-0.5 rounded-full">
+        <Minus className="size-2.5" /> 동률
+      </span>
+    );
+  const up = delta > 0;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-0.5 text-[9px] tabular-nums px-1.5 py-0.5 rounded-full border",
+        up ? "text-emerald-700 bg-emerald-100 border-emerald-300" : "text-red-600 bg-red-100 border-red-300"
+      )}
+    >
+      {up ? <ArrowUp className="size-2.5" /> : <ArrowDown className="size-2.5" />}
+      {Math.abs(delta)}
+    </span>
+  );
+};
 
 /* ─── Component ─── */
 const RankingPage = () => {
