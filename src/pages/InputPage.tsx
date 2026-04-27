@@ -1493,6 +1493,11 @@ const InputPage = () => {
               <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5">
                 수익(+)으로 합산됩니다 · 추가지원금과 별개 항목
               </p>
+              {form.voucher && String(form.voucher).trim() !== "" && form.voucher_returned !== "유" && (
+                <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">
+                  ⚠ 미반납 상태입니다 · 반납 완료 시 정산에 반영됩니다
+                </p>
+              )}
             </Field>
             <Field label="반납 상태">
               <div className="flex items-center gap-2 h-9">
