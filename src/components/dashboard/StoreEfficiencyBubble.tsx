@@ -3,15 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { Sparkles, TrendingUp, TrendingDown } from "lucide-react";
 import { formatShortKRW } from "@/data/mockData";
+import { calcDashboardProfit } from "@/lib/profit";
 
 interface ChannelRow {
   channel: string;
-  count: number;       // 인입(개통완료) 건수
-  revenue: number;     // 수수료 + VAS
-  expense: number;     // 지원금 합
+  count: number;       // 개통완료 건수
+  inquiries: number;   // 인입 건수
+  revenue: number;     // 판매수수료 + 상품권 금액
+  expense: number;     // 오퍼/카드 추가지원금 + 모요 수수료
   moyoFee: number;     // 모요 수수료
   profit: number;      // 순수익
-  efficiency: number;  // 수익률 % = profit / revenue * 100
+  successRate: number; // 인입 대비 성공률
+  efficiency: number;  // 비용 대비 실질 순수익률 %
 }
 
 const NEON = [
@@ -27,8 +30,7 @@ const NEON = [
 
 /**
  * 채널별 효율 분석
- * 인입 대비 순수익(%) 기준 시각화
- * 모요 수수료(88,000/건, moyo_excluded=false인 건만) 차감 반영
+ * 성공률과 비용 대비 실질 순수익률 기준 시각화
  */
 export const StoreEfficiencyBubble = () => {
   const { startDate, endDate } = usePeriod();
@@ -39,32 +41,35 @@ export const StoreEfficiencyBubble = () => {
     let alive = true;
     (async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from("sales")
-        .select("channel, net_fee, vas_fee, distributor_amount, extra_subsidy, cash_support_amount, customer_support_amount, corp_card_amount, voucher, voucher_returned, moyo_excluded")
-        .gte("open_date", startDate)
-        .lte("open_date", endDate)
-        .eq("status", "개통완료")
-        .limit(10000);
+      const [salesRes, inquiriesRes] = await Promise.all([
+        supabase
+          .from("sales")
+          .select("channel, unit_price, net_fee, extra_subsidy, corp_card_amount, custom_fields, moyo_excluded")
+          .gte("open_date", startDate)
+          .lte("open_date", endDate)
+          .eq("status", "개통완료")
+          .limit(10000),
+        supabase
+          .from("inquiries")
+          .select("channel")
+          .gte("inquiry_date", startDate)
+          .lte("inquiry_date", endDate)
+          .limit(10000),
+      ]);
       if (!alive) return;
 
-      const map = new Map<string, ChannelRow>();
-      (data ?? []).forEach((r: any) => {
-        const voucherExcluded = r.voucher && String(r.voucher).trim() !== "" && r.voucher_returned !== "유";
-        if (voucherExcluded) return;
-
+      const inquiryMap = new Map<string, number>();
+      (inquiriesRes.data ?? []).forEach((r: any) => {
         const ch = (r.channel || "기타").toString().trim() || "기타";
-        const revenue = (Number(r.net_fee) || 0) + (Number(r.vas_fee) || 0);
-        const expense =
-          (Number(r.distributor_amount) || 0) +
-          (Number(r.extra_subsidy) || 0) +
-          (Number(r.cash_support_amount) || 0) +
-          (Number(r.customer_support_amount) || 0) +
-          (Number(r.corp_card_amount) || 0);
-        const moyoFee = (ch === "모요" && !r.moyo_excluded) ? 88000 : 0;
-        const profit = revenue - expense - moyoFee;
+        inquiryMap.set(ch, (inquiryMap.get(ch) ?? 0) + 1);
+      });
 
-        const cur = map.get(ch) ?? { channel: ch, count: 0, revenue: 0, expense: 0, moyoFee: 0, profit: 0, efficiency: 0 };
+      const map = new Map<string, ChannelRow>();
+      (salesRes.data ?? []).forEach((r: any) => {
+        const ch = (r.channel || "기타").toString().trim() || "기타";
+        const { revenue, expense, moyoFee, profit } = calcDashboardProfit(r);
+
+        const cur = map.get(ch) ?? { channel: ch, count: 0, inquiries: 0, revenue: 0, expense: 0, moyoFee: 0, profit: 0, successRate: 0, efficiency: 0 };
         cur.count += 1;
         cur.revenue += revenue;
         cur.expense += expense;
@@ -74,7 +79,9 @@ export const StoreEfficiencyBubble = () => {
       });
       const arr = Array.from(map.values()).map((c) => ({
         ...c,
-        efficiency: c.revenue > 0 ? (c.profit / c.revenue) * 100 : 0,
+        inquiries: Math.max(inquiryMap.get(c.channel) ?? 0, c.count),
+        successRate: Math.max(inquiryMap.get(c.channel) ?? 0, c.count) > 0 ? (c.count / Math.max(inquiryMap.get(c.channel) ?? 0, c.count)) * 100 : 0,
+        efficiency: c.expense > 0 ? (c.profit / c.expense) * 100 : c.profit > 0 ? 100 : 0,
       }));
       arr.sort((a, b) => b.profit - a.profit);
       setRows(arr);
@@ -95,7 +102,7 @@ export const StoreEfficiencyBubble = () => {
             <Sparkles className="size-5 text-primary" />
             채널별 효율 분석
           </h3>
-          <p className="text-xs text-muted-foreground mt-1">인입 대비 순수익률(%) · 모요 수수료(88,000원/건) 차감 반영</p>
+          <p className="text-xs text-muted-foreground mt-1">성공률 + 비용 대비 실질 순수익 · 모요 수수료 차감 반영</p>
         </div>
       </div>
 
@@ -116,7 +123,8 @@ export const StoreEfficiencyBubble = () => {
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="size-2.5 rounded-full shrink-0" style={{ background: color }} />
                     <span className="font-semibold text-sm">{r.channel}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{r.count}건</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">개통 {r.count}건</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/30">성공 {r.successRate.toFixed(1)}%</span>
                     {r.moyoFee > 0 && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-warning/15 text-warning border border-warning/30">
                         모요 -{formatShortKRW(r.moyoFee)}
@@ -132,7 +140,7 @@ export const StoreEfficiencyBubble = () => {
                     </div>
                     <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold tabular-nums ${positive ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
                       <TrendIcon className="size-3" />
-                      {r.efficiency.toFixed(1)}%
+                      ROI {r.efficiency.toFixed(1)}%
                     </div>
                   </div>
                 </div>
@@ -143,8 +151,8 @@ export const StoreEfficiencyBubble = () => {
                   />
                 </div>
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-1.5 tabular-nums">
-                  <span>수익 {formatShortKRW(r.revenue)}</span>
-                  <span>지출 {formatShortKRW(r.expense + r.moyoFee)}</span>
+                  <span>인입 {r.inquiries}건 · 수익 {formatShortKRW(r.revenue)}</span>
+                  <span>투입비용 {formatShortKRW(r.expense)}</span>
                 </div>
               </div>
             );

@@ -4,21 +4,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { Trophy, ArrowRight, Crown, Medal } from "lucide-react";
 import { formatShortKRW } from "@/data/mockData";
+import { calcDashboardProfit } from "@/lib/profit";
 
 interface StaffRow {
   uid: string;
   name: string;
   store: string;
   count: number;
-  revenue: number;     // 판매수수료(net_fee) + VAS 수수료
-  expense: number;     // 지원금 합
+  revenue: number;     // 판매수수료 + 상품권 금액
+  expense: number;     // 오퍼/카드 추가지원금 + 모요 수수료
   profit: number;      // 순수익
 }
 
 /**
  * 개인별 순수익 랭킹 (전사 통합)
- * 순수익 = (net_fee + vas_fee) - (distributor_amount + extra_subsidy + cash_support_amount + customer_support_amount + corp_card_amount)
- * 모요 채널 건은 인당 88,000원 모요 수수료 추가 차감
+ * 순수익 = (판매수수료 + 상품권 금액) - (오퍼 추가지원금 + 카드결제 추가지원금 + 모요 수수료)
  */
 export const StoreRevenueRanking = () => {
   const { startDate, endDate } = usePeriod();
@@ -33,7 +33,7 @@ export const StoreRevenueRanking = () => {
       const [salesRes, profilesRes] = await Promise.all([
         supabase
           .from("sales")
-          .select("created_by, manager, channel, net_fee, vas_fee, distributor_amount, extra_subsidy, cash_support_amount, customer_support_amount, corp_card_amount, voucher, voucher_returned, moyo_excluded")
+          .select("created_by, manager, channel, unit_price, net_fee, extra_subsidy, corp_card_amount, custom_fields, moyo_excluded")
           .gte("open_date", startDate)
           .lte("open_date", endDate)
           .eq("status", "개통완료")
@@ -52,36 +52,25 @@ export const StoreRevenueRanking = () => {
 
       const ownerOf = (s: any): string => {
         const m = (s.manager ?? "").trim().toLowerCase();
+        if (m && byId.has(m)) return m;
         if (m && byName.has(m)) return byName.get(m)!;
         return s.created_by;
       };
 
       const map = new Map<string, StaffRow>();
       (salesRes.data ?? []).forEach((r: any) => {
-        // 상품권 미반납 건은 정산 제외
-        const voucherExcluded = r.voucher && String(r.voucher).trim() !== "" && r.voucher_returned !== "유";
-        if (voucherExcluded) return;
-
         const uid = ownerOf(r);
         if (!uid) return;
         const p = byId.get(uid);
         const name = p?.display_name ?? "미지정";
         const store = p?.store ?? "-";
 
-        const revenue = (Number(r.net_fee) || 0) + (Number(r.vas_fee) || 0);
-        const expense =
-          (Number(r.distributor_amount) || 0) +
-          (Number(r.extra_subsidy) || 0) +
-          (Number(r.cash_support_amount) || 0) +
-          (Number(r.customer_support_amount) || 0) +
-          (Number(r.corp_card_amount) || 0);
-        const moyoFee = (r.channel === "모요" && !r.moyo_excluded) ? 88000 : 0;
-        const profit = revenue - expense - moyoFee;
+        const { revenue, expense, profit } = calcDashboardProfit(r);
 
         const cur = map.get(uid) ?? { uid, name, store, count: 0, revenue: 0, expense: 0, profit: 0 };
         cur.count += 1;
         cur.revenue += revenue;
-        cur.expense += expense + moyoFee;
+        cur.expense += expense;
         cur.profit += profit;
         map.set(uid, cur);
       });
@@ -111,7 +100,7 @@ export const StoreRevenueRanking = () => {
             <Trophy className="size-5 text-primary" />
             개인별 순수익 랭킹
           </h3>
-          <p className="text-xs text-muted-foreground mt-1">전사 통합 · (수수료+VAS) − 지원금 − 모요수수료</p>
+          <p className="text-xs text-muted-foreground mt-1">전사 통합 · (판매수수료+상품권) − 추가지원금 − 카드 − 모요수수료</p>
         </div>
         <span className="text-[10px] uppercase tracking-wider px-2 py-1 rounded-full bg-primary/10 text-primary border border-primary/30 font-bold">
           TOP 10
