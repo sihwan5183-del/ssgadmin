@@ -90,6 +90,7 @@ const SETTLEMENT_COLUMNS: Array<ColumnDef> = [
   ["cash_support_amount", "현금지원금(₩)"],
   ["receivable_amount", "미수금(₩)"],
   ["receivable_paid", "미수금 입금"],
+  ["voucher_amount", "상품권 금액(₩, 수익)", (r: any) => Number(r?.custom_fields?.voucher_amount ?? 0) || ""],
   ["net_fee", "순수익(₩)"],
   ["approval_status", "검수상태"],
 ];
