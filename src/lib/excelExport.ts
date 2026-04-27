@@ -140,7 +140,7 @@ export const SALES_COLUMNS: Array<ColumnDef> = [
 ];
 
 /** 컬럼 매핑 — 오퍼(지원금) 관리 전용 */
-export const OFFER_COLUMNS: Array<[string, string]> = [
+export const OFFER_COLUMNS: Array<ColumnDef> = [
   ["seq", "순번"],
   ["open_date", "개통일"],
   ["channel", "인입경로"],
