@@ -1397,6 +1397,51 @@ export type Database = {
         }
         Relationships: []
       }
+      recurring_expenses: {
+        Row: {
+          active: boolean
+          amount: number
+          auto_register: boolean
+          created_at: string
+          created_by: string
+          day_of_month: number
+          expense_type: string
+          id: string
+          last_generated_month: string | null
+          note: string | null
+          updated_at: string
+          vendor: string | null
+        }
+        Insert: {
+          active?: boolean
+          amount?: number
+          auto_register?: boolean
+          created_at?: string
+          created_by: string
+          day_of_month?: number
+          expense_type: string
+          id?: string
+          last_generated_month?: string | null
+          note?: string | null
+          updated_at?: string
+          vendor?: string | null
+        }
+        Update: {
+          active?: boolean
+          amount?: number
+          auto_register?: boolean
+          created_at?: string
+          created_by?: string
+          day_of_month?: number
+          expense_type?: string
+          id?: string
+          last_generated_month?: string | null
+          note?: string | null
+          updated_at?: string
+          vendor?: string | null
+        }
+        Relationships: []
+      }
       regulars: {
         Row: {
           birth_date: string | null
