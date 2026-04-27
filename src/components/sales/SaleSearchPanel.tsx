@@ -409,6 +409,20 @@ export const SaleSearchPanel = () => {
           고객명 · 전화번호 · 단말기 일련번호(IMEI)
         </span>
         <div className="ml-auto flex items-center gap-2 flex-wrap">
+          {(statusFilter || approvalFilter) && (
+            <Badge
+              variant="outline"
+              className="border-primary/40 text-primary bg-primary/10 gap-1 cursor-pointer"
+              onClick={() => {
+                setStatusFilter(null);
+                setApprovalFilter(null);
+                search(undefined, undefined, undefined, undefined, null, null);
+              }}
+              title="필터 해제"
+            >
+              필터: {statusFilter ?? approvalFilter} <X className="size-3" />
+            </Badge>
+          )}
           <Badge variant="outline" className="border-amber-400 text-amber-700 bg-amber-50 gap-1">
             <AlertCircle className="size-3" /> 미승인 {pendingCount}건
           </Badge>

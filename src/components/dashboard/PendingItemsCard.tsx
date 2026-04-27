@@ -18,7 +18,7 @@ export const PendingItemsCard = () => {
 
   return (
     <Link
-      to="/activities?pending=1"
+      to="/activities?pending=1&auto=1"
       className="glass rounded-xl p-3 shadow-card-elevated hover:border-amber-400 transition-colors group block relative overflow-hidden"
       title={urgent ? "긴급 처리 필요" : "클릭하면 활동관리에서 미처리만 필터됩니다"}
     >
