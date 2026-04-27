@@ -666,6 +666,81 @@ export const SaleSearchPanel = () => {
                     {isAdmin && " (관리자는 검수 탭에서 상태를 되돌릴 수 있습니다)"}
                   </div>
                 )}
+                {/* === 검수 핵심 요약 (번들·동판·TV·VAS) === */}
+                {(() => {
+                  const cf = ((selected as any).custom_fields ?? {}) as Record<string, any>;
+                  const tvLines: Array<{ rate_plan?: string; settop?: string }> =
+                    Array.isArray(cf.tv_lines) ? cf.tv_lines : [];
+                  const vas1 = cf.vas1 ?? cf.vas_1 ?? null;
+                  const vas2 = cf.vas2 ?? cf.vas_2 ?? null;
+                  const bundle = (selected as any).bundle as string | null;
+                  const isCash = !!(selected as any).cash_open || Number((selected as any).cash_support_amount ?? 0) > 0;
+                  const hasBundleInfo = bundle || isCash || tvLines.length > 0;
+                  return (
+                    <div className="mb-4 rounded-xl border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-primary/[0.02] p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="size-4 text-primary" />
+                        <h4 className="text-sm font-bold">검수 핵심 요약 — 번들 / 동판 / 추가회선</h4>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                        <div className="rounded-lg bg-background/60 border border-border/40 px-3 py-2">
+                          <div className="text-[10px] text-muted-foreground">결합/번들</div>
+                          <div className={"text-sm font-bold mt-0.5 " + (bundle ? "text-foreground" : "text-muted-foreground/60")}>
+                            {bundle || "(없음)"}
+                          </div>
+                        </div>
+                        <div className="rounded-lg bg-background/60 border border-border/40 px-3 py-2">
+                          <div className="text-[10px] text-muted-foreground">동판 / 현금개통</div>
+                          <div className={"text-sm font-bold mt-0.5 " + (isCash ? "text-warning" : "text-muted-foreground/60")}>
+                            {isCash ? "✓ 현금개통" : "(아니오)"}
+                          </div>
+                        </div>
+                        <div className="rounded-lg bg-background/60 border border-border/40 px-3 py-2">
+                          <div className="text-[10px] text-muted-foreground">가입유형</div>
+                          <div className="text-sm font-bold mt-0.5">{(selected as any).sale_type || "(미지정)"}</div>
+                        </div>
+                        <div className="rounded-lg bg-background/60 border border-border/40 px-3 py-2">
+                          <div className="text-[10px] text-muted-foreground">개통방식</div>
+                          <div className="text-sm font-bold mt-0.5">{(selected as any).open_method || "(미지정)"}</div>
+                        </div>
+                      </div>
+                      {tvLines.length > 0 && (
+                        <div className="rounded-lg border border-border/40 bg-background/60 p-3">
+                          <div className="text-[11px] font-semibold text-muted-foreground mb-2">
+                            TV 추가회선 ({tvLines.length}개)
+                          </div>
+                          <div className="space-y-1.5">
+                            {tvLines.map((l, i) => (
+                              <div key={i} className="flex items-center gap-3 text-xs px-2 py-1.5 rounded-md bg-muted/30">
+                                <span className="font-mono text-primary font-bold">TV{i + 1}</span>
+                                <span className="flex-1">
+                                  <span className="text-muted-foreground">요금제:</span>{" "}
+                                  <span className="font-medium">{l.rate_plan || "—"}</span>
+                                </span>
+                                <span className="flex-1">
+                                  <span className="text-muted-foreground">셋톱:</span>{" "}
+                                  <span className="font-medium">{l.settop || "—"}</span>
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {(vas1 || vas2) && (
+                        <div className="rounded-lg border border-border/40 bg-background/60 p-3">
+                          <div className="text-[11px] font-semibold text-muted-foreground mb-2">부가서비스</div>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div><span className="text-muted-foreground">VAS1:</span> <span className="font-medium">{vas1 || "—"}</span></div>
+                            <div><span className="text-muted-foreground">VAS2:</span> <span className="font-medium">{vas2 || "—"}</span></div>
+                          </div>
+                        </div>
+                      )}
+                      {!hasBundleInfo && !vas1 && !vas2 && (
+                        <p className="text-[11px] text-muted-foreground">번들/추가회선/부가서비스 정보가 없습니다.</p>
+                      )}
+                    </div>
+                  );
+                })()}
                 <div className="grid grid-cols-2 gap-3">
                   {EDITABLE_FIELDS.map(({ key, label, type }) => (
                     <div key={key} className="space-y-1.5">
