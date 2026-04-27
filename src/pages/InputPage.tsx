@@ -922,8 +922,8 @@ const InputPage = () => {
               </div>
             </Field>
           </Grid>
-          <Grid cols={2}>
-            <Field label="개통요금제">
+          <Grid cols={3}>
+            <Field label="개통요금제" className="md:col-span-2">
               {(() => {
                 const mapped = getPlansForProduct(form.product);
                 const plans = mapped.length > 0 ? mapped : RATE_PLANS;
@@ -945,6 +945,19 @@ const InputPage = () => {
                   </Select>
                 );
               })()}
+            </Field>
+            <Field label="할부 개월">
+              <Input
+                type="text"
+                inputMode="numeric"
+                placeholder="예: 24"
+                className="h-9 bg-input/60 text-xs"
+                value={customFields.installment_months ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^\d]/g, "").slice(0, 3);
+                  setCustomFields((f) => ({ ...f, installment_months: v }));
+                }}
+              />
             </Field>
             <Field label="동판/번들">
               <div className="flex items-center gap-2 h-9">
