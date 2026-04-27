@@ -72,7 +72,10 @@ const DONUT_COLORS = [
 ];
 
 // Standard products tracked for goals
-const GOAL_PRODUCTS = ["모바일", "인터넷", "TV", "스마트홈", "2ND"];
+const GOAL_PRODUCTS = ["모바일", "인터넷", "TV프리", "스마트홈", "2ND"];
+
+// Mix chart products (detailed breakdown)
+const MIX_PRODUCTS = ["모바일", "인터넷", "TV프리", "스마트홈", "부가서비스"];
 
 // Buckets for product breakdown
 function productBucket(p: string | null): string {
@@ -80,7 +83,8 @@ function productBucket(p: string | null): string {
   if (!s) return "기타";
   if (/2nd|세컨|워치|태블릿|tablet|watch/i.test(p ?? "")) return "2ND";
   if (/스마트홈|iot|홈/i.test(p ?? "")) return "스마트홈";
-  if (/tv/i.test(p ?? "")) return "TV";
+  // TV프리만 별도 집계 (일반 TV는 기타로 분류)
+  if (/tv\s*프리|프리tv|tv프리/i.test(p ?? "") || (p ?? "").includes("TV프리")) return "TV프리";
   if (/인터넷|기가|wifi/i.test(p ?? "")) return "인터넷";
   if (/모바일|mobile|usim|mnp|재약정|업셀/i.test(p ?? "")) return "모바일";
   return "기타";
@@ -88,7 +92,7 @@ function productBucket(p: string | null): string {
 
 function isWiredOrSolution(p: string | null) {
   const b = productBucket(p);
-  return b === "인터넷" || b === "TV" || b === "스마트홈" || b === "2ND";
+  return b === "인터넷" || b === "TV프리" || b === "스마트홈" || b === "2ND";
 }
 
 function categorize(sale: SaleRow): "모바일" | "결합/인터넷·TV" | "기타 오퍼" {
