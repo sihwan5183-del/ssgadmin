@@ -786,9 +786,6 @@ const InputPage = () => {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="개통년월">
-              <Input value={form.open_month ?? ""} onChange={(e) => set("open_month", e.target.value)} placeholder="2026. 4. 10" className="h-9 bg-input/60 text-xs" />
-            </Field>
             <Field label="옵션">
               <div className="flex items-center gap-2 h-9">
                 <Switch checked={!!form.moyo_excluded} onCheckedChange={(v) => set("moyo_excluded", v)} />
