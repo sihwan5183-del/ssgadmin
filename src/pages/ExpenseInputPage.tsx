@@ -256,10 +256,19 @@ export default function ExpenseInputPage() {
     const end = new Date((adForm.end_date || adForm.spend_date) + "T00:00:00");
     const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
     const inputAmount = Number(adForm.amount.replace(/[^0-9.-]/g, "")) || 0;
-    const dailyAmount =
-      adForm.amount_mode === "daily" ? inputAmount : Math.round(inputAmount / days);
-    const totalAmount =
-      adForm.amount_mode === "total" ? inputAmount : inputAmount * days;
+    // daily 모드에서 사용자가 [최종 합산 금액]을 수기로 수정한 경우 그 값을 우선 사용
+    const overrideTotal = Number((adForm.total_override || "").replace(/[^0-9.-]/g, "")) || 0;
+    const useOverride = adForm.amount_mode === "daily" && adForm.total_overridden && overrideTotal > 0;
+    const totalAmount = useOverride
+      ? overrideTotal
+      : adForm.amount_mode === "total"
+        ? inputAmount
+        : inputAmount * days;
+    const dailyAmount = useOverride
+      ? Math.round(overrideTotal / days)
+      : adForm.amount_mode === "daily"
+        ? inputAmount
+        : Math.round(inputAmount / days);
 
     // 기간 동안 매일 ad_spend 행을 생성하여 일자별로 자동 분산
     const inserts = [] as any[];
