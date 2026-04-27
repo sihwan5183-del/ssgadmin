@@ -923,7 +923,8 @@ const InputPage = () => {
             </Field>
           </Grid>
           <Grid cols={3}>
-            <Field label="개통요금제" className="md:col-span-2">
+            <div className="md:col-span-2">
+              <Field label="개통요금제">
               {(() => {
                 const mapped = getPlansForProduct(form.product);
                 const plans = mapped.length > 0 ? mapped : RATE_PLANS;
@@ -945,7 +946,8 @@ const InputPage = () => {
                   </Select>
                 );
               })()}
-            </Field>
+              </Field>
+            </div>
             <Field label="할부 개월">
               <Input
                 type="text"
