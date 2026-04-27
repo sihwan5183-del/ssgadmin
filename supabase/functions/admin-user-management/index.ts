@@ -406,7 +406,7 @@ Deno.serve(async (req) => {
       }).eq("user_id", body.user_id);
       if (profErr) return json({ error: profErr.message }, 400);
       // 활성 세션 테이블 정리
-      await admin.from("active_sessions").delete().eq("user_id", body.user_id).catch(() => {});
+      try { await admin.from("active_sessions").delete().eq("user_id", body.user_id); } catch { /* noop */ }
       await admin.from("auth_attempts").insert({
         user_id: body.user_id,
         kind: "soft_delete",
