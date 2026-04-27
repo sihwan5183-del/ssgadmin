@@ -21,7 +21,7 @@ export const RadialGoalGauge = () => {
       .select("id", { count: "exact", head: true })
       .gte("open_date", startDate)
       .lte("open_date", endDate)
-      .eq("status", "개통완료")
+      .in("status", ["개통완료", "설치완료"])
       .then(({ count }) => {
         if (alive) setCurrent(count ?? 0);
       });
