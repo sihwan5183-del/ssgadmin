@@ -1934,14 +1934,50 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_monthly_inquiries: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          inflow_count: number
+          note: string | null
+          updated_at: string
+          user_id: string
+          year_month: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          inflow_count?: number
+          note?: string | null
+          updated_at?: string
+          user_id: string
+          year_month: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          inflow_count?: number
+          note?: string | null
+          updated_at?: string
+          user_id?: string
+          year_month?: string
+        }
+        Relationships: []
+      }
       staff_product_goals: {
         Row: {
           created_at: string
           created_by: string | null
           goal_count: number
+          goal_type: string
+          goal_value: number
           id: string
           note: string | null
           product: string
+          sale_type: string
           updated_at: string
           user_id: string
           year_month: string
@@ -1950,9 +1986,12 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           goal_count?: number
+          goal_type?: string
+          goal_value?: number
           id?: string
           note?: string | null
           product: string
+          sale_type?: string
           updated_at?: string
           user_id: string
           year_month: string
@@ -1961,9 +2000,12 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           goal_count?: number
+          goal_type?: string
+          goal_value?: number
           id?: string
           note?: string | null
           product?: string
+          sale_type?: string
           updated_at?: string
           user_id?: string
           year_month?: string
