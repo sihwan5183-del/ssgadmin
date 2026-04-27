@@ -910,6 +910,32 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
                   );
                 })()}
                 <div className="grid grid-cols-2 gap-3">
+                  {/* 담당자 — UUID 대신 실명 드롭다운 (검색 가능) */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">담당자</Label>
+                    <Select
+                      value={(editForm.manager as string | null) ?? ""}
+                      onValueChange={(v) => setEditForm({ ...editForm, manager: v || null })}
+                      disabled={!canEdit}
+                    >
+                      <SelectTrigger className="h-10 bg-input/60">
+                        <SelectValue placeholder="담당자 선택">
+                          {(() => {
+                            const v = (editForm.manager as string | null) ?? "";
+                            if (!v) return "담당자 선택";
+                            return staffNameMap[v] ?? v;
+                          })()}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {staffList.map((s) => (
+                          <SelectItem key={s.user_id} value={s.user_id}>
+                            {s.display_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   {EDITABLE_FIELDS.map(({ key, label, type }) => (
                     <div key={key} className="space-y-1.5">
                       <Label className="text-xs text-muted-foreground">{label}</Label>
