@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { SaleSearchPanel } from "@/components/sales/SaleSearchPanel";
 import { LiveFeedSection } from "@/components/sales/LiveFeedSection";
@@ -440,6 +441,15 @@ function PendingItemsSection() {
 const ActivitiesPage = () => {
   const { scope } = useViewScope();
   const { isAdmin } = useRole();
+  const [searchParams] = useSearchParams();
+  const wantPending = searchParams.get("pending") === "1";
+  const tabParam = searchParams.get("tab");
+  const initialTab = tabParam || (wantPending ? "search" : (isAdmin ? "super" : "search"));
+  const [tab, setTab] = useState<string>(initialTab);
+  useEffect(() => {
+    if (wantPending) setTab("search");
+    else if (tabParam) setTab(tabParam);
+  }, [wantPending, tabParam]);
 
   return (
     <>
@@ -454,7 +464,7 @@ const ActivitiesPage = () => {
         }
       />
 
-      <Tabs defaultValue={isAdmin ? "super" : "search"} className="space-y-5">
+      <Tabs value={tab} onValueChange={setTab} className="space-y-5">
         <TabsList>
           {isAdmin && (
             <TabsTrigger value="super" className="gap-2">

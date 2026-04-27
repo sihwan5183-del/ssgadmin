@@ -32,11 +32,14 @@ import { Link } from "react-router-dom";
 import { useDashboardLayout } from "@/hooks/useDashboardLayout";
 import { DashboardLayoutManager } from "@/components/dashboard/DashboardLayoutManager";
 import { useRole } from "@/hooks/useRole";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 
 const Index = () => {
   const marketing = useMarketingSpend();
   const { excludedLabels } = useBudgetCategories();
   const { isAdmin } = useRole();
+  const { isSuperAdmin } = useSuperAdmin();
+  const canSeeAdminWidgets = isAdmin || isSuperAdmin;
   const { widgets, isVisible, toggle, move, resetToDefault } = useDashboardLayout();
   const liveRoi =
     marketing.current > 0
@@ -61,7 +64,7 @@ const Index = () => {
       {isVisible("review_alerts") && <MyReviewAlerts />}
 
       {/* 업무 바로가기 */}
-      {isVisible("quick_links") && (
+      {canSeeAdminWidgets && isVisible("quick_links") && (
         <section className="mb-1.5">
           <QuickLinksWidget />
         </section>
@@ -95,7 +98,7 @@ const Index = () => {
         </section>
       )}
 
-      {isVisible("channel_activation") && <ChannelActivationBreakdown />}
+      {canSeeAdminWidgets && isVisible("channel_activation") && <ChannelActivationBreakdown />}
       {isVisible("activation_breakdown") && <ActivationBreakdown />}
 
       {/* 나의 예상 인센티브 */}
