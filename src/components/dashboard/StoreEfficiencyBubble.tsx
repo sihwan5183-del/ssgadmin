@@ -44,7 +44,7 @@ export const StoreEfficiencyBubble = () => {
       const [salesRes, inquiriesRes] = await Promise.all([
         supabase
           .from("sales")
-          .select("channel, unit_price, net_fee, extra_subsidy, corp_card_amount, custom_fields, moyo_excluded")
+          .select("channel, unit_price, vas_fee, receivable_amount, receivable_paid, voucher, voucher_returned, trade_in_enabled, trade_in_confirmed, distributor_amount, cash_support_amount, cash_open, extra_subsidy, customer_support_amount, corp_card_amount, custom_fields, moyo_excluded")
           .gte("open_date", startDate)
           .lte("open_date", endDate)
           .eq("status", "개통완료")
@@ -102,7 +102,7 @@ export const StoreEfficiencyBubble = () => {
             <Sparkles className="size-5 text-primary" />
             채널별 효율 분석
           </h3>
-          <p className="text-xs text-muted-foreground mt-1">성공률 + 비용 대비 실질 순수익 · 모요 수수료 차감 반영</p>
+          <p className="text-xs text-muted-foreground mt-1">성공률 + 비용 대비 실질 순수익 · 5번 법인카드/모요 수수료 반영</p>
         </div>
       </div>
 
