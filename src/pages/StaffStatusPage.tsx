@@ -928,15 +928,15 @@ export default function StaffStatusPage() {
               </Card>
             </section>
 
-            {/* === 영업 생산성 분석 (Attach Rate / ARPU / Trend / Radar) === */}
+            {/* === 종합 영업 효율 분석 (Attach Rate / ARPU / Trend / Goals / Radar) === */}
             <section className="space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <h3 className="text-sm font-semibold flex items-center gap-2">
-                  <Activity className="size-4 text-primary-glow" /> 영업 생산성 분석
+                  <Activity className="size-4 text-primary-glow" /> 종합 영업 효율 분석
                   <Badge variant="outline" className="text-[10px] ml-1">{productivity.salesType}</Badge>
                 </h3>
                 <div className="text-[11px] text-muted-foreground">
-                  기준: 모바일 {analytics.mobileCount}건 · 전기 비교 ({prevRange.start} ~ {prevRange.end})
+                  기준: 모바일 {analytics.mobileCount}건 · 전월 비교 ({prevRange.start} ~ {prevRange.end})
                 </div>
               </div>
 
@@ -1009,35 +1009,40 @@ export default function StaffStatusPage() {
                 </Card>
               </div>
 
-              {/* Attach Rate Bar + Radar */}
-              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+              {/* Attach Rate (전 상품) + 월간 목표 달성률 + Radar */}
+              <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
+                {/* 전 상품 모바일 대비 유치율 — 가로형 멀티 막대 */}
                 <Card className="p-5 glass lg:col-span-3">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold">모바일 대비 항목별 유치율 (Attach Rate)</h4>
-                    <span className="text-[10px] text-muted-foreground">▲▼ 전기 대비</span>
+                    <h4 className="text-sm font-semibold">모바일 대비 전 상품 유치율 (Attach Rate)</h4>
+                    <span className="text-[10px] text-muted-foreground">▲▼ 전월 대비</span>
                   </div>
                   {analytics.mobileCount === 0 ? (
-                    <div className="h-48 grid place-items-center text-xs text-muted-foreground">모바일 개통 데이터 없음</div>
+                    <div className="h-56 grid place-items-center text-xs text-muted-foreground">모바일 개통 데이터 없음</div>
                   ) : (
                     <>
-                      <div className="h-48">
+                      <div className="h-56">
                         <ResponsiveContainer>
-                          <BarChart data={productivity.attachBars} margin={{ top: 8, right: 8, left: -16, bottom: 4 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.4)" />
-                            <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                            <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} unit="%" />
+                          <BarChart
+                            data={productivity.attachBars.filter((b) => b.name !== "2nd 디바이스")}
+                            layout="vertical"
+                            margin={{ top: 8, right: 24, left: 8, bottom: 4 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.4)" horizontal={false} />
+                            <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} unit="%" domain={[0, (dataMax: number) => Math.max(100, Math.ceil(dataMax / 10) * 10)]} />
+                            <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} width={70} />
                             <RTooltip
                               contentStyle={{ background: "hsl(0 0% 100% / 0.96)", color: "#374151", border: "1px solid hsl(0 0% 88%)", borderRadius: 12, fontSize: 12 }}
-                              formatter={(v: any) => [`${v}%`, "유치율"]}
+                              formatter={(v: any, _n: any, p: any) => [`${v}% (전월 ${p?.payload?.prev ?? 0}%)`, "유치율"]}
                             />
-                            <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                              {productivity.attachBars.map((b, i) => <Cell key={i} fill={b.fill} />)}
+                            <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={22}>
+                              {productivity.attachBars.filter((b) => b.name !== "2nd 디바이스").map((b, i) => <Cell key={i} fill={b.fill} />)}
                             </Bar>
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
-                      <div className="grid grid-cols-5 gap-1.5 mt-2">
-                        {productivity.attachBars.map((b) => (
+                      <div className="grid grid-cols-4 gap-1.5 mt-2">
+                        {productivity.attachBars.filter((b) => b.name !== "2nd 디바이스").map((b) => (
                           <div key={b.name} className="text-center p-1.5 rounded-md bg-card/40 border border-border/40">
                             <div className="text-[10px] text-muted-foreground truncate">{b.name}</div>
                             <div className="text-sm font-bold tabular-nums">{b.value}%</div>
@@ -1049,24 +1054,68 @@ export default function StaffStatusPage() {
                   )}
                 </Card>
 
-                <Card className="p-5 glass lg:col-span-2">
-                  <h4 className="text-sm font-semibold mb-2">영업 성향 레이더</h4>
-                  <div className="h-56">
-                    <ResponsiveContainer>
-                      <RadarChart data={productivity.radarData} outerRadius="78%">
-                        <PolarGrid stroke="hsl(var(--border) / 0.5)" />
-                        <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                        <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
-                        <Radar name="유치율" dataKey="value" stroke="hsl(45 95% 60%)" fill="hsl(45 95% 60%)" fillOpacity={0.45} />
-                        <RTooltip
-                          contentStyle={{ background: "hsl(0 0% 100% / 0.96)", color: "#374151", border: "1px solid hsl(0 0% 88%)", borderRadius: 12, fontSize: 12 }}
-                          formatter={(v: any) => [`${v}%`, "유치율"]}
-                        />
-                      </RadarChart>
-                    </ResponsiveContainer>
+                {/* 월간 목표 달성률 — 유치율 옆 배치 */}
+                <Card className="p-5 glass lg:col-span-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold flex items-center gap-2">
+                      <Target className="size-4 text-primary-glow" /> 월간 목표 달성률
+                    </h4>
+                    <Badge variant="outline" className="text-[10px]">{yearMonth}</Badge>
+                  </div>
+                  <div className="space-y-2.5">
+                    {selectedGoals.map((g) => {
+                      const colorMap: Record<string, string> = {
+                        모바일: "hsl(45 95% 60%)",
+                        인터넷: "hsl(195 90% 60%)",
+                        TV프리: "hsl(280 80% 70%)",
+                        스마트홈: "hsl(155 75% 55%)",
+                        "2ND": "hsl(15 85% 65%)",
+                      };
+                      return (
+                        <div key={g.product} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-medium flex items-center gap-2">
+                              <span className="size-2 rounded-full" style={{ background: colorMap[g.product] ?? "hsl(var(--primary))" }} />
+                              {g.product}
+                            </span>
+                            <span className="text-muted-foreground tabular-nums">
+                              <span className="text-amber-700 font-semibold">{g.achieved}</span>
+                              {g.goal > 0 ? (
+                                <> / {g.goal}대 · <span className={g.pct >= 100 ? "text-emerald-400 font-bold" : "text-emerald-300 font-semibold"}>{g.pct}%</span></>
+                              ) : (
+                                <> · 목표 미설정</>
+                              )}
+                            </span>
+                          </div>
+                          <Progress value={g.goal > 0 ? g.pct : 0} className="h-2" />
+                        </div>
+                      );
+                    })}
                   </div>
                 </Card>
               </div>
+
+              {/* Radar — 영업 성향 시각화 */}
+              <Card className="p-5 glass">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold">영업 성향 레이더 (전 상품 유치율)</h4>
+                  <span className="text-[10px] text-muted-foreground">중심에서 멀수록 우수</span>
+                </div>
+                <div className="h-60">
+                  <ResponsiveContainer>
+                    <RadarChart data={productivity.radarData} outerRadius="78%">
+                      <PolarGrid stroke="hsl(var(--border) / 0.5)" />
+                      <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                      <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+                      <Radar name="유치율" dataKey="value" stroke="hsl(45 95% 60%)" fill="hsl(45 95% 60%)" fillOpacity={0.45} />
+                      <RTooltip
+                        contentStyle={{ background: "hsl(0 0% 100% / 0.96)", color: "#374151", border: "1px solid hsl(0 0% 88%)", borderRadius: 12, fontSize: 12 }}
+                        formatter={(v: any) => [`${v}%`, "유치율"]}
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
             </section>
 
             {/* Donut + Simulator (existing) */}
