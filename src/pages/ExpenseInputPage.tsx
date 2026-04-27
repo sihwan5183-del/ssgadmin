@@ -645,13 +645,126 @@ export default function ExpenseInputPage() {
               💡 항목 종류를 추가/수정하려면 좌측 메뉴 <span className="text-foreground font-medium">입력 항목 관리 → 지출 항목</span>에서 변경하세요.
             </p>
           </TabsContent>
+
+          <TabsContent value="고정지출">
+            <form onSubmit={submitFixed} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <Label>집행일 *</Label>
+                <Input type="date" value={fixedForm.spend_date}
+                  onChange={(e) => setFixedForm({ ...fixedForm, spend_date: e.target.value })} />
+              </div>
+              <div>
+                <Label>고정지출 항목 *</Label>
+                <Select value={fixedForm.expense_type}
+                  onValueChange={(v) => setFixedForm({ ...fixedForm, expense_type: v })}>
+                  <SelectTrigger><SelectValue placeholder="항목 선택" /></SelectTrigger>
+                  <SelectContent>
+                    {FIXED_EXPENSE_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>월 고정 금액 (₩) *</Label>
+                <Input inputMode="numeric" placeholder="예: 29000"
+                  value={fixedForm.amount}
+                  onChange={(e) => setFixedForm({ ...fixedForm, amount: e.target.value })} />
+              </div>
+              <div className="md:col-span-2">
+                <Label>거래처 / 서비스명</Label>
+                <Input placeholder="예: Adobe Creative Cloud"
+                  value={fixedForm.vendor}
+                  onChange={(e) => setFixedForm({ ...fixedForm, vendor: e.target.value })} />
+              </div>
+              <div>
+                <Label>매월 자동 등록일</Label>
+                <Input type="number" min={1} max={28}
+                  value={fixedForm.day_of_month}
+                  onChange={(e) => setFixedForm({ ...fixedForm, day_of_month: Number(e.target.value) })} />
+                <p className="text-[10px] text-muted-foreground mt-1">매월 해당일에 자동 생성 (1~28)</p>
+              </div>
+              <div className="md:col-span-2 lg:col-span-3">
+                <Label>메모</Label>
+                <Textarea rows={2} placeholder="결제수단, 계정, 갱신 주기 등"
+                  value={fixedForm.note}
+                  onChange={(e) => setFixedForm({ ...fixedForm, note: e.target.value })} />
+              </div>
+              <div className="md:col-span-2 lg:col-span-3 flex items-center justify-between gap-3 flex-wrap">
+                <label className="flex items-center gap-2 text-sm">
+                  <Switch checked={fixedForm.auto_register}
+                    onCheckedChange={(v) => setFixedForm({ ...fixedForm, auto_register: v })} />
+                  <span className="flex items-center gap-1.5">
+                    <Repeat className="size-3.5 text-primary" />
+                    매월 자동 등록 (템플릿 저장)
+                  </span>
+                </label>
+                <Button type="submit" disabled={saving} className="gap-2">
+                  <PlusCircle className="size-4" />
+                  {saving ? "저장 중..." : "고정지출 저장"}
+                </Button>
+              </div>
+            </form>
+            <p className="text-[11px] text-muted-foreground mt-3">
+              💡 항목 종류는 <span className="text-foreground font-medium">입력 항목 관리 → 고정지출 항목</span>에서 직접 추가/수정/삭제할 수 있습니다.
+            </p>
+
+            {/* 자동 등록 템플릿 목록 */}
+            <div className="mt-6 border-t border-border/50 pt-5">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-semibold text-sm flex items-center gap-2">
+                  <CalendarClock className="size-4 text-primary" />
+                  매월 자동 등록 템플릿 ({recurring.length})
+                </h4>
+              </div>
+              {recurring.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-3">아직 등록된 자동 템플릿이 없습니다</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-xs text-muted-foreground border-b border-border/50">
+                      <tr>
+                        <th className="text-left py-2 pr-3">항목</th>
+                        <th className="text-left py-2 pr-3">거래처</th>
+                        <th className="text-right py-2 pr-3">월 금액</th>
+                        <th className="text-center py-2 pr-3">등록일</th>
+                        <th className="text-center py-2 pr-3">최근 생성월</th>
+                        <th className="text-center py-2 pr-3">활성</th>
+                        <th className="text-right py-2 pr-3"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recurring.map((r) => (
+                        <tr key={r.id} className="border-b border-border/30 hover:bg-muted/30">
+                          <td className="py-2 pr-3 font-medium">{r.expense_type}</td>
+                          <td className="py-2 pr-3 text-muted-foreground">{r.vendor ?? "-"}</td>
+                          <td className="py-2 pr-3 text-right font-mono">{formatKRW(Number(r.amount))}</td>
+                          <td className="py-2 pr-3 text-center text-muted-foreground">매월 {r.day_of_month}일</td>
+                          <td className="py-2 pr-3 text-center text-muted-foreground">{r.last_generated_month ?? "-"}</td>
+                          <td className="py-2 pr-3 text-center">
+                            <Switch checked={r.active} onCheckedChange={() => toggleRecurringActive(r)} />
+                          </td>
+                          <td className="py-2 pr-3 text-right">
+                            {(user?.id === r.created_by || isAdmin) && (
+                              <Button variant="ghost" size="icon" onClick={() => deleteRecurring(r.id)} className="size-8">
+                                <Trash2 className="size-4 text-destructive" />
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </TabsContent>
         </Tabs>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
         <Card className="p-5 glass">
           <div className="text-xs text-muted-foreground mb-3 flex items-center gap-2">
             <Megaphone className="size-3.5" /> 매체별 광고비 합계
+            <span className="ml-auto text-[11px] tabular-nums text-foreground">{formatKRW(totals.adTotal)}</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {Object.entries(totals.byMedia).length === 0 && (
@@ -669,12 +782,31 @@ export default function ExpenseInputPage() {
         <Card className="p-5 glass">
           <div className="text-xs text-muted-foreground mb-3 flex items-center gap-2">
             <Receipt className="size-3.5" /> 항목별 기타지출 합계
+            <span className="ml-auto text-[11px] tabular-nums text-foreground">{formatKRW(totals.etcTotal)}</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {Object.entries(totals.byType).length === 0 && (
               <span className="text-sm text-muted-foreground">아직 데이터가 없습니다</span>
             )}
             {Object.entries(totals.byType)
+              .sort((a, b) => b[1] - a[1])
+              .map(([t, v]) => (
+                <Badge key={t} variant="outline" className="text-xs">
+                  {t} · <span className="ml-1 font-semibold text-foreground">{formatKRW(v)}</span>
+                </Badge>
+              ))}
+          </div>
+        </Card>
+        <Card className="p-5 glass">
+          <div className="text-xs text-muted-foreground mb-3 flex items-center gap-2">
+            <Repeat className="size-3.5" /> 항목별 고정지출 합계
+            <span className="ml-auto text-[11px] tabular-nums text-foreground">{formatKRW(totals.fixedTotal)}</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(totals.byFixed).length === 0 && (
+              <span className="text-sm text-muted-foreground">아직 데이터가 없습니다</span>
+            )}
+            {Object.entries(totals.byFixed)
               .sort((a, b) => b[1] - a[1])
               .map(([t, v]) => (
                 <Badge key={t} variant="outline" className="text-xs">
