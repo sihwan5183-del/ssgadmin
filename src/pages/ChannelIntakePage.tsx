@@ -8,9 +8,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   PhoneOff, RefreshCw, XCircle, Phone, Search, Clock, AlertTriangle,
-  MessageSquare, Plus, BarChart3, ListPlus, ChevronRight,
+  MessageSquare, Plus, BarChart3, ListPlus, ChevronRight, Pencil, Trash2, History,
 } from "lucide-react";
 import {
   Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, Funnel, FunnelChart,
@@ -22,11 +33,10 @@ import { InquiryForm } from "@/components/inquiries/InquiryForm";
 import { FailureAnalysisChart } from "@/components/inquiries/FailureAnalysisChart";
 import { LeadSourceChart } from "@/components/inquiries/LeadSourceChart";
 import { StaffTimelinePanel } from "@/components/inquiries/StaffTimelinePanel";
+import { useInquiryStatuses } from "@/hooks/useInquiryStatuses";
+import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-
-const CRM_STATUSES = ["미처리", "문의중", "부재", "재케어", "실패", "방문예약", "개통완료"] as const;
-type CrmStatus = (typeof CRM_STATUSES)[number];
 
 const FAIL_REASONS = [
   "가격(지원금) 불만",
