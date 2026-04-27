@@ -4,12 +4,13 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
+import { Search, Save } from "lucide-react";
 import { StaffDetailDialog } from "@/components/admin/accounts/StaffDetailDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStores } from "@/hooks/useStores";
 import { ROLE_LABELS, type AppRole } from "@/hooks/useRole";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { useRole } from "@/hooks/useRole";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -50,16 +51,32 @@ export default function AccountStaffPage() {
   const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
   const [deleting, setDeleting] = useState(false);
   const { isSuperAdmin } = useSuperAdmin();
+  const { isAdmin } = useRole();
   const { stores } = useStores();
+  const yearMonth = useMemo(() => new Date().toISOString().slice(0, 7), []);
+  const [inflowMap, setInflowMap] = useState<Record<string, number>>({});
+  const [successMap, setSuccessMap] = useState<Record<string, number>>({});
+  const [inflowEdit, setInflowEdit] = useState<Record<string, string>>({});
+  const [savingInflow, setSavingInflow] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const [{ data: profs }, { data: roleRows }] = await Promise.all([
+    const monthStart = `${yearMonth}-01`;
+    const monthEnd = new Date(new Date(monthStart).getFullYear(), new Date(monthStart).getMonth() + 1, 0).toISOString().slice(0, 10);
+    const [{ data: profs }, { data: roleRows }, { data: inflowRows }, { data: salesRows }] = await Promise.all([
       supabase
         .from("profiles")
         .select("user_id, display_name, phone, team, store, position, status, hire_date, created_at")
         .order("created_at", { ascending: false }),
       supabase.from("user_roles").select("user_id, role"),
+      supabase.from("staff_monthly_inquiries")
+        .select("user_id, inflow_count")
+        .eq("year_month", yearMonth),
+      supabase.from("sales")
+        .select("created_by, approval_status")
+        .gte("open_date", monthStart)
+        .lte("open_date", monthEnd)
+        .limit(20000),
     ]);
     setRows((profs ?? []) as Row[]);
     const roleMap: Record<string, AppRole[]> = {};
@@ -67,6 +84,15 @@ export default function AccountStaffPage() {
       (roleMap[r.user_id] ||= []).push(r.role);
     }
     setRolesByUser(roleMap);
+    const im: Record<string, number> = {};
+    (inflowRows ?? []).forEach((r: any) => { im[r.user_id] = r.inflow_count; });
+    setInflowMap(im);
+    const sm: Record<string, number> = {};
+    (salesRows ?? []).forEach((r: any) => {
+      if (r.approval_status === "취소" || r.approval_status === "반려") return;
+      sm[r.created_by] = (sm[r.created_by] ?? 0) + 1;
+    });
+    setSuccessMap(sm);
     // 이메일 일괄 조회 (관리자만 응답 받음)
     supabase.functions
       .invoke("admin-user-management", { body: { action: "list_user_emails" } })
@@ -75,9 +101,29 @@ export default function AccountStaffPage() {
       })
       .catch(() => {});
     setLoading(false);
-  }, []);
+  }, [yearMonth]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  const saveInflow = async (uid: string) => {
+    const v = inflowEdit[uid];
+    if (v === undefined) return;
+    const num = Math.max(0, parseInt(v || "0", 10) || 0);
+    setSavingInflow(uid);
+    try {
+      const { error } = await supabase
+        .from("staff_monthly_inquiries")
+        .upsert({ user_id: uid, year_month: yearMonth, inflow_count: num }, { onConflict: "user_id,year_month" });
+      if (error) throw error;
+      setInflowMap((m) => ({ ...m, [uid]: num }));
+      setInflowEdit((m) => { const x = { ...m }; delete x[uid]; return x; });
+      toast.success("인입 건수 저장됨");
+    } catch (e: any) {
+      toast.error("저장 실패: " + (e.message ?? ""));
+    } finally {
+      setSavingInflow(null);
+    }
+  };
 
   const performSoftDelete = async () => {
     if (!deleteTarget) return;
@@ -169,6 +215,9 @@ export default function AccountStaffPage() {
                   <th className="text-left px-3 py-2">연락처</th>
                   <th className="text-left px-3 py-2">입사일</th>
                   <th className="text-left px-3 py-2">상태</th>
+                  <th className="text-right px-3 py-2">인입({yearMonth.slice(5)})</th>
+                  <th className="text-right px-3 py-2">개통</th>
+                  <th className="text-right px-3 py-2">전환율</th>
                   <th className="text-right px-3 py-2"></th>
                 </tr>
               </thead>
@@ -176,6 +225,10 @@ export default function AccountStaffPage() {
                 {filtered.map((r) => {
                   const s = STATUS_BADGE[r.status] ?? { label: r.status, variant: "outline" as const };
                   const rs = rolesByUser[r.user_id] ?? [];
+                  const inflow = inflowMap[r.user_id] ?? 0;
+                  const success = successMap[r.user_id] ?? 0;
+                  const conv = inflow > 0 ? Math.round((success / inflow) * 100) : 0;
+                  const editVal = inflowEdit[r.user_id];
                   return (
                     <tr key={r.user_id} className="border-b border-border/30 hover:bg-muted/30">
                       <td className="px-3 py-2 font-medium">{r.display_name}</td>
@@ -196,6 +249,28 @@ export default function AccountStaffPage() {
                       <td className="px-3 py-2 text-muted-foreground">{r.hire_date ?? "-"}</td>
                       <td className="px-3 py-2"><Badge variant={s.variant}>{s.label}</Badge></td>
                       <td className="px-3 py-2 text-right">
+                        {isAdmin ? (
+                          <div className="flex items-center justify-end gap-1">
+                            <Input
+                              type="number" min={0} className="h-7 w-20 text-right tabular-nums"
+                              value={editVal !== undefined ? editVal : String(inflow)}
+                              onChange={(e) => setInflowEdit((m) => ({ ...m, [r.user_id]: e.target.value }))}
+                            />
+                            {editVal !== undefined && (
+                              <Button size="sm" variant="ghost" className="h-7 px-2" disabled={savingInflow === r.user_id} onClick={() => saveInflow(r.user_id)}>
+                                <Save className="size-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="tabular-nums text-muted-foreground">{inflow}</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{success}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        <span className={conv >= 50 ? "text-emerald-600 font-semibold" : conv >= 25 ? "text-amber-600 font-medium" : "text-muted-foreground"}>{inflow > 0 ? `${conv}%` : "-"}</span>
+                      </td>
+                      <td className="px-3 py-2 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button size="sm" variant="ghost" onClick={() => setSelected({ id: r.user_id, email: emails[r.user_id] ?? null })}>상세</Button>
                           {isSuperAdmin && r.status !== "resigned" && r.status !== "deleted" && (
@@ -215,7 +290,7 @@ export default function AccountStaffPage() {
                   );
                 })}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={10} className="text-center py-10 text-muted-foreground text-sm">결과 없음</td></tr>
+                  <tr><td colSpan={13} className="text-center py-10 text-muted-foreground text-sm">결과 없음</td></tr>
                 )}
               </tbody>
             </table>
