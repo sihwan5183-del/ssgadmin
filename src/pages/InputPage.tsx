@@ -1082,7 +1082,8 @@ const InputPage = () => {
                        .map((m: any) => m.rate_plan as string),
                    ));
                    return (
-                 <Grid cols={2}>
+                 <div className="grid grid-cols-12 gap-2">
+                  <div className="col-span-12 md:col-span-4">
                   <Field label="부가서비스 1">
                     {(() => {
                       const mismatch = defaults?.default_vas1 && form.vas1 && form.vas1 !== defaults.default_vas1 && !autoFilledFields.has("vas1");
@@ -1115,6 +1116,8 @@ const InputPage = () => {
                       );
                     })()}
                   </Field>
+                  </div>
+                  <div className="col-span-12 md:col-span-4">
                   <Field label="부가서비스 2">
                     {(() => {
                       const mismatch = defaults?.default_vas2 && form.vas2 && form.vas2 !== defaults.default_vas2 && !autoFilledFields.has("vas2");
@@ -1147,7 +1150,28 @@ const InputPage = () => {
                       );
                     })()}
                   </Field>
-                </Grid>
+                  </div>
+                  <div className="col-span-12 md:col-span-4">
+                    <Field label="복지할인">
+                      <Select
+                        value={customFields.welfare_discount ?? "해당없음"}
+                        onValueChange={(v) => setCustomFields((f) => ({ ...f, welfare_discount: v }))}
+                      >
+                        <SelectTrigger className="h-9 bg-input/60 text-xs">
+                          <SelectValue placeholder="해당없음" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="해당없음">해당없음</SelectItem>
+                          <SelectItem value="기초생활수급자">기초생활수급자</SelectItem>
+                          <SelectItem value="차상위계층">차상위계층</SelectItem>
+                          <SelectItem value="장애인">장애인</SelectItem>
+                          <SelectItem value="국가유공자">국가유공자</SelectItem>
+                          <SelectItem value="기초연금수급자">기초연금수급자</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  </div>
+                </div>
                    );
                  })()}
               </div>
