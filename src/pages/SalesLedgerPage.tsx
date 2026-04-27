@@ -28,6 +28,7 @@ import { PaginationBar } from "@/components/ui/pagination-bar";
 import { exportToExcel, SALES_COLUMNS, OFFER_COLUMNS } from "@/lib/excelExport";
 import { useQuickExport, useLastUpdated } from "@/hooks/useQuickExport";
 import { maskPhone, maskName } from "@/lib/maskPii";
+import { useResignedUsers, ResignedTag } from "@/hooks/useResignedUsers";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
