@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
@@ -9,15 +9,18 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { toast } from "sonner";
 import {
   Search, Users, TrendingUpIcon, Coins, Target, Sparkles, Info,
   Smartphone, Wifi, Gift, Calculator, CheckCircle2, Clock, XCircle, ChevronDown,
+  PhoneCall, Package, Settings2, Plus,
 } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RTooltip, RadialBarChart, RadialBar, PolarAngleAxis } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RTooltip, RadialBarChart, RadialBar, PolarAngleAxis, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { formatKRWShort } from "@/data/financeData";
 import { useIncentiveRates } from "@/hooks/useIncentiveRates";
 import { calcTotalIncentive, forecastIncentive, calcIncentiveForSale } from "@/lib/incentiveEngine";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Profile {
@@ -36,24 +39,58 @@ interface SaleRow {
   sale_type: string | null;
   open_date: string | null;
   manager: string | null;
+  status: string | null;
   approval_status: string;
   pending_resolved: boolean;
   pending_items: any;
   distributor_amount: number | null;
   net_fee: number | null;
+  vas1: string | null;
+  vas2: string | null;
 }
 
-// Donut palette tuned for dark mode (gold + emerald accents)
+interface InquiryRow {
+  id: string;
+  manager: string | null;
+  status: string;
+  converted_sale_id: string | null;
+  inquiry_date: string;
+  channel: string;
+}
+
+interface GoalRow {
+  id: string;
+  user_id: string;
+  product: string;
+  year_month: string;
+  goal_count: number;
+}
+
 const DONUT_COLORS = [
-  "hsl(45 95% 60%)",   // gold
-  "hsl(155 75% 55%)",  // emerald
-  "hsl(195 90% 60%)",  // cyan
-  "hsl(280 80% 70%)",  // violet
-  "hsl(15 85% 65%)",   // coral
-  "hsl(330 80% 65%)",  // pink
+  "hsl(45 95% 60%)", "hsl(155 75% 55%)", "hsl(195 90% 60%)",
+  "hsl(280 80% 70%)", "hsl(15 85% 65%)", "hsl(330 80% 65%)",
 ];
 
-// Map a sale to a high-level revenue category for the donut
+// Standard products tracked for goals
+const GOAL_PRODUCTS = ["모바일", "인터넷", "TV", "스마트홈", "2ND"];
+
+// Buckets for product breakdown
+function productBucket(p: string | null): string {
+  const s = (p ?? "").toLowerCase();
+  if (!s) return "기타";
+  if (/2nd|세컨|워치|태블릿|tablet|watch/i.test(p ?? "")) return "2ND";
+  if (/스마트홈|iot|홈/i.test(p ?? "")) return "스마트홈";
+  if (/tv/i.test(p ?? "")) return "TV";
+  if (/인터넷|기가|wifi/i.test(p ?? "")) return "인터넷";
+  if (/모바일|mobile|usim|mnp|재약정|업셀/i.test(p ?? "")) return "모바일";
+  return "기타";
+}
+
+function isWiredOrSolution(p: string | null) {
+  const b = productBucket(p);
+  return b === "인터넷" || b === "TV" || b === "스마트홈" || b === "2ND";
+}
+
 function categorize(sale: SaleRow): "모바일" | "결합/인터넷·TV" | "기타 오퍼" {
   const p = (sale.product ?? "").toLowerCase();
   if (/(인터넷|tv|결합|iot|기가)/i.test(sale.product ?? "")) return "결합/인터넷·TV";
@@ -76,6 +113,33 @@ const STATUS_BADGE: Record<string, { label: string; className: string; icon: typ
   취소: { label: "취소", className: "border-destructive/40 text-destructive bg-destructive/10", icon: XCircle },
 };
 
+// Match a sale to a profile: manager-name match preferred, fallback to created_by
+function buildOwnerResolver(profiles: Profile[]) {
+  const byName = new Map<string, string>();
+  profiles.forEach((p) => byName.set(p.display_name.trim().toLowerCase(), p.user_id));
+  return (sale: { manager: string | null; created_by: string }) => {
+    const m = (sale.manager ?? "").trim().toLowerCase();
+    if (m && byName.has(m)) return byName.get(m)!;
+    return sale.created_by;
+  };
+}
+
+function buildInquiryOwnerResolver(profiles: Profile[]) {
+  const byName = new Map<string, string>();
+  profiles.forEach((p) => byName.set(p.display_name.trim().toLowerCase(), p.user_id));
+  return (row: { manager: string | null }) => {
+    const m = (row.manager ?? "").trim().toLowerCase();
+    if (m && byName.has(m)) return byName.get(m)!;
+    return null;
+  };
+}
+
+// "성공" = 취소/반려가 아닌 모든 것
+function isSuccess(s: SaleRow) {
+  const st = s.approval_status;
+  return st !== "취소" && st !== "반려";
+}
+
 export default function StaffStatusPage() {
   const { user } = useAuth();
   const { isAdmin, isManager, loading: roleLoading } = useRole();
@@ -85,22 +149,31 @@ export default function StaffStatusPage() {
   const [search, setSearch] = useState("");
   const [team, setTeam] = useState<string>("__all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [sales, setSales] = useState<SaleRow[]>([]);
+  const [allSales, setAllSales] = useState<SaleRow[]>([]);
+  const [allInquiries, setAllInquiries] = useState<InquiryRow[]>([]);
+  const [goals, setGoals] = useState<GoalRow[]>([]);
   const [loading, setLoading] = useState(false);
   const { rates: incentiveRates } = useIncentiveRates();
   const [showDetail, setShowDetail] = useState(false);
+  const [goalDialogOpen, setGoalDialogOpen] = useState(false);
 
-  // Simulator state
+  // Simulator
   const [simSaleType, setSimSaleType] = useState<string>("__any");
   const [simProduct, setSimProduct] = useState<string>("__any");
   const [simModel, setSimModel] = useState<string>("__any");
 
   const canViewAll = isAdmin || isManager;
+  const yearMonth = useMemo(() => (endDate || new Date().toISOString().slice(0, 10)).slice(0, 7), [endDate]);
 
+  // Load profiles
   useEffect(() => {
     if (roleLoading || !user) return;
     (async () => {
-      const { data } = await supabase.from("profiles").select("user_id, display_name, team").order("display_name");
+      const { data } = await supabase
+        .from("profiles")
+        .select("user_id, display_name, team")
+        .eq("status", "active")
+        .order("display_name");
       const list = (data ?? []) as Profile[];
       const visible = canViewAll ? list : list.filter((p) => p.user_id === user.id);
       setProfiles(visible);
@@ -124,58 +197,89 @@ export default function StaffStatusPage() {
 
   const selected = profiles.find((p) => p.user_id === selectedId) ?? null;
 
-  useEffect(() => {
-    if (!selected) { setSales([]); return; }
-    setLoading(true);
-    (async () => {
-      const { data } = await supabase
-        .from("sales")
-        .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, approval_status, pending_resolved, pending_items, distributor_amount, net_fee")
-        .eq("created_by", selected.user_id)
-        .gte("open_date", startDate)
-        .lte("open_date", endDate)
-        .order("open_date", { ascending: false });
-      setSales((data ?? []) as SaleRow[]);
-      setLoading(false);
-    })();
-  }, [selected, startDate, endDate]);
-
-  // === Aggregated leaderboard for ALL visible staff ===
-  const [allSales, setAllSales] = useState<SaleRow[]>([]);
-  const [allLoading, setAllLoading] = useState(false);
-
-  useEffect(() => {
+  // Load ALL sales + inquiries + goals once per period (single query — efficient)
+  const reloadData = useCallback(async () => {
     if (roleLoading || profiles.length === 0) return;
-    setAllLoading(true);
-    (async () => {
-      const ids = profiles.map((p) => p.user_id);
-      const { data } = await supabase
-        .from("sales")
-        .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, approval_status, pending_resolved, pending_items, distributor_amount, net_fee")
+    setLoading(true);
+    const ids = profiles.map((p) => p.user_id);
+    const names = profiles.map((p) => p.display_name);
+    // Sales: rows where created_by in ids OR manager in names — fetch via two queries to avoid OR complexity
+    const [{ data: byCreator }, { data: byManager }, { data: inq }, { data: goalRows }] = await Promise.all([
+      supabase.from("sales")
+        .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, status, approval_status, pending_resolved, pending_items, distributor_amount, net_fee, vas1, vas2")
         .in("created_by", ids)
         .gte("open_date", startDate)
-        .lte("open_date", endDate);
-      setAllSales((data ?? []) as SaleRow[]);
-      setAllLoading(false);
-    })();
-  }, [profiles, startDate, endDate, roleLoading]);
+        .lte("open_date", endDate)
+        .order("open_date", { ascending: false })
+        .limit(5000),
+      supabase.from("sales")
+        .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, status, approval_status, pending_resolved, pending_items, distributor_amount, net_fee, vas1, vas2")
+        .in("manager", names)
+        .gte("open_date", startDate)
+        .lte("open_date", endDate)
+        .order("open_date", { ascending: false })
+        .limit(5000),
+      supabase.from("inquiries")
+        .select("id, manager, status, converted_sale_id, inquiry_date, channel")
+        .in("manager", names)
+        .gte("inquiry_date", startDate)
+        .lte("inquiry_date", endDate)
+        .limit(5000),
+      supabase.from("staff_product_goals")
+        .select("id, user_id, product, year_month, goal_count")
+        .in("user_id", ids)
+        .eq("year_month", yearMonth),
+    ]);
+    // Merge & dedupe
+    const map = new Map<string, SaleRow>();
+    [...(byCreator ?? []), ...(byManager ?? [])].forEach((r: any) => map.set(r.id, r as SaleRow));
+    setAllSales(Array.from(map.values()));
+    setAllInquiries((inq ?? []) as InquiryRow[]);
+    setGoals((goalRows ?? []) as GoalRow[]);
+    setLoading(false);
+  }, [profiles, startDate, endDate, yearMonth, roleLoading]);
+
+  useEffect(() => { reloadData(); }, [reloadData]);
+
+  const ownerOf = useMemo(() => buildOwnerResolver(profiles), [profiles]);
+  const inquiryOwnerOf = useMemo(() => buildInquiryOwnerResolver(profiles), [profiles]);
+
+  // Group sales by owner
+  const salesByOwner = useMemo(() => {
+    const m = new Map<string, SaleRow[]>();
+    allSales.forEach((s) => {
+      const id = ownerOf(s);
+      const arr = m.get(id) ?? [];
+      arr.push(s);
+      m.set(id, arr);
+    });
+    return m;
+  }, [allSales, ownerOf]);
+
+  const inquiriesByOwner = useMemo(() => {
+    const m = new Map<string, InquiryRow[]>();
+    allInquiries.forEach((q) => {
+      const id = inquiryOwnerOf(q);
+      if (!id) return;
+      const arr = m.get(id) ?? [];
+      arr.push(q);
+      m.set(id, arr);
+    });
+    return m;
+  }, [allInquiries, inquiryOwnerOf]);
 
   const leaderboard = useMemo(() => {
-    const byUser = new Map<string, SaleRow[]>();
-    allSales.forEach((s) => {
-      const arr = byUser.get(s.created_by) ?? [];
-      arr.push(s);
-      byUser.set(s.created_by, arr);
-    });
     const rows = filteredProfiles.map((p) => {
-      const list = byUser.get(p.user_id) ?? [];
-      const { total } = calcTotalIncentive(list as any, incentiveRates);
-      const distributorTotal = list.reduce((sum, s) => sum + Number(s.distributor_amount ?? 0), 0);
-      const netFeeTotal = list.reduce((sum, s) => sum + Number(s.net_fee ?? 0), 0);
+      const list = salesByOwner.get(p.user_id) ?? [];
+      const successList = list.filter(isSuccess);
+      const { total } = calcTotalIncentive(successList as any, incentiveRates);
+      const distributorTotal = successList.reduce((sum, s) => sum + Number(s.distributor_amount ?? 0), 0);
+      const netFeeTotal = successList.reduce((sum, s) => sum + Number(s.net_fee ?? 0), 0);
       const pendingCount = list.filter((s) => s.pending_resolved === false).length;
       return {
         profile: p,
-        salesCount: list.length,
+        salesCount: successList.length,
+        totalCount: list.length,
         incentive: total,
         distributorTotal,
         netFeeTotal,
@@ -184,11 +288,23 @@ export default function StaffStatusPage() {
     });
     rows.sort((a, b) => b.incentive - a.incentive || b.salesCount - a.salesCount);
     return rows;
-  }, [allSales, filteredProfiles, incentiveRates]);
+  }, [salesByOwner, filteredProfiles, incentiveRates]);
 
-  // === Incentive computation ===
+  // Selected staff data (filtered)
+  const sales = useMemo(() => {
+    if (!selected) return [];
+    return salesByOwner.get(selected.user_id) ?? [];
+  }, [salesByOwner, selected]);
+
+  const inquiries = useMemo(() => {
+    if (!selected) return [];
+    return inquiriesByOwner.get(selected.user_id) ?? [];
+  }, [inquiriesByOwner, selected]);
+
+  // === Incentive computation (only success sales contribute) ===
   const incentive = useMemo(() => {
-    const { total, breakdowns } = calcTotalIncentive(sales as any, incentiveRates);
+    const successSales = sales.filter(isSuccess);
+    const { total, breakdowns } = calcTotalIncentive(successSales as any, incentiveRates);
     const fc = forecastIncentive(total, startDate, endDate);
     const goal = Math.max(fc.projected + 100000, Math.ceil((fc.projected || 100000) / 100000) * 100000 + 100000);
     const goalPct = goal > 0 ? Math.min(100, Math.round((total / goal) * 100)) : 0;
@@ -197,13 +313,11 @@ export default function StaffStatusPage() {
     const avgPerSale = earnedSales > 0 ? Math.round(total / earnedSales) : 0;
     const salesNeeded = avgPerSale > 0 ? Math.ceil(gapToGoal / avgPerSale) : 0;
 
-    // Per-sale items (joined with sales)
     const items = sales.map((s) => {
       const b = breakdowns.find((x) => x.saleId === s.id);
       return { sale: s, amount: b?.amount ?? 0, matched: b?.matched ?? [] };
     });
 
-    // Category breakdown
     const catMap = new Map<string, number>();
     items.forEach((it) => {
       if (it.amount <= 0) return;
@@ -215,7 +329,82 @@ export default function StaffStatusPage() {
     return { total, fc, goal, goalPct, gapToGoal, salesNeeded, items, categoryData };
   }, [sales, incentiveRates, startDate, endDate]);
 
-  // Simulator: estimate incentive for a hypothetical sale
+  // === Detailed analytics (only success sales) ===
+  const analytics = useMemo(() => {
+    const successSales = sales.filter(isSuccess);
+
+    // Channel inquiries vs success
+    const chanMap = new Map<string, { inflow: number; success: number }>();
+    inquiries.forEach((q) => {
+      const c = q.channel || "기타";
+      const r = chanMap.get(c) ?? { inflow: 0, success: 0 };
+      r.inflow += 1;
+      if (q.converted_sale_id || q.status === "전환") r.success += 1;
+      chanMap.set(c, r);
+    });
+    const channelStats = Array.from(chanMap.entries())
+      .map(([channel, v]) => ({ channel, ...v, rate: v.inflow > 0 ? Math.round((v.success / v.inflow) * 100) : 0 }))
+      .sort((a, b) => b.inflow - a.inflow);
+
+    // Total inflow / success / rate
+    const totalInflow = inquiries.length;
+    const totalConverted = inquiries.filter((q) => q.converted_sale_id || q.status === "전환").length;
+    const overallRate = totalInflow > 0 ? Math.round((totalConverted / totalInflow) * 100) : 0;
+
+    // Product breakdown
+    const prodMap = new Map<string, number>();
+    successSales.forEach((s) => {
+      const b = productBucket(s.product);
+      prodMap.set(b, (prodMap.get(b) ?? 0) + 1);
+    });
+    const productStats = GOAL_PRODUCTS.map((name) => ({ name, count: prodMap.get(name) ?? 0 }));
+
+    // VAS counts: vas1 + vas2 non-empty units sold
+    let vasCount = 0;
+    successSales.forEach((s) => {
+      if (s.vas1 && s.vas1.trim() && s.vas1 !== "없음") vasCount += 1;
+      if (s.vas2 && s.vas2.trim() && s.vas2 !== "없음") vasCount += 1;
+    });
+
+    // 2nd device VAS attach rate: among 2ND-bucket sales, how many have any vas
+    const second = successSales.filter((s) => productBucket(s.product) === "2ND");
+    const secondWithVas = second.filter((s) =>
+      (s.vas1 && s.vas1.trim() && s.vas1 !== "없음") || (s.vas2 && s.vas2.trim() && s.vas2 !== "없음")
+    );
+    const secondVasRate = second.length > 0 ? Math.round((secondWithVas.length / second.length) * 100) : 0;
+
+    // Mobile vs wired/solution share
+    const mobileCount = successSales.filter((s) => productBucket(s.product) === "모바일").length;
+    const wiredCount = successSales.filter((s) => isWiredOrSolution(s.product)).length;
+    const otherCount = successSales.length - mobileCount - wiredCount;
+    const mixData = [
+      { name: "모바일", value: mobileCount },
+      { name: "유선/솔루션", value: wiredCount },
+      ...(otherCount > 0 ? [{ name: "기타", value: otherCount }] : []),
+    ].filter((d) => d.value > 0);
+
+    return {
+      channelStats, totalInflow, totalConverted, overallRate,
+      productStats, vasCount,
+      secondCount: second.length, secondVasRate,
+      mixData, mobileCount, wiredCount,
+    };
+  }, [sales, inquiries]);
+
+  // Goals for selected
+  const selectedGoals = useMemo(() => {
+    if (!selected) return [] as { product: string; goal: number; achieved: number; pct: number }[];
+    const map = new Map<string, number>();
+    goals.filter((g) => g.user_id === selected.user_id).forEach((g) => map.set(g.product, g.goal_count));
+    return GOAL_PRODUCTS.map((p) => {
+      const goal = map.get(p) ?? 0;
+      const achieved = analytics.productStats.find((x) => x.name === p)?.count ?? 0;
+      const pct = goal > 0 ? Math.min(100, Math.round((achieved / goal) * 100)) : 0;
+      return { product: p, goal, achieved, pct };
+    });
+  }, [selected, goals, analytics.productStats]);
+
+  // Simulator
   const distinctSaleTypes = useMemo(() => Array.from(new Set(incentiveRates.map((r) => r.match_sale_type).filter(Boolean) as string[])), [incentiveRates]);
   const distinctProducts = useMemo(() => Array.from(new Set(incentiveRates.map((r) => r.match_product).filter(Boolean) as string[])), [incentiveRates]);
   const distinctModels = useMemo(() => Array.from(new Set(incentiveRates.map((r) => r.match_model).filter(Boolean) as string[])), [incentiveRates]);
@@ -268,31 +457,10 @@ export default function StaffStatusPage() {
                 </SelectContent>
               </Select>
             )}
-            <div className="flex flex-wrap gap-2 max-h-32 overflow-auto">
-              {filteredProfiles.map((p) => (
-                <button
-                  key={p.user_id}
-                  onClick={() => setSelectedId(p.user_id)}
-                  className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
-                    selectedId === p.user_id
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "border-border/40 hover:border-primary/50 text-foreground/80"
-                  }`}
-                >
-                  {p.display_name}
-                  {p.team && <span className="ml-2 text-xs opacity-70">{p.team}</span>}
-                </button>
-              ))}
-              {filteredProfiles.length === 0 && (
-                <span className="text-sm text-muted-foreground">표시할 직원이 없습니다</span>
-              )}
-            </div>
           </div>
         </Card>
 
-        {/* ============================================
-            전직원 실적 한눈에 (Leaderboard)
-            ============================================ */}
+        {/* Leaderboard */}
         {canViewAll && (
           <section>
             <div className="flex items-center justify-between mb-3">
@@ -303,7 +471,7 @@ export default function StaffStatusPage() {
                   {leaderboard.length}명
                 </Badge>
               </h3>
-              {allLoading && <span className="text-xs text-muted-foreground">불러오는 중…</span>}
+              {loading && <span className="text-xs text-muted-foreground">불러오는 중…</span>}
             </div>
             {leaderboard.length === 0 ? (
               <Card className="glass p-8 text-center text-muted-foreground text-sm">
@@ -319,9 +487,7 @@ export default function StaffStatusPage() {
                       key={row.profile.user_id}
                       onClick={() => setSelectedId(row.profile.user_id)}
                       className={`group text-left p-4 rounded-xl border glass transition-all hover:-translate-y-0.5 hover:shadow-elevated ${
-                        isSelected
-                          ? "border-primary/60 bg-primary/[0.06]"
-                          : "border-border/40 hover:border-primary/40"
+                        isSelected ? "border-primary/60 bg-primary/[0.06]" : "border-border/40 hover:border-primary/40"
                       }`}
                     >
                       <div className="flex items-center justify-between mb-2.5">
@@ -331,9 +497,7 @@ export default function StaffStatusPage() {
                             rank === 2 ? "bg-slate-400/20 text-slate-200" :
                             rank === 3 ? "bg-orange-100 text-orange-700" :
                             "bg-card/60 text-muted-foreground"
-                          }`}>
-                            #{rank}
-                          </div>
+                          }`}>#{rank}</div>
                           <div className="min-w-0">
                             <div className="text-sm font-semibold truncate">{row.profile.display_name}</div>
                             {row.profile.team && (
@@ -349,26 +513,20 @@ export default function StaffStatusPage() {
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div>
-                          <div className="text-[10px] text-muted-foreground">개통 건수</div>
-                          <div className="text-base font-bold tabular-nums">{row.salesCount}건</div>
+                          <div className="text-[10px] text-muted-foreground">성공 / 전체</div>
+                          <div className="text-base font-bold tabular-nums">{row.salesCount}/{row.totalCount}</div>
                         </div>
                         <div>
                           <div className="text-[10px] text-muted-foreground">인센티브</div>
-                          <div className="text-base font-bold text-amber-700 tabular-nums">
-                            {formatKRWShort(row.incentive)}
-                          </div>
+                          <div className="text-base font-bold text-amber-700 tabular-nums">{formatKRWShort(row.incentive)}</div>
                         </div>
                         <div>
                           <div className="text-[10px] text-muted-foreground">유통망 지원금</div>
-                          <div className="text-sm font-semibold tabular-nums text-foreground/90">
-                            {formatKRWShort(row.distributorTotal)}
-                          </div>
+                          <div className="text-sm font-semibold tabular-nums text-foreground/90">{formatKRWShort(row.distributorTotal)}</div>
                         </div>
                         <div>
                           <div className="text-[10px] text-muted-foreground">회수 마진</div>
-                          <div className="text-sm font-semibold text-emerald-300 tabular-nums">
-                            {formatKRWShort(row.netFeeTotal)}
-                          </div>
+                          <div className="text-sm font-semibold text-emerald-300 tabular-nums">{formatKRWShort(row.netFeeTotal)}</div>
                         </div>
                       </div>
                     </button>
@@ -386,27 +544,31 @@ export default function StaffStatusPage() {
           </Card>
         ) : (
           <>
-            {/* ============================================
-                [1] 나의 성과 요약 카드 (3 hero cards)
-                ============================================ */}
+            {/* Section header for selected staff */}
+            <div className="flex items-center justify-between gap-3 flex-wrap pt-2 border-t border-border/30">
+              <div>
+                <div className="text-xs text-muted-foreground">상세 현황</div>
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  {selected.display_name}
+                  {selected.team && <Badge variant="outline" className="text-xs">{selected.team}</Badge>}
+                </h2>
+              </div>
+              {isAdmin && (
+                <Button variant="outline" size="sm" onClick={() => setGoalDialogOpen(true)} className="gap-2">
+                  <Settings2 className="size-4" /> 월간 목표 설정 ({yearMonth})
+                </Button>
+              )}
+            </div>
+
+            {/* [Hero] 3 cards */}
             <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-              {/* 1. 이번 달 총 인센티브 */}
               <Card className="p-7 glass relative overflow-hidden border-amber-300 bg-gradient-to-br from-amber-500/[0.12] via-amber-500/[0.04] to-transparent">
                 <div className="absolute -right-10 -top-10 size-40 rounded-full bg-amber-50 blur-3xl pointer-events-none" />
                 <div className="relative">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-sm font-medium text-amber-700/80">
-                      <Coins className="size-4 text-amber-400" />
-                      이번 달 총 인센티브
+                      <Coins className="size-4 text-amber-400" /> 이번 달 총 인센티브
                     </div>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button className="text-muted-foreground hover:text-foreground transition"><Info className="size-3.5" /></button>
-                      </TooltipTrigger>
-                      <TooltipContent side="left" className="max-w-xs text-xs">
-                        어드민에 등록된 인센티브 규칙({incentiveRates.length}개)과 본인 실적을 매칭해 자동 합산한 금액입니다.
-                      </TooltipContent>
-                    </Tooltip>
                   </div>
                   <div className="mt-4 text-4xl lg:text-5xl font-extrabold tracking-tight text-amber-700 tabular-nums leading-none">
                     {formatKRWShort(incentive.total)}
@@ -417,23 +579,11 @@ export default function StaffStatusPage() {
                 </div>
               </Card>
 
-              {/* 2. 마감 예상 인센티브 */}
               <Card className="p-7 glass relative overflow-hidden border-emerald-500/30 bg-gradient-to-br from-emerald-500/[0.12] via-emerald-500/[0.04] to-transparent">
                 <div className="absolute -right-10 -top-10 size-40 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none" />
                 <div className="relative">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm font-medium text-emerald-200/80">
-                      <TrendingUpIcon className="size-4 text-emerald-400" />
-                      마감 예상 인센티브
-                    </div>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button className="text-muted-foreground hover:text-foreground transition"><Info className="size-3.5" /></button>
-                      </TooltipTrigger>
-                      <TooltipContent side="left" className="max-w-xs text-xs">
-                        현재까지 일평균 {formatKRWShort(Math.round(incentive.fc.dailyAvg))} × 총 {incentive.fc.totalDays}일로 선형 예측한 월말 예상 금액입니다.
-                      </TooltipContent>
-                    </Tooltip>
+                  <div className="flex items-center gap-2 text-sm font-medium text-emerald-200/80">
+                    <TrendingUpIcon className="size-4 text-emerald-400" /> 마감 예상 인센티브
                   </div>
                   <div className="mt-4 text-4xl lg:text-5xl font-extrabold tracking-tight text-emerald-300 tabular-nums leading-none">
                     {formatKRWShort(incentive.fc.projected)}
@@ -444,31 +594,15 @@ export default function StaffStatusPage() {
                 </div>
               </Card>
 
-              {/* 3. 목표 달성률 (circular gauge) */}
               <Card className="p-5 glass relative overflow-hidden border-amber-500/20">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                    <Target className="size-4 text-amber-400" />
-                    목표 달성률
-                  </div>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button className="text-muted-foreground hover:text-foreground transition"><Info className="size-3.5" /></button>
-                    </TooltipTrigger>
-                    <TooltipContent side="left" className="max-w-xs text-xs">
-                      목표 = 마감 예상보다 한 단계 위(₩100,000 단위 올림). 페이스를 끌어올리면 목표가 자동 상향됩니다.
-                    </TooltipContent>
-                  </Tooltip>
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Target className="size-4 text-amber-400" /> 인센티브 목표 달성률
                 </div>
                 <div className="relative h-44 mt-1">
                   <ResponsiveContainer>
-                    <RadialBarChart
-                      innerRadius="78%"
-                      outerRadius="100%"
+                    <RadialBarChart innerRadius="78%" outerRadius="100%"
                       data={[{ name: "달성률", value: incentive.goalPct, fill: "hsl(45 95% 60%)" }]}
-                      startAngle={90}
-                      endAngle={-270}
-                    >
+                      startAngle={90} endAngle={-270}>
                       <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
                       <RadialBar dataKey="value" cornerRadius={20} background={{ fill: "hsl(var(--muted) / 0.25)" }} />
                     </RadialBarChart>
@@ -478,53 +612,131 @@ export default function StaffStatusPage() {
                     <div className="text-[10px] text-muted-foreground mt-1">목표 {formatKRWShort(incentive.goal)}</div>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2 leading-relaxed flex items-start gap-1.5">
-                  <Sparkles className="size-3.5 text-amber-400 shrink-0 mt-0.5" />
-                  <span>
-                    {incentive.salesNeeded > 0
-                      ? <>약 <span className="text-amber-700 font-bold">{incentive.salesNeeded}건</span> 더 판매하면 <span className="text-emerald-300 font-bold">{formatKRWShort(incentive.gapToGoal)}</span> 추가!</>
-                      : "인센티브 단가를 등록하면 동기부여 메시지가 표시됩니다."}
-                  </span>
-                </p>
               </Card>
             </section>
 
-            {/* ============================================
-                [2] 항목별 수익 분석 + [4] 시뮬레이터
-                ============================================ */}
-            <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-              {/* Donut */}
-              <Card className="p-6 glass lg:col-span-2">
-                <div className="flex items-center justify-between mb-2">
+            {/* === 채널별 인입 대비 성공률 + 가입상품별 실적 === */}
+            <section className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              <Card className="p-6 glass">
+                <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-semibold flex items-center gap-2">
-                    <Smartphone className="size-4 text-primary-glow" />
-                    항목별 인센티브 수익 비중
+                    <PhoneCall className="size-4 text-primary-glow" /> 채널별 인입 대비 성공률
                   </h3>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button className="text-muted-foreground hover:text-foreground transition"><Info className="size-3.5" /></button>
-                    </TooltipTrigger>
-                    <TooltipContent side="left" className="max-w-xs text-xs">
-                      모바일(단말기 개통), 결합/인터넷·TV, 기타 오퍼별로 인센티브 발생액을 합산한 비중입니다.
-                    </TooltipContent>
-                  </Tooltip>
+                  <div className="text-xs text-muted-foreground">
+                    전체 {analytics.totalInflow}건 / 성공 {analytics.totalConverted}건 ·
+                    <span className="text-emerald-300 font-semibold ml-1">{analytics.overallRate}%</span>
+                  </div>
                 </div>
+                {analytics.channelStats.length === 0 ? (
+                  <div className="py-10 text-center text-sm text-muted-foreground">
+                    이 기간 등록된 인입(문의) 데이터가 없습니다
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {analytics.channelStats.map((c) => (
+                      <div key={c.channel} className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-medium">{c.channel}</span>
+                          <span className="text-muted-foreground tabular-nums">
+                            {c.success}/{c.inflow} ·
+                            <span className="text-emerald-300 font-semibold ml-1">{c.rate}%</span>
+                          </span>
+                        </div>
+                        <Progress value={c.rate} className="h-2" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+
+              <Card className="p-6 glass">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <Package className="size-4 text-primary-glow" /> 가입상품별 실적 & 목표 달성
+                  </h3>
+                  <Badge variant="outline" className="text-[10px]">{yearMonth}</Badge>
+                </div>
+                <div className="space-y-3">
+                  {selectedGoals.map((g) => (
+                    <div key={g.product} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium">{g.product}</span>
+                        <span className="text-muted-foreground tabular-nums">
+                          <span className="text-amber-700 font-semibold">{g.achieved}</span>
+                          {g.goal > 0 ? <> / 목표 {g.goal}대 · <span className="text-emerald-300 font-semibold">{g.pct}%</span></> : <> · 목표 미설정</>}
+                        </span>
+                      </div>
+                      <Progress value={g.goal > 0 ? g.pct : 0} className="h-2.5" />
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </section>
+
+            {/* === 부가서비스 / 2nd / 판매비중 === */}
+            <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <Card className="p-6 glass">
+                <div className="text-sm font-semibold flex items-center gap-2 mb-2">
+                  <Gift className="size-4 text-primary-glow" /> 부가서비스 유치
+                </div>
+                <div className="text-4xl font-extrabold text-amber-700 tabular-nums">{analytics.vasCount}<span className="text-base font-normal text-muted-foreground ml-1">건</span></div>
+                <p className="text-xs text-muted-foreground mt-2">VAS1·VAS2 합산. 성공 실적 기준</p>
+              </Card>
+
+              <Card className="p-6 glass">
+                <div className="text-sm font-semibold flex items-center gap-2 mb-2">
+                  <Smartphone className="size-4 text-primary-glow" /> 모바일 2nd 부가 유치율
+                </div>
+                <div className="text-4xl font-extrabold text-emerald-300 tabular-nums">{analytics.secondVasRate}<span className="text-base font-normal text-muted-foreground ml-1">%</span></div>
+                <p className="text-xs text-muted-foreground mt-2">2ND 디바이스 {analytics.secondCount}건 중 부가 포함 건 비율</p>
+              </Card>
+
+              <Card className="p-6 glass">
+                <div className="text-sm font-semibold flex items-center gap-2 mb-3">
+                  <Wifi className="size-4 text-primary-glow" /> 모바일 vs 유선/솔루션 비중
+                </div>
+                {analytics.mixData.length === 0 ? (
+                  <div className="h-32 grid place-items-center text-xs text-muted-foreground">데이터 없음</div>
+                ) : (
+                  <div className="h-36">
+                    <ResponsiveContainer>
+                      <PieChart>
+                        <Pie data={analytics.mixData} dataKey="value" nameKey="name" innerRadius={42} outerRadius={66} paddingAngle={3} stroke="none">
+                          {analytics.mixData.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />)}
+                        </Pie>
+                        <RTooltip contentStyle={{ background: "hsl(0 0% 100% / 0.96)", color: "#374151", border: "1px solid hsl(0 0% 88%)", borderRadius: 12, fontSize: 12 }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+                <div className="flex flex-wrap justify-center gap-2 text-[10px] mt-1">
+                  {analytics.mixData.map((d, i) => (
+                    <span key={d.name} className="flex items-center gap-1">
+                      <span className="size-2 rounded-full" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                      {d.name} {d.value}건
+                    </span>
+                  ))}
+                </div>
+              </Card>
+            </section>
+
+            {/* Donut + Simulator (existing) */}
+            <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <Card className="p-6 glass lg:col-span-2">
+                <h3 className="text-sm font-semibold flex items-center gap-2 mb-2">
+                  <Smartphone className="size-4 text-primary-glow" /> 항목별 인센티브 수익 비중
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                   <div className="h-64">
                     {incentive.categoryData.length === 0 ? (
-                      <div className="h-full grid place-items-center text-sm text-muted-foreground">
-                        매칭된 인센티브가 없습니다
-                      </div>
+                      <div className="h-full grid place-items-center text-sm text-muted-foreground">매칭된 인센티브가 없습니다</div>
                     ) : (
                       <ResponsiveContainer>
                         <PieChart>
                           <Pie data={incentive.categoryData} dataKey="value" nameKey="name" innerRadius={62} outerRadius={100} paddingAngle={3} stroke="none">
                             {incentive.categoryData.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />)}
                           </Pie>
-                          <RTooltip
-                            contentStyle={{ background: "hsl(0 0% 100% / 0.96)", color: "#374151", border: "1px solid hsl(0 0% 88%)", borderRadius: 12, fontSize: 12, boxShadow: "0 4px 20px hsl(0 0% 0% / 0.10)", padding: "8px 12px" }}
-                            formatter={(v: any) => formatKRWShort(Number(v))}
-                          />
+                          <RTooltip contentStyle={{ background: "hsl(0 0% 100% / 0.96)", color: "#374151", border: "1px solid hsl(0 0% 88%)", borderRadius: 12, fontSize: 12 }} formatter={(v: any) => formatKRWShort(Number(v))} />
                         </PieChart>
                       </ResponsiveContainer>
                     )}
@@ -537,10 +749,7 @@ export default function StaffStatusPage() {
                       const pct = incentive.total > 0 ? Math.round((c.value / incentive.total) * 100) : 0;
                       return (
                         <li key={c.name} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-card/40 border border-border/40">
-                          <div
-                            className="size-9 rounded-lg grid place-items-center"
-                            style={{ background: `${DONUT_COLORS[i % DONUT_COLORS.length]}22`, color: DONUT_COLORS[i % DONUT_COLORS.length] }}
-                          >
+                          <div className="size-9 rounded-lg grid place-items-center" style={{ background: `${DONUT_COLORS[i % DONUT_COLORS.length]}22`, color: DONUT_COLORS[i % DONUT_COLORS.length] }}>
                             <Icon className="size-4" />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -555,22 +764,10 @@ export default function StaffStatusPage() {
                 </div>
               </Card>
 
-              {/* [4] Simulator */}
               <Card className="p-6 glass border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.06] to-transparent">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold flex items-center gap-2">
-                    <Calculator className="size-4 text-emerald-400" />
-                    인센티브 시뮬레이터
-                  </h3>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button className="text-muted-foreground hover:text-foreground transition"><Info className="size-3.5" /></button>
-                    </TooltipTrigger>
-                    <TooltipContent side="left" className="max-w-xs text-xs">
-                      조건을 골라 한 건 더 팔았을 때 받을 수 있는 인센티브를 미리 확인하세요.
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
+                <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+                  <Calculator className="size-4 text-emerald-400" /> 인센티브 시뮬레이터
+                </h3>
                 <div className="space-y-2.5">
                   <Select value={simSaleType} onValueChange={setSimSaleType}>
                     <SelectTrigger><SelectValue placeholder="가입 유형" /></SelectTrigger>
@@ -596,44 +793,17 @@ export default function StaffStatusPage() {
                 </div>
                 <div className="mt-4 p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.08]">
                   <div className="text-[11px] text-emerald-200/80">+1건 추가 시 예상 인센티브</div>
-                  <div className="text-3xl font-extrabold tabular-nums text-emerald-300 mt-0.5">
-                    +{formatKRWShort(simResult.amount)}
-                  </div>
-                  {simResult.matched.length > 0 ? (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {simResult.matched.map((m) => (
-                        <Badge key={m.rateId} variant="outline" className="border-emerald-500/30 text-emerald-300 text-[10px]">
-                          {m.label} +{formatKRWShort(m.amount)}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="mt-2 text-[11px] text-muted-foreground">매칭되는 규칙이 없습니다</div>
-                  )}
+                  <div className="text-3xl font-extrabold tabular-nums text-emerald-300 mt-0.5">+{formatKRWShort(simResult.amount)}</div>
                 </div>
-                {simResult.amount > 0 && (
-                  <p className="mt-3 text-[11px] text-muted-foreground">
-                    예상 합계: <span className="text-amber-700 font-semibold">{formatKRWShort(incentive.total + simResult.amount)}</span>
-                    {" "}→ 달성률{" "}
-                    <span className="text-amber-700 font-semibold">
-                      {Math.min(100, Math.round(((incentive.total + simResult.amount) / Math.max(1, incentive.goal)) * 100))}%
-                    </span>
-                  </p>
-                )}
               </Card>
             </section>
 
-            {/* ============================================
-                [3] 실시간 인센티브 카드 리스트
-                ============================================ */}
+            {/* Real-time incentive list (kept) */}
             <section>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold flex items-center gap-2">
-                  <Coins className="size-4 text-amber-400" />
-                  실시간 인센티브 발생 내역
-                  <Badge variant="outline" className="border-border/50 text-muted-foreground ml-1">
-                    {incentive.items.length}건
-                  </Badge>
+                  <Coins className="size-4 text-amber-400" /> 실시간 인센티브 발생 내역
+                  <Badge variant="outline" className="border-border/50 text-muted-foreground ml-1">{incentive.items.length}건</Badge>
                 </h3>
                 {sales.length > 12 && (
                   <Button variant="ghost" size="sm" onClick={() => setShowDetail((v) => !v)}>
@@ -642,13 +812,10 @@ export default function StaffStatusPage() {
                   </Button>
                 )}
               </div>
-
               {loading ? (
                 <Card className="glass p-10 text-center text-muted-foreground">불러오는 중…</Card>
               ) : incentive.items.length === 0 ? (
-                <Card className="glass p-10 text-center text-muted-foreground">
-                  해당 기간에 실적이 없습니다
-                </Card>
+                <Card className="glass p-10 text-center text-muted-foreground">해당 기간에 실적이 없습니다</Card>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                   {(showDetail ? incentive.items : incentive.items.slice(0, 12)).map(({ sale, amount, matched }) => {
@@ -657,45 +824,22 @@ export default function StaffStatusPage() {
                     const cat = categorize(sale);
                     const CatIcon = CATEGORY_ICON[cat] ?? Gift;
                     return (
-                      <Card
-                        key={sale.id}
-                        className={`p-4 glass relative overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-elevated ${
-                          amount > 0 ? "border-amber-500/20" : "border-border/40"
-                        }`}
-                      >
-                        {amount > 0 && (
-                          <div className="absolute -right-6 -top-6 size-20 rounded-full bg-amber-50 blur-2xl pointer-events-none" />
-                        )}
+                      <Card key={sale.id} className={`p-4 glass relative overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-elevated ${amount > 0 ? "border-amber-500/20" : "border-border/40"}`}>
                         <div className="relative space-y-2.5">
-                          {/* Header */}
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex items-center gap-2 min-w-0">
-                              <div className="size-8 rounded-lg bg-card/60 grid place-items-center text-muted-foreground shrink-0">
-                                <CatIcon className="size-4" />
-                              </div>
+                              <div className="size-8 rounded-lg bg-card/60 grid place-items-center text-muted-foreground shrink-0"><CatIcon className="size-4" /></div>
                               <div className="min-w-0">
-                                <div className="text-sm font-semibold truncate">
-                                  {sale.device_model || sale.product || "(모델 미지정)"}
-                                </div>
-                                <div className="text-[11px] text-muted-foreground truncate">
-                                  {sale.customer_name ?? "고객 미상"} · {sale.open_date ?? "-"}
-                                </div>
+                                <div className="text-sm font-semibold truncate">{sale.device_model || sale.product || "(모델 미지정)"}</div>
+                                <div className="text-[11px] text-muted-foreground truncate">{sale.customer_name ?? "고객 미상"} · {sale.open_date ?? "-"}</div>
                               </div>
                             </div>
-                            <Badge variant="outline" className={`gap-1 shrink-0 ${status.className}`}>
-                              <StatusIcon className="size-3" /> {status.label}
-                            </Badge>
+                            <Badge variant="outline" className={`gap-1 shrink-0 ${status.className}`}><StatusIcon className="size-3" /> {status.label}</Badge>
                           </div>
-
-                          {/* Body */}
                           <div className="flex items-end justify-between pt-1">
                             <div className="space-y-1">
-                              <Badge variant="outline" className="border-border/40 text-muted-foreground text-[10px]">
-                                {sale.sale_type ?? "유형 미지정"}
-                              </Badge>
-                              {sale.channel && (
-                                <div className="text-[10px] text-muted-foreground">{sale.channel}</div>
-                              )}
+                              <Badge variant="outline" className="border-border/40 text-muted-foreground text-[10px]">{sale.sale_type ?? "유형 미지정"}</Badge>
+                              {sale.channel && <div className="text-[10px] text-muted-foreground">{sale.channel}</div>}
                             </div>
                             <div className="text-right">
                               <div className="text-[10px] text-muted-foreground">발생 인센티브</div>
@@ -704,19 +848,6 @@ export default function StaffStatusPage() {
                               </div>
                             </div>
                           </div>
-
-                          {matched.length > 0 && (
-                            <div className="pt-1 flex flex-wrap gap-1">
-                              {matched.slice(0, 3).map((m) => (
-                                <Badge key={m.rateId} variant="outline" className="border-amber-300 text-amber-700/80 text-[10px]">
-                                  {m.label}
-                                </Badge>
-                              ))}
-                              {matched.length > 3 && (
-                                <span className="text-[10px] text-muted-foreground">+{matched.length - 3}</span>
-                              )}
-                            </div>
-                          )}
                         </div>
                       </Card>
                     );
@@ -726,7 +857,96 @@ export default function StaffStatusPage() {
             </section>
           </>
         )}
+
+        {/* Goal editor dialog */}
+        {selected && isAdmin && (
+          <GoalDialog
+            open={goalDialogOpen}
+            onOpenChange={setGoalDialogOpen}
+            user={selected}
+            yearMonth={yearMonth}
+            currentGoals={goals.filter((g) => g.user_id === selected.user_id)}
+            onSaved={reloadData}
+          />
+        )}
       </div>
     </TooltipProvider>
+  );
+}
+
+function GoalDialog({
+  open, onOpenChange, user, yearMonth, currentGoals, onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  user: Profile;
+  yearMonth: string;
+  currentGoals: GoalRow[];
+  onSaved: () => void;
+}) {
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const init: Record<string, string> = {};
+    GOAL_PRODUCTS.forEach((p) => {
+      const g = currentGoals.find((x) => x.product === p);
+      init[p] = g ? String(g.goal_count) : "";
+    });
+    setValues(init);
+  }, [currentGoals, open]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const rows = GOAL_PRODUCTS
+        .map((p) => ({
+          user_id: user.user_id,
+          product: p,
+          year_month: yearMonth,
+          goal_count: Math.max(0, parseInt(values[p] || "0", 10) || 0),
+        }));
+      const { error } = await supabase
+        .from("staff_product_goals")
+        .upsert(rows, { onConflict: "user_id,product,year_month" });
+      if (error) throw error;
+      toast.success("월간 목표가 저장되었습니다");
+      onSaved();
+      onOpenChange(false);
+    } catch (e: any) {
+      toast.error("저장 실패: " + (e.message ?? ""));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{user.display_name} · {yearMonth} 월간 목표</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          {GOAL_PRODUCTS.map((p) => (
+            <div key={p} className="flex items-center gap-3">
+              <div className="w-24 text-sm font-medium">{p}</div>
+              <Input
+                type="number"
+                min={0}
+                placeholder="0"
+                value={values[p] ?? ""}
+                onChange={(e) => setValues((v) => ({ ...v, [p]: e.target.value }))}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground">대</span>
+            </div>
+          ))}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>취소</Button>
+          <Button onClick={handleSave} disabled={saving}>{saving ? "저장 중..." : "저장"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
