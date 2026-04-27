@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, Trash2, Building2, ShieldCheck } from "lucide-react";
 import { ROLE_LABELS, type AppRole } from "@/hooks/useRole";
+import { RolePermissionsMatrix } from "@/components/admin/accounts/RolePermissionsMatrix";
 
 interface Position { id: string; name: string; sort_order: number; active: boolean; }
 interface Store { id: string; name: string; code: string | null; region: string | null; active: boolean; }
@@ -73,6 +74,7 @@ export default function AccountRolesPage() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
+      <RolePermissionsMatrix />
       <Card className="p-4">
         <div className="flex items-center gap-2 mb-3">
           <ShieldCheck className="size-4 text-primary" />
