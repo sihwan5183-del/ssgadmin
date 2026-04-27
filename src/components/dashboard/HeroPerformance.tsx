@@ -120,10 +120,10 @@ export const HeroPerformance = () => {
       // 개통대기 = 청약완료 + 택배발송 (현장 개통 전 단계 통합 카운트)
       const PENDING_STATUSES = ["청약완료", "택배발송"];
       const [a, b, c, d, e] = await Promise.all([
-        supabase.from("sales").select("product").gte("open_date", startDate).lte("open_date", endDate).eq("status", "개통완료").limit(10000),
-        supabase.from("sales").select("product").gte("open_date", prevStartDate).lte("open_date", prevEndDate).eq("status", "개통완료").limit(10000),
-        supabase.from("sales").select("product").eq("open_date", todayISO).eq("status", "개통완료").limit(5000),
-        supabase.from("sales").select("product").eq("open_date", ydayISO).eq("status", "개통완료").limit(5000),
+        supabase.from("sales").select("product").gte("open_date", startDate).lte("open_date", endDate).in("status", ["개통완료", "설치완료"]).limit(10000),
+        supabase.from("sales").select("product").gte("open_date", prevStartDate).lte("open_date", prevEndDate).in("status", ["개통완료", "설치완료"]).limit(10000),
+        supabase.from("sales").select("product").eq("open_date", todayISO).in("status", ["개통완료", "설치완료"]).limit(5000),
+        supabase.from("sales").select("product").eq("open_date", ydayISO).in("status", ["개통완료", "설치완료"]).limit(5000),
         supabase.from("sales").select("product, created_at").in("status", PENDING_STATUSES).limit(5000),
       ]);
       if (!alive) return;
