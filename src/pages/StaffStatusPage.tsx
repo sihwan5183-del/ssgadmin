@@ -1299,3 +1299,23 @@ function GoalDialog({
     </Dialog>
   );
 }
+
+function DeltaPill({ delta, compact = false }: { delta: number; compact?: boolean }) {
+  const Icon = delta > 0 ? ArrowUp : delta < 0 ? ArrowDown : Minus;
+  const cls =
+    delta > 0
+      ? "text-emerald-300 bg-emerald-500/10 border-emerald-400/30"
+      : delta < 0
+      ? "text-destructive bg-destructive/10 border-destructive/30"
+      : "text-muted-foreground bg-muted/30 border-border/40";
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full border tabular-nums ${cls} ${
+        compact ? "text-[9px] mt-0.5" : "text-[10px] mt-1"
+      }`}
+    >
+      <Icon className="size-2.5" />
+      {Math.abs(delta)}%p
+    </span>
+  );
+}
