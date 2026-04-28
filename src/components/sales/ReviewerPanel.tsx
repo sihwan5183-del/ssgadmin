@@ -357,6 +357,29 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
         </Badge>
       </div>
 
+      {/* 입력 검증 — 시스템 기준값과 비교, 다르면 빨강 */}
+      {validations.length > 0 && (
+        <div className="rounded-lg border border-border/40 bg-card/40 p-3 space-y-1.5">
+          <div className="text-xs font-semibold flex items-center gap-1.5">
+            <ShieldAlert className="size-3.5 text-primary-glow" />
+            입력 검증 (마스터 기준 비교)
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            {validations.map((v, i) => (
+              <div key={i} className={`flex items-center justify-between gap-2 text-[11px] px-2 py-1.5 rounded-md border ${
+                v.ok ? "border-emerald-500/30 bg-emerald-500/5" : "border-destructive/40 bg-destructive/5"
+              }`}>
+                <span className="text-muted-foreground shrink-0">{v.label}</span>
+                <span className="flex items-center gap-1 min-w-0 truncate">
+                  <span className={v.ok ? "text-foreground" : "text-destructive font-bold"}>{v.actual}</span>
+                  {!v.ok && <span className="text-muted-foreground/70 text-[10px]">≠ 기준 {v.expected}</span>}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Revision context (visible to everyone if exists) */}
       {showRevisionContext && (
         <div className="rounded-lg border border-orange-300 bg-orange-500/5 p-3 space-y-2">
