@@ -748,16 +748,28 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
                                 })()}
                                 {/* 대기 라벨 바로 옆 완료 버튼 (호버 시 강조) */}
                                 {matchesPendingActivationStatus(r.status) && (
-                                  <button
-                                    onClick={(e) => markCompletion(r, e)}
-                                    disabled={completingIds.has(r.id)}
-                                    onClickCapture={(e) => e.stopPropagation()}
-                                    className="inline-flex items-center gap-1 h-6 px-2 rounded-md border text-[10px] font-medium border-emerald-500/60 text-emerald-700 bg-emerald-50/70 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 hover:shadow transition-all opacity-80 group-hover:opacity-100 disabled:opacity-40"
+                                  <span
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-disabled={completingIds.has(r.id)}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      if (!completingIds.has(r.id)) markCompletion(r, e as any);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if ((e.key === "Enter" || e.key === " ") && !completingIds.has(r.id)) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        markCompletion(r, e as any);
+                                      }
+                                    }}
+                                    className={`inline-flex items-center gap-1 h-6 px-2 rounded-md border text-[10px] font-medium cursor-pointer select-none border-emerald-500/60 text-emerald-700 bg-emerald-50/70 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 hover:shadow transition-all opacity-80 group-hover:opacity-100 ${completingIds.has(r.id) ? "opacity-40 pointer-events-none" : ""}`}
                                     title={`${completionLabelFor(r.product)} 처리`}
                                   >
                                     <CheckCircle2 className="size-3" />
                                     {completionStatusFor(r.product)}
-                                  </button>
+                                  </span>
                                 )}
                                 {/* 3. 미처리 */}
                                 {hasUnhandled && (
