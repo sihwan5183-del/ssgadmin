@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { SaleSearchPanel } from "@/components/sales/SaleSearchPanel";
 import { LiveFeedSection } from "@/components/sales/LiveFeedSection";
+import { UnifiedReviewCenter } from "@/components/sales/UnifiedReviewCenter";
 import { useViewScope } from "@/contexts/ViewScopeContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -14,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   FileWarning, Search, Upload, Phone, User, Smartphone, AlertTriangle, ListChecks,
-  ClipboardList, CheckCircle2, Pencil, Building2, Clock,
+  ClipboardList, CheckCircle2, Pencil, Building2, Clock, ShieldCheck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
@@ -445,22 +446,23 @@ const ActivitiesPage = () => {
   const wantPending = searchParams.get("pending") === "1";
   const tabParam = searchParams.get("tab");
   const statusParam = searchParams.get("status");
-  // 미완료 항목 탭으로 라우팅: 신규/구 alias 모두 수용
-  const isIncompleteParam =
+  // 미완료 항목 탭은 [통합 검수함]으로 통합됨
+  const isReviewParam =
+    tabParam === "review" ||
     tabParam === "incomplete" ||
     tabParam === "pending-activation" ||
     tabParam === "subscribed" ||
     statusParam === "청약완료,택배발송,예약" ||
     statusParam === "청약완료,택배발송";
-  const initialTab = isIncompleteParam
-    ? "incomplete"
-    : (tabParam || (wantPending ? "search" : (isAdmin ? "super" : "search")));
+  const initialTab = isReviewParam
+    ? "review"
+    : (tabParam || (wantPending ? "review" : (isAdmin ? "super" : "review")));
   const [tab, setTab] = useState<string>(initialTab);
   useEffect(() => {
-    if (isIncompleteParam) setTab("incomplete");
+    if (isReviewParam) setTab("review");
     else if (tabParam) setTab(tabParam);
-    else if (wantPending) setTab("search");
-  }, [wantPending, tabParam, statusParam, isIncompleteParam]);
+    else if (wantPending) setTab("review");
+  }, [wantPending, tabParam, statusParam, isReviewParam]);
 
   return (
     <>
@@ -482,14 +484,14 @@ const ActivitiesPage = () => {
               <Building2 className="size-4" /> 슈퍼 뷰
             </TabsTrigger>
           )}
+          <TabsTrigger value="review" className="gap-2">
+            <ShieldCheck className="size-4" /> 통합 검수함
+          </TabsTrigger>
           <TabsTrigger value="search" className="gap-2">
             <ListChecks className="size-4" /> 실적 검색·관리
           </TabsTrigger>
           <TabsTrigger value="missing-docs" className="gap-2">
             <FileWarning className="size-4" /> 서류 미첨부
-          </TabsTrigger>
-          <TabsTrigger value="incomplete" className="gap-2">
-            <Clock className="size-4" /> 미완료 항목
           </TabsTrigger>
         </TabsList>
 
@@ -499,6 +501,14 @@ const ActivitiesPage = () => {
           </TabsContent>
         )}
 
+        <TabsContent value="review" className="space-y-3">
+          <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5 text-xs font-semibold text-primary flex items-center gap-2">
+            <ShieldCheck className="size-4 shrink-0" />
+            <span>통합 검수함 — 수정완료(주황) → 신규(파랑) → 검수보류(빨강) 순으로 자동 정렬됩니다. 종결 처리된 건은 자동으로 사라집니다.</span>
+          </div>
+          <UnifiedReviewCenter />
+        </TabsContent>
+
         <TabsContent value="search" className="space-y-6">
           <SaleSearchPanel />
           <div className="pt-2 border-t border-border/40" />
@@ -507,14 +517,6 @@ const ActivitiesPage = () => {
 
         <TabsContent value="missing-docs">
           <MissingDocsSection />
-        </TabsContent>
-
-        <TabsContent value="incomplete" className="space-y-3">
-          <div className="rounded-lg border border-notice/40 bg-notice px-4 py-2.5 text-xs font-semibold text-notice-foreground flex items-center gap-2">
-            <AlertTriangle className="size-4 shrink-0" />
-            <span>※ 미완료건은 택배발송 청약완료 건만 표시됩니다.</span>
-          </div>
-          <SaleSearchPanel presetStatus="청약완료,택배발송" />
         </TabsContent>
       </Tabs>
     </>

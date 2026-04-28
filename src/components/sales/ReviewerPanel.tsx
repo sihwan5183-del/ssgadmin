@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -58,6 +58,14 @@ interface SaleSnapshot {
   product?: string | null;
   status?: string | null;
   custom_fields?: Record<string, any> | null;
+  // 입력 검증용 추가 필드 (선택)
+  rate_plan?: string | null;
+  device_model?: string | null;
+  unit_price?: number | null;
+  sale_type?: string | null;
+  // 이상영업 신규 컬럼
+  is_suspicious?: boolean | null;
+  suspicious_reason?: string | null;
 }
 
 interface Props {
@@ -100,15 +108,25 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
   const [pendingResolved, setPendingResolved] = useState<boolean>(!!sale.pending_resolved);
   // 신규 검수 메타
   const cf = (sale.custom_fields ?? {}) as Record<string, any>;
-  const [fraudSuspect, setFraudSuspect] = useState<boolean>(!!cf.fraud_suspect);
-  const [fraudReason, setFraudReason] = useState<string>(cf.fraud_reason ?? "");
-  const [smsSent, setSmsSent] = useState<boolean>(!!cf.sms_sent);
+  // 이상영업: 신규 컬럼(is_suspicious/suspicious_reason) 우선, 레거시(custom_fields.fraud_*) 폴백
+  const [fraudSuspect, setFraudSuspect] = useState<boolean>(
+    sale.is_suspicious ?? !!cf.fraud_suspect,
+  );
+  const [fraudReason, setFraudReason] = useState<string>(
+    sale.suspicious_reason ?? cf.fraud_reason ?? "",
+  );
   const [installDate, setInstallDate] = useState<string>(cf.install_date ?? "");
   const [installDone, setInstallDone] = useState<boolean>(!!cf.install_done);
   const [finalVerdict, setFinalVerdict] = useState<"" | "정상" | "비정상">(
     (cf.final_verdict as "" | "정상" | "비정상") ?? "",
   );
   const [verdictReason, setVerdictReason] = useState<string>(cf.verdict_reason ?? "");
+  // 입력 검증용 마스터 데이터
+  const [planMaster, setPlanMaster] = useState<{
+    product: string; rate_plan: string; default_sale_type: string | null;
+    default_vas1: string | null; default_vas2: string | null;
+  } | null>(null);
+  const [modelMaster, setModelMaster] = useState<{ model_name: string; retail_price: number } | null>(null);
 
   useEffect(() => {
     setReason("");
@@ -118,14 +136,85 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
     setPendingNote(sale.pending_note ?? "");
     setPendingResolved(!!sale.pending_resolved);
     const c = (sale.custom_fields ?? {}) as Record<string, any>;
-    setFraudSuspect(!!c.fraud_suspect);
-    setFraudReason(c.fraud_reason ?? "");
-    setSmsSent(!!c.sms_sent);
+    setFraudSuspect(sale.is_suspicious ?? !!c.fraud_suspect);
+    setFraudReason(sale.suspicious_reason ?? c.fraud_reason ?? "");
     setInstallDate(c.install_date ?? "");
     setInstallDone(!!c.install_done);
     setFinalVerdict((c.final_verdict as "" | "정상" | "비정상") ?? "");
     setVerdictReason(c.verdict_reason ?? "");
-  }, [sale.id, sale.revision_fields, sale.custom_fields, sale.pending_items, sale.pending_note, sale.pending_resolved]);
+  }, [sale.id, sale.revision_fields, sale.custom_fields, sale.pending_items, sale.pending_note, sale.pending_resolved, sale.is_suspicious, sale.suspicious_reason]);
+
+  // 마스터 로드 (요금제·단말기) — 입력값 검증
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const product = sale.product ?? null;
+      const ratePlan = sale.rate_plan ?? null;
+      const model = sale.device_model ?? null;
+      const tasks: PromiseLike<unknown>[] = [];
+      if (product && ratePlan) {
+        tasks.push(
+          supabase
+            .from("product_rate_plans")
+            .select("product, rate_plan, default_sale_type, default_vas1, default_vas2")
+            .eq("product", product).eq("rate_plan", ratePlan).maybeSingle()
+            .then(({ data }) => { if (!cancelled) setPlanMaster((data as any) ?? null); }),
+        );
+      } else { setPlanMaster(null); }
+      if (model) {
+        tasks.push(
+          supabase
+            .from("device_models")
+            .select("model_name, retail_price")
+            .eq("model_name", model).maybeSingle()
+            .then(({ data }) => { if (!cancelled) setModelMaster((data as any) ?? null); }),
+        );
+      } else { setModelMaster(null); }
+      await Promise.all(tasks);
+    })();
+    return () => { cancelled = true; };
+  }, [sale.id, sale.product, sale.rate_plan, sale.device_model]);
+
+  // 검증 결과 — 다르면 빨강
+  const validations = useMemo(() => {
+    const list: Array<{ label: string; expected: string; actual: string; ok: boolean }> = [];
+    if (planMaster) {
+      const cfAny = (sale.custom_fields ?? {}) as Record<string, any>;
+      if (planMaster.default_sale_type && sale.sale_type) {
+        list.push({
+          label: "가입유형",
+          expected: planMaster.default_sale_type,
+          actual: sale.sale_type,
+          ok: planMaster.default_sale_type === sale.sale_type,
+        });
+      }
+      const vas1 = cfAny.vas1 ?? cfAny.vas_1 ?? null;
+      if (planMaster.default_vas1 && vas1) {
+        list.push({
+          label: "VAS1", expected: planMaster.default_vas1, actual: String(vas1),
+          ok: planMaster.default_vas1 === vas1,
+        });
+      }
+      const vas2 = cfAny.vas2 ?? cfAny.vas_2 ?? null;
+      if (planMaster.default_vas2 && vas2) {
+        list.push({
+          label: "VAS2", expected: planMaster.default_vas2, actual: String(vas2),
+          ok: planMaster.default_vas2 === vas2,
+        });
+      }
+    }
+    if (modelMaster && Number(sale.unit_price ?? 0) > 0 && Number(modelMaster.retail_price ?? 0) > 0) {
+      const expected = Number(modelMaster.retail_price);
+      const actual = Number(sale.unit_price);
+      list.push({
+        label: "단말 정상가",
+        expected: expected.toLocaleString("ko-KR"),
+        actual: actual.toLocaleString("ko-KR"),
+        ok: Math.abs(expected - actual) <= expected * 0.05, // 5% 오차 허용
+      });
+    }
+    return list;
+  }, [planMaster, modelMaster, sale.sale_type, sale.unit_price, sale.custom_fields]);
 
   const checkedCount = checklistItems.filter((i) => checks[i.key]).length;
   const allChecked = checkedCount === checklistItems.length;
@@ -133,19 +222,23 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
     || (sale.product ?? "").includes("TV")
     || (sale.product ?? "").includes("홈");
 
-  // 모바일/2nd 상품 + 상태가 '택배발송'이면 → 우측에 [개통완료] 토큰 노출
+  // 상품군별 종결 토글: 모바일/2nd → 개통완료 / 홈군 → 설치완료
   const normalizedStatus = (sale.status ?? "").replace(/\s+/g, "").trim();
-  const canMarkActivated = !isHomeProduct && normalizedStatus === "택배발송";
+  const completionTarget = isHomeProduct ? "설치완료" : "개통완료";
+  const completionPrev = isHomeProduct ? "청약완료" : "택배발송";
+  const isCompleted = normalizedStatus === completionTarget;
+  const canToggleCompletion = isCompleted || normalizedStatus === completionPrev;
   const [marking, setMarking] = useState(false);
-  const markActivated = async () => {
+  const toggleCompletion = async () => {
     setMarking(true);
+    const nextStatus = isCompleted ? completionPrev : completionTarget;
     const { error } = await supabase
       .from("sales")
-      .update({ status: "개통완료" } as never)
+      .update({ status: nextStatus } as never)
       .eq("id", sale.id);
     setMarking(false);
     if (error) return toast.error(error.message);
-    toast.success("개통완료로 변경되었습니다");
+    toast.success(`${nextStatus}로 변경되었습니다`);
     onChanged();
   };
 
@@ -264,6 +357,29 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
         </Badge>
       </div>
 
+      {/* 입력 검증 — 시스템 기준값과 비교, 다르면 빨강 */}
+      {validations.length > 0 && (
+        <div className="rounded-lg border border-border/40 bg-card/40 p-3 space-y-1.5">
+          <div className="text-xs font-semibold flex items-center gap-1.5">
+            <ShieldAlert className="size-3.5 text-primary-glow" />
+            입력 검증 (마스터 기준 비교)
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            {validations.map((v, i) => (
+              <div key={i} className={`flex items-center justify-between gap-2 text-[11px] px-2 py-1.5 rounded-md border ${
+                v.ok ? "border-emerald-500/30 bg-emerald-500/5" : "border-destructive/40 bg-destructive/5"
+              }`}>
+                <span className="text-muted-foreground shrink-0">{v.label}</span>
+                <span className="flex items-center gap-1 min-w-0 truncate">
+                  <span className={v.ok ? "text-foreground" : "text-destructive font-bold"}>{v.actual}</span>
+                  {!v.ok && <span className="text-muted-foreground/70 text-[10px]">≠ 기준 {v.expected}</span>}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Revision context (visible to everyone if exists) */}
       {showRevisionContext && (
         <div className="rounded-lg border border-orange-300 bg-orange-500/5 p-3 space-y-2">
@@ -376,12 +492,23 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
               checked={fraudSuspect}
               onCheckedChange={async (v) => {
                 setFraudSuspect(v);
-                await patchCustom({
-                  fraud_suspect: v,
-                  fraud_marked_at: v ? new Date().toISOString() : null,
-                  fraud_marked_by: v ? user?.id ?? null : null,
-                  ...(v ? {} : { fraud_reason: "" }),
-                });
+                // 신규 컬럼(is_suspicious)에 우선 기록 + 레거시 custom_fields 동기화
+                const { error } = await supabase
+                  .from("sales")
+                  .update({
+                    is_suspicious: v,
+                    suspicious_reason: v ? (fraudReason || null) : null,
+                    custom_fields: {
+                      ...(sale.custom_fields ?? {}),
+                      fraud_suspect: v,
+                      fraud_marked_at: v ? new Date().toISOString() : null,
+                      fraud_marked_by: v ? user?.id ?? null : null,
+                      ...(v ? {} : { fraud_reason: "" }),
+                    },
+                  } as never)
+                  .eq("id", sale.id);
+                if (error) toast.error(error.message);
+                else onChanged();
                 if (v) toast.warning("이상영업으로 표기되었습니다 — 정산이 일시 중지됩니다");
               }}
             />
@@ -392,7 +519,16 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
                 rows={2}
                 value={fraudReason}
                 onChange={(e) => setFraudReason(e.target.value)}
-                onBlur={() => patchCustom({ fraud_reason: fraudReason })}
+                onBlur={async () => {
+                  const { error } = await supabase
+                    .from("sales")
+                    .update({
+                      suspicious_reason: fraudReason || null,
+                      custom_fields: { ...(sale.custom_fields ?? {}), fraud_reason: fraudReason },
+                    } as never)
+                    .eq("id", sale.id);
+                  if (error) toast.error(error.message); else onChanged();
+                }}
                 placeholder="의심 사유 (예: 동일 명의 단기 재가입, 지원금 과다 등)"
                 className="bg-input/60 text-sm border-destructive/40"
               />
@@ -401,34 +537,28 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
           )}
         </div>
 
-        {/* SMS 발송 */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between rounded-lg border border-border/40 p-3">
+        {/* 업무 종결 토글 — 상품군별 [개통 완료] / [설치 완료] */}
+        <div className={`rounded-lg border p-3 space-y-2 ${
+          isCompleted ? "border-emerald-500/60 bg-emerald-500/10" : "border-border/40"
+        }`}>
+          <div className="flex items-center justify-between">
             <span className="text-xs font-semibold flex items-center gap-1.5">
-              <MessageCircle className="size-3.5 text-sky-400" />
-              고객 문자발송
+              <CheckCircle2 className={`size-3.5 ${isCompleted ? "text-emerald-500" : "text-muted-foreground"}`} />
+              {isHomeProduct ? "설치 완료" : "개통 완료"} 처리
             </span>
             <Switch
-              checked={smsSent}
-              onCheckedChange={(v) => {
-                setSmsSent(v);
-                patchCustom({ sms_sent: v, sms_sent_at: v ? new Date().toISOString() : null });
-              }}
+              checked={isCompleted}
+              disabled={marking || !canToggleCompletion}
+              onCheckedChange={() => toggleCompletion()}
             />
           </div>
-          {/* 개통완료 버튼 — 모바일/2nd 상품 + 상태가 '택배발송'일 때만 노출 */}
-          {canMarkActivated && (
-            <button
-              type="button"
-              onClick={markActivated}
-              disabled={marking}
-              className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-emerald-400/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-50"
-              title="택배발송 → 개통완료로 변경"
-            >
-              <CheckCircle2 className="size-3.5" />
-              개통완료 처리
-            </button>
-          )}
+          <p className="text-[10px] text-muted-foreground leading-tight">
+            {!canToggleCompletion
+              ? `상태가 '${completionPrev}' 또는 '${completionTarget}'일 때만 종결 처리할 수 있습니다`
+              : isCompleted
+              ? `OFF로 전환하면 '${completionPrev}'으로 복구됩니다`
+              : `ON으로 전환하면 즉시 '${completionTarget}'으로 변경되어 통합 검수함에서 제외됩니다`}
+          </p>
         </div>
 
         {/* 최종 판정 (정상/비정상) */}
