@@ -730,8 +730,34 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
                                   <Icon className="size-3" /> {ap}
                                 </Badge>
                                 {/* 2. 개통 상태 */}
-                                {r.status && (
-                                  <Badge variant="outline" className={`text-[10px] ${SALE_STATUS_BADGE[r.status] ?? ""}`}>{r.status}</Badge>
+                                {r.status && (() => {
+                                  const waiting = waitingLabelFor(r.product, r.status);
+                                  if (waiting) {
+                                    return (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-[10px] font-semibold border-blue-500 text-blue-700 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/40"
+                                      >
+                                        {waiting}
+                                      </Badge>
+                                    );
+                                  }
+                                  return (
+                                    <Badge variant="outline" className={`text-[10px] ${SALE_STATUS_BADGE[r.status] ?? ""}`}>{r.status}</Badge>
+                                  );
+                                })()}
+                                {/* 대기 라벨 바로 옆 완료 버튼 (호버 시 강조) */}
+                                {matchesPendingActivationStatus(r.status) && (
+                                  <button
+                                    onClick={(e) => markCompletion(r, e)}
+                                    disabled={completingIds.has(r.id)}
+                                    onClickCapture={(e) => e.stopPropagation()}
+                                    className="inline-flex items-center gap-1 h-6 px-2 rounded-md border text-[10px] font-medium border-emerald-500/60 text-emerald-700 bg-emerald-50/70 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 hover:shadow transition-all opacity-80 group-hover:opacity-100 disabled:opacity-40"
+                                    title={`${completionLabelFor(r.product)} 처리`}
+                                  >
+                                    <CheckCircle2 className="size-3" />
+                                    {completionStatusFor(r.product)}
+                                  </button>
                                 )}
                                 {/* 3. 미처리 */}
                                 {hasUnhandled && (
