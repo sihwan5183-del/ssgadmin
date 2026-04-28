@@ -494,34 +494,28 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
           )}
         </div>
 
-        {/* SMS 발송 */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between rounded-lg border border-border/40 p-3">
+        {/* 업무 종결 토글 — 상품군별 [개통 완료] / [설치 완료] */}
+        <div className={`rounded-lg border p-3 space-y-2 ${
+          isCompleted ? "border-emerald-500/60 bg-emerald-500/10" : "border-border/40"
+        }`}>
+          <div className="flex items-center justify-between">
             <span className="text-xs font-semibold flex items-center gap-1.5">
-              <MessageCircle className="size-3.5 text-sky-400" />
-              고객 문자발송
+              <CheckCircle2 className={`size-3.5 ${isCompleted ? "text-emerald-500" : "text-muted-foreground"}`} />
+              {isHomeProduct ? "설치 완료" : "개통 완료"} 처리
             </span>
             <Switch
-              checked={smsSent}
-              onCheckedChange={(v) => {
-                setSmsSent(v);
-                patchCustom({ sms_sent: v, sms_sent_at: v ? new Date().toISOString() : null });
-              }}
+              checked={isCompleted}
+              disabled={marking || !canToggleCompletion}
+              onCheckedChange={() => toggleCompletion()}
             />
           </div>
-          {/* 개통완료 버튼 — 모바일/2nd 상품 + 상태가 '택배발송'일 때만 노출 */}
-          {canMarkActivated && (
-            <button
-              type="button"
-              onClick={markActivated}
-              disabled={marking}
-              className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-emerald-400/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-50"
-              title="택배발송 → 개통완료로 변경"
-            >
-              <CheckCircle2 className="size-3.5" />
-              개통완료 처리
-            </button>
-          )}
+          <p className="text-[10px] text-muted-foreground leading-tight">
+            {!canToggleCompletion
+              ? `상태가 '${completionPrev}' 또는 '${completionTarget}'일 때만 종결 처리할 수 있습니다`
+              : isCompleted
+              ? `OFF로 전환하면 '${completionPrev}'으로 복구됩니다`
+              : `ON으로 전환하면 즉시 '${completionTarget}'으로 변경되어 통합 검수함에서 제외됩니다`}
+          </p>
         </div>
 
         {/* 최종 판정 (정상/비정상) */}
