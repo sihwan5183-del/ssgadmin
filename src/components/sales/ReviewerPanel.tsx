@@ -469,12 +469,23 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
               checked={fraudSuspect}
               onCheckedChange={async (v) => {
                 setFraudSuspect(v);
-                await patchCustom({
-                  fraud_suspect: v,
-                  fraud_marked_at: v ? new Date().toISOString() : null,
-                  fraud_marked_by: v ? user?.id ?? null : null,
-                  ...(v ? {} : { fraud_reason: "" }),
-                });
+                // 신규 컬럼(is_suspicious)에 우선 기록 + 레거시 custom_fields 동기화
+                const { error } = await supabase
+                  .from("sales")
+                  .update({
+                    is_suspicious: v,
+                    suspicious_reason: v ? (fraudReason || null) : null,
+                    custom_fields: {
+                      ...(sale.custom_fields ?? {}),
+                      fraud_suspect: v,
+                      fraud_marked_at: v ? new Date().toISOString() : null,
+                      fraud_marked_by: v ? user?.id ?? null : null,
+                      ...(v ? {} : { fraud_reason: "" }),
+                    },
+                  } as never)
+                  .eq("id", sale.id);
+                if (error) toast.error(error.message);
+                else onChanged();
                 if (v) toast.warning("이상영업으로 표기되었습니다 — 정산이 일시 중지됩니다");
               }}
             />
@@ -485,7 +496,16 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
                 rows={2}
                 value={fraudReason}
                 onChange={(e) => setFraudReason(e.target.value)}
-                onBlur={() => patchCustom({ fraud_reason: fraudReason })}
+                onBlur={async () => {
+                  const { error } = await supabase
+                    .from("sales")
+                    .update({
+                      suspicious_reason: fraudReason || null,
+                      custom_fields: { ...(sale.custom_fields ?? {}), fraud_reason: fraudReason },
+                    } as never)
+                    .eq("id", sale.id);
+                  if (error) toast.error(error.message); else onChanged();
+                }}
                 placeholder="의심 사유 (예: 동일 명의 단기 재가입, 지원금 과다 등)"
                 className="bg-input/60 text-sm border-destructive/40"
               />
