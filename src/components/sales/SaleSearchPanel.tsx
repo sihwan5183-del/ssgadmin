@@ -154,8 +154,8 @@ const waitingLabelFor = (
 const SALE_STATUS_BADGE: Record<string, string> = {
   청약완료: "border-sky-400 text-sky-700 bg-sky-50 dark:bg-sky-500/15 dark:text-sky-300 dark:border-sky-500/30",
   택배발송: "border-indigo-400 text-indigo-700 bg-indigo-50 dark:bg-indigo-500/15 dark:text-indigo-300 dark:border-indigo-500/30",
-  개통완료: "border-emerald-400 text-emerald-700 bg-emerald-50 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30",
-  설치완료: "border-emerald-400 text-emerald-700 bg-emerald-50 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30",
+  개통완료: "border-foreground/40 text-foreground bg-emerald-50 font-bold dark:bg-emerald-500/15 dark:text-foreground dark:border-foreground/40",
+  설치완료: "border-foreground/40 text-foreground bg-emerald-50 font-bold dark:bg-emerald-500/15 dark:text-foreground dark:border-foreground/40",
   예약: "border-violet-400 text-violet-700 bg-violet-50 dark:bg-violet-500/15 dark:text-violet-300 dark:border-violet-500/30",
   보류: "border-amber-400 text-amber-700 bg-amber-50 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30",
   취소: "border-destructive/40 text-destructive bg-destructive/10",
