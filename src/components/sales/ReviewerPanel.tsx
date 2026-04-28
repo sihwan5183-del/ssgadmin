@@ -310,24 +310,18 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
       toast.error("필수 체크 항목을 모두 완료해야 승인할 수 있습니다");
       return;
     }
-    // 수정요청 시: 미체크된 활성 항목을 사유 prefix로 자동 입력
+    // 수정요청 시: 미체크 활성 항목명을 사유 앞에 자동 prefix
+    let effectiveReason = reason.trim();
     if (next === "수정요청") {
       const unchecked = checklistItems.filter((i) => !checks[i.key]).map((i) => i.label);
-      if (unchecked.length > 0 && !reason.includes("[미확인 항목]")) {
-        const auto = `[미확인 항목] ${unchecked.join(", ")}\n\n`;
-        // 사용자가 입력한 사유는 뒤에 보존
-        const merged = `${auto}${reason.trim()}`.trim();
-        // reason state는 비동기지만 payload에 직접 사용
-        // (이후 setReason(""))
-        // payload.revision_reason은 아래에서 reason.trim()을 쓰므로 임시 변수 사용
-        // → 아래 needsReason 분기에서 처리하도록 reason 자체를 갱신
-        setReason(merged);
+      if (unchecked.length > 0 && !effectiveReason.includes("[미확인 항목]")) {
+        effectiveReason = `[미확인 항목] ${unchecked.join(", ")}\n\n${effectiveReason}`.trim();
       }
     }
     setSubmitting(true);
     const payload: Record<string, unknown> = { approval_status: next };
     if (needsReason) {
-      payload.revision_reason = reason.trim();
+      payload.revision_reason = effectiveReason;
       payload.revision_fields = next === "수정요청" ? fields : null;
       payload.revision_requested_at = new Date().toISOString();
       payload.revision_requested_by = user?.id ?? null;
