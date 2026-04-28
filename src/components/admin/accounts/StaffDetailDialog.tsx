@@ -102,11 +102,13 @@ export function StaffDetailDialog({ userId, email, open, onOpenChange, onChanged
   };
 
   const resetToDefault = async () => {
-    if (!confirm(`${profile.display_name} 님의 비밀번호를 기본값 "123456"으로 초기화하시겠습니까?\n\n사용자에게 즉시 비밀번호 변경을 안내하세요.`)) return;
+    if (!confirm(`${profile.display_name} 님의 비밀번호를 임시 비밀번호로 초기화하시겠습니까?\n\n생성된 임시 비밀번호를 안전하게 사용자에게 전달하세요.`)) return;
     try {
-      await call("reset_password_default");
-      toast.success("비밀번호가 123456으로 초기화되었습니다", {
-        description: "사용자에게 즉시 변경하도록 안내해주세요.",
+      const data = await call("reset_password_default");
+      const temp = (data as any)?.temp_password;
+      toast.success("임시 비밀번호가 발급되었습니다", {
+        description: temp ? `임시 비밀번호: ${temp} · 즉시 변경하도록 안내하세요.` : "사용자에게 즉시 변경하도록 안내해주세요.",
+        duration: 15000,
       });
     } catch (e) { toast.error("초기화 실패", { description: (e as Error).message }); }
   };
