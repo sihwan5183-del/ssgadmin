@@ -98,9 +98,13 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
   const StatusIcon = meta.icon;
 
   // 어드민에서 정의한 체크리스트 (없으면 기본값)
-  const checklistItems: ChecklistItem[] = Array.isArray(settings["review.checklist"]) && settings["review.checklist"].length > 0
+  const rawChecklist = Array.isArray(settings["review.checklist"]) && settings["review.checklist"].length > 0
     ? (settings["review.checklist"] as ChecklistItem[])
     : DEFAULT_CHECKLIST;
+  // enabled가 false인 항목은 검수창에 노출하지 않음 (관리자가 끈 항목)
+  const checklistItems: ChecklistItem[] = rawChecklist
+    .map((i) => ({ ...i, enabled: i.enabled !== false }))
+    .filter((i) => i.enabled);
 
   const savedChecks = (sale.custom_fields?.review_checklist ?? {}) as Record<string, boolean>;
   const [reason, setReason] = useState("");
@@ -222,6 +226,8 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
   }, [planMaster, modelMaster, sale.sale_type, sale.unit_price, sale.custom_fields]);
 
   const checkedCount = checklistItems.filter((i) => checks[i.key]).length;
+  const requiredItems = checklistItems.filter((i) => i.required);
+  const allRequiredChecked = requiredItems.every((i) => checks[i.key]);
   const allChecked = checkedCount === checklistItems.length;
   const isHomeProduct = (sale.product ?? "").includes("인터넷")
     || (sale.product ?? "").includes("TV")
@@ -300,9 +306,23 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
       toast.error("수정이 필요한 항목을 1개 이상 선택해주세요");
       return;
     }
-    if (next === "검수완료" && !allChecked) {
-      toast.error("모든 검수 체크리스트 항목을 완료해야 검수 완료 처리가 가능합니다");
+    if (next === "검수완료" && !allRequiredChecked) {
+      toast.error("필수 체크 항목을 모두 완료해야 승인할 수 있습니다");
       return;
+    }
+    // 수정요청 시: 미체크된 활성 항목을 사유 prefix로 자동 입력
+    if (next === "수정요청") {
+      const unchecked = checklistItems.filter((i) => !checks[i.key]).map((i) => i.label);
+      if (unchecked.length > 0 && !reason.includes("[미확인 항목]")) {
+        const auto = `[미확인 항목] ${unchecked.join(", ")}\n\n`;
+        // 사용자가 입력한 사유는 뒤에 보존
+        const merged = `${auto}${reason.trim()}`.trim();
+        // reason state는 비동기지만 payload에 직접 사용
+        // (이후 setReason(""))
+        // payload.revision_reason은 아래에서 reason.trim()을 쓰므로 임시 변수 사용
+        // → 아래 needsReason 분기에서 처리하도록 reason 자체를 갱신
+        setReason(merged);
+      }
     }
     setSubmitting(true);
     const payload: Record<string, unknown> = { approval_status: next };
