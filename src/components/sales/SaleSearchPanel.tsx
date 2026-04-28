@@ -694,7 +694,7 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
                         return (
                           <div
                             key={r.id}
-                            className={`flex items-stretch transition-all duration-300 ease-out overflow-hidden ${
+                            className={`group flex items-stretch transition-all duration-300 ease-out overflow-hidden ${
                               completingIds.has(r.id)
                                 ? "opacity-0 -translate-x-4 max-h-0 py-0 my-0 border-transparent"
                                 : "opacity-100 max-h-40"
