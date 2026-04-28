@@ -137,6 +137,20 @@ const completionStatusFor = (product: string | null | undefined) =>
 const completionLabelFor = (product: string | null | undefined) =>
   isHomeProduct(product) ? "설치 완료" : "개통 완료";
 
+// 상품군 + 상태에 따른 대기 라벨 (모바일/2nd: 택배발송→개통대기, 홈군: 청약완료→설치대기)
+const waitingLabelFor = (
+  product: string | null | undefined,
+  status: string | null | undefined,
+): string | null => {
+  const s = normalizeStatusValue(status);
+  if (isHomeProduct(product)) {
+    if (s === "청약완료") return "설치대기";
+  } else {
+    if (s === "택배발송") return "개통대기";
+  }
+  return null;
+};
+
 const SALE_STATUS_BADGE: Record<string, string> = {
   청약완료: "border-sky-400 text-sky-700 bg-sky-50 dark:bg-sky-500/15 dark:text-sky-300 dark:border-sky-500/30",
   택배발송: "border-indigo-400 text-indigo-700 bg-indigo-50 dark:bg-indigo-500/15 dark:text-indigo-300 dark:border-indigo-500/30",
