@@ -58,6 +58,14 @@ interface SaleSnapshot {
   product?: string | null;
   status?: string | null;
   custom_fields?: Record<string, any> | null;
+  // 입력 검증용 추가 필드 (선택)
+  rate_plan?: string | null;
+  device_model?: string | null;
+  unit_price?: number | null;
+  sale_type?: string | null;
+  // 이상영업 신규 컬럼
+  is_suspicious?: boolean | null;
+  suspicious_reason?: string | null;
 }
 
 interface Props {
@@ -100,15 +108,25 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
   const [pendingResolved, setPendingResolved] = useState<boolean>(!!sale.pending_resolved);
   // 신규 검수 메타
   const cf = (sale.custom_fields ?? {}) as Record<string, any>;
-  const [fraudSuspect, setFraudSuspect] = useState<boolean>(!!cf.fraud_suspect);
-  const [fraudReason, setFraudReason] = useState<string>(cf.fraud_reason ?? "");
-  const [smsSent, setSmsSent] = useState<boolean>(!!cf.sms_sent);
+  // 이상영업: 신규 컬럼(is_suspicious/suspicious_reason) 우선, 레거시(custom_fields.fraud_*) 폴백
+  const [fraudSuspect, setFraudSuspect] = useState<boolean>(
+    sale.is_suspicious ?? !!cf.fraud_suspect,
+  );
+  const [fraudReason, setFraudReason] = useState<string>(
+    sale.suspicious_reason ?? cf.fraud_reason ?? "",
+  );
   const [installDate, setInstallDate] = useState<string>(cf.install_date ?? "");
   const [installDone, setInstallDone] = useState<boolean>(!!cf.install_done);
   const [finalVerdict, setFinalVerdict] = useState<"" | "정상" | "비정상">(
     (cf.final_verdict as "" | "정상" | "비정상") ?? "",
   );
   const [verdictReason, setVerdictReason] = useState<string>(cf.verdict_reason ?? "");
+  // 입력 검증용 마스터 데이터
+  const [planMaster, setPlanMaster] = useState<{
+    product: string; rate_plan: string; default_sale_type: string | null;
+    default_vas1: string | null; default_vas2: string | null;
+  } | null>(null);
+  const [modelMaster, setModelMaster] = useState<{ model_name: string; retail_price: number } | null>(null);
 
   useEffect(() => {
     setReason("");
@@ -118,14 +136,85 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
     setPendingNote(sale.pending_note ?? "");
     setPendingResolved(!!sale.pending_resolved);
     const c = (sale.custom_fields ?? {}) as Record<string, any>;
-    setFraudSuspect(!!c.fraud_suspect);
-    setFraudReason(c.fraud_reason ?? "");
-    setSmsSent(!!c.sms_sent);
+    setFraudSuspect(sale.is_suspicious ?? !!c.fraud_suspect);
+    setFraudReason(sale.suspicious_reason ?? c.fraud_reason ?? "");
     setInstallDate(c.install_date ?? "");
     setInstallDone(!!c.install_done);
     setFinalVerdict((c.final_verdict as "" | "정상" | "비정상") ?? "");
     setVerdictReason(c.verdict_reason ?? "");
-  }, [sale.id, sale.revision_fields, sale.custom_fields, sale.pending_items, sale.pending_note, sale.pending_resolved]);
+  }, [sale.id, sale.revision_fields, sale.custom_fields, sale.pending_items, sale.pending_note, sale.pending_resolved, sale.is_suspicious, sale.suspicious_reason]);
+
+  // 마스터 로드 (요금제·단말기) — 입력값 검증
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const product = sale.product ?? null;
+      const ratePlan = sale.rate_plan ?? null;
+      const model = sale.device_model ?? null;
+      const tasks: Promise<unknown>[] = [];
+      if (product && ratePlan) {
+        tasks.push(
+          supabase
+            .from("product_rate_plans")
+            .select("product, rate_plan, default_sale_type, default_vas1, default_vas2")
+            .eq("product", product).eq("rate_plan", ratePlan).maybeSingle()
+            .then(({ data }) => { if (!cancelled) setPlanMaster((data as any) ?? null); }),
+        );
+      } else { setPlanMaster(null); }
+      if (model) {
+        tasks.push(
+          supabase
+            .from("device_models")
+            .select("model_name, retail_price")
+            .eq("model_name", model).maybeSingle()
+            .then(({ data }) => { if (!cancelled) setModelMaster((data as any) ?? null); }),
+        );
+      } else { setModelMaster(null); }
+      await Promise.all(tasks);
+    })();
+    return () => { cancelled = true; };
+  }, [sale.id, sale.product, sale.rate_plan, sale.device_model]);
+
+  // 검증 결과 — 다르면 빨강
+  const validations = useMemo(() => {
+    const list: Array<{ label: string; expected: string; actual: string; ok: boolean }> = [];
+    if (planMaster) {
+      const cfAny = (sale.custom_fields ?? {}) as Record<string, any>;
+      if (planMaster.default_sale_type && sale.sale_type) {
+        list.push({
+          label: "가입유형",
+          expected: planMaster.default_sale_type,
+          actual: sale.sale_type,
+          ok: planMaster.default_sale_type === sale.sale_type,
+        });
+      }
+      const vas1 = cfAny.vas1 ?? cfAny.vas_1 ?? null;
+      if (planMaster.default_vas1 && vas1) {
+        list.push({
+          label: "VAS1", expected: planMaster.default_vas1, actual: String(vas1),
+          ok: planMaster.default_vas1 === vas1,
+        });
+      }
+      const vas2 = cfAny.vas2 ?? cfAny.vas_2 ?? null;
+      if (planMaster.default_vas2 && vas2) {
+        list.push({
+          label: "VAS2", expected: planMaster.default_vas2, actual: String(vas2),
+          ok: planMaster.default_vas2 === vas2,
+        });
+      }
+    }
+    if (modelMaster && Number(sale.unit_price ?? 0) > 0 && Number(modelMaster.retail_price ?? 0) > 0) {
+      const expected = Number(modelMaster.retail_price);
+      const actual = Number(sale.unit_price);
+      list.push({
+        label: "단말 정상가",
+        expected: expected.toLocaleString("ko-KR"),
+        actual: actual.toLocaleString("ko-KR"),
+        ok: Math.abs(expected - actual) <= expected * 0.05, // 5% 오차 허용
+      });
+    }
+    return list;
+  }, [planMaster, modelMaster, sale.sale_type, sale.unit_price, sale.custom_fields]);
 
   const checkedCount = checklistItems.filter((i) => checks[i.key]).length;
   const allChecked = checkedCount === checklistItems.length;
@@ -133,19 +222,23 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
     || (sale.product ?? "").includes("TV")
     || (sale.product ?? "").includes("홈");
 
-  // 모바일/2nd 상품 + 상태가 '택배발송'이면 → 우측에 [개통완료] 토큰 노출
+  // 상품군별 종결 토글: 모바일/2nd → 개통완료 / 홈군 → 설치완료
   const normalizedStatus = (sale.status ?? "").replace(/\s+/g, "").trim();
-  const canMarkActivated = !isHomeProduct && normalizedStatus === "택배발송";
+  const completionTarget = isHomeProduct ? "설치완료" : "개통완료";
+  const completionPrev = isHomeProduct ? "청약완료" : "택배발송";
+  const isCompleted = normalizedStatus === completionTarget;
+  const canToggleCompletion = isCompleted || normalizedStatus === completionPrev;
   const [marking, setMarking] = useState(false);
-  const markActivated = async () => {
+  const toggleCompletion = async () => {
     setMarking(true);
+    const nextStatus = isCompleted ? completionPrev : completionTarget;
     const { error } = await supabase
       .from("sales")
-      .update({ status: "개통완료" } as never)
+      .update({ status: nextStatus } as never)
       .eq("id", sale.id);
     setMarking(false);
     if (error) return toast.error(error.message);
-    toast.success("개통완료로 변경되었습니다");
+    toast.success(`${nextStatus}로 변경되었습니다`);
     onChanged();
   };
 
