@@ -151,7 +151,7 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
       const product = sale.product ?? null;
       const ratePlan = sale.rate_plan ?? null;
       const model = sale.device_model ?? null;
-      const tasks: Promise<unknown>[] = [];
+      const tasks: PromiseLike<unknown>[] = [];
       if (product && ratePlan) {
         tasks.push(
           supabase
