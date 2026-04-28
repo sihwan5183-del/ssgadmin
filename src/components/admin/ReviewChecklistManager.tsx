@@ -145,7 +145,12 @@ export const ReviewChecklistManager = () => {
           </div>
         )}
 
-        <SortableList items={items} onReorder={(next) => setItems(next)}>
+        <SortableList
+          items={items.map((i) => ({ ...i, id: i.key }))}
+          onReorder={(next) =>
+            setItems(next.map(({ id: _id, ...rest }) => rest as ChecklistItem))
+          }
+        >
           {(it) => (
             <SortableItem
               key={it.key}
