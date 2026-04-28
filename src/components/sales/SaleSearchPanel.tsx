@@ -154,8 +154,8 @@ const waitingLabelFor = (
 const SALE_STATUS_BADGE: Record<string, string> = {
   청약완료: "border-sky-400 text-sky-700 bg-sky-50 dark:bg-sky-500/15 dark:text-sky-300 dark:border-sky-500/30",
   택배발송: "border-indigo-400 text-indigo-700 bg-indigo-50 dark:bg-indigo-500/15 dark:text-indigo-300 dark:border-indigo-500/30",
-  개통완료: "border-emerald-400 text-emerald-700 bg-emerald-50 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30",
-  설치완료: "border-emerald-400 text-emerald-700 bg-emerald-50 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30",
+  개통완료: "border-foreground/40 text-foreground bg-emerald-50 font-bold dark:bg-emerald-500/15 dark:text-foreground dark:border-foreground/40",
+  설치완료: "border-foreground/40 text-foreground bg-emerald-50 font-bold dark:bg-emerald-500/15 dark:text-foreground dark:border-foreground/40",
   예약: "border-violet-400 text-violet-700 bg-violet-50 dark:bg-violet-500/15 dark:text-violet-300 dark:border-violet-500/30",
   보류: "border-amber-400 text-amber-700 bg-amber-50 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30",
   취소: "border-destructive/40 text-destructive bg-destructive/10",
@@ -224,20 +224,35 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
 
   const markCompletion = async (row: SaleHit, e: React.MouseEvent) => {
     e.stopPropagation();
-    const nextStatus = completionStatusFor(row.product);
-    // 1) 애니메이션 트리거
-    setCompletingIds((prev) => {
-      const n = new Set(prev);
-      n.add(row.id);
-      return n;
-    });
-    // 2) DB 업데이트
+    const completionStatus = completionStatusFor(row.product);
+    const isCurrentlyCompleted = normalizeStatusValue(row.status) === completionStatus;
+    const cf = ((row as any).custom_fields ?? {}) as Record<string, any>;
+    const defaultPrev = isHomeProduct(row.product) ? "청약완료" : "택배발송";
+    const nextStatus = isCurrentlyCompleted
+      ? (cf.previous_status as string | undefined) || defaultPrev
+      : completionStatus;
+    const nextCustomFields = isCurrentlyCompleted
+      ? (() => {
+          const { previous_status: _omit, ...rest } = cf;
+          return rest;
+        })()
+      : { ...cf, previous_status: row.status ?? defaultPrev };
+
+    // 1) 애니메이션 트리거 (완료 처리 시에만 사라짐 효과)
+    if (!isCurrentlyCompleted) {
+      setCompletingIds((prev) => {
+        const n = new Set(prev);
+        n.add(row.id);
+        return n;
+      });
+    }
+    // 2) DB 즉시 업데이트 (저장 버튼 불필요)
     const { error } = await supabase
       .from("sales")
-      .update({ status: nextStatus })
+      .update({ status: nextStatus, custom_fields: nextCustomFields as any })
       .eq("id", row.id);
     if (error) {
-      toast.error("완료 처리 실패: " + error.message);
+      toast.error((isCurrentlyCompleted ? "복구" : "완료") + " 처리 실패: " + error.message);
       setCompletingIds((prev) => {
         const n = new Set(prev);
         n.delete(row.id);
@@ -246,16 +261,42 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
       return;
     }
     toast.success(`${row.customer_name ?? "고객"} · ${nextStatus} 처리됨`);
-    // 3) 애니메이션 후 리스트에서 제거
-    setTimeout(() => {
-      setResults((prev) => prev.filter((r) => r.id !== row.id));
-      setCompletingIds((prev) => {
-        const n = new Set(prev);
-        n.delete(row.id);
-        return n;
-      });
+    // 3) 로컬 상태 즉시 반영
+    if (isCurrentlyCompleted) {
+      // 복구: 리스트에 그대로 두고 상태값만 갱신
+      setResults((prev) =>
+        prev.map((r) =>
+          r.id === row.id
+            ? ({ ...r, status: nextStatus, custom_fields: nextCustomFields } as SaleHit)
+            : r,
+        ),
+      );
       refreshCounts();
-    }, 320);
+    } else {
+      // 완료: 애니메이션 후 미완료 리스트에서 제거 (완료 상태 행은 미완료 필터에서 자동 제외)
+      setTimeout(() => {
+        setResults((prev) =>
+          prev.map((r) =>
+            r.id === row.id
+              ? ({ ...r, status: nextStatus, custom_fields: nextCustomFields } as SaleHit)
+              : r,
+          ).filter((r) => {
+            // 미완료 탭(presetStatus)에서는 완료된 행을 제거
+            if (presetStatus) {
+              const allowed = presetStatus.split(",").map((s) => s.trim());
+              return allowed.includes(r.status ?? "");
+            }
+            return true;
+          }),
+        );
+        setCompletingIds((prev) => {
+          const n = new Set(prev);
+          n.delete(row.id);
+          return n;
+        });
+        refreshCounts();
+      }, 320);
+    }
   };
 
   const purgeFilter: PurgeFilter = useMemo(() => ({
@@ -747,30 +788,41 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
                                   );
                                 })()}
                                 {/* 대기 라벨 바로 옆 완료 버튼 (호버 시 강조) */}
-                                {matchesPendingActivationStatus(r.status) && (
-                                  <span
-                                    role="button"
-                                    tabIndex={0}
-                                    aria-disabled={completingIds.has(r.id)}
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      if (!completingIds.has(r.id)) markCompletion(r, e as any);
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if ((e.key === "Enter" || e.key === " ") && !completingIds.has(r.id)) {
+                                {(() => {
+                                  const completionStatus = completionStatusFor(r.product);
+                                  const isCompleted = normalizeStatusValue(r.status) === completionStatus;
+                                  const canToggle = matchesPendingActivationStatus(r.status) || isCompleted;
+                                  if (!canToggle) return null;
+                                  return (
+                                    <span
+                                      role="button"
+                                      tabIndex={0}
+                                      aria-pressed={isCompleted}
+                                      aria-disabled={completingIds.has(r.id)}
+                                      onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        markCompletion(r, e as any);
-                                      }
-                                    }}
-                                    className={`inline-flex items-center gap-1 h-6 px-2 rounded-md border text-[10px] font-medium cursor-pointer select-none border-emerald-500/60 text-emerald-700 bg-emerald-50/70 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 hover:shadow transition-all opacity-80 group-hover:opacity-100 ${completingIds.has(r.id) ? "opacity-40 pointer-events-none" : ""}`}
-                                    title={`${completionLabelFor(r.product)} 처리`}
-                                  >
-                                    <CheckCircle2 className="size-3" />
-                                    {completionStatusFor(r.product)}
-                                  </span>
-                                )}
+                                        if (!completingIds.has(r.id)) markCompletion(r, e as any);
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if ((e.key === "Enter" || e.key === " ") && !completingIds.has(r.id)) {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          markCompletion(r, e as any);
+                                        }
+                                      }}
+                                      className={`inline-flex items-center gap-1 h-6 px-2 rounded-md border text-[10px] font-medium cursor-pointer select-none transition-all ${
+                                        isCompleted
+                                          ? "bg-emerald-600 text-white border-emerald-600 shadow hover:bg-emerald-700"
+                                          : "border-emerald-500/60 text-emerald-700 bg-emerald-50/70 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 hover:shadow opacity-80 group-hover:opacity-100"
+                                      } ${completingIds.has(r.id) ? "opacity-40 pointer-events-none" : ""}`}
+                                      title={isCompleted ? `${completionStatus} 해제` : `${completionLabelFor(r.product)} 처리`}
+                                    >
+                                      <CheckCircle2 className="size-3" />
+                                      {isCompleted ? `${completionStatus} ✓` : completionStatus}
+                                    </span>
+                                  );
+                                })()}
                                 {/* 3. 미처리 */}
                                 {hasUnhandled && (
                                   <Badge variant="outline" className="text-[10px] gap-1 border-amber-500 text-amber-700 bg-amber-50">
