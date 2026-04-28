@@ -199,7 +199,7 @@ export function UnifiedReviewCenter() {
       </div>
 
       {/* 본문 — 좌(40%) / 우(60%) */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,35fr)_minmax(0,65fr)]">
         {/* === 좌측 리스트 === */}
         <div className="border-r border-border/40 flex flex-col max-h-[calc(100vh-220px)]">
           <div className="p-3 border-b border-border/40">
