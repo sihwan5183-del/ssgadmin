@@ -294,13 +294,17 @@ export function UserManagementPanel() {
           size="sm"
           className="h-10"
           onClick={async () => {
-            if (!confirm("슈퍼관리자 계정 'UDak@daum.net' 을 생성하거나 동기화합니다.\n비밀번호는 123456 으로 설정되며 admin 권한이 부여됩니다. 진행하시겠습니까?")) return;
+            if (!confirm("슈퍼관리자 계정 'UDak@daum.net' 을 생성하거나 동기화합니다.\n임시 비밀번호가 새로 발급되며 admin 권한이 부여됩니다. 진행하시겠습니까?")) return;
             try {
               const { data, error } = await supabase.functions.invoke("admin-user-management", {
                 body: { action: "ensure_super_admin" },
               });
               if (error || (data as any)?.error) throw new Error((data as any)?.error ?? error?.message);
-              toast.success("슈퍼관리자 준비 완료", { description: `이메일: UDak@daum.net · 비밀번호: 123456` });
+              const temp = (data as any)?.temp_password;
+              toast.success("슈퍼관리자 준비 완료", {
+                description: temp ? `이메일: UDak@daum.net · 임시 비밀번호: ${temp}` : "임시 비밀번호가 발급되었습니다.",
+                duration: 15000,
+              });
               fetchAll();
             } catch (e) { toast.error("실패", { description: (e as Error).message }); }
           }}
