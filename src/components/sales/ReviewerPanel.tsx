@@ -452,25 +452,66 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
             <CheckCircle2 className="size-3.5 text-emerald-400 shrink-0" />
             <span className="truncate">검수 체크리스트</span>
           </span>
-          <Badge variant="outline" className={`text-[10px] shrink-0 ${allChecked ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10" : "border-amber-400 text-amber-700 bg-amber-50"}`}>
-            {checkedCount} / {checklistItems.length}
+          <Badge variant="outline" className={`text-[10px] shrink-0 ${allRequiredChecked ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10" : "border-amber-400 text-amber-700 bg-amber-50"}`}>
+            {checkedCount} / {checklistItems.length} (필수 {requiredItems.filter(i=>checks[i.key]).length}/{requiredItems.length})
           </Badge>
         </div>
-        <div className="grid grid-cols-2 gap-1.5">
-          {checklistItems.map((item) => (
-            <label
-              key={item.key}
-              className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md border text-[12px] whitespace-nowrap transition-colors ${
-                isAdmin ? "cursor-pointer hover:border-primary/30" : "cursor-default opacity-90"
-              } ${checks[item.key] ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200" : "border-border/40"}`}
-            >
-              <Checkbox checked={!!checks[item.key]} onCheckedChange={() => toggleCheck(item.key)} disabled={!isAdmin} className="shrink-0" />
-              <span className="truncate">{item.label}</span>
-            </label>
-          ))}
+        <div className="space-y-1">
+          {checklistItems.map((item) => {
+            // 매핑 필드의 실측/기준값 추출
+            const cfAny = (sale.custom_fields ?? {}) as Record<string, any>;
+            let actual: string | null = null;
+            let expected: string | null = null;
+            if (item.field) {
+              const f = item.field;
+              const raw =
+                (sale as any)[f] ??
+                cfAny[f] ??
+                (f === "vas1" ? cfAny.vas_1 : null) ??
+                (f === "vas2" ? cfAny.vas_2 : null);
+              if (raw !== null && raw !== undefined && raw !== "") {
+                actual = typeof raw === "number" ? raw.toLocaleString("ko-KR") : String(raw);
+              }
+              if (planMaster) {
+                if (f === "rate_plan") expected = planMaster.rate_plan;
+                if (f === "sale_type") expected = planMaster.default_sale_type;
+                if (f === "vas1") expected = planMaster.default_vas1;
+                if (f === "vas2") expected = planMaster.default_vas2;
+              }
+              if (modelMaster && f === "unit_price") {
+                expected = Number(modelMaster.retail_price).toLocaleString("ko-KR");
+              }
+              if (modelMaster && f === "device_model") expected = modelMaster.model_name;
+            }
+            const mismatch = !!(expected && actual && expected !== actual);
+            return (
+              <label
+                key={item.key}
+                className={`flex items-center gap-2 px-2 py-1.5 rounded-md border text-[12px] transition-colors ${
+                  isAdmin ? "cursor-pointer hover:border-primary/30" : "cursor-default opacity-90"
+                } ${checks[item.key] ? "border-emerald-500/40 bg-emerald-500/10" : mismatch ? "border-destructive/50 bg-destructive/5" : "border-border/40"}`}
+              >
+                <Checkbox checked={!!checks[item.key]} onCheckedChange={() => toggleCheck(item.key)} disabled={!isAdmin} className="shrink-0" />
+                <span className="truncate flex-1">{item.label}</span>
+                {item.required && (
+                  <Badge variant="outline" className="text-[9px] h-4 px-1 border-orange-400 text-orange-600 bg-orange-50 shrink-0">필수</Badge>
+                )}
+                {item.field && (actual || expected) && (
+                  <div className="flex items-center gap-1 text-[10px] shrink-0">
+                    <span className={mismatch ? "text-destructive font-bold" : "text-foreground"}>
+                      {actual ?? "-"}
+                    </span>
+                    {expected && expected !== actual && (
+                      <span className="text-muted-foreground">≠ {expected}</span>
+                    )}
+                  </div>
+                )}
+              </label>
+            );
+          })}
         </div>
-        {!allChecked && (
-          <p className="text-[10px] text-muted-foreground leading-tight">모든 항목 체크 시 '검수 완료' 활성화</p>
+        {!allRequiredChecked && (
+          <p className="text-[10px] text-muted-foreground leading-tight">필수 항목을 모두 체크해야 [승인] 버튼이 활성화됩니다</p>
         )}
       </div>
 
