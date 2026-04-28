@@ -793,21 +793,6 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
                               </div>
                             </div>
                             </button>
-                            {/* 전용 완료 버튼: 모바일=개통완료 / 홈=설치완료 */}
-                            {matchesPendingActivationStatus(r.status) && (
-                              <div className="self-center pr-3 shrink-0" onClick={(e) => e.stopPropagation()}>
-                                <Button
-                                  size="sm"
-                                  onClick={(e) => markCompletion(r, e)}
-                                  disabled={completingIds.has(r.id)}
-                                  className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
-                                  title={`${completionLabelFor(r.product)} 처리 (리스트에서 제거)`}
-                                >
-                                  <CheckCircle2 className="size-3.5" />
-                                  {completionLabelFor(r.product)}
-                                </Button>
-                              </div>
-                            )}
                           </div>
                         );
                       })}
