@@ -788,30 +788,41 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
                                   );
                                 })()}
                                 {/* 대기 라벨 바로 옆 완료 버튼 (호버 시 강조) */}
-                                {matchesPendingActivationStatus(r.status) && (
-                                  <span
-                                    role="button"
-                                    tabIndex={0}
-                                    aria-disabled={completingIds.has(r.id)}
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      if (!completingIds.has(r.id)) markCompletion(r, e as any);
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if ((e.key === "Enter" || e.key === " ") && !completingIds.has(r.id)) {
+                                {(() => {
+                                  const completionStatus = completionStatusFor(r.product);
+                                  const isCompleted = normalizeStatusValue(r.status) === completionStatus;
+                                  const canToggle = matchesPendingActivationStatus(r.status) || isCompleted;
+                                  if (!canToggle) return null;
+                                  return (
+                                    <span
+                                      role="button"
+                                      tabIndex={0}
+                                      aria-pressed={isCompleted}
+                                      aria-disabled={completingIds.has(r.id)}
+                                      onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        markCompletion(r, e as any);
-                                      }
-                                    }}
-                                    className={`inline-flex items-center gap-1 h-6 px-2 rounded-md border text-[10px] font-medium cursor-pointer select-none border-emerald-500/60 text-emerald-700 bg-emerald-50/70 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 hover:shadow transition-all opacity-80 group-hover:opacity-100 ${completingIds.has(r.id) ? "opacity-40 pointer-events-none" : ""}`}
-                                    title={`${completionLabelFor(r.product)} 처리`}
-                                  >
-                                    <CheckCircle2 className="size-3" />
-                                    {completionStatusFor(r.product)}
-                                  </span>
-                                )}
+                                        if (!completingIds.has(r.id)) markCompletion(r, e as any);
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if ((e.key === "Enter" || e.key === " ") && !completingIds.has(r.id)) {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          markCompletion(r, e as any);
+                                        }
+                                      }}
+                                      className={`inline-flex items-center gap-1 h-6 px-2 rounded-md border text-[10px] font-medium cursor-pointer select-none transition-all ${
+                                        isCompleted
+                                          ? "bg-emerald-600 text-white border-emerald-600 shadow hover:bg-emerald-700"
+                                          : "border-emerald-500/60 text-emerald-700 bg-emerald-50/70 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 hover:shadow opacity-80 group-hover:opacity-100"
+                                      } ${completingIds.has(r.id) ? "opacity-40 pointer-events-none" : ""}`}
+                                      title={isCompleted ? `${completionStatus} 해제` : `${completionLabelFor(r.product)} 처리`}
+                                    >
+                                      <CheckCircle2 className="size-3" />
+                                      {isCompleted ? `${completionStatus} ✓` : completionStatus}
+                                    </span>
+                                  );
+                                })()}
                                 {/* 3. 미처리 */}
                                 {hasUnhandled && (
                                   <Badge variant="outline" className="text-[10px] gap-1 border-amber-500 text-amber-700 bg-amber-50">
