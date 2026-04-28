@@ -99,6 +99,14 @@ Deno.serve(async (req) => {
 
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
+  // 관리자 권한 확인: 대량 데이터 내보내기는 관리자만 가능
+  const { data: isAdminResult, error: roleErr } = await admin.rpc("is_admin", { _user_id: userId });
+  if (roleErr || !isAdminResult) {
+    return new Response(JSON.stringify({ error: "Forbidden: 관리자 권한이 필요합니다." }), {
+      status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   let body: ReqBody;
   try { body = await req.json(); } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON" }), {
