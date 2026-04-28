@@ -18,15 +18,20 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
 import { PendingItemsEditor } from "./PendingItemsEditor";
 
-interface ChecklistItem { key: string; label: string }
+interface ChecklistItem {
+  key: string;
+  label: string;
+  enabled?: boolean;
+  required?: boolean;
+  field?: string | null;
+}
 const DEFAULT_CHECKLIST: ChecklistItem[] = [
-  { key: "docs_match", label: "가입 서류 일치" },
-  { key: "plan_match", label: "요금제 확인" },
-  { key: "price_match", label: "단가 확인" },
-  { key: "bundle_match", label: "결합 확인" },
-  { key: "autodebit_match", label: "자동이체 / 입금계좌 확인" },
-  { key: "fee_match", label: "단가/수수료 정책 일치" },
-  { key: "vas_fee_match", label: "부가서비스 수수료 적용" },
+  { key: "docs_match", label: "가입 서류 일치", enabled: true, required: true },
+  { key: "plan_match", label: "요금제 확인", enabled: true, required: true, field: "rate_plan" },
+  { key: "price_match", label: "단가 확인", enabled: true, required: true, field: "unit_price" },
+  { key: "vas_match", label: "부가서비스 확인", enabled: true, required: false, field: "vas1" },
+  { key: "autodebit_match", label: "자동이체 / 입금계좌 확인", enabled: true, required: false, field: "auto_debit" },
+  { key: "bundle_match", label: "결합 확인", enabled: true, required: false, field: "bundle" },
 ];
 
 export type ApprovalStatus = "승인대기" | "검수완료" | "확정" | "반려" | "수정요청" | "환수" | "취소";
