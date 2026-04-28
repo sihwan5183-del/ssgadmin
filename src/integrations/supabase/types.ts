@@ -1587,6 +1587,7 @@ export type Database = {
           distributor_amount: number | null
           extra_subsidy: number | null
           id: string
+          is_suspicious: boolean
           locked: boolean
           manager: string | null
           moyo_excluded: boolean | null
@@ -1611,6 +1612,7 @@ export type Database = {
           sale_type: string | null
           seq: number | null
           status: string | null
+          suspicious_reason: string | null
           tracking_no: string | null
           trade_in_confirmed: number | null
           trade_in_enabled: boolean
@@ -1651,6 +1653,7 @@ export type Database = {
           distributor_amount?: number | null
           extra_subsidy?: number | null
           id?: string
+          is_suspicious?: boolean
           locked?: boolean
           manager?: string | null
           moyo_excluded?: boolean | null
@@ -1675,6 +1678,7 @@ export type Database = {
           sale_type?: string | null
           seq?: number | null
           status?: string | null
+          suspicious_reason?: string | null
           tracking_no?: string | null
           trade_in_confirmed?: number | null
           trade_in_enabled?: boolean
@@ -1715,6 +1719,7 @@ export type Database = {
           distributor_amount?: number | null
           extra_subsidy?: number | null
           id?: string
+          is_suspicious?: boolean
           locked?: boolean
           manager?: string | null
           moyo_excluded?: boolean | null
@@ -1739,6 +1744,7 @@ export type Database = {
           sale_type?: string | null
           seq?: number | null
           status?: string | null
+          suspicious_reason?: string | null
           tracking_no?: string | null
           trade_in_confirmed?: number | null
           trade_in_enabled?: boolean
