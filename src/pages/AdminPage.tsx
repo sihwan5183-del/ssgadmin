@@ -181,7 +181,7 @@ export default function AdminPage() {
             <Coins className="size-4" /> 인센티브 단가
           </TabsTrigger>
           <TabsTrigger value="checklist" className="gap-2">
-            <ListChecks className="size-4" /> 검수 체크리스트
+            <ListChecks className="size-4" /> 검수 항목 설정
           </TabsTrigger>
           <TabsTrigger value="strategy" className="gap-2">
             <Sparkles className="size-4" /> 전략 / 임계값

@@ -18,15 +18,20 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
 import { PendingItemsEditor } from "./PendingItemsEditor";
 
-interface ChecklistItem { key: string; label: string }
+interface ChecklistItem {
+  key: string;
+  label: string;
+  enabled?: boolean;
+  required?: boolean;
+  field?: string | null;
+}
 const DEFAULT_CHECKLIST: ChecklistItem[] = [
-  { key: "docs_match", label: "가입 서류 일치" },
-  { key: "plan_match", label: "요금제 확인" },
-  { key: "price_match", label: "단가 확인" },
-  { key: "bundle_match", label: "결합 확인" },
-  { key: "autodebit_match", label: "자동이체 / 입금계좌 확인" },
-  { key: "fee_match", label: "단가/수수료 정책 일치" },
-  { key: "vas_fee_match", label: "부가서비스 수수료 적용" },
+  { key: "docs_match", label: "가입 서류 일치", enabled: true, required: true },
+  { key: "plan_match", label: "요금제 확인", enabled: true, required: true, field: "rate_plan" },
+  { key: "price_match", label: "단가 확인", enabled: true, required: true, field: "unit_price" },
+  { key: "vas_match", label: "부가서비스 확인", enabled: true, required: false, field: "vas1" },
+  { key: "autodebit_match", label: "자동이체 / 입금계좌 확인", enabled: true, required: false, field: "auto_debit" },
+  { key: "bundle_match", label: "결합 확인", enabled: true, required: false, field: "bundle" },
 ];
 
 export type ApprovalStatus = "승인대기" | "검수완료" | "확정" | "반려" | "수정요청" | "환수" | "취소";
@@ -93,9 +98,13 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
   const StatusIcon = meta.icon;
 
   // 어드민에서 정의한 체크리스트 (없으면 기본값)
-  const checklistItems: ChecklistItem[] = Array.isArray(settings["review.checklist"]) && settings["review.checklist"].length > 0
+  const rawChecklist = Array.isArray(settings["review.checklist"]) && settings["review.checklist"].length > 0
     ? (settings["review.checklist"] as ChecklistItem[])
     : DEFAULT_CHECKLIST;
+  // enabled가 false인 항목은 검수창에 노출하지 않음 (관리자가 끈 항목)
+  const checklistItems: ChecklistItem[] = rawChecklist
+    .map((i) => ({ ...i, enabled: i.enabled !== false }))
+    .filter((i) => i.enabled);
 
   const savedChecks = (sale.custom_fields?.review_checklist ?? {}) as Record<string, boolean>;
   const [reason, setReason] = useState("");
@@ -217,6 +226,8 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
   }, [planMaster, modelMaster, sale.sale_type, sale.unit_price, sale.custom_fields]);
 
   const checkedCount = checklistItems.filter((i) => checks[i.key]).length;
+  const requiredItems = checklistItems.filter((i) => i.required);
+  const allRequiredChecked = requiredItems.every((i) => checks[i.key]);
   const allChecked = checkedCount === checklistItems.length;
   const isHomeProduct = (sale.product ?? "").includes("인터넷")
     || (sale.product ?? "").includes("TV")
@@ -295,14 +306,22 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
       toast.error("수정이 필요한 항목을 1개 이상 선택해주세요");
       return;
     }
-    if (next === "검수완료" && !allChecked) {
-      toast.error("모든 검수 체크리스트 항목을 완료해야 검수 완료 처리가 가능합니다");
+    if (next === "검수완료" && !allRequiredChecked) {
+      toast.error("필수 체크 항목을 모두 완료해야 승인할 수 있습니다");
       return;
+    }
+    // 수정요청 시: 미체크 활성 항목명을 사유 앞에 자동 prefix
+    let effectiveReason = reason.trim();
+    if (next === "수정요청") {
+      const unchecked = checklistItems.filter((i) => !checks[i.key]).map((i) => i.label);
+      if (unchecked.length > 0 && !effectiveReason.includes("[미확인 항목]")) {
+        effectiveReason = `[미확인 항목] ${unchecked.join(", ")}\n\n${effectiveReason}`.trim();
+      }
     }
     setSubmitting(true);
     const payload: Record<string, unknown> = { approval_status: next };
     if (needsReason) {
-      payload.revision_reason = reason.trim();
+      payload.revision_reason = effectiveReason;
       payload.revision_fields = next === "수정요청" ? fields : null;
       payload.revision_requested_at = new Date().toISOString();
       payload.revision_requested_by = user?.id ?? null;
@@ -433,25 +452,66 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
             <CheckCircle2 className="size-3.5 text-emerald-400 shrink-0" />
             <span className="truncate">검수 체크리스트</span>
           </span>
-          <Badge variant="outline" className={`text-[10px] shrink-0 ${allChecked ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10" : "border-amber-400 text-amber-700 bg-amber-50"}`}>
-            {checkedCount} / {checklistItems.length}
+          <Badge variant="outline" className={`text-[10px] shrink-0 ${allRequiredChecked ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10" : "border-amber-400 text-amber-700 bg-amber-50"}`}>
+            {checkedCount} / {checklistItems.length} (필수 {requiredItems.filter(i=>checks[i.key]).length}/{requiredItems.length})
           </Badge>
         </div>
-        <div className="grid grid-cols-2 gap-1.5">
-          {checklistItems.map((item) => (
-            <label
-              key={item.key}
-              className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md border text-[12px] whitespace-nowrap transition-colors ${
-                isAdmin ? "cursor-pointer hover:border-primary/30" : "cursor-default opacity-90"
-              } ${checks[item.key] ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200" : "border-border/40"}`}
-            >
-              <Checkbox checked={!!checks[item.key]} onCheckedChange={() => toggleCheck(item.key)} disabled={!isAdmin} className="shrink-0" />
-              <span className="truncate">{item.label}</span>
-            </label>
-          ))}
+        <div className="space-y-1">
+          {checklistItems.map((item) => {
+            // 매핑 필드의 실측/기준값 추출
+            const cfAny = (sale.custom_fields ?? {}) as Record<string, any>;
+            let actual: string | null = null;
+            let expected: string | null = null;
+            if (item.field) {
+              const f = item.field;
+              const raw =
+                (sale as any)[f] ??
+                cfAny[f] ??
+                (f === "vas1" ? cfAny.vas_1 : null) ??
+                (f === "vas2" ? cfAny.vas_2 : null);
+              if (raw !== null && raw !== undefined && raw !== "") {
+                actual = typeof raw === "number" ? raw.toLocaleString("ko-KR") : String(raw);
+              }
+              if (planMaster) {
+                if (f === "rate_plan") expected = planMaster.rate_plan;
+                if (f === "sale_type") expected = planMaster.default_sale_type;
+                if (f === "vas1") expected = planMaster.default_vas1;
+                if (f === "vas2") expected = planMaster.default_vas2;
+              }
+              if (modelMaster && f === "unit_price") {
+                expected = Number(modelMaster.retail_price).toLocaleString("ko-KR");
+              }
+              if (modelMaster && f === "device_model") expected = modelMaster.model_name;
+            }
+            const mismatch = !!(expected && actual && expected !== actual);
+            return (
+              <label
+                key={item.key}
+                className={`flex items-center gap-2 px-2 py-1.5 rounded-md border text-[12px] transition-colors ${
+                  isAdmin ? "cursor-pointer hover:border-primary/30" : "cursor-default opacity-90"
+                } ${checks[item.key] ? "border-emerald-500/40 bg-emerald-500/10" : mismatch ? "border-destructive/50 bg-destructive/5" : "border-border/40"}`}
+              >
+                <Checkbox checked={!!checks[item.key]} onCheckedChange={() => toggleCheck(item.key)} disabled={!isAdmin} className="shrink-0" />
+                <span className="truncate flex-1">{item.label}</span>
+                {item.required && (
+                  <Badge variant="outline" className="text-[9px] h-4 px-1 border-orange-400 text-orange-600 bg-orange-50 shrink-0">필수</Badge>
+                )}
+                {item.field && (actual || expected) && (
+                  <div className="flex items-center gap-1 text-[10px] shrink-0">
+                    <span className={mismatch ? "text-destructive font-bold" : "text-foreground"}>
+                      {actual ?? "-"}
+                    </span>
+                    {expected && expected !== actual && (
+                      <span className="text-muted-foreground">≠ {expected}</span>
+                    )}
+                  </div>
+                )}
+              </label>
+            );
+          })}
         </div>
-        {!allChecked && (
-          <p className="text-[10px] text-muted-foreground leading-tight">모든 항목 체크 시 '검수 완료' 활성화</p>
+        {!allRequiredChecked && (
+          <p className="text-[10px] text-muted-foreground leading-tight">필수 항목을 모두 체크해야 [승인] 버튼이 활성화됩니다</p>
         )}
       </div>
 
@@ -686,19 +746,35 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 pt-1">
-            <Button onClick={() => submitDecision("검수완료")} disabled={submitting} variant="default" size="sm" className="bg-sky-600 hover:bg-sky-700">
-              <ShieldCheck className="size-3.5 mr-1" /> 검수 완료
+          <div className="grid grid-cols-3 gap-2 pt-2">
+            <Button
+              onClick={() => submitDecision("검수완료")}
+              disabled={submitting || !allRequiredChecked}
+              variant="default"
+              className="h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm"
+              title={!allRequiredChecked ? "필수 체크리스트를 먼저 완료하세요" : ""}
+            >
+              <ShieldCheck className="size-4 mr-1.5" /> 승인
             </Button>
-            <Button onClick={() => submitDecision("수정요청")} disabled={submitting} variant="outline" size="sm" className="border-orange-400 text-orange-700 hover:bg-orange-50">
-              <Edit3 className="size-3.5 mr-1" /> 수정요청
+            <Button
+              onClick={() => submitDecision("수정요청")}
+              disabled={submitting}
+              variant="outline"
+              className="h-11 border-orange-400 text-orange-700 hover:bg-orange-50 font-semibold text-sm"
+            >
+              <Edit3 className="size-4 mr-1.5" /> 수정요청
             </Button>
-            <Button onClick={() => submitDecision("반려")} disabled={submitting} variant="outline" size="sm" className="border-destructive/40 text-destructive hover:bg-destructive/10">
-              <XCircle className="size-3.5 mr-1" /> 반려
+            <Button
+              onClick={() => submitDecision("반려")}
+              disabled={submitting}
+              variant="outline"
+              className="h-11 border-destructive/50 text-destructive hover:bg-destructive/10 font-semibold text-sm"
+            >
+              <XCircle className="size-4 mr-1.5" /> 반려
             </Button>
           </div>
           <p className="text-[10px] text-muted-foreground">
-            검수 완료 = 기획팀 검토 종료(잠금 없음, 정산 확정 전 단계) · 수정요청/반려 = 사유 필수
+            승인 = 기획팀 검토 종료(잠금 없음, 정산 확정 전 단계) · 수정요청 시 미체크 항목이 사유에 자동 첨부됩니다 · 반려/수정요청 = 사유 필수
           </p>
         </div>
       ) : !isOwner ? (
