@@ -137,6 +137,20 @@ const completionStatusFor = (product: string | null | undefined) =>
 const completionLabelFor = (product: string | null | undefined) =>
   isHomeProduct(product) ? "설치 완료" : "개통 완료";
 
+// 상품군 + 상태에 따른 대기 라벨 (모바일/2nd: 택배발송→개통대기, 홈군: 청약완료→설치대기)
+const waitingLabelFor = (
+  product: string | null | undefined,
+  status: string | null | undefined,
+): string | null => {
+  const s = normalizeStatusValue(status);
+  if (isHomeProduct(product)) {
+    if (s === "청약완료") return "설치대기";
+  } else {
+    if (s === "택배발송") return "개통대기";
+  }
+  return null;
+};
+
 const SALE_STATUS_BADGE: Record<string, string> = {
   청약완료: "border-sky-400 text-sky-700 bg-sky-50 dark:bg-sky-500/15 dark:text-sky-300 dark:border-sky-500/30",
   택배발송: "border-indigo-400 text-indigo-700 bg-indigo-50 dark:bg-indigo-500/15 dark:text-indigo-300 dark:border-indigo-500/30",
@@ -680,7 +694,7 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
                         return (
                           <div
                             key={r.id}
-                            className={`flex items-stretch transition-all duration-300 ease-out overflow-hidden ${
+                            className={`group flex items-stretch transition-all duration-300 ease-out overflow-hidden ${
                               completingIds.has(r.id)
                                 ? "opacity-0 -translate-x-4 max-h-0 py-0 my-0 border-transparent"
                                 : "opacity-100 max-h-40"
@@ -716,8 +730,46 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
                                   <Icon className="size-3" /> {ap}
                                 </Badge>
                                 {/* 2. 개통 상태 */}
-                                {r.status && (
-                                  <Badge variant="outline" className={`text-[10px] ${SALE_STATUS_BADGE[r.status] ?? ""}`}>{r.status}</Badge>
+                                {r.status && (() => {
+                                  const waiting = waitingLabelFor(r.product, r.status);
+                                  if (waiting) {
+                                    return (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-[10px] font-semibold border-blue-500 text-blue-700 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/40"
+                                      >
+                                        {waiting}
+                                      </Badge>
+                                    );
+                                  }
+                                  return (
+                                    <Badge variant="outline" className={`text-[10px] ${SALE_STATUS_BADGE[r.status] ?? ""}`}>{r.status}</Badge>
+                                  );
+                                })()}
+                                {/* 대기 라벨 바로 옆 완료 버튼 (호버 시 강조) */}
+                                {matchesPendingActivationStatus(r.status) && (
+                                  <span
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-disabled={completingIds.has(r.id)}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      if (!completingIds.has(r.id)) markCompletion(r, e as any);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if ((e.key === "Enter" || e.key === " ") && !completingIds.has(r.id)) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        markCompletion(r, e as any);
+                                      }
+                                    }}
+                                    className={`inline-flex items-center gap-1 h-6 px-2 rounded-md border text-[10px] font-medium cursor-pointer select-none border-emerald-500/60 text-emerald-700 bg-emerald-50/70 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 hover:shadow transition-all opacity-80 group-hover:opacity-100 ${completingIds.has(r.id) ? "opacity-40 pointer-events-none" : ""}`}
+                                    title={`${completionLabelFor(r.product)} 처리`}
+                                  >
+                                    <CheckCircle2 className="size-3" />
+                                    {completionStatusFor(r.product)}
+                                  </span>
                                 )}
                                 {/* 3. 미처리 */}
                                 {hasUnhandled && (
@@ -753,21 +805,6 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
                               </div>
                             </div>
                             </button>
-                            {/* 전용 완료 버튼: 모바일=개통완료 / 홈=설치완료 */}
-                            {matchesPendingActivationStatus(r.status) && (
-                              <div className="self-center pr-3 shrink-0" onClick={(e) => e.stopPropagation()}>
-                                <Button
-                                  size="sm"
-                                  onClick={(e) => markCompletion(r, e)}
-                                  disabled={completingIds.has(r.id)}
-                                  className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
-                                  title={`${completionLabelFor(r.product)} 처리 (리스트에서 제거)`}
-                                >
-                                  <CheckCircle2 className="size-3.5" />
-                                  {completionLabelFor(r.product)}
-                                </Button>
-                              </div>
-                            )}
                           </div>
                         );
                       })}
