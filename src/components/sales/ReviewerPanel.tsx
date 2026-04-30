@@ -746,35 +746,27 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 pt-2">
+          <div className="grid grid-cols-2 gap-2 pt-2">
             <Button
               onClick={() => submitDecision("검수완료")}
               disabled={submitting || !allRequiredChecked}
               variant="default"
-              className="h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm"
+              className="h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base"
               title={!allRequiredChecked ? "필수 체크리스트를 먼저 완료하세요" : ""}
             >
-              <ShieldCheck className="size-4 mr-1.5" /> 승인
+              <ShieldCheck className="size-5 mr-2" /> 검수 완료
             </Button>
             <Button
               onClick={() => submitDecision("수정요청")}
               disabled={submitting}
               variant="outline"
-              className="h-11 border-orange-400 text-orange-700 hover:bg-orange-50 font-semibold text-sm"
+              className="h-12 border-orange-400 text-orange-700 hover:bg-orange-50 font-bold text-base"
             >
-              <Edit3 className="size-4 mr-1.5" /> 수정요청
-            </Button>
-            <Button
-              onClick={() => submitDecision("반려")}
-              disabled={submitting}
-              variant="outline"
-              className="h-11 border-destructive/50 text-destructive hover:bg-destructive/10 font-semibold text-sm"
-            >
-              <XCircle className="size-4 mr-1.5" /> 반려
+              <Edit3 className="size-5 mr-2" /> 재검수 필요
             </Button>
           </div>
           <p className="text-[10px] text-muted-foreground">
-            승인 = 기획팀 검토 종료(잠금 없음, 정산 확정 전 단계) · 수정요청 시 미체크 항목이 사유에 자동 첨부됩니다 · 반려/수정요청 = 사유 필수
+            검수 완료 = 미완료 리스트에서 제외 · 재검수 필요 = 사유 메모와 함께 리스트 유지(미체크 항목 자동 첨부)
           </p>
         </div>
       ) : !isOwner ? (
