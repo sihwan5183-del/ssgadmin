@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { usePositions } from "@/hooks/usePositions";
 import { useStores } from "@/hooks/useStores";
-import { ROLE_LABELS, type AppRole } from "@/hooks/useRole";
+import { ROLE_LABELS, ASSIGNABLE_ROLES, type AppRole } from "@/hooks/useRole";
 import { ShieldCheck, Mail, Power, KeyRound } from "lucide-react";
 
 interface Profile {
@@ -23,7 +23,8 @@ interface Profile {
   hire_date: string | null;
 }
 
-const ALL_ROLES: AppRole[] = ["admin","ceo","planner","manager","team_lead","staff","user"];
+// 5단계 권한 (super_admin은 시스템 자동 부여, 부여 UI에서 제외)
+const ALL_ROLES: AppRole[] = ASSIGNABLE_ROLES.map((r) => r.value);
 
 export function StaffDetailDialog({ userId, email, open, onOpenChange, onChanged }: {
   userId: string | null;
@@ -190,18 +191,19 @@ export function StaffDetailDialog({ userId, email, open, onOpenChange, onChanged
               <ShieldCheck className="size-3.5" /> 권한 그룹
             </div>
             <div className="flex flex-wrap gap-2">
-              {ALL_ROLES.map((r) => {
+              {ASSIGNABLE_ROLES.map(({ value: r, label, description }) => {
                 const has = roles.includes(r);
                 return (
                   <button
                     key={r}
                     disabled={busy}
                     onClick={() => toggleRole(r)}
+                    title={description}
                     className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
                       has ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    {ROLE_LABELS[r]}
+                    {label}
                   </button>
                 );
               })}
