@@ -114,7 +114,7 @@ const emptyForm = {
 export default function AdCalendarPage() {
   const { user } = useAuth();
   const { isAdmin } = useRole();
-  const { year, month, setYear, setMonth, mode, startDate, endDate, label: periodLabel } = usePeriod();
+  const { year, month, setYear, setMonth, setMode, mode, startDate, endDate, label: periodLabel } = usePeriod();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [salesByDate, setSalesByDate] = useState<Map<string, Map<string, number>>>(new Map());
   const [loading, setLoading] = useState(true);
