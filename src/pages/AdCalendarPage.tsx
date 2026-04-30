@@ -470,14 +470,14 @@ export default function AdCalendarPage() {
               <div
                 key={idx}
                 className={cn(
-                  "min-h-[120px] border-b border-r border-border/30 p-2 group transition-colors",
+                  "min-h-[150px] border-b border-r border-border/30 p-2 group transition-colors flex flex-col",
                   !cell.inMonth && "bg-background/40 opacity-40",
                   cell.inMonth && "hover:bg-white/[0.02]",
                   isToday && "bg-primary/5 ring-1 ring-primary/30 ring-inset",
                   (idx + 1) % 7 === 0 && "border-r-0",
                 )}
               >
-                <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center justify-between mb-2">
                   <button
                     type="button"
                     disabled={!cell.inMonth}
@@ -488,7 +488,7 @@ export default function AdCalendarPage() {
                     }}
                     title="이 날짜의 실적 보기"
                     className={cn(
-                      "text-xs font-semibold tabular-nums hover:underline disabled:no-underline",
+                      "text-sm font-bold tabular-nums hover:underline disabled:no-underline",
                       dow === 0 && "text-destructive/80",
                       dow === 6 && "text-primary-glow/80",
                       isToday && "px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground",
@@ -510,7 +510,7 @@ export default function AdCalendarPage() {
                   )}
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-1 flex-1">
                   {dayItems.slice(0, 3).map((c) => {
                     const p = getMediaPalette(c.media);
                     const isStart = c.start_date === key;
@@ -526,7 +526,7 @@ export default function AdCalendarPage() {
                             onMouseEnter={() => c.image_url && setHoverPreview({ url: c.image_url, topic: c.topic })}
                             onMouseLeave={() => setHoverPreview(null)}
                             className={cn(
-                              "w-full text-left px-1.5 py-1 text-[10px] leading-tight border-l-2",
+                              "w-full text-left px-1.5 py-1 text-[10px] leading-tight border-l-[3px] rounded-sm",
                               p.bg,
                               p.border,
                               p.text,
@@ -536,11 +536,11 @@ export default function AdCalendarPage() {
                             )}
                           >
                             <div className="flex items-center justify-between gap-1">
-                              <span className="font-semibold truncate">{c.media}</span>
+                              <span className="font-bold truncate">{c.media}</span>
                               {c.image_url && <ImageIcon className="size-2.5 opacity-70 shrink-0" />}
                             </div>
-                            <div className="truncate text-foreground/90">{c.topic}</div>
-                            <div className="tabular-nums opacity-80">₩{fmtKRW(c.total_budget || 0)}</div>
+                            <div className="truncate text-white/95 font-medium">{c.topic}</div>
+                            <div className="tabular-nums font-semibold text-white/85">₩{fmtKRW(c.total_budget || 0)}</div>
                           </button>
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-xs">
@@ -560,16 +560,17 @@ export default function AdCalendarPage() {
                       <PopoverTrigger asChild>
                         <button
                           onClick={(e) => e.stopPropagation()}
-                          className="w-full text-[10px] font-medium text-primary-glow hover:text-primary px-1.5 py-0.5 rounded-md hover:bg-primary/10 text-left"
+                          className="w-full text-[11px] font-bold text-[hsl(28_100%_70%)] hover:text-[hsl(28_100%_80%)] px-1.5 py-1 rounded-md bg-[hsl(28_95%_55%/0.15)] hover:bg-[hsl(28_95%_55%/0.25)] border border-[hsl(28_95%_55%/0.4)] text-left transition"
                         >
                           + {dayItems.length - 3}개 더보기
                         </button>
                       </PopoverTrigger>
-                      <PopoverContent align="start" className="w-72 p-2 max-h-80 overflow-y-auto">
-                        <div className="text-[11px] text-muted-foreground px-2 py-1 font-medium">
-                          {key} · 총 {dayItems.length}건
+                      <PopoverContent align="start" className="w-80 p-3 max-h-96 overflow-y-auto glass-strong border-border/50 rounded-2xl shadow-card-elevated">
+                        <div className="text-xs px-1 pb-2 font-semibold border-b border-border/30 mb-2 flex items-center justify-between">
+                          <span className="text-foreground">📅 {key}</span>
+                          <span className="text-muted-foreground tabular-nums">총 {dayItems.length}건</span>
                         </div>
-                        <div className="space-y-1">
+                        <div className="space-y-1.5">
                           {dayItems.map((c) => {
                             const pp = getMediaPalette(c.media);
                             return (
@@ -577,16 +578,16 @@ export default function AdCalendarPage() {
                                 key={c.id}
                                 onClick={(e) => { e.stopPropagation(); setOpenDetail(c); }}
                                 className={cn(
-                                  "w-full text-left px-2 py-1.5 rounded-md border-l-2 text-xs",
+                                  "w-full text-left px-2.5 py-2 rounded-lg border-l-[3px] text-xs",
                                   pp.bg, pp.border, pp.text,
                                   "hover:brightness-125 transition",
                                 )}
                               >
-                                <div className="font-semibold flex items-center justify-between gap-2">
+                                <div className="font-bold flex items-center justify-between gap-2">
                                   <span>{c.media}</span>
-                                  <span className="tabular-nums opacity-80">₩{fmtKRW(c.total_budget || 0)}</span>
+                                  <span className="tabular-nums font-semibold text-white/90">₩{fmtKRW(c.total_budget || 0)}</span>
                                 </div>
-                                <div className="text-foreground/90 truncate">{c.topic}</div>
+                                <div className="text-white/95 font-medium truncate mt-0.5">{c.topic}</div>
                               </button>
                             );
                           })}
@@ -600,20 +601,28 @@ export default function AdCalendarPage() {
                   const dayMap = salesByDate.get(key);
                   const opens = dayMap?.get("__total__") ?? 0;
                   const cpa = opens > 0 && spend > 0 ? Math.round(spend / opens) : 0;
-                  if (spend === 0 && opens === 0) return null;
+                  if (!cell.inMonth) return null;
+                  const hasData = spend > 0 || opens > 0;
                   return (
-                    <div className="mt-1.5 pt-1.5 border-t border-border/20 grid grid-cols-3 gap-1 text-[9px] tabular-nums">
+                    <div className={cn(
+                      "mt-auto pt-1.5 border-t border-border/30 grid grid-cols-3 gap-1 text-[10px] tabular-nums",
+                      !hasData && "opacity-40"
+                    )}>
                       <div className="text-center">
-                        <div className="text-muted-foreground">지출</div>
-                        <div className="font-semibold text-foreground">₩{fmtKRW(Math.round(spend))}</div>
+                        <div className="text-muted-foreground text-[9px]">지출</div>
+                        <div className="font-bold text-foreground">
+                          {spend > 0 ? `₩${fmtKRW(Math.round(spend))}` : "-"}
+                        </div>
                       </div>
                       <div className="text-center">
-                        <div className="text-muted-foreground">개통</div>
-                        <div className="font-semibold text-emerald-300">{opens}건</div>
+                        <div className="text-muted-foreground text-[9px]">개통</div>
+                        <div className="font-bold text-emerald-300">
+                          {opens > 0 ? `${opens}건` : "-"}
+                        </div>
                       </div>
                       <div className="text-center">
-                        <div className="text-muted-foreground">CPA</div>
-                        <div className="font-semibold text-primary-glow">
+                        <div className="text-muted-foreground text-[9px]">CPA</div>
+                        <div className="font-bold text-[hsl(28_100%_72%)]">
                           {cpa > 0 ? `₩${fmtKRW(cpa)}` : "-"}
                         </div>
                       </div>
