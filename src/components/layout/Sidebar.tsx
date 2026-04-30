@@ -16,6 +16,15 @@ export const Sidebar = () => {
 
   const currentRole: MenuRole = isAdmin ? "admin" : isManager ? "manager" : "user";
 
+  // 사원에게는 노출하지 않을 경로 (팀장 이상 전용)
+  // - 지출/매출 정산, 업체 관리(SEG), 관리자 설정, 직원/계정 관리, 인센티브/제품 마스터, 다운로드
+  const STAFF_BLOCKED_PREFIXES = [
+    "/expense", "/expenses", "/seg", "/admin", "/account",
+    "/menu-manager", "/incentive", "/product-rate", "/equipment",
+    "/budget", "/device-models", "/field-options", "/downloads",
+    "/staff-status", "/team",
+  ];
+
   const visibleGroups = useMemo(() => {
     return groups
       .filter((g) => g.active && g.visible_roles.includes(currentRole))
@@ -27,7 +36,9 @@ export const Sidebar = () => {
               i.active &&
               i.group_id === g.id &&
               i.visible_roles.includes(currentRole) &&
-              (!i.is_admin_only || isAdmin)
+              (!i.is_admin_only || isAdmin) &&
+              // 사원이면 위 prefix 경로 차단
+              (currentRole !== "user" || !STAFF_BLOCKED_PREFIXES.some((p) => i.path.startsWith(p)))
           )
           .sort((a, b) => a.sort_order - b.sort_order),
       }))
@@ -116,7 +127,7 @@ export const Sidebar = () => {
                         <span className="font-medium">{item.label}</span>
                         {item.is_admin_only && (
                           <span className="ml-auto text-[9px] text-primary uppercase tracking-wider font-semibold">
-                            admin
+                            관리자
                           </span>
                         )}
                       </NavLink>

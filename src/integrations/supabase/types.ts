@@ -2212,6 +2212,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_view_user_data: {
+        Args: { _target: string; _viewer: string }
+        Returns: boolean
+      }
       cleanup_old_download_history: { Args: never; Returns: undefined }
       has_role: {
         Args: {
@@ -2224,6 +2228,7 @@ export type Database = {
       is_ceo: { Args: { _user_id: string }; Returns: boolean }
       is_planner: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_team_lead: { Args: { _user_id: string }; Returns: boolean }
       is_user_active: { Args: { _user_id: string }; Returns: boolean }
       normalize_device_model: { Args: { _raw: string }; Returns: string }
       normalize_serial_no: { Args: { _raw: string }; Returns: string }
