@@ -1060,6 +1060,7 @@ export default function ExpenseInputPage() {
                 <th className="text-left py-2 pr-3">매체/항목</th>
                 <th className="text-left py-2 pr-3">인입경로</th>
                 <th className="text-left py-2 pr-3">캠페인/적요</th>
+                <th className="text-left py-2 pr-3 whitespace-nowrap">결제수단</th>
                 <th className="text-right py-2 pr-3">금액</th>
                 <th className="text-right py-2 pr-3"></th>
               </tr>
