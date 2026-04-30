@@ -14,7 +14,14 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, PlusCircle, Megaphone, Receipt, Download, Building2, Banknote, Wallet, TrendingUp, Coins, Sparkles, Repeat, CalendarClock } from "lucide-react";
+import { Trash2, PlusCircle, Megaphone, Receipt, Download, Building2, Banknote, Wallet, TrendingUp, Coins, Sparkles, Repeat, CalendarClock, Pencil, CreditCard } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
@@ -44,6 +51,9 @@ interface ExpenseRow {
   amount: number;
   campaign: string | null;
   note: string | null;
+  payment_method?: string | null;
+  card_name?: string | null;
+  card_last4?: string | null;
 }
 
 const formatKRW = (n: number) =>
@@ -132,6 +142,9 @@ export default function ExpenseInputPage() {
     total_overridden: false,
     campaign: "",
     note: "",
+    payment_method: "",
+    card_name: "",
+    card_last4: "",
   });
 
   const [etcForm, setEtcForm] = useState({
@@ -140,6 +153,9 @@ export default function ExpenseInputPage() {
     amount: "",
     campaign: "",
     note: "",
+    payment_method: "",
+    card_name: "",
+    card_last4: "",
   });
 
   const [fixedForm, setFixedForm] = useState({
@@ -150,6 +166,9 @@ export default function ExpenseInputPage() {
     note: "",
     auto_register: true,
     day_of_month: 1,
+    payment_method: "",
+    card_name: "",
+    card_last4: "",
   });
 
   // recurring expense templates
@@ -285,6 +304,9 @@ export default function ExpenseInputPage() {
         channel: adForm.channel || null,
         amount: dailyAmount,
         campaign: adForm.campaign || null,
+        payment_method: adForm.payment_method || null,
+        card_name: adForm.card_name || null,
+        card_last4: adForm.card_last4 || null,
         note:
           (adForm.note ? adForm.note + " · " : "") +
           (days > 1
@@ -301,7 +323,7 @@ export default function ExpenseInputPage() {
         ? `${days}일에 걸쳐 일별 ${dailyAmount.toLocaleString()}원씩 자동 분산 저장됨 (총 ${totalAmount.toLocaleString()}원)`
         : "광고비가 저장되었습니다",
     );
-    setAdForm({ spend_date: todayISO(), end_date: todayISO(), media: "", channel: "", amount: "", amount_mode: "total", total_override: "", total_overridden: false, campaign: "", note: "" });
+    setAdForm({ spend_date: todayISO(), end_date: todayISO(), media: "", channel: "", amount: "", amount_mode: "total", total_override: "", total_overridden: false, campaign: "", note: "", payment_method: "", card_name: "", card_last4: "" });
     fetchRows();
   };
 
@@ -323,12 +345,15 @@ export default function ExpenseInputPage() {
       channel: null,
       amount: Number(etcForm.amount.replace(/[^0-9.-]/g, "")) || 0,
       campaign: etcForm.campaign || null,
+      payment_method: etcForm.payment_method || null,
+      card_name: etcForm.card_name || null,
+      card_last4: etcForm.card_last4 || null,
       note: etcForm.note || null,
     });
     setSaving(false);
     if (error) return toast.error("저장 실패: " + error.message);
     toast.success("지출이 저장되었습니다");
-    setEtcForm({ spend_date: todayISO(), expense_type: "", amount: "", campaign: "", note: "" });
+    setEtcForm({ spend_date: todayISO(), expense_type: "", amount: "", campaign: "", note: "", payment_method: "", card_name: "", card_last4: "" });
     fetchRows();
   };
 
@@ -351,6 +376,9 @@ export default function ExpenseInputPage() {
       channel: null,
       amount,
       campaign: fixedForm.vendor || null,
+      payment_method: fixedForm.payment_method || null,
+      card_name: fixedForm.card_name || null,
+      card_last4: fixedForm.card_last4 || null,
       note: fixedForm.note || null,
     });
     if (error) {
@@ -378,7 +406,7 @@ export default function ExpenseInputPage() {
       toast.success("고정지출이 저장되었습니다");
     }
     setSaving(false);
-    setFixedForm({ spend_date: todayISO(), expense_type: "", amount: "", vendor: "", note: "", auto_register: true, day_of_month: 1 });
+    setFixedForm({ spend_date: todayISO(), expense_type: "", amount: "", vendor: "", note: "", auto_register: true, day_of_month: 1, payment_method: "", card_name: "", card_last4: "" });
     fetchRows();
   };
 
@@ -406,6 +434,62 @@ export default function ExpenseInputPage() {
       toast.success("삭제되었습니다");
       fetchRows();
     }
+  };
+
+  // 수정 다이얼로그
+  const [editRow, setEditRow] = useState<ExpenseRow | null>(null);
+  const [editForm, setEditForm] = useState<{
+    spend_date: string; media: string; expense_type: string; channel: string;
+    amount: string; campaign: string; note: string;
+    payment_method: string; card_name: string; card_last4: string;
+  }>({
+    spend_date: "", media: "", expense_type: "", channel: "",
+    amount: "", campaign: "", note: "",
+    payment_method: "", card_name: "", card_last4: "",
+  });
+  const [editSaving, setEditSaving] = useState(false);
+
+  const openEdit = (r: ExpenseRow) => {
+    setEditRow(r);
+    setEditForm({
+      spend_date: r.spend_date,
+      media: r.media ?? "",
+      expense_type: r.expense_type ?? "",
+      channel: r.channel ?? "",
+      amount: String(r.amount ?? ""),
+      campaign: r.campaign ?? "",
+      note: r.note ?? "",
+      payment_method: r.payment_method ?? "",
+      card_name: r.card_name ?? "",
+      card_last4: r.card_last4 ?? "",
+    });
+  };
+
+  const submitEdit = async () => {
+    if (!editRow) return;
+    setEditSaving(true);
+    const amount = Number((editForm.amount || "").replace(/[^0-9.-]/g, "")) || 0;
+    const { error } = await supabase
+      .from("ad_spend")
+      .update({
+        spend_date: editForm.spend_date,
+        spend_month: editForm.spend_date.slice(0, 7),
+        media: editForm.media || editForm.expense_type,
+        expense_type: editForm.expense_type || null,
+        channel: editForm.channel || null,
+        amount,
+        campaign: editForm.campaign || null,
+        note: editForm.note || null,
+        payment_method: editForm.payment_method || null,
+        card_name: editForm.card_name || null,
+        card_last4: editForm.card_last4 || null,
+      })
+      .eq("id", editRow.id);
+    setEditSaving(false);
+    if (error) return toast.error("수정 실패: " + error.message);
+    toast.success("수정되었습니다");
+    setEditRow(null);
+    fetchRows();
   };
 
   return (
@@ -635,6 +719,31 @@ export default function ExpenseInputPage() {
                   value={adForm.campaign}
                   onChange={(e) => setAdForm({ ...adForm, campaign: e.target.value })} />
               </div>
+              <div>
+                <Label className="flex items-center gap-1.5"><CreditCard className="size-3.5" /> 결제수단</Label>
+                <Select value={adForm.payment_method} onValueChange={(v) => setAdForm({ ...adForm, payment_method: v })}>
+                  <SelectTrigger><SelectValue placeholder="선택 (신용카드/체크/이체/현금)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="신용카드">신용카드</SelectItem>
+                    <SelectItem value="체크카드">체크카드</SelectItem>
+                    <SelectItem value="계좌이체">계좌이체</SelectItem>
+                    <SelectItem value="현금">현금</SelectItem>
+                    <SelectItem value="기타">기타</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>카드명</Label>
+                <Input placeholder="예: 현대카드"
+                  value={adForm.card_name}
+                  onChange={(e) => setAdForm({ ...adForm, card_name: e.target.value })} />
+              </div>
+              <div>
+                <Label>카드번호 끝 4자리</Label>
+                <Input inputMode="numeric" maxLength={4} placeholder="예: 1234"
+                  value={adForm.card_last4}
+                  onChange={(e) => setAdForm({ ...adForm, card_last4: e.target.value.replace(/\D/g, "").slice(0, 4) })} />
+              </div>
               <div className="md:col-span-2 lg:col-span-3">
                 <Label>메모</Label>
                 <Textarea rows={2} placeholder="집행 채널 세부, 소재, 타겟 등"
@@ -678,6 +787,31 @@ export default function ExpenseInputPage() {
                 <Input placeholder="예: ○○부동산 11월 임대료"
                   value={etcForm.campaign}
                   onChange={(e) => setEtcForm({ ...etcForm, campaign: e.target.value })} />
+              </div>
+              <div>
+                <Label className="flex items-center gap-1.5"><CreditCard className="size-3.5" /> 결제수단</Label>
+                <Select value={etcForm.payment_method} onValueChange={(v) => setEtcForm({ ...etcForm, payment_method: v })}>
+                  <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="신용카드">신용카드</SelectItem>
+                    <SelectItem value="체크카드">체크카드</SelectItem>
+                    <SelectItem value="계좌이체">계좌이체</SelectItem>
+                    <SelectItem value="현금">현금</SelectItem>
+                    <SelectItem value="기타">기타</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>카드명</Label>
+                <Input placeholder="예: 현대카드"
+                  value={etcForm.card_name}
+                  onChange={(e) => setEtcForm({ ...etcForm, card_name: e.target.value })} />
+              </div>
+              <div>
+                <Label>카드번호 끝 4자리</Label>
+                <Input inputMode="numeric" maxLength={4} placeholder="예: 1234"
+                  value={etcForm.card_last4}
+                  onChange={(e) => setEtcForm({ ...etcForm, card_last4: e.target.value.replace(/\D/g, "").slice(0, 4) })} />
               </div>
               <div className="md:col-span-2 lg:col-span-3">
                 <Label>메모</Label>
@@ -732,6 +866,31 @@ export default function ExpenseInputPage() {
                   value={fixedForm.day_of_month}
                   onChange={(e) => setFixedForm({ ...fixedForm, day_of_month: Number(e.target.value) })} />
                 <p className="text-[10px] text-muted-foreground mt-1">매월 해당일에 자동 생성 (1~28)</p>
+              </div>
+              <div>
+                <Label className="flex items-center gap-1.5"><CreditCard className="size-3.5" /> 결제수단</Label>
+                <Select value={fixedForm.payment_method} onValueChange={(v) => setFixedForm({ ...fixedForm, payment_method: v })}>
+                  <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="신용카드">신용카드</SelectItem>
+                    <SelectItem value="체크카드">체크카드</SelectItem>
+                    <SelectItem value="계좌이체">계좌이체</SelectItem>
+                    <SelectItem value="현금">현금</SelectItem>
+                    <SelectItem value="자동이체">자동이체</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>카드명</Label>
+                <Input placeholder="예: 현대카드"
+                  value={fixedForm.card_name}
+                  onChange={(e) => setFixedForm({ ...fixedForm, card_name: e.target.value })} />
+              </div>
+              <div>
+                <Label>카드번호 끝 4자리</Label>
+                <Input inputMode="numeric" maxLength={4} placeholder="예: 1234"
+                  value={fixedForm.card_last4}
+                  onChange={(e) => setFixedForm({ ...fixedForm, card_last4: e.target.value.replace(/\D/g, "").slice(0, 4) })} />
               </div>
               <div className="md:col-span-2 lg:col-span-3">
                 <Label>메모</Label>
@@ -901,6 +1060,7 @@ export default function ExpenseInputPage() {
                 <th className="text-left py-2 pr-3">매체/항목</th>
                 <th className="text-left py-2 pr-3">인입경로</th>
                 <th className="text-left py-2 pr-3">캠페인/적요</th>
+                <th className="text-left py-2 pr-3 whitespace-nowrap">결제수단</th>
                 <th className="text-right py-2 pr-3">금액</th>
                 <th className="text-right py-2 pr-3"></th>
               </tr>
@@ -918,6 +1078,7 @@ export default function ExpenseInputPage() {
                 </td>
                 <td className="py-2 pr-3 text-muted-foreground">-</td>
                 <td className="py-2 pr-3 text-muted-foreground text-xs">sales.distributor_amount 합계</td>
+                <td className="py-2 pr-3 text-muted-foreground">-</td>
                 <td className="py-2 pr-3 text-right font-mono font-semibold">{formatKRW(salesAgg.distributor)}</td>
                 <td />
               </tr>
@@ -932,6 +1093,7 @@ export default function ExpenseInputPage() {
                 </td>
                 <td className="py-2 pr-3 text-muted-foreground">-</td>
                 <td className="py-2 pr-3 text-muted-foreground text-xs">cash_open=true 건의 cash_support_amount 합계</td>
+                <td className="py-2 pr-3 text-muted-foreground">-</td>
                 <td className="py-2 pr-3 text-right font-mono font-semibold">{formatKRW(salesAgg.cash)}</td>
                 <td />
               </tr>
@@ -946,21 +1108,25 @@ export default function ExpenseInputPage() {
                 </td>
                 <td className="py-2 pr-3 text-muted-foreground">-</td>
                 <td className="py-2 pr-3 text-muted-foreground text-xs">receivable_paid 입력된 건의 receivable_amount 합계</td>
+                <td className="py-2 pr-3 text-muted-foreground">-</td>
                 <td className="py-2 pr-3 text-right font-mono font-semibold">{formatKRW(salesAgg.receivable)}</td>
                 <td />
               </tr>
 
               {loading ? (
-                <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">불러오는 중...</td></tr>
+                <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">불러오는 중...</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">등록된 지출이 없습니다</td></tr>
+                <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">등록된 지출이 없습니다</td></tr>
               ) : (
                 rows.map((r) => {
                   const sel = bulk.isSelected(r.id);
+                  const cardLabel = r.card_name
+                    ? `${r.card_name}${r.card_last4 ? `-${r.card_last4}` : ""}`
+                    : (r.payment_method ?? "");
                   return (
                     <tr key={r.id} className={`border-b border-border/30 hover:bg-muted/30 ${sel ? "bg-primary/5" : ""}`} data-state={sel ? "selected" : undefined}>
                       <td className="py-2 pr-2"><Checkbox checked={sel} onCheckedChange={() => bulk.toggle(r.id)} /></td>
-                      <td className="py-2 pr-3">{r.spend_date}</td>
+                      <td className="py-2 pr-3 whitespace-nowrap">{r.spend_date}</td>
                       <td className="py-2 pr-3">
                         <Badge variant="outline"
                           className={`text-[10px] ${
@@ -971,17 +1137,32 @@ export default function ExpenseInputPage() {
                           {r.category}
                         </Badge>
                       </td>
-                      <td className="py-2 pr-3 font-medium">{r.expense_type ?? r.media}</td>
+                      <td className="py-2 pr-3 font-medium whitespace-nowrap">{r.expense_type ?? r.media}</td>
                       <td className="py-2 pr-3 text-muted-foreground">{r.channel ?? "-"}</td>
                       <td className="py-2 pr-3 text-muted-foreground truncate max-w-[240px]">{r.campaign ?? "-"}</td>
+                      <td className="py-2 pr-3 whitespace-nowrap text-foreground">
+                        {cardLabel ? (
+                          <span className="inline-flex items-center gap-1 text-foreground font-medium">
+                            <CreditCard className="size-3 text-muted-foreground" />
+                            {cardLabel}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </td>
                       <td className="py-2 pr-3 text-right font-mono font-semibold text-expense">
                         {formatKRW(Number(r.amount))}
                       </td>
-                      <td className="py-2 pr-3 text-right">
-                        {user?.id === r.created_by && (
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)} className="size-8">
-                            <Trash2 className="size-4 text-destructive" />
-                          </Button>
+                      <td className="py-2 pr-3 text-right whitespace-nowrap">
+                        {(user?.id === r.created_by || isAdmin) && (
+                          <div className="inline-flex items-center gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => openEdit(r)} className="size-8" title="수정">
+                              <Pencil className="size-4 text-primary" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)} className="size-8" title="삭제">
+                              <Trash2 className="size-4 text-destructive" />
+                            </Button>
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -1026,6 +1207,78 @@ export default function ExpenseInputPage() {
         }}
         onDone={fetchRows}
       />
+
+      {/* 지출 수정 다이얼로그 */}
+      <Dialog open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>지출 내역 수정 {editRow ? `· ${editRow.category}` : ""}</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <Label>집행일</Label>
+              <Input type="date" value={editForm.spend_date}
+                onChange={(e) => setEditForm({ ...editForm, spend_date: e.target.value })} />
+            </div>
+            <div>
+              <Label>매체/항목</Label>
+              <Input value={editForm.media}
+                onChange={(e) => setEditForm({ ...editForm, media: e.target.value })} />
+            </div>
+            <div>
+              <Label>인입 경로</Label>
+              <Input value={editForm.channel}
+                onChange={(e) => setEditForm({ ...editForm, channel: e.target.value })} />
+            </div>
+            <div>
+              <Label>금액 (₩)</Label>
+              <Input inputMode="numeric" value={editForm.amount}
+                onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })} />
+            </div>
+            <div className="md:col-span-2">
+              <Label>캠페인 / 적요</Label>
+              <Input value={editForm.campaign}
+                onChange={(e) => setEditForm({ ...editForm, campaign: e.target.value })} />
+            </div>
+            <div>
+              <Label className="flex items-center gap-1.5"><CreditCard className="size-3.5" /> 결제수단</Label>
+              <Select value={editForm.payment_method} onValueChange={(v) => setEditForm({ ...editForm, payment_method: v })}>
+                <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="신용카드">신용카드</SelectItem>
+                  <SelectItem value="체크카드">체크카드</SelectItem>
+                  <SelectItem value="계좌이체">계좌이체</SelectItem>
+                  <SelectItem value="자동이체">자동이체</SelectItem>
+                  <SelectItem value="현금">현금</SelectItem>
+                  <SelectItem value="기타">기타</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>카드명</Label>
+              <Input placeholder="예: 현대카드" value={editForm.card_name}
+                onChange={(e) => setEditForm({ ...editForm, card_name: e.target.value })} />
+            </div>
+            <div>
+              <Label>카드번호 끝 4자리</Label>
+              <Input inputMode="numeric" maxLength={4} placeholder="예: 1234"
+                value={editForm.card_last4}
+                onChange={(e) => setEditForm({ ...editForm, card_last4: e.target.value.replace(/\D/g, "").slice(0, 4) })} />
+            </div>
+            <div className="md:col-span-2">
+              <Label>메모</Label>
+              <Textarea rows={3} value={editForm.note}
+                onChange={(e) => setEditForm({ ...editForm, note: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditRow(null)}>취소</Button>
+            <Button onClick={submitEdit} disabled={editSaving}>
+              {editSaving ? "저장 중..." : "수정 저장"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

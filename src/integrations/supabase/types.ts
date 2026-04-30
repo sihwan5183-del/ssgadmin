@@ -158,6 +158,8 @@ export type Database = {
         Row: {
           amount: number
           campaign: string | null
+          card_last4: string | null
+          card_name: string | null
           category: string
           channel: string | null
           created_at: string
@@ -167,6 +169,7 @@ export type Database = {
           id: string
           media: string
           note: string | null
+          payment_method: string | null
           spend_date: string
           spend_month: string | null
           updated_at: string
@@ -174,6 +177,8 @@ export type Database = {
         Insert: {
           amount?: number
           campaign?: string | null
+          card_last4?: string | null
+          card_name?: string | null
           category?: string
           channel?: string | null
           created_at?: string
@@ -183,6 +188,7 @@ export type Database = {
           id?: string
           media: string
           note?: string | null
+          payment_method?: string | null
           spend_date: string
           spend_month?: string | null
           updated_at?: string
@@ -190,6 +196,8 @@ export type Database = {
         Update: {
           amount?: number
           campaign?: string | null
+          card_last4?: string | null
+          card_name?: string | null
           category?: string
           channel?: string | null
           created_at?: string
@@ -199,6 +207,7 @@ export type Database = {
           id?: string
           media?: string
           note?: string | null
+          payment_method?: string | null
           spend_date?: string
           spend_month?: string | null
           updated_at?: string
