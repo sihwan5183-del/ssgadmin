@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Check, Upload, Pencil, X, Camera, Plus, Trash2, Tv, Sparkles, AlertTriangle, Wallet, Banknote, CreditCard, Smartphone } from "lucide-react";
+import { Check, Upload, Pencil, X, Camera, Plus, Trash2, Tv, Sparkles, AlertTriangle, Wallet, Banknote, CreditCard, Smartphone, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
