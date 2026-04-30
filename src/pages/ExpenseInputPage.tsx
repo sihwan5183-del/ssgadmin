@@ -811,6 +811,31 @@ export default function ExpenseInputPage() {
                   onChange={(e) => setFixedForm({ ...fixedForm, day_of_month: Number(e.target.value) })} />
                 <p className="text-[10px] text-muted-foreground mt-1">매월 해당일에 자동 생성 (1~28)</p>
               </div>
+              <div>
+                <Label className="flex items-center gap-1.5"><CreditCard className="size-3.5" /> 결제수단</Label>
+                <Select value={fixedForm.payment_method} onValueChange={(v) => setFixedForm({ ...fixedForm, payment_method: v })}>
+                  <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="신용카드">신용카드</SelectItem>
+                    <SelectItem value="체크카드">체크카드</SelectItem>
+                    <SelectItem value="계좌이체">계좌이체</SelectItem>
+                    <SelectItem value="현금">현금</SelectItem>
+                    <SelectItem value="자동이체">자동이체</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>카드명</Label>
+                <Input placeholder="예: 현대카드"
+                  value={fixedForm.card_name}
+                  onChange={(e) => setFixedForm({ ...fixedForm, card_name: e.target.value })} />
+              </div>
+              <div>
+                <Label>카드번호 끝 4자리</Label>
+                <Input inputMode="numeric" maxLength={4} placeholder="예: 1234"
+                  value={fixedForm.card_last4}
+                  onChange={(e) => setFixedForm({ ...fixedForm, card_last4: e.target.value.replace(/\D/g, "").slice(0, 4) })} />
+              </div>
               <div className="md:col-span-2 lg:col-span-3">
                 <Label>메모</Label>
                 <Textarea rows={2} placeholder="결제수단, 계정, 갱신 주기 등"
