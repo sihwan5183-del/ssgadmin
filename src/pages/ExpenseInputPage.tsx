@@ -1207,6 +1207,78 @@ export default function ExpenseInputPage() {
         }}
         onDone={fetchRows}
       />
+
+      {/* 지출 수정 다이얼로그 */}
+      <Dialog open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>지출 내역 수정 {editRow ? `· ${editRow.category}` : ""}</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <Label>집행일</Label>
+              <Input type="date" value={editForm.spend_date}
+                onChange={(e) => setEditForm({ ...editForm, spend_date: e.target.value })} />
+            </div>
+            <div>
+              <Label>매체/항목</Label>
+              <Input value={editForm.media}
+                onChange={(e) => setEditForm({ ...editForm, media: e.target.value })} />
+            </div>
+            <div>
+              <Label>인입 경로</Label>
+              <Input value={editForm.channel}
+                onChange={(e) => setEditForm({ ...editForm, channel: e.target.value })} />
+            </div>
+            <div>
+              <Label>금액 (₩)</Label>
+              <Input inputMode="numeric" value={editForm.amount}
+                onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })} />
+            </div>
+            <div className="md:col-span-2">
+              <Label>캠페인 / 적요</Label>
+              <Input value={editForm.campaign}
+                onChange={(e) => setEditForm({ ...editForm, campaign: e.target.value })} />
+            </div>
+            <div>
+              <Label className="flex items-center gap-1.5"><CreditCard className="size-3.5" /> 결제수단</Label>
+              <Select value={editForm.payment_method} onValueChange={(v) => setEditForm({ ...editForm, payment_method: v })}>
+                <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="신용카드">신용카드</SelectItem>
+                  <SelectItem value="체크카드">체크카드</SelectItem>
+                  <SelectItem value="계좌이체">계좌이체</SelectItem>
+                  <SelectItem value="자동이체">자동이체</SelectItem>
+                  <SelectItem value="현금">현금</SelectItem>
+                  <SelectItem value="기타">기타</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>카드명</Label>
+              <Input placeholder="예: 현대카드" value={editForm.card_name}
+                onChange={(e) => setEditForm({ ...editForm, card_name: e.target.value })} />
+            </div>
+            <div>
+              <Label>카드번호 끝 4자리</Label>
+              <Input inputMode="numeric" maxLength={4} placeholder="예: 1234"
+                value={editForm.card_last4}
+                onChange={(e) => setEditForm({ ...editForm, card_last4: e.target.value.replace(/\D/g, "").slice(0, 4) })} />
+            </div>
+            <div className="md:col-span-2">
+              <Label>메모</Label>
+              <Textarea rows={3} value={editForm.note}
+                onChange={(e) => setEditForm({ ...editForm, note: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditRow(null)}>취소</Button>
+            <Button onClick={submitEdit} disabled={editSaving}>
+              {editSaving ? "저장 중..." : "수정 저장"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
