@@ -732,6 +732,31 @@ export default function ExpenseInputPage() {
                   value={etcForm.campaign}
                   onChange={(e) => setEtcForm({ ...etcForm, campaign: e.target.value })} />
               </div>
+              <div>
+                <Label className="flex items-center gap-1.5"><CreditCard className="size-3.5" /> 결제수단</Label>
+                <Select value={etcForm.payment_method} onValueChange={(v) => setEtcForm({ ...etcForm, payment_method: v })}>
+                  <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="신용카드">신용카드</SelectItem>
+                    <SelectItem value="체크카드">체크카드</SelectItem>
+                    <SelectItem value="계좌이체">계좌이체</SelectItem>
+                    <SelectItem value="현금">현금</SelectItem>
+                    <SelectItem value="기타">기타</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>카드명</Label>
+                <Input placeholder="예: 현대카드"
+                  value={etcForm.card_name}
+                  onChange={(e) => setEtcForm({ ...etcForm, card_name: e.target.value })} />
+              </div>
+              <div>
+                <Label>카드번호 끝 4자리</Label>
+                <Input inputMode="numeric" maxLength={4} placeholder="예: 1234"
+                  value={etcForm.card_last4}
+                  onChange={(e) => setEtcForm({ ...etcForm, card_last4: e.target.value.replace(/\D/g, "").slice(0, 4) })} />
+              </div>
               <div className="md:col-span-2 lg:col-span-3">
                 <Label>메모</Label>
                 <Textarea rows={2} placeholder="결제수단, 영수증 번호 등"
