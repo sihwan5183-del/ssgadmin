@@ -1555,16 +1555,18 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
           );
         })()}
 
-        <div className="flex gap-3">
-          {editingId && (
-            <Button type="button" variant="outline" onClick={reset} className="h-10 rounded-2xl text-sm">
-              <X className="size-4 mr-2" /> 취소
+        {!hideSubmit && (
+          <div className="flex gap-3">
+            {editingId && (
+              <Button type="button" variant="outline" onClick={reset} className="h-10 rounded-2xl text-sm">
+                <X className="size-4 mr-2" /> 취소
+              </Button>
+            )}
+            <Button type="submit" disabled={busy} className="flex-1 h-10 bg-gradient-primary shadow-glow rounded-2xl text-sm font-semibold">
+              <Check className="size-4 mr-2" /> {editingId ? "수정 저장" : "판매 1건 저장"}
             </Button>
-          )}
-          <Button type="submit" disabled={busy} className="flex-1 h-10 bg-gradient-primary shadow-glow rounded-2xl text-sm font-semibold">
-            <Check className="size-4 mr-2" /> {editingId ? "수정 저장" : "판매 1건 저장"}
-          </Button>
-        </div>
+          </div>
+        )}
       </form>
     </>
   );
