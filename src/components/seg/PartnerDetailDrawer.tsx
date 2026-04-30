@@ -3,7 +3,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Plus, Phone, Mail, MapPin, Calendar, Building2, Edit, Trash2, CheckCircle2, Circle, Paperclip } from "lucide-react";
+import { Plus, Phone, MapPin, Calendar, Building2, Edit, Trash2, CheckCircle2, Circle, Paperclip, FileText, X, DollarSign } from "lucide-react";
 import { useSegActivities, type SegPartner, type SegActivity } from "@/hooks/useSegPartners";
 import { ActivityFormDialog } from "./ActivityFormDialog";
 import { PartnerFormDialog } from "./PartnerFormDialog";
@@ -33,6 +33,8 @@ export function PartnerDetailDrawer({ open, onOpenChange, partner }: Props) {
   const [editingActivity, setEditingActivity] = useState<SegActivity | null>(null);
   const [partnerEditOpen, setPartnerEditOpen] = useState(false);
   const [attachments, setAttachments] = useState<any[]>([]);
+  const [partnerImageUrls, setPartnerImageUrls] = useState<Record<string, string>>({});
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   useEffect(() => {
     if (!partner?.id) return;
@@ -43,10 +45,19 @@ export function PartnerDetailDrawer({ open, onOpenChange, partner }: Props) {
         .eq("partner_id", partner.id)
         .order("created_at", { ascending: false });
       setAttachments(data ?? []);
+      const urls: Record<string, string> = {};
+      for (const att of (data ?? []).filter((a: any) => !a.activity_id && (a.mime_type || "").startsWith("image/"))) {
+        const { data: s } = await (supabase as any).storage
+          .from("seg-files").createSignedUrl(att.storage_path, 600);
+        if (s?.signedUrl) urls[att.id] = s.signedUrl;
+      }
+      setPartnerImageUrls(urls);
     })();
   }, [partner?.id, activities.length]);
 
   if (!partner) return null;
+  const partnerAttachments = attachments.filter((a) => !a.activity_id);
+  const pricingTerms = (partner.custom_fields as any)?.pricing_terms as string | undefined;
 
   const onDeleteActivity = async (id: string) => {
     if (!confirm("이 활동 이력을 삭제할까요?")) return;
@@ -95,17 +106,57 @@ export function PartnerDetailDrawer({ open, onOpenChange, partner }: Props) {
               {partner.contact_phone && (
                 <Info icon={Phone} label="연락처" value={partner.contact_phone} />
               )}
-              {partner.contact_email && (
-                <Info icon={Mail} label="이메일" value={partner.contact_email} />
-              )}
               {partner.address && (
                 <Info icon={MapPin} label="주소" value={partner.address} full />
               )}
             </div>
+            {pricingTerms && (
+              <div className="pt-2 border-t border-border/40">
+                <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                  <DollarSign className="size-3" /> 단가적용 조건
+                </div>
+                <p className="whitespace-pre-wrap text-sm bg-muted/40 rounded-md p-2">{pricingTerms}</p>
+              </div>
+            )}
             {partner.contract_detail && (
               <div className="pt-2 border-t border-border/40">
                 <div className="text-xs text-muted-foreground mb-1">계약 내용</div>
                 <p className="whitespace-pre-wrap text-sm">{partner.contract_detail}</p>
+              </div>
+            )}
+            {partnerAttachments.length > 0 && (
+              <div className="pt-2 border-t border-border/40">
+                <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                  <Paperclip className="size-3" /> 첨부 파일 ({partnerAttachments.length})
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  {partnerAttachments.map((att) => {
+                    const isImg = (att.mime_type || "").startsWith("image/");
+                    const url = partnerImageUrls[att.id];
+                    return (
+                      <div key={att.id} className="border border-border rounded-md overflow-hidden bg-muted/30">
+                        {isImg && url ? (
+                          <button type="button" onClick={() => setLightbox(url)} className="block w-full">
+                            <img src={url} alt={att.file_name} className="w-full h-20 object-cover" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => downloadAttachment(att.storage_path, att.file_name)}
+                            className="w-full h-20 grid place-items-center hover:bg-muted/50">
+                            <FileText className="size-6 text-muted-foreground" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => downloadAttachment(att.storage_path, att.file_name)}
+                          className="block w-full px-1.5 py-1 text-[10px] truncate text-left hover:underline">
+                          {att.file_name}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
             <div className="pt-2 flex justify-end">
@@ -195,6 +246,20 @@ export function PartnerDetailDrawer({ open, onOpenChange, partner }: Props) {
         onOpenChange={setPartnerEditOpen}
         partner={partner}
       />
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-sm grid place-items-center p-6 cursor-zoom-out"
+          onClick={() => setLightbox(null)}
+        >
+          <img src={lightbox} alt="확대 보기" className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
+          <button
+            className="absolute top-4 right-4 size-10 rounded-full bg-background/80 grid place-items-center"
+            onClick={() => setLightbox(null)}
+          >
+            <X className="size-5" />
+          </button>
+        </div>
+      )}
     </>
   );
 }
