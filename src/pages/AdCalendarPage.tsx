@@ -392,8 +392,11 @@ export default function AdCalendarPage() {
           <Button variant="outline" size="icon" onClick={onPrevMonth} className="size-9">
             <ChevronLeft className="size-4" />
           </Button>
-          <div className="px-4 py-1.5 rounded-xl glass border border-border/40 text-base font-semibold tabular-nums">
-            {year}년 {activeMonth}월
+          <div className="px-4 py-1.5 rounded-xl glass border border-border/40 text-base font-semibold tabular-nums flex flex-col items-center leading-tight">
+            <span>{gridYear}년 {activeMonth}월</span>
+            {mode !== "month" && (
+              <span className="text-[10px] font-medium text-primary-glow/80">조회: {periodLabel}</span>
+            )}
           </div>
           <Button variant="outline" size="icon" onClick={onNextMonth} className="size-9">
             <ChevronRight className="size-4" />
