@@ -247,14 +247,16 @@ export default function AdCalendarPage() {
   }, [campaigns, monthStart, monthEnd]);
 
   const onPrevMonth = () => {
+    if (mode !== "month") setMode("month");
     if (activeMonth === 1) {
-      setYear(year - 1);
+      setYear(gridYear - 1);
       setMonth(12);
     } else setMonth(activeMonth - 1);
   };
   const onNextMonth = () => {
+    if (mode !== "month") setMode("month");
     if (activeMonth === 12) {
-      setYear(year + 1);
+      setYear(gridYear + 1);
       setMonth(1);
     } else setMonth(activeMonth + 1);
   };
