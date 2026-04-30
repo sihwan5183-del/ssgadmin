@@ -510,7 +510,7 @@ export default function AdCalendarPage() {
                   )}
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-1 flex-1">
                   {dayItems.slice(0, 3).map((c) => {
                     const p = getMediaPalette(c.media);
                     const isStart = c.start_date === key;
@@ -526,7 +526,7 @@ export default function AdCalendarPage() {
                             onMouseEnter={() => c.image_url && setHoverPreview({ url: c.image_url, topic: c.topic })}
                             onMouseLeave={() => setHoverPreview(null)}
                             className={cn(
-                              "w-full text-left px-1.5 py-1 text-[10px] leading-tight border-l-2",
+                              "w-full text-left px-1.5 py-1 text-[10px] leading-tight border-l-[3px] rounded-sm",
                               p.bg,
                               p.border,
                               p.text,
@@ -536,11 +536,11 @@ export default function AdCalendarPage() {
                             )}
                           >
                             <div className="flex items-center justify-between gap-1">
-                              <span className="font-semibold truncate">{c.media}</span>
+                              <span className="font-bold truncate">{c.media}</span>
                               {c.image_url && <ImageIcon className="size-2.5 opacity-70 shrink-0" />}
                             </div>
-                            <div className="truncate text-foreground/90">{c.topic}</div>
-                            <div className="tabular-nums opacity-80">₩{fmtKRW(c.total_budget || 0)}</div>
+                            <div className="truncate text-white/95 font-medium">{c.topic}</div>
+                            <div className="tabular-nums font-semibold text-white/85">₩{fmtKRW(c.total_budget || 0)}</div>
                           </button>
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-xs">
