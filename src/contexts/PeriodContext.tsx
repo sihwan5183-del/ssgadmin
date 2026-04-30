@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState, ReactNode, useCallback } from "react";
+import { createContext, useContext, useMemo, useState, ReactNode, useCallback, useEffect } from "react";
 
 export type PeriodMode = "month" | "day" | "range";
 
@@ -78,11 +78,32 @@ const formatLabel = (start: string, end: string) => {
 
 export const PeriodProvider = ({ children }: { children: ReactNode }) => {
   const now = new Date();
-  const [mode, setMode] = useState<PeriodMode>("month");
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1);
-  const [customStart, setCustomStart] = useState<string | null>(null);
-  const [customEnd, setCustomEnd] = useState<string | null>(null);
+  // ── 세션 상태 영속화 (페이지 이동/새로고침 시에도 유지) ──
+  const SS_KEY = "ssg.period.v1";
+  const persisted = (() => {
+    try {
+      const raw = sessionStorage.getItem(SS_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
+  const [mode, setMode] = useState<PeriodMode>(persisted?.mode ?? "month");
+  const [year, setYear] = useState<number>(persisted?.year ?? now.getFullYear());
+  const [month, setMonth] = useState<number>(persisted?.month ?? now.getMonth() + 1);
+  const [customStart, setCustomStart] = useState<string | null>(persisted?.customStart ?? null);
+  const [customEnd, setCustomEnd] = useState<string | null>(persisted?.customEnd ?? null);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        SS_KEY,
+        JSON.stringify({ mode, year, month, customStart, customEnd }),
+      );
+    } catch {
+      /* ignore quota errors */
+    }
+  }, [mode, year, month, customStart, customEnd]);
 
   const setSingleDay = useCallback((d: string) => {
     setMode("day");

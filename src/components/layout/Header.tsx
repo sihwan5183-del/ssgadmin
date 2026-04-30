@@ -2,6 +2,8 @@ import { ScopeToggle } from "./ScopeToggle";
 import { PeriodFilter } from "./PeriodFilter";
 import { NotificationBell } from "./NotificationBell";
 import { GlobalSearch } from "./GlobalSearch";
+import { usePeriod } from "@/contexts/PeriodContext";
+import { CalendarRange } from "lucide-react";
 
 interface HeaderProps {
   title: string;
@@ -18,12 +20,18 @@ export const Header = ({
   showPeriodFilter = true,
   rightSlot,
 }: HeaderProps) => {
+  const { mode, label } = usePeriod();
   return (
     <header className="flex flex-col md:flex-row md:items-start md:justify-between gap-2 mb-3">
       <div className="min-w-0">
         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
           <span className="size-1.5 rounded-full bg-success animate-pulse" />
           실시간 동기화 중
+          {showPeriodFilter && mode !== "month" && (
+            <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-primary/15 text-primary-glow text-[10px] font-medium">
+              <CalendarRange className="size-2.5" /> 조회 기간: {label}
+            </span>
+          )}
         </div>
         <h1 className="mt-0.5 text-lg md:text-2xl font-bold tracking-tight leading-tight" title={subtitle}>
           <span className="text-gradient">{title}</span>

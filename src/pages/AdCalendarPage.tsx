@@ -114,7 +114,7 @@ const emptyForm = {
 export default function AdCalendarPage() {
   const { user } = useAuth();
   const { isAdmin } = useRole();
-  const { year, month, setYear, setMonth } = usePeriod();
+  const { year, month, setYear, setMonth, setMode, mode, startDate, endDate, label: periodLabel } = usePeriod();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [salesByDate, setSalesByDate] = useState<Map<string, Map<string, number>>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -129,17 +129,18 @@ export default function AdCalendarPage() {
   const [filterMedia, setFilterMedia] = useState<string>("all");
   const [filterChannel, setFilterChannel] = useState<string>("all");
 
-  // 월 단위 조회 (선택 월과 겹치는 모든 캠페인)
-  const monthStart = useMemo(() => {
-    const m = month === 0 ? 1 : month;
-    return `${year}-${String(m).padStart(2, "0")}-01`;
-  }, [year, month]);
-  const monthEnd = useMemo(() => {
-    const m = month === 0 ? 12 : month;
-    const last = new Date(year, m, 0).getDate();
-    return `${year}-${String(m).padStart(2, "0")}-${String(last).padStart(2, "0")}`;
-  }, [year, month]);
-  const activeMonth = month === 0 ? new Date().getMonth() + 1 : month;
+  // 조회 범위: month 모드면 해당 월, day/range면 PeriodContext의 startDate/endDate 사용
+  const monthStart = startDate;
+  const monthEnd = endDate;
+  // 캘린더 그리드는 항상 월 격자로 표기 → start 기준 연/월 사용
+  const gridYear = useMemo(() => {
+    if (mode === "month") return year;
+    return new Date(startDate + "T00:00:00").getFullYear();
+  }, [mode, year, startDate]);
+  const activeMonth = useMemo(() => {
+    if (mode === "month") return month === 0 ? new Date().getMonth() + 1 : month;
+    return new Date(startDate + "T00:00:00").getMonth() + 1;
+  }, [mode, month, startDate]);
 
   const load = async () => {
     setLoading(true);
@@ -178,7 +179,7 @@ export default function AdCalendarPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [monthStart, monthEnd]);
 
-  const grid = useMemo(() => buildMonthGrid(year, activeMonth), [year, activeMonth]);
+  const grid = useMemo(() => buildMonthGrid(gridYear, activeMonth), [gridYear, activeMonth]);
 
   // 필터 적용된 캠페인
   const filteredCampaigns = useMemo(() => {
@@ -246,14 +247,16 @@ export default function AdCalendarPage() {
   }, [campaigns, monthStart, monthEnd]);
 
   const onPrevMonth = () => {
+    if (mode !== "month") setMode("month");
     if (activeMonth === 1) {
-      setYear(year - 1);
+      setYear(gridYear - 1);
       setMonth(12);
     } else setMonth(activeMonth - 1);
   };
   const onNextMonth = () => {
+    if (mode !== "month") setMode("month");
     if (activeMonth === 12) {
-      setYear(year + 1);
+      setYear(gridYear + 1);
       setMonth(1);
     } else setMonth(activeMonth + 1);
   };
@@ -389,8 +392,11 @@ export default function AdCalendarPage() {
           <Button variant="outline" size="icon" onClick={onPrevMonth} className="size-9">
             <ChevronLeft className="size-4" />
           </Button>
-          <div className="px-4 py-1.5 rounded-xl glass border border-border/40 text-base font-semibold tabular-nums">
-            {year}년 {activeMonth}월
+          <div className="px-4 py-1.5 rounded-xl glass border border-border/40 text-base font-semibold tabular-nums flex flex-col items-center leading-tight">
+            <span>{gridYear}년 {activeMonth}월</span>
+            {mode !== "month" && (
+              <span className="text-[10px] font-medium text-primary-glow/80">조회: {periodLabel}</span>
+            )}
           </div>
           <Button variant="outline" size="icon" onClick={onNextMonth} className="size-9">
             <ChevronRight className="size-4" />
