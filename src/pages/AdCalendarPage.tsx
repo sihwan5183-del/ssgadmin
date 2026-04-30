@@ -470,14 +470,14 @@ export default function AdCalendarPage() {
               <div
                 key={idx}
                 className={cn(
-                  "min-h-[120px] border-b border-r border-border/30 p-2 group transition-colors",
+                  "min-h-[150px] border-b border-r border-border/30 p-2 group transition-colors flex flex-col",
                   !cell.inMonth && "bg-background/40 opacity-40",
                   cell.inMonth && "hover:bg-white/[0.02]",
                   isToday && "bg-primary/5 ring-1 ring-primary/30 ring-inset",
                   (idx + 1) % 7 === 0 && "border-r-0",
                 )}
               >
-                <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center justify-between mb-2">
                   <button
                     type="button"
                     disabled={!cell.inMonth}
@@ -488,7 +488,7 @@ export default function AdCalendarPage() {
                     }}
                     title="이 날짜의 실적 보기"
                     className={cn(
-                      "text-xs font-semibold tabular-nums hover:underline disabled:no-underline",
+                      "text-sm font-bold tabular-nums hover:underline disabled:no-underline",
                       dow === 0 && "text-destructive/80",
                       dow === 6 && "text-primary-glow/80",
                       isToday && "px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground",
