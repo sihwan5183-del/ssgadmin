@@ -436,6 +436,62 @@ export default function ExpenseInputPage() {
     }
   };
 
+  // 수정 다이얼로그
+  const [editRow, setEditRow] = useState<ExpenseRow | null>(null);
+  const [editForm, setEditForm] = useState<{
+    spend_date: string; media: string; expense_type: string; channel: string;
+    amount: string; campaign: string; note: string;
+    payment_method: string; card_name: string; card_last4: string;
+  }>({
+    spend_date: "", media: "", expense_type: "", channel: "",
+    amount: "", campaign: "", note: "",
+    payment_method: "", card_name: "", card_last4: "",
+  });
+  const [editSaving, setEditSaving] = useState(false);
+
+  const openEdit = (r: ExpenseRow) => {
+    setEditRow(r);
+    setEditForm({
+      spend_date: r.spend_date,
+      media: r.media ?? "",
+      expense_type: r.expense_type ?? "",
+      channel: r.channel ?? "",
+      amount: String(r.amount ?? ""),
+      campaign: r.campaign ?? "",
+      note: r.note ?? "",
+      payment_method: r.payment_method ?? "",
+      card_name: r.card_name ?? "",
+      card_last4: r.card_last4 ?? "",
+    });
+  };
+
+  const submitEdit = async () => {
+    if (!editRow) return;
+    setEditSaving(true);
+    const amount = Number((editForm.amount || "").replace(/[^0-9.-]/g, "")) || 0;
+    const { error } = await supabase
+      .from("ad_spend")
+      .update({
+        spend_date: editForm.spend_date,
+        spend_month: editForm.spend_date.slice(0, 7),
+        media: editForm.media || editForm.expense_type,
+        expense_type: editForm.expense_type || null,
+        channel: editForm.channel || null,
+        amount,
+        campaign: editForm.campaign || null,
+        note: editForm.note || null,
+        payment_method: editForm.payment_method || null,
+        card_name: editForm.card_name || null,
+        card_last4: editForm.card_last4 || null,
+      })
+      .eq("id", editRow.id);
+    setEditSaving(false);
+    if (error) return toast.error("수정 실패: " + error.message);
+    toast.success("수정되었습니다");
+    setEditRow(null);
+    fetchRows();
+  };
+
   return (
     <div>
       <Header
