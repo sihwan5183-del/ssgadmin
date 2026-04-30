@@ -1078,6 +1078,7 @@ export default function ExpenseInputPage() {
                 </td>
                 <td className="py-2 pr-3 text-muted-foreground">-</td>
                 <td className="py-2 pr-3 text-muted-foreground text-xs">sales.distributor_amount 합계</td>
+                <td className="py-2 pr-3 text-muted-foreground">-</td>
                 <td className="py-2 pr-3 text-right font-mono font-semibold">{formatKRW(salesAgg.distributor)}</td>
                 <td />
               </tr>
@@ -1092,6 +1093,7 @@ export default function ExpenseInputPage() {
                 </td>
                 <td className="py-2 pr-3 text-muted-foreground">-</td>
                 <td className="py-2 pr-3 text-muted-foreground text-xs">cash_open=true 건의 cash_support_amount 합계</td>
+                <td className="py-2 pr-3 text-muted-foreground">-</td>
                 <td className="py-2 pr-3 text-right font-mono font-semibold">{formatKRW(salesAgg.cash)}</td>
                 <td />
               </tr>
@@ -1106,21 +1108,25 @@ export default function ExpenseInputPage() {
                 </td>
                 <td className="py-2 pr-3 text-muted-foreground">-</td>
                 <td className="py-2 pr-3 text-muted-foreground text-xs">receivable_paid 입력된 건의 receivable_amount 합계</td>
+                <td className="py-2 pr-3 text-muted-foreground">-</td>
                 <td className="py-2 pr-3 text-right font-mono font-semibold">{formatKRW(salesAgg.receivable)}</td>
                 <td />
               </tr>
 
               {loading ? (
-                <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">불러오는 중...</td></tr>
+                <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">불러오는 중...</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">등록된 지출이 없습니다</td></tr>
+                <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">등록된 지출이 없습니다</td></tr>
               ) : (
                 rows.map((r) => {
                   const sel = bulk.isSelected(r.id);
+                  const cardLabel = r.card_name
+                    ? `${r.card_name}${r.card_last4 ? `-${r.card_last4}` : ""}`
+                    : (r.payment_method ?? "");
                   return (
                     <tr key={r.id} className={`border-b border-border/30 hover:bg-muted/30 ${sel ? "bg-primary/5" : ""}`} data-state={sel ? "selected" : undefined}>
                       <td className="py-2 pr-2"><Checkbox checked={sel} onCheckedChange={() => bulk.toggle(r.id)} /></td>
-                      <td className="py-2 pr-3">{r.spend_date}</td>
+                      <td className="py-2 pr-3 whitespace-nowrap">{r.spend_date}</td>
                       <td className="py-2 pr-3">
                         <Badge variant="outline"
                           className={`text-[10px] ${
@@ -1131,17 +1137,32 @@ export default function ExpenseInputPage() {
                           {r.category}
                         </Badge>
                       </td>
-                      <td className="py-2 pr-3 font-medium">{r.expense_type ?? r.media}</td>
+                      <td className="py-2 pr-3 font-medium whitespace-nowrap">{r.expense_type ?? r.media}</td>
                       <td className="py-2 pr-3 text-muted-foreground">{r.channel ?? "-"}</td>
                       <td className="py-2 pr-3 text-muted-foreground truncate max-w-[240px]">{r.campaign ?? "-"}</td>
+                      <td className="py-2 pr-3 whitespace-nowrap text-foreground">
+                        {cardLabel ? (
+                          <span className="inline-flex items-center gap-1 text-foreground font-medium">
+                            <CreditCard className="size-3 text-muted-foreground" />
+                            {cardLabel}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </td>
                       <td className="py-2 pr-3 text-right font-mono font-semibold text-expense">
                         {formatKRW(Number(r.amount))}
                       </td>
-                      <td className="py-2 pr-3 text-right">
-                        {user?.id === r.created_by && (
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)} className="size-8">
-                            <Trash2 className="size-4 text-destructive" />
-                          </Button>
+                      <td className="py-2 pr-3 text-right whitespace-nowrap">
+                        {(user?.id === r.created_by || isAdmin) && (
+                          <div className="inline-flex items-center gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => openEdit(r)} className="size-8" title="수정">
+                              <Pencil className="size-4 text-primary" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)} className="size-8" title="삭제">
+                              <Trash2 className="size-4 text-destructive" />
+                            </Button>
+                          </div>
                         )}
                       </td>
                     </tr>
