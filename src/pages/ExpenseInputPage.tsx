@@ -142,6 +142,9 @@ export default function ExpenseInputPage() {
     total_overridden: false,
     campaign: "",
     note: "",
+    payment_method: "",
+    card_name: "",
+    card_last4: "",
   });
 
   const [etcForm, setEtcForm] = useState({
@@ -150,6 +153,9 @@ export default function ExpenseInputPage() {
     amount: "",
     campaign: "",
     note: "",
+    payment_method: "",
+    card_name: "",
+    card_last4: "",
   });
 
   const [fixedForm, setFixedForm] = useState({
@@ -160,6 +166,9 @@ export default function ExpenseInputPage() {
     note: "",
     auto_register: true,
     day_of_month: 1,
+    payment_method: "",
+    card_name: "",
+    card_last4: "",
   });
 
   // recurring expense templates
