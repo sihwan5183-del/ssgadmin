@@ -304,6 +304,9 @@ export default function ExpenseInputPage() {
         channel: adForm.channel || null,
         amount: dailyAmount,
         campaign: adForm.campaign || null,
+        payment_method: adForm.payment_method || null,
+        card_name: adForm.card_name || null,
+        card_last4: adForm.card_last4 || null,
         note:
           (adForm.note ? adForm.note + " · " : "") +
           (days > 1
@@ -320,7 +323,7 @@ export default function ExpenseInputPage() {
         ? `${days}일에 걸쳐 일별 ${dailyAmount.toLocaleString()}원씩 자동 분산 저장됨 (총 ${totalAmount.toLocaleString()}원)`
         : "광고비가 저장되었습니다",
     );
-    setAdForm({ spend_date: todayISO(), end_date: todayISO(), media: "", channel: "", amount: "", amount_mode: "total", total_override: "", total_overridden: false, campaign: "", note: "" });
+    setAdForm({ spend_date: todayISO(), end_date: todayISO(), media: "", channel: "", amount: "", amount_mode: "total", total_override: "", total_overridden: false, campaign: "", note: "", payment_method: "", card_name: "", card_last4: "" });
     fetchRows();
   };
 
@@ -342,12 +345,15 @@ export default function ExpenseInputPage() {
       channel: null,
       amount: Number(etcForm.amount.replace(/[^0-9.-]/g, "")) || 0,
       campaign: etcForm.campaign || null,
+      payment_method: etcForm.payment_method || null,
+      card_name: etcForm.card_name || null,
+      card_last4: etcForm.card_last4 || null,
       note: etcForm.note || null,
     });
     setSaving(false);
     if (error) return toast.error("저장 실패: " + error.message);
     toast.success("지출이 저장되었습니다");
-    setEtcForm({ spend_date: todayISO(), expense_type: "", amount: "", campaign: "", note: "" });
+    setEtcForm({ spend_date: todayISO(), expense_type: "", amount: "", campaign: "", note: "", payment_method: "", card_name: "", card_last4: "" });
     fetchRows();
   };
 
@@ -370,6 +376,9 @@ export default function ExpenseInputPage() {
       channel: null,
       amount,
       campaign: fixedForm.vendor || null,
+      payment_method: fixedForm.payment_method || null,
+      card_name: fixedForm.card_name || null,
+      card_last4: fixedForm.card_last4 || null,
       note: fixedForm.note || null,
     });
     if (error) {
@@ -397,7 +406,7 @@ export default function ExpenseInputPage() {
       toast.success("고정지출이 저장되었습니다");
     }
     setSaving(false);
-    setFixedForm({ spend_date: todayISO(), expense_type: "", amount: "", vendor: "", note: "", auto_register: true, day_of_month: 1 });
+    setFixedForm({ spend_date: todayISO(), expense_type: "", amount: "", vendor: "", note: "", auto_register: true, day_of_month: 1, payment_method: "", card_name: "", card_last4: "" });
     fetchRows();
   };
 
