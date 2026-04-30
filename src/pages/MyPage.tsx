@@ -1,5 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { useRole } from "@/hooks/useRole";
+import { useRole, formatRoleLabel } from "@/hooks/useRole";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +10,8 @@ import { useEffect, useState } from "react";
 
 const MyPage = () => {
   const { user } = useAuth();
-  const { primaryRole, isAdmin } = useRole();
+  const { primaryRole, isAdmin, roles } = useRole();
+  const { isSuperAdmin } = useSuperAdmin();
   const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
@@ -39,7 +41,12 @@ const MyPage = () => {
           <div className="space-y-2 text-sm">
             <div className="flex items-center justify-between py-2 border-b border-border/30">
               <span className="text-muted-foreground flex items-center gap-2"><Shield className="size-3.5" /> 권한</span>
-              <Badge variant="outline">{primaryRole ?? "user"}</Badge>
+              <Badge variant="outline">
+                {formatRoleLabel(
+                  isSuperAdmin ? undefined : (roles.includes("ceo") ? "ceo" : roles.includes("admin") ? "admin" : roles.includes("team_lead") ? "team_lead" : primaryRole),
+                  isSuperAdmin
+                )}
+              </Badge>
             </div>
             {profile?.store && (
               <div className="flex items-center justify-between py-2 border-b border-border/30">
