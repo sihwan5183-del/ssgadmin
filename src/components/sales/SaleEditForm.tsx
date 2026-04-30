@@ -1,6 +1,7 @@
 // Auto-extracted reusable form for sale create/edit. Mirrors src/pages/InputPage.tsx so the
 // inspection (검수) panel offers an identical UX to the data-entry screen.
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -119,6 +120,88 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   const { calc: calcNetFee, formula: netFeeFormula } = useNetFeeFormula();
   const [staffOptions, setStaffOptions] = useState<{ user_id: string; display_name: string; store: string | null }[]>([]);
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
+  const [linkedInquiryId, setLinkedInquiryId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // 인입 → 실적 자동 채움 (URL 파라미터) — embedded 모드에서는 비활성
+  useEffect(() => {
+    if (embedded) return;
+    const fromInquiry = searchParams.get("from_inquiry");
+    if (!fromInquiry) return;
+    const customer = searchParams.get("customer_name") ?? "";
+    const phone = searchParams.get("phone") ?? "";
+    const channel = searchParams.get("channel") ?? "";
+    const manager = searchParams.get("manager") ?? "";
+    setForm((f) => ({
+      ...f,
+      customer_name: customer || f.customer_name,
+      phone: phone || f.phone,
+      channel: channel || f.channel,
+      manager: manager || f.manager,
+      open_date: f.open_date ?? new Date().toISOString().slice(0, 10),
+    }));
+    setLinkedInquiryId(fromInquiry);
+    toast.info("인입 데이터가 자동 입력되었습니다", { description: "저장 시 인입 건과 자동 연결됩니다." });
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 수정 모드: URL ?edit=<id> (embedded 모드에서는 saleId prop 사용)
+  useEffect(() => {
+    if (embedded || saleId) return;
+    const editId = searchParams.get("edit");
+    if (!editId) return;
+    setEditingId(editId);
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // editingId가 잡히면(수정모드 진입) 데이터 로드 — saleId prop과 동일한 로직
+  useEffect(() => {
+    if (saleId) return; // saleId effect가 처리
+    if (!editingId) return;
+    (async () => {
+      const { data, error } = await supabase
+        .from("sales")
+        .select("*")
+        .eq("id", editingId)
+        .maybeSingle();
+      if (error || !data) {
+        toast.error("실적 데이터를 불러올 수 없습니다");
+        return;
+      }
+      const s = data as any;
+      setForm({
+        seq: s.seq, channel: s.channel, moyo_excluded: s.moyo_excluded ?? false,
+        manager: s.manager, open_month: s.open_month, product: s.product,
+        sale_type: s.sale_type, open_method: s.open_method, status: s.status,
+        open_date: s.open_date, customer_name: s.customer_name, birth_date: s.birth_date,
+        phone: s.phone, device_model: s.device_model, device_serial: s.device_serial,
+        usim_model: s.usim_model, usim_serial: s.usim_serial, rate_plan: s.rate_plan,
+        vas1: s.vas1, vas2: s.vas2,
+        unit_price: s.unit_price ?? 0, vas_fee: s.vas_fee ?? 0,
+        voucher: s.voucher, voucher_returned: s.voucher_returned,
+        receivable_amount: s.receivable_amount ?? 0, receivable_paid: s.receivable_paid,
+        cash_open: s.cash_open ?? false,
+        distributor_amount: s.distributor_amount ?? 0,
+        extra_subsidy: s.extra_subsidy ?? 0,
+        cash_support_amount: s.cash_support_amount ?? 0,
+        cash_bank: s.cash_bank, cash_account: s.cash_account, cash_holder: s.cash_holder,
+        net_fee: s.net_fee ?? 0, delivery_type: s.delivery_type,
+        tracking_no: s.tracking_no, note: s.note, bundle: s.bundle,
+        trade_in_enabled: s.trade_in_enabled ?? false,
+        trade_in_model: s.trade_in_model,
+        trade_in_estimate: s.trade_in_estimate ?? 0,
+        trade_in_confirmed: s.trade_in_confirmed ?? 0,
+        customer_support_amount: (s as any).customer_support_amount ?? 0,
+        corp_card_amount: (s as any).corp_card_amount ?? 0,
+      });
+      setCustomFields(s.custom_fields ?? {});
+      setPendingItems(Array.isArray(s.pending_items) ? s.pending_items : []);
+      setPendingNote(s.pending_note ?? "");
+      setPendingResolved(s.pending_resolved ?? true);
+    })();
+  }, [editingId, saleId]);
 
   useEffect(() => {
     (async () => {
@@ -280,6 +363,13 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
         const { data: inserted, error } = await supabase.from("sales").insert(payload).select("id").single();
         if (error) throw error;
         resultId = inserted?.id ?? null;
+        if (linkedInquiryId && resultId) {
+          await supabase
+            .from("inquiries")
+            .update({ status: "개통완료", converted_sale_id: resultId })
+            .eq("id", linkedInquiryId);
+          setLinkedInquiryId(null);
+        }
         toast.success("판매 실적 저장 완료", { description: "대시보드에 즉시 반영됩니다." });
       }
       if (!embedded) reset();
