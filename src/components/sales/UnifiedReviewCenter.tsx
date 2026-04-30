@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { ReviewerPanel } from "./ReviewerPanel";
 import { toast } from "sonner";
+import { SaleEditForm } from "./SaleEditForm";
 
 type ApprovalStatus =
   | "승인대기"
@@ -278,7 +279,7 @@ export function UnifiedReviewCenter() {
               </div>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="rounded-lg border border-border/40 bg-card/40 px-3 py-2 flex items-center gap-3 flex-wrap">
                 <div className="text-sm">
                   <span className="font-semibold">{selected.customer_name ?? "(이름없음)"}</span>
@@ -292,6 +293,15 @@ export function UnifiedReviewCenter() {
                   </Badge>
                 </div>
               </div>
+              {/* 실적 입력창과 동일한 UX — 검수자가 즉시 수정/저장 가능 */}
+              <SaleEditForm
+                key={`form-${selected.id}`}
+                saleId={selected.id}
+                embedded
+                onSaved={() => handleChanged()}
+              />
+              {/* 검수 및 메모 — 전폭 레이아웃 */}
+              <div className="w-full">
               <ReviewerPanel
                 key={selected.id}
                 sale={{
@@ -319,6 +329,7 @@ export function UnifiedReviewCenter() {
                 }}
                 onChanged={handleChanged}
               />
+              </div>
             </div>
           )}
         </div>
