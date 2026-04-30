@@ -14,7 +14,14 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, PlusCircle, Megaphone, Receipt, Download, Building2, Banknote, Wallet, TrendingUp, Coins, Sparkles, Repeat, CalendarClock } from "lucide-react";
+import { Trash2, PlusCircle, Megaphone, Receipt, Download, Building2, Banknote, Wallet, TrendingUp, Coins, Sparkles, Repeat, CalendarClock, Pencil, CreditCard } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
@@ -44,6 +51,9 @@ interface ExpenseRow {
   amount: number;
   campaign: string | null;
   note: string | null;
+  payment_method?: string | null;
+  card_name?: string | null;
+  card_last4?: string | null;
 }
 
 const formatKRW = (n: number) =>
