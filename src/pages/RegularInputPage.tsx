@@ -231,13 +231,30 @@ const RegularInputPage = () => {
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs">전화번호</Label>
-            <Input
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              placeholder="010-0000-0000"
-            />
+          <div className="md:col-span-2 grid grid-cols-[140px_1fr] gap-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">통신사 *</Label>
+              <Select
+                value={form.carrier}
+                onValueChange={(v) => setForm({ ...form, carrier: v })}
+              >
+                <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectContent>
+                  {CARRIERS.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">전화번호</Label>
+              <Input
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                placeholder={form.carrier ? "010-0000-0000" : "통신사를 먼저 선택"}
+                disabled={!form.carrier}
+              />
+            </div>
           </div>
 
           <div className="space-y-1.5">
