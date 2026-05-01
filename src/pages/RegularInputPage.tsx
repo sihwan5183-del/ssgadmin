@@ -29,9 +29,20 @@ interface Regular {
   note: string | null;
   created_at: string;
   created_by: string;
+  carrier?: string | null;
 }
 
 const today = () => new Date().toISOString().slice(0, 10);
+
+const CARRIERS = [
+  "SKT",
+  "KT",
+  "LGU+",
+  "알뜰폰(SKT망)",
+  "알뜰폰(KT망)",
+  "알뜰폰(LGU+망)",
+] as const;
+const isOurCarrier = (c?: string | null) => c === "LGU+";
 
 const RegularInputPage = () => {
   const { user } = useAuth();
@@ -43,6 +54,7 @@ const RegularInputPage = () => {
   const [form, setForm] = useState({
     channel: "",
     customer_name: "",
+    carrier: "",
     phone: "",
     birth_date: "",
     manager: "",
@@ -72,6 +84,7 @@ const RegularInputPage = () => {
     setForm({
       channel: "",
       customer_name: "",
+      carrier: "",
       phone: "",
       birth_date: "",
       manager: "",
@@ -91,6 +104,7 @@ const RegularInputPage = () => {
       created_by: user.id,
       channel: form.channel,
       customer_name: form.customer_name.trim(),
+      carrier: form.carrier || null,
       phone: form.phone || null,
       birth_date: form.birth_date || null,
       manager: form.manager || null,
