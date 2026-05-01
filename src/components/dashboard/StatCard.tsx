@@ -9,6 +9,8 @@ interface StatCardProps {
   icon: LucideIcon;
   accent?: "primary" | "secondary" | "success" | "warning";
   hint?: string;
+  /** 카드 상단에 작게 표시되는 기준 시점 (예: "11월 누적", "11.28 (목) 당일") */
+  periodLabel?: string;
 }
 
 const accentMap = {
@@ -18,7 +20,7 @@ const accentMap = {
   warning: "from-warning/30 to-warning/5 text-warning",
 };
 
-export const StatCard = ({ label, value, delta, icon: Icon, accent = "primary", hint }: StatCardProps) => {
+export const StatCard = ({ label, value, delta, icon: Icon, accent = "primary", hint, periodLabel }: StatCardProps) => {
   const positive = (delta ?? 0) >= 0;
   return (
     <div
@@ -27,6 +29,11 @@ export const StatCard = ({ label, value, delta, icon: Icon, accent = "primary", 
     >
       <div className={cn("absolute -top-10 -right-10 size-28 rounded-full bg-gradient-to-br blur-2xl opacity-60 group-hover:opacity-100 transition-opacity", accentMap[accent])} />
       <div className="relative">
+        {periodLabel && (
+          <div className="text-[9px] font-medium text-muted-foreground/80 uppercase tracking-wide truncate mb-0.5">
+            {periodLabel}
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <div className={cn("size-6 rounded-md grid place-items-center bg-gradient-to-br", accentMap[accent])}>
             <Icon className="size-3" />
