@@ -361,8 +361,9 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
         : calcNetFee(baseNumeric),
       custom_fields: {
         ...customFields,
-        // 약정 정보 미선택 시 DB 에 '해당없음' 으로 안전 기록 (모바일 2nd 가 아닐 때만 발생 가능)
-        contract_type: customFields.contract_type || "해당없음",
+        // 약정 정보: 모바일 2nd 가 아니면 비활성 필드이므로 null 로 안전 저장,
+        //          2nd 인 경우 사용자가 선택한 값을 그대로 보관 (필수 검증은 onSubmit 상단에서 처리)
+        contract_type: form.product === "2ND" ? (customFields.contract_type || null) : null,
       },
       pending_items: pendingItems,
       pending_note: pendingNote || null,
@@ -459,6 +460,15 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                       !f.rate_plan || allowed.length === 0 || allowed.includes(f.rate_plan);
                     return { ...f, product: v, rate_plan: keepRate ? f.rate_plan : null };
                   });
+                  // 모바일 2nd 가 아니면 약정 정보(contract_type) 초기화 — 비활성 필드의 잔존값 제거
+                  if (v !== "2ND") {
+                    setCustomFields((cf) => {
+                      if (!("contract_type" in cf)) return cf;
+                      const next = { ...cf };
+                      delete next.contract_type;
+                      return next;
+                    });
+                  }
                   const defaults = getDefaultsForProduct(v);
                   if (defaults) {
                     const filled = new Set<string>();
@@ -678,39 +688,59 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
             </div>
             <div className="col-span-12 md:col-span-3">
               <Field label={form.product === "2ND" ? "약정 정보 *" : "약정 정보"}>
-                <div className={cn(
-                  "inline-flex h-9 w-full rounded-md border bg-input/60 p-0.5 text-xs",
-                  form.product === "2ND" && !customFields.contract_type
-                    ? "border-destructive/60"
-                    : "border-border/40"
-                )}>
-                  {[
-                    { v: "선택약정", label: "선택약정" },
-                    { v: "이통사지원금", label: "이통사지원금" },
-                  ].map((opt) => {
-                    const active = customFields.contract_type === opt.v;
-                    return (
-                      <button
-                        key={opt.v}
-                        type="button"
-                        onClick={() => setCustomFields((f) => ({ ...f, contract_type: opt.v }))}
+                {(() => {
+                  const is2nd = form.product === "2ND";
+                  const disabledTip = "이 상품은 약정 정보를 입력하지 않습니다";
+                  return (
+                    <>
+                      <div
+                        title={!is2nd ? disabledTip : undefined}
+                        aria-disabled={!is2nd}
                         className={cn(
-                          "flex-1 rounded-[5px] font-medium transition-colors",
-                          active
-                            ? "bg-primary text-primary-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground"
+                          "inline-flex h-9 w-full rounded-md border p-0.5 text-xs transition-colors",
+                          !is2nd
+                            ? "bg-muted/60 border-border/30 cursor-not-allowed opacity-70"
+                            : customFields.contract_type
+                              ? "bg-input/60 border-border/40"
+                              : "bg-input/60 border-destructive/60",
                         )}
                       >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                {form.product !== "2ND" && (
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    선택 사항 — 미선택 시 ‘해당없음’으로 저장됩니다
-                  </p>
-                )}
+                        {[
+                          { v: "선택약정", label: "선택약정" },
+                          { v: "이통사지원금", label: "이통사지원금" },
+                        ].map((opt) => {
+                          const active = is2nd && customFields.contract_type === opt.v;
+                          return (
+                            <button
+                              key={opt.v}
+                              type="button"
+                              disabled={!is2nd}
+                              title={!is2nd ? disabledTip : undefined}
+                              onClick={() =>
+                                is2nd && setCustomFields((f) => ({ ...f, contract_type: opt.v }))
+                              }
+                              className={cn(
+                                "flex-1 rounded-[5px] font-medium transition-colors",
+                                !is2nd
+                                  ? "text-muted-foreground/60 cursor-not-allowed"
+                                  : active
+                                    ? "bg-primary text-primary-foreground shadow-sm"
+                                    : "text-muted-foreground hover:text-foreground",
+                              )}
+                            >
+                              {opt.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {!is2nd && (
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          {disabledTip}
+                        </p>
+                      )}
+                    </>
+                  );
+                })()}
               </Field>
             </div>
           </div>
