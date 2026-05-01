@@ -1265,6 +1265,42 @@ export type Database = {
         }
         Relationships: []
       }
+      plan_retention_rules: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+          retention_days: number
+          sale_type: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          retention_days?: number
+          sale_type: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          retention_days?: number
+          sale_type?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       positions: {
         Row: {
           active: boolean
@@ -1651,6 +1687,9 @@ export type Database = {
           pending_note: string | null
           pending_resolved: boolean
           phone: string | null
+          plan_change_completed_at: string | null
+          plan_change_due_date: string | null
+          plan_change_note: string | null
           product: string | null
           rate_plan: string | null
           re_review_requested_at: string | null
@@ -1717,6 +1756,9 @@ export type Database = {
           pending_note?: string | null
           pending_resolved?: boolean
           phone?: string | null
+          plan_change_completed_at?: string | null
+          plan_change_due_date?: string | null
+          plan_change_note?: string | null
           product?: string | null
           rate_plan?: string | null
           re_review_requested_at?: string | null
@@ -1783,6 +1825,9 @@ export type Database = {
           pending_note?: string | null
           pending_resolved?: boolean
           phone?: string | null
+          plan_change_completed_at?: string | null
+          plan_change_due_date?: string | null
+          plan_change_note?: string | null
           product?: string | null
           rate_plan?: string | null
           re_review_requested_at?: string | null
