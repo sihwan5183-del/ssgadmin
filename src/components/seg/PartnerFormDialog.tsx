@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import type { SegPartner } from "@/hooks/useSegPartners";
 import { Upload, X, FileText, ImageIcon, Paperclip, Lock } from "lucide-react";
+import { formatPhone } from "@/lib/phoneFormat";
 
 interface Props {
   open: boolean;
@@ -202,7 +203,7 @@ export function PartnerFormDialog({ open, onOpenChange, partner, onSaved }: Prop
             <Input value={form.contact_name ?? ""} onChange={(e) => set("contact_name", e.target.value)} />
           </Field>
           <Field label="담당자 연락처">
-            <Input value={form.contact_phone ?? ""} onChange={(e) => set("contact_phone", e.target.value)} />
+            <Input value={form.contact_phone ?? ""} onChange={(e) => set("contact_phone", formatPhone(e.target.value))} placeholder="010-0000-0000" type="tel" inputMode="numeric" maxLength={13} />
           </Field>
           <Field label="상태">
             <Select value={form.status ?? "active"} onValueChange={(v) => set("status", v)}>

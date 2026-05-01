@@ -11,6 +11,7 @@ import { usePositions } from "@/hooks/usePositions";
 import { useStores } from "@/hooks/useStores";
 import { ROLE_LABELS, ASSIGNABLE_ROLES, type AppRole } from "@/hooks/useRole";
 import { ShieldCheck, Mail, Power, KeyRound } from "lucide-react";
+import { formatPhone } from "@/lib/phoneFormat";
 
 interface Profile {
   user_id: string;
@@ -145,7 +146,7 @@ export function StaffDetailDialog({ userId, email, open, onOpenChange, onChanged
               <Input value={profile.display_name} onChange={(e) => setProfile({ ...profile, display_name: e.target.value })} />
             </Field>
             <Field label="연락처">
-              <Input value={profile.phone ?? ""} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} placeholder="010-0000-0000" />
+              <Input value={profile.phone ?? ""} onChange={(e) => setProfile({ ...profile, phone: formatPhone(e.target.value) })} placeholder="010-0000-0000" type="tel" inputMode="numeric" maxLength={13} />
             </Field>
             <Field label="이메일">
               <Input value={email ?? ""} disabled />

@@ -15,6 +15,7 @@ import { formatStaffName } from "@/lib/staffName";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { formatPhone } from "@/lib/phoneFormat";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -231,7 +232,7 @@ export default function AccountStaffPage() {
                           ))}
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-muted-foreground">{r.phone ?? "-"}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{r.phone ? formatPhone(r.phone) : "-"}</td>
                       <td className="px-3 py-2 text-muted-foreground">{r.hire_date ?? "-"}</td>
                       <td className="px-3 py-2"><Badge variant={s.variant}>{s.label}</Badge></td>
                       <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{success}</td>

@@ -28,6 +28,7 @@ import {
   Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, Funnel, FunnelChart,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
+import { formatPhone } from "@/lib/phoneFormat";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { InquiryForm } from "@/components/inquiries/InquiryForm";
@@ -745,7 +746,7 @@ const ChannelIntakePage = () => {
                         <td className="px-3 py-2 text-xs align-middle">
                           {r.phone ? (
                             <a href={`tel:${r.phone}`} className="flex items-center gap-1 text-foreground/80 hover:text-foreground">
-                              <Phone className="size-3" /> {r.phone}
+                              <Phone className="size-3" /> {formatPhone(r.phone)}
                             </a>
                           ) : "-"}
                         </td>
@@ -932,8 +933,12 @@ const ChannelIntakePage = () => {
                   <label className="text-xs text-muted-foreground">연락처</label>
                   <Input
                     value={detail.phone}
-                    onChange={(e) => setDetail((d) => ({ ...d, phone: e.target.value }))}
+                    onChange={(e) => setDetail((d) => ({ ...d, phone: formatPhone(e.target.value) }))}
                     className="h-9"
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={13}
+                    placeholder="010-0000-0000"
                   />
                 </div>
                 <div className="space-y-1">
