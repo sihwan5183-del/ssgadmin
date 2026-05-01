@@ -281,6 +281,7 @@ const RegularsPage = () => {
   const filtered = useMemo(() => {
     return list.filter((r) => {
       if (filterChannel !== "all" && r.channel !== filterChannel) return false;
+      if (filterStaff !== "all" && r.created_by !== filterStaff) return false;
       if (onlyConverted && !r.converted) return false;
       if (filterConverted === "y" && !r.converted) return false;
       if (filterConverted === "n" && r.converted) return false;
@@ -296,7 +297,45 @@ const RegularsPage = () => {
       }
       return true;
     });
-  }, [list, q, filterChannel, filterConverted, filterCarrier, onlyConverted]);
+  }, [list, q, filterChannel, filterConverted, filterCarrier, onlyConverted, filterStaff]);
+
+  // 직원별 단골 등록 통계 (월/전체 필터)
+  const staffStats = useMemo(() => {
+    const inMonth = (iso: string) => {
+      if (staffStatMonth === "all") return true;
+      return iso?.startsWith(staffStatMonth);
+    };
+    const map = new Map<string, { uid: string; total: number; converted: number }>();
+    for (const r of list) {
+      if (!inMonth(r.registered_date)) continue;
+      const uid = r.created_by ?? "_unknown";
+      const cur = map.get(uid) ?? { uid, total: 0, converted: 0 };
+      cur.total += 1;
+      if (r.converted) cur.converted += 1;
+      map.set(uid, cur);
+    }
+    return [...map.values()]
+      .map((s) => ({
+        ...s,
+        name: nameOf(s.uid),
+        rate: s.total > 0 ? Math.round((s.converted / s.total) * 1000) / 10 : 0,
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [list, staffStatMonth, profileMap]);
+
+  // 이번 달 TOP 3
+  const top3 = useMemo(() => {
+    const ym = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+    const map = new Map<string, number>();
+    for (const r of list) {
+      if (!r.registered_date?.startsWith(ym)) continue;
+      map.set(r.created_by ?? "_unknown", (map.get(r.created_by ?? "_unknown") ?? 0) + 1);
+    }
+    return [...map.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([uid, count]) => ({ uid, name: nameOf(uid), count }));
+  }, [list, profileMap]);
 
   // 다중 선택
   const bulk = useBulkSelection<string>(filtered.map((r) => r.id));
