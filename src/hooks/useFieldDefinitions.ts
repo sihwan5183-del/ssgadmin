@@ -44,8 +44,9 @@ export const useFieldDefinitions = (tableName: string) => {
 
   useEffect(() => {
     load();
+    const channelName = `field-defs-${tableName}-${Math.random().toString(36).slice(2, 10)}`;
     const ch = supabase
-      .channel(`field-defs-${tableName}`)
+      .channel(channelName)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "field_definitions" },
