@@ -97,7 +97,7 @@ export const useNetFeeFormula = () => {
     };
     load();
     const ch = supabase
-      .channel("formula-settings")
+      .channel(`formula-settings-${Math.random().toString(36).slice(2, 10)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "app_settings" },
