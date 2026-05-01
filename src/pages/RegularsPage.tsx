@@ -525,6 +525,14 @@ const RegularsPage = () => {
           <Badge variant="outline" className="border-primary/40 text-primary-glow ml-auto">
             {filtered.length}건
           </Badge>
+          <label className="flex items-center gap-2 px-2.5 h-9 rounded-md border border-emerald-500/40 bg-emerald-500/5 cursor-pointer text-xs">
+            <Checkbox
+              checked={onlyConverted}
+              onCheckedChange={(v) => setOnlyConverted(!!v)}
+              className="border-emerald-600 data-[state=checked]:bg-emerald-600"
+            />
+            <span className="text-emerald-700 dark:text-emerald-400 font-medium">전환완료만 보기</span>
+          </label>
           {isAdmin && (
             <Button
               variant="outline"
