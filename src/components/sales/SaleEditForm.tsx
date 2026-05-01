@@ -24,6 +24,7 @@ import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ModelAutocomplete } from "@/components/ui/model-autocomplete";
+import { useDeviceModels } from "@/hooks/useDeviceModels";
 
 export type SaleRow = {
   id: string;
