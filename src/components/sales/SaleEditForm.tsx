@@ -24,6 +24,7 @@ import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ModelAutocomplete } from "@/components/ui/model-autocomplete";
+import { useDeviceModels } from "@/hooks/useDeviceModels";
 
 export type SaleRow = {
   id: string;
@@ -118,6 +119,7 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   const [busy, setBusy] = useState(false);
   const { fields: dynamicFields } = useFieldDefinitions("sales");
   const { calc: calcNetFee, formula: netFeeFormula } = useNetFeeFormula();
+  const { models: deviceModels } = useDeviceModels(true);
   const [staffOptions, setStaffOptions] = useState<{ user_id: string; display_name: string; store: string | null }[]>([]);
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
   const [linkedInquiryId, setLinkedInquiryId] = useState<string | null>(null);
@@ -322,6 +324,16 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
     if (!customFields.contract_type) {
       toast.error("약정 정보를 선택해주세요", { description: "선택약정 또는 이통사지원금 중 하나를 선택해야 합니다." });
       return;
+    }
+    // 단말기 모델: 마스터에 등록된 정확한 펫네임만 허용
+    if (form.device_model && form.device_model.trim().length > 0) {
+      const ok = deviceModels.some((m) => m.model_name === form.device_model);
+      if (!ok) {
+        toast.error("단말기 모델을 확정해주세요", {
+          description: "검색 후 목록에서 직접 선택한 모델만 저장할 수 있습니다.",
+        });
+        return;
+      }
     }
     setBusy(true);
     const baseNumeric = {
