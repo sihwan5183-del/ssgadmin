@@ -84,7 +84,7 @@ export default function AccountStaffPage() {
     setRolesByUser(roleMap);
     const sm: Record<string, number> = {};
     (salesRows ?? []).forEach((r: any) => {
-      if (r.approval_status === "취소" || r.approval_status === "반려") return;
+      // 정책: 검수 상태와 무관하게 [저장]된 모든 실적을 직원별 집계에 포함
       sm[r.created_by] = (sm[r.created_by] ?? 0) + 1;
     });
     setSuccessMap(sm);
