@@ -10,6 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useStores } from "@/hooks/useStores";
 import { ROLE_LABELS, type AppRole } from "@/hooks/useRole";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { useRole } from "@/hooks/useRole";
+import { formatStaffName } from "@/lib/staffName";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -50,6 +53,9 @@ export default function AccountStaffPage() {
   const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
   const [deleting, setDeleting] = useState(false);
   const { isSuperAdmin } = useSuperAdmin();
+  const { isAdmin } = useRole();
+  const canDelete = isAdmin || isSuperAdmin;
+  const [includeResigned, setIncludeResigned] = useState(false);
   const { stores } = useStores();
   const yearMonth = useMemo(() => new Date().toISOString().slice(0, 7), []);
   const [successMap, setSuccessMap] = useState<Record<string, number>>({});
@@ -119,6 +125,9 @@ export default function AccountStaffPage() {
   const filtered = useMemo(() => {
     const ql = q.trim().toLowerCase();
     return rows.filter((r) => {
+      // 퇴사자/삭제는 기본 제외, 토글로만 노출
+      const isResigned = r.status === "resigned" || r.status === "deleted";
+      if (isResigned && !includeResigned && statusFilter !== "resigned") return false;
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (storeFilter !== "all" && (r.store ?? "") !== storeFilter) return false;
       if (roleFilter !== "all") {
@@ -129,7 +138,7 @@ export default function AccountStaffPage() {
       return [r.display_name, r.phone, r.team, r.store, r.position, emails[r.user_id]]
         .filter(Boolean).join(" ").toLowerCase().includes(ql);
     });
-  }, [rows, q, statusFilter, storeFilter, roleFilter, rolesByUser, emails]);
+  }, [rows, q, statusFilter, storeFilter, roleFilter, rolesByUser, emails, includeResigned]);
 
   return (
     <div className="space-y-3">
@@ -165,6 +174,14 @@ export default function AccountStaffPage() {
             ))}
           </SelectContent>
         </Select>
+        <label className="inline-flex items-center gap-2 text-xs text-muted-foreground select-none px-2">
+          <Checkbox
+            checked={includeResigned}
+            onCheckedChange={(v) => setIncludeResigned(!!v)}
+            id="include-resigned"
+          />
+          <span>퇴사자 포함 보기</span>
+        </label>
       </div>
 
       {loading ? (
@@ -193,9 +210,14 @@ export default function AccountStaffPage() {
                   const s = STATUS_BADGE[r.status] ?? { label: r.status, variant: "outline" as const };
                   const rs = rolesByUser[r.user_id] ?? [];
                   const success = successMap[r.user_id] ?? 0;
+                  const isResigned = r.status === "resigned" || r.status === "deleted";
+                  const canDeleteThis =
+                    canDelete && (r.status === "suspended" || r.status === "resigned");
                   return (
                     <tr key={r.user_id} className="border-b border-border/30 hover:bg-muted/30">
-                      <td className="px-3 py-2 font-medium">{r.display_name}</td>
+                      <td className="px-3 py-2 font-medium">
+                        {formatStaffName(r.display_name, isResigned)}
+                      </td>
                       <td className="px-3 py-2 text-muted-foreground">{emails[r.user_id] ?? "-"}</td>
                       <td className="px-3 py-2">{r.store ?? "-"}</td>
                       <td className="px-3 py-2">{r.team ?? "-"}</td>
@@ -216,13 +238,13 @@ export default function AccountStaffPage() {
                       <td className="px-3 py-2 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button size="sm" variant="ghost" onClick={() => setSelected({ id: r.user_id, email: emails[r.user_id] ?? null })}>상세</Button>
-                          {isSuperAdmin && r.status !== "resigned" && r.status !== "deleted" && (
+                          {canDeleteThis && (
                             <Button
                               size="sm"
                               variant="ghost"
                               className="text-destructive hover:text-destructive hover:bg-destructive/10"
                               onClick={() => setDeleteTarget(r)}
-                              title="계정 삭제 (퇴사 처리)"
+                              title="계정 삭제"
                             >
                               <Trash2 className="size-4" />
                             </Button>
