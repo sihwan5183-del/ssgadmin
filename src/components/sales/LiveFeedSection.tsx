@@ -13,6 +13,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useViewScope } from "@/contexts/ViewScopeContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useStaffNames } from "@/hooks/useStaffNames";
 import { useRole } from "@/hooks/useRole";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
@@ -63,6 +64,7 @@ function timeAgo(iso: string) {
 }
 
 export function LiveFeedSection() {
+  const { resolve: resolveStaff } = useStaffNames();
   const { scope } = useViewScope();
   const { user } = useAuth();
   const { isAdmin, isManager } = useRole();
