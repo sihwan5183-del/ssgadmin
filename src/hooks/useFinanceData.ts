@@ -60,6 +60,15 @@ export interface FinanceData {
   roi: number;                  // netMargin / totalExpense * 100
   cpaAvg: number;               // totalAdSpend / totalSuccess
   marginRate: number;           // netMargin / totalRevenue * 100
+  // 직전 동일 길이 구간 (증감 비교용)
+  prev: {
+    totalRevenue: number;
+    totalExpense: number;
+    netMargin: number;
+    roi: number;
+    totalSuccess: number;
+    cpaAvg: number;
+  };
   // 신규 정밀 합산 (대표님 정의 기준)
   revenueBreakdown: { label: string; amount: number; key: string }[];
   expenseBreakdown: { label: string; amount: number; key: string }[];
@@ -107,17 +116,19 @@ const isoWeekKey = (iso: string) => {
 };
 
 export function useFinanceData(): FinanceData {
-  const { startDate, endDate } = usePeriod();
+  const { startDate, endDate, prevStartDate, prevEndDate } = usePeriod();
   const { categories, includedExpenseLabels, excludedLabels } = useBudgetCategories();
   const [salesRows, setSalesRows] = useState<any[]>([]);
   const [spendRows, setSpendRows] = useState<any[]>([]);
+  const [prevSalesRows, setPrevSalesRows] = useState<any[]>([]);
+  const [prevSpendRows, setPrevSpendRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const [salesRes, spendRes] = await Promise.all([
+      const [salesRes, spendRes, prevSalesRes, prevSpendRes] = await Promise.all([
         supabase
           .from("sales")
           .select(
@@ -133,16 +144,33 @@ export function useFinanceData(): FinanceData {
           .gte("spend_date", startDate)
           .lte("spend_date", endDate)
           .limit(10000),
+        supabase
+          .from("sales")
+          .select(
+            "channel, product, open_date, unit_price, distributor_amount, cash_support_amount, extra_subsidy, customer_support_amount, corp_card_amount, receivable_amount, vas_fee, net_fee, voucher, voucher_returned, trade_in_enabled, trade_in_confirmed, moyo_excluded, custom_fields",
+          )
+          .gte("open_date", prevStartDate)
+          .lte("open_date", prevEndDate)
+          .in("status", ["개통완료", "설치완료"])
+          .limit(10000),
+        supabase
+          .from("ad_spend")
+          .select("category, amount, spend_date")
+          .gte("spend_date", prevStartDate)
+          .lte("spend_date", prevEndDate)
+          .limit(10000),
       ]);
       if (cancelled) return;
       setSalesRows(salesRes.data ?? []);
       setSpendRows(spendRes.data ?? []);
+      setPrevSalesRows(prevSalesRes.data ?? []);
+      setPrevSpendRows(prevSpendRes.data ?? []);
       setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [startDate, endDate]);
+  }, [startDate, endDate, prevStartDate, prevEndDate]);
 
   return useMemo<FinanceData>(() => {
     // ※ 모든 행은 status=개통완료 (쿼리에서 필터됨).
@@ -152,6 +180,70 @@ export function useFinanceData(): FinanceData {
       const category = String(r.category ?? "광고비").trim();
       return category === "광고비" || category === "기타지출" || category === "고정지출";
     });
+
+    /**
+     * 직전 동일 길이 구간의 핵심 합계를 계산.
+     * 메인 합산과 동일한 정의(수익=brakedown 합, 지출=brakedown 합) 를 사용해야
+     * 카드 표시값과 비교 기준이 일치한다.
+     */
+    const computeCoreTotals = (sRows: any[], spRows: any[]) => {
+      let totalSuccess = 0;
+      let sumCommission = 0,
+        sumVas = 0,
+        sumReceivable = 0,
+        sumVoucher = 0,
+        sumTradeIn = 0,
+        sumDistributor = 0,
+        sumCashOpen = 0,
+        sumExtraSubsidy = 0,
+        sumCustomerSupport = 0,
+        sumCorpCard = 0,
+        sumMoyoFee = 0;
+      for (const r of sRows) {
+        totalSuccess += 1;
+        const p = calcDashboardProfit(r);
+        sumCommission += p.salesCommission;
+        sumVas += p.vasFee;
+        sumReceivable += p.receivableAmount;
+        sumVoucher += p.voucherAmount;
+        sumTradeIn += p.tradeInConfirmed;
+        sumDistributor += p.distributor;
+        sumCashOpen += p.cashSupport;
+        sumExtraSubsidy += p.offerSubsidy;
+        sumCustomerSupport += p.customerSupport;
+        sumCorpCard += p.cardSubsidy;
+        sumMoyoFee += p.moyoFee;
+      }
+      let adOnly = 0,
+        etcOnly = 0,
+        fixedOnly = 0;
+      for (const r of spRows) {
+        const c = String(r.category ?? "").trim();
+        const v = Number(r.amount ?? 0);
+        if (c === "광고비") adOnly += v;
+        else if (c === "기타지출") etcOnly += v;
+        else if (c === "고정지출") fixedOnly += v;
+      }
+      const totalAdSpend = adOnly + etcOnly + fixedOnly;
+      const totalRevenue =
+        sumCommission + sumVas + sumReceivable + sumVoucher + sumTradeIn;
+      const totalExpense =
+        sumDistributor +
+        sumCashOpen +
+        sumExtraSubsidy +
+        sumCustomerSupport +
+        sumCorpCard +
+        adOnly +
+        etcOnly +
+        fixedOnly +
+        sumMoyoFee;
+      const netMargin = totalRevenue - totalExpense;
+      const roi = totalExpense > 0 ? (netMargin / totalExpense) * 100 : 0;
+      const cpaAvg = totalSuccess > 0 ? totalAdSpend / totalSuccess : 0;
+      return { totalRevenue, totalExpense, netMargin, roi, totalSuccess, cpaAvg };
+    };
+
+    const prev = computeCoreTotals(prevSalesRows, prevSpendRows);
 
     // ---------- 신규 합산 (대표님 정의 정확 매칭) ----------
     let sumCommission = 0;
@@ -407,6 +499,7 @@ export function useFinanceData(): FinanceData {
       roi,
       cpaAvg,
       marginRate,
+      prev,
       moyoAppliedCount,
       moyoExcludedCount,
       moyoFee,
@@ -423,5 +516,5 @@ export function useFinanceData(): FinanceData {
       hasSales: totalSuccess > 0,
       hasSpend: totalAdSpend > 0,
     };
-  }, [salesRows, spendRows, startDate, endDate, loading, categories, includedExpenseLabels, excludedLabels]);
+  }, [salesRows, spendRows, prevSalesRows, prevSpendRows, startDate, endDate, loading, categories, includedExpenseLabels, excludedLabels]);
 }

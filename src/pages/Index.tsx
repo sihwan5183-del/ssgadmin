@@ -35,6 +35,68 @@ import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { RevenueComposition } from "@/components/finance/RevenueComposition";
 import { CategoryBreakdownChart } from "@/components/finance/CategoryBreakdownChart";
+import { usePeriod } from "@/contexts/PeriodContext";
+import { CalendarDays, Calendar as CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const isoToday = () => {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+const pctChange = (cur: number, prev: number): number | undefined => {
+  if (!isFinite(cur) || !isFinite(prev)) return undefined;
+  if (prev === 0) {
+    if (cur === 0) return 0;
+    return undefined; // 직전이 0이면 비교 의미 없음 — 표시 생략
+  }
+  return ((cur - prev) / Math.abs(prev)) * 100;
+};
+
+/** 대시보드 상단의 [월간 현황 / 일간 현황] 큰 전환 토글 */
+const ScopeBigToggle = () => {
+  const { mode, setMode, setSingleDay, customStart, label } = usePeriod();
+  const isDayMode = mode === "day";
+  const isMonthMode = mode === "month";
+  const items = [
+    { key: "month" as const, label: "월간 현황", icon: CalendarDays, hint: "선택한 월 1일~말일 누적" },
+    { key: "day" as const, label: "일간 현황", icon: CalendarIcon, hint: "선택한 하루 단일 실적" },
+  ];
+  return (
+    <div className="mb-2 flex items-center gap-2 flex-wrap">
+      <div className="inline-flex p-1 rounded-2xl bg-muted/40 border border-border/40">
+        {items.map((it) => {
+          const Icon = it.icon;
+          const active =
+            (it.key === "month" && isMonthMode) || (it.key === "day" && isDayMode);
+          return (
+            <button
+              key={it.key}
+              onClick={() => {
+                if (it.key === "month") setMode("month");
+                else setSingleDay(customStart ?? isoToday());
+              }}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-300 whitespace-nowrap",
+                active
+                  ? "bg-gradient-primary text-primary-foreground shadow-glow"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              title={it.hint}
+            >
+              <Icon className="size-3.5" />
+              {it.label}
+            </button>
+          );
+        })}
+      </div>
+      <span className="text-xs text-muted-foreground">
+        기준: <span className="font-semibold text-foreground">{label}</span>
+      </span>
+    </div>
+  );
+};
 
 const Index = () => {
   const finance = useFinanceData();
@@ -44,6 +106,24 @@ const Index = () => {
   const canSeeAdminWidgets = isAdmin || isSuperAdmin;
   const { widgets, isVisible, toggle, move, resetToDefault } = useDashboardLayout();
   const liveRoi = Math.round(finance.roi);
+
+  const { mode, year, month, startDate, label: periodLabel } = usePeriod();
+  // 카드 상단에 표시할 짧은 기준 시점 라벨
+  const cardPeriodLabel = (() => {
+    if (mode === "month") return `${month || year}월 누적`;
+    if (mode === "day") {
+      const d = new Date(startDate + "T00:00:00");
+      const weekday = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
+      return `${d.getMonth() + 1}.${String(d.getDate()).padStart(2, "0")} (${weekday}) 당일`;
+    }
+    return periodLabel;
+  })();
+
+  const dRevenue = pctChange(finance.totalRevenue, finance.prev.totalRevenue);
+  const dExpense = pctChange(finance.totalExpense, finance.prev.totalExpense);
+  const dNet = pctChange(finance.netMargin, finance.prev.netMargin);
+  const dRoi = pctChange(finance.roi, finance.prev.roi);
+
   return (
     <>
       <Header
@@ -58,6 +138,9 @@ const Index = () => {
           />
         ) : undefined}
       />
+
+      {/* 상단 [월간 현황 / 일간 현황] 큰 토글 — 모든 카드/차트의 기준 동기화 */}
+      <ScopeBigToggle />
 
       {/* === 본인 검수 피드백 (반려/수정요청) === */}
       {isVisible("review_alerts") && <MyReviewAlerts />}
@@ -120,6 +203,8 @@ const Index = () => {
         <StatCard
           label="총 수익"
           value={finance.loading ? "…" : formatShortKRW(finance.totalRevenue)}
+          periodLabel={cardPeriodLabel}
+          delta={dRevenue}
           icon={TrendingUp}
           accent="primary"
           hint="단가표 수수료 + 부가서비스 + 수급완료 미수금 + 반납완료 상품권 + 확정 중고폰"
@@ -127,6 +212,8 @@ const Index = () => {
         <StatCard
           label="총 지출"
           value={finance.loading ? "…" : formatShortKRW(finance.totalExpense)}
+          periodLabel={cardPeriodLabel}
+          delta={dExpense}
           icon={TrendingDown}
           accent="warning"
           hint="지원금 + 5번 법인카드 + 광고비/기타지출 + 모요 수수료"
@@ -134,6 +221,8 @@ const Index = () => {
         <StatCard
           label="순수익"
           value={finance.loading ? "…" : formatShortKRW(finance.netMargin)}
+          periodLabel={cardPeriodLabel}
+          delta={dNet}
           icon={Sparkles}
           accent="success"
           hint="총 수익 − 총 지출"
@@ -141,6 +230,8 @@ const Index = () => {
         <StatCard
           label="정산 ROI"
           value={`${liveRoi}%`}
+          periodLabel={cardPeriodLabel}
+          delta={dRoi}
           icon={Target}
           accent="secondary"
           hint="순수익 ÷ 총 지출"
