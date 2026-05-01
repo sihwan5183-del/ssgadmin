@@ -189,6 +189,7 @@ export default function StaffStatusPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [search, setSearch] = useState("");
   const [team, setTeam] = useState<string>("__all");
+  const [includeResigned, setIncludeResigned] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [allSales, setAllSales] = useState<SaleRow[]>([]);
   const [allInquiries, setAllInquiries] = useState<InquiryRow[]>([]);
@@ -224,8 +225,8 @@ export default function StaffStatusPage() {
     (async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("user_id, display_name, team")
-        .eq("status", "active")
+        .select("user_id, display_name, team, status")
+        .in("status", ["active", "leave", "suspended", "resigned", "deleted"])
         .order("display_name");
       const list = (data ?? []) as Profile[];
       const visible = canViewAll ? list : list.filter((p) => p.user_id === user.id);
@@ -244,9 +245,11 @@ export default function StaffStatusPage() {
     return profiles.filter((p) => {
       if (team !== "__all" && (p.team ?? "") !== team) return false;
       if (search && !p.display_name.toLowerCase().includes(search.toLowerCase())) return false;
+      const resigned = p.status === "resigned" || p.status === "deleted";
+      if (resigned && !includeResigned) return false;
       return true;
     });
-  }, [profiles, search, team]);
+  }, [profiles, search, team, includeResigned]);
 
   const selected = profiles.find((p) => p.user_id === selectedId) ?? null;
 
