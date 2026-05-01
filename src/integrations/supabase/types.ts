@@ -2104,6 +2104,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           goal_count: number
+          goal_input_mode: string
+          goal_percent: number
           goal_type: string
           goal_value: number
           id: string
@@ -2118,6 +2120,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           goal_count?: number
+          goal_input_mode?: string
+          goal_percent?: number
           goal_type?: string
           goal_value?: number
           id?: string
@@ -2132,6 +2136,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           goal_count?: number
+          goal_input_mode?: string
+          goal_percent?: number
           goal_type?: string
           goal_value?: number
           id?: string
@@ -2177,6 +2183,57 @@ export type Database = {
           phone?: string | null
           region?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      team_product_goals: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          goal_count: number
+          goal_input_mode: string
+          goal_percent: number
+          goal_type: string
+          goal_value: number
+          id: string
+          note: string | null
+          product: string
+          sale_type: string
+          team: string
+          updated_at: string
+          year_month: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          goal_count?: number
+          goal_input_mode?: string
+          goal_percent?: number
+          goal_type?: string
+          goal_value?: number
+          id?: string
+          note?: string | null
+          product: string
+          sale_type?: string
+          team: string
+          updated_at?: string
+          year_month: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          goal_count?: number
+          goal_input_mode?: string
+          goal_percent?: number
+          goal_type?: string
+          goal_value?: number
+          id?: string
+          note?: string | null
+          product?: string
+          sale_type?: string
+          team?: string
+          updated_at?: string
+          year_month?: string
         }
         Relationships: []
       }
