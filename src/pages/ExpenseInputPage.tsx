@@ -306,7 +306,8 @@ export default function ExpenseInputPage() {
     for (let i = 0; i < days; i++) {
       const d = new Date(start);
       d.setDate(d.getDate() + i);
-      const dateISO = d.toISOString().slice(0, 10);
+      // 로컬 기준으로 변환해야 KST 자정이 전날(UTC) 로 밀리지 않는다.
+      const dateISO = toLocalISO(d);
       inserts.push({
         created_by: user.id,
         category: "광고비",
