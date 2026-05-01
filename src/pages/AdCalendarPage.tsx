@@ -649,17 +649,68 @@ export default function AdCalendarPage() {
                   const cpa = opens > 0 && spend > 0 ? Math.round(spend / opens) : 0;
                   if (!cell.inMonth) return null;
                   const hasData = spend > 0 || opens > 0;
+                  const breakdown = dailySpendBreakdown.get(key);
+                  const breakdownEntries = breakdown
+                    ? Array.from(breakdown.entries()).sort((a, b) => b[1] - a[1])
+                    : [];
                   return (
                     <div className={cn(
-                      "mt-auto pt-1.5 border-t border-border/30 grid grid-cols-3 gap-1 text-[10px] tabular-nums",
+                      "mt-auto pt-1.5 border-t border-border/30 grid grid-cols-3 gap-1 text-[10px] tabular-nums items-end",
                       !hasData && "opacity-40"
                     )}>
-                      <div className="text-center">
-                        <div className="text-muted-foreground text-[9px]">지출</div>
-                        <div className="font-bold text-foreground">
-                          {spend > 0 ? `₩${fmtKRW(Math.round(spend))}` : "-"}
-                        </div>
-                      </div>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="text-center cursor-help">
+                            <div className="text-muted-foreground text-[9px]">하루 지출금액</div>
+                            <div className="font-extrabold text-foreground text-[12px] leading-tight">
+                              {spend > 0 ? (
+                                <>
+                                  ₩{fmtKRW(Math.round(spend))}
+                                  <span className="text-[9px] font-semibold text-muted-foreground ml-0.5">원</span>
+                                </>
+                              ) : "-"}
+                            </div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <div className="space-y-1 text-xs">
+                            <div className="font-semibold flex items-center justify-between gap-3">
+                              <span>📅 {key} · 매체별 지출</span>
+                            </div>
+                            {breakdownEntries.length === 0 ? (
+                              <div className="text-muted-foreground">집행된 광고 없음</div>
+                            ) : (
+                              <>
+                                <div className="space-y-0.5">
+                                  {breakdownEntries.map(([media, amt]) => {
+                                    const p = getMediaPalette(media);
+                                    const pct = spend > 0 ? Math.round((amt / spend) * 100) : 0;
+                                    return (
+                                      <div key={media} className="flex items-center justify-between gap-3">
+                                        <span className="flex items-center gap-1.5">
+                                          <span className={cn("size-2 rounded-full", p.dot)} />
+                                          {media}
+                                        </span>
+                                        <span className="tabular-nums">
+                                          ₩{Math.round(amt).toLocaleString("ko-KR")}원
+                                          <span className="text-muted-foreground ml-1">({pct}%)</span>
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                <div className="pt-1 mt-1 border-t border-border/40 flex items-center justify-between gap-3 font-semibold">
+                                  <span>합계</span>
+                                  <span className="tabular-nums">₩{Math.round(spend).toLocaleString("ko-KR")}원</span>
+                                </div>
+                                <div className="text-[10px] text-muted-foreground pt-0.5">
+                                  ※ 캠페인 총예산을 집행 일수로 나눈 일할 계산
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
                       <div className="text-center">
                         <div className="text-muted-foreground text-[9px]">개통</div>
                         <div className="font-bold text-emerald-300">
@@ -669,7 +720,7 @@ export default function AdCalendarPage() {
                       <div className="text-center">
                         <div className="text-muted-foreground text-[9px]">CPA</div>
                         <div className="font-bold text-[hsl(28_100%_72%)]">
-                          {cpa > 0 ? `₩${fmtKRW(cpa)}` : "-"}
+                          {cpa > 0 ? (<>₩{fmtKRW(cpa)}<span className="text-[8px] font-semibold text-muted-foreground ml-0.5">원</span></>) : "-"}
                         </div>
                       </div>
                     </div>
