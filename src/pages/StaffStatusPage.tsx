@@ -373,11 +373,12 @@ export default function StaffStatusPage() {
       myGoals.forEach((g) => {
         const goalVal = Number(g.goal_value || g.goal_count);
         let achieved = 0;
-        if (g.product === "모바일") {
+        const gBucket = productBucket(g.product);
+        if (gBucket === "모바일") {
           if (g.sale_type === "__all") achieved = prodCount("모바일");
           else achieved = list.filter((s) => productBucket(s.product) === "모바일" && mobileSaleTypeBucket(s.sale_type) === g.sale_type).length;
         } else {
-          achieved = prodCount(g.product);
+          achieved = prodCount(gBucket);
         }
         const pct = Math.min(150, Math.round((achieved / goalVal) * 100));
         totalPct += pct;
