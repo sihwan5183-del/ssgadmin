@@ -355,12 +355,29 @@ const RegularInputPage = () => {
               </thead>
               <tbody>
                 {list.map((r) => (
-                  <tr key={r.id} className="border-b border-border/20 hover:bg-accent/20">
+                  <tr
+                    key={r.id}
+                    className={`border-b border-border/20 hover:bg-accent/20 transition-colors ${
+                      r.converted ? "bg-emerald-500/[0.07]" : ""
+                    }`}
+                  >
                     <td className="py-2 px-2 tabular-nums text-xs">{r.registered_date}</td>
                     <td className="py-2 px-2">
                       <Badge variant="outline" className="text-xs">{r.channel}</Badge>
                     </td>
-                    <td className="py-2 px-2 font-medium">{r.customer_name}</td>
+                    <td className="py-2 px-2 font-medium">
+                      <div className="flex items-center gap-1.5">
+                        <span>{r.customer_name}</span>
+                        {r.converted && (
+                          <span
+                            className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30"
+                            title={r.converted_at ? `전환일: ${new Date(r.converted_at).toLocaleDateString("ko-KR")}` : "전환 완료"}
+                          >
+                            ✓ 전환완료
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="py-2 px-2">
                       {r.carrier ? (
                         <Badge
