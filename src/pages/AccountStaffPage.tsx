@@ -274,13 +274,13 @@ export default function AccountStaffPage() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v && !deleting) setDeleteTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>계정 삭제(퇴사 처리)</AlertDialogTitle>
+            <AlertDialogTitle>이 직원의 계정을 삭제하시겠습니까?</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>{deleteTarget?.display_name}</strong> 님의 계정을 삭제(퇴사 처리)하시겠습니까?
+              <strong>{deleteTarget?.display_name}</strong> 님의 계정을 삭제합니다.
               <br />
-              삭제 후에도 기존 실적 데이터는 보존되며, 작성자 이름 옆에 <em>(퇴사자)</em> 표기가 자동으로 붙습니다.
+              과거 실적 데이터에는 <em>(퇴사자)</em> 로 표기됩니다.
               <br />
-              해당 계정은 즉시 로그인이 차단되고 모든 세션이 종료됩니다.
+              계정은 즉시 로그인이 차단되고 모든 세션이 종료됩니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -290,7 +290,7 @@ export default function AccountStaffPage() {
               disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleting ? "처리 중…" : "삭제(퇴사 처리)"}
+              {deleting ? "처리 중…" : "삭제"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
