@@ -1050,9 +1050,11 @@ export default function ExpenseInputPage() {
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <h3 className="font-semibold">지출 내역 — {periodLabel}</h3>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
-              <Download className="size-4" /> 엑셀로 내보내기
-            </Button>
+            {isAdmin && (
+              <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
+                <Download className="size-4" /> 엑셀로 내보내기
+              </Button>
+            )}
             {isAdmin && (
               <Button
                 variant="outline"
