@@ -231,7 +231,7 @@ export default function AccountStaffPage() {
                           ))}
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-muted-foreground">{r.phone ?? "-"}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{r.phone ? formatPhone(r.phone) : "-"}</td>
                       <td className="px-3 py-2 text-muted-foreground">{r.hire_date ?? "-"}</td>
                       <td className="px-3 py-2"><Badge variant={s.variant}>{s.label}</Badge></td>
                       <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{success}</td>
