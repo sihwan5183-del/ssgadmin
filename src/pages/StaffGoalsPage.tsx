@@ -246,6 +246,15 @@ export default function StaffGoalsPage() {
     effectiveCount(getEntry(uid, itemKey), mobileBaseFor(uid));
   const totalFor = (uid: string) => mapping.reduce((sum, m) => sum + cellCount(uid, m.key), 0);
   const achievedFor = (uid: string) => mapping.reduce((sum, m) => sum + (achievedMap[goalKey(uid, m.key)] ?? 0), 0);
+  // 핵심 달성률 = 모바일 실적 ÷ 모바일 목표 (모바일 미설정 시 전 항목 합산 기준 fallback)
+  const coreRateFor = (uid: string) => {
+    const mGoal = cellCount(uid, MOBILE_KEY);
+    const mAch = achievedMap[goalKey(uid, MOBILE_KEY)] ?? 0;
+    if (mGoal > 0) return Math.round((mAch / mGoal) * 100);
+    const total = totalFor(uid);
+    const ach = achievedFor(uid);
+    return total > 0 ? Math.round((ach / total) * 100) : 0;
+  };
 
   /* Cell helpers (team) */
   const getTeamEntry = (team: string, itemKey: string): GoalEntry =>
@@ -589,15 +598,18 @@ export default function StaffGoalsPage() {
                         </th>
                       ))}
                       <th className="text-right px-3 py-2 bg-primary/5">월 총합</th>
-                      <th className="text-right px-3 py-2 bg-emerald-500/5">달성</th>
-                      <th className="text-right px-3 py-2 bg-emerald-500/5">달성률</th>
+                      <th className="text-right px-3 py-2 bg-emerald-500/5">실적 합계</th>
+                      <th className="text-right px-3 py-2 bg-emerald-500/5">
+                        핵심 달성률
+                        <div className="text-[9px] text-muted-foreground/70 font-normal">모바일 기준</div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredStaff.map((s) => {
                       const total = totalFor(s.user_id);
                       const ach = achievedFor(s.user_id);
-                      const rate = total > 0 ? Math.round((ach / total) * 100) : 0;
+                      const rate = coreRateFor(s.user_id);
                       const mobileBase = mobileBaseFor(s.user_id);
                       return (
                         <tr key={s.user_id} className="border-b border-border/30 hover:bg-muted/20">
@@ -622,6 +634,9 @@ export default function StaffGoalsPage() {
                             const isDirty = dirty.has(k);
                             const isMobile = m.key === MOBILE_KEY;
                             const computed = effectiveCount(e, mobileBase);
+                            const cellAch = achievedMap[k] ?? 0;
+                            const cellPct = computed > 0 ? Math.round((cellAch / computed) * 100) : 0;
+                            const cellOver = computed > 0 && cellPct >= 100;
                             return (
                               <td key={m.key} className={cn(
                                 "px-2 py-1.5 text-center align-top",
@@ -684,6 +699,37 @@ export default function StaffGoalsPage() {
                                     </div>
                                   </div>
                                 )}
+                                {/* 항목별 개별 실적 / 달성률 */}
+                                {computed > 0 && (
+                                  <div className="mt-1 space-y-0.5">
+                                    <div className="flex items-center justify-center gap-1 text-[10px] tabular-nums">
+                                      <span className="text-muted-foreground">실적</span>
+                                      <span className={cn(
+                                        "font-semibold",
+                                        cellPct >= 120 ? "text-amber-500" :
+                                        cellPct >= 100 ? "text-amber-600" :
+                                        cellPct >= 70 ? "text-emerald-600" : "text-foreground",
+                                      )}>{cellAch}</span>
+                                      <span className="text-muted-foreground">·</span>
+                                      <span className={cn(
+                                        "font-bold",
+                                        cellPct >= 120 ? "text-amber-500" :
+                                        cellPct >= 100 ? "text-amber-600" :
+                                        cellPct >= 70 ? "text-emerald-600" : "text-muted-foreground",
+                                      )}>{cellPct}%{cellOver && "⭐"}</span>
+                                    </div>
+                                    <div className="h-1 rounded-full bg-muted overflow-hidden mx-auto w-20">
+                                      <div
+                                        className={cn(
+                                          "h-full transition-all",
+                                          cellPct >= 100 ? "bg-amber-500" :
+                                          cellPct >= 70 ? "bg-emerald-500" : "bg-primary/60",
+                                        )}
+                                        style={{ width: `${Math.min(100, cellPct)}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                )}
                               </td>
                             );
                           })}
@@ -691,11 +737,12 @@ export default function StaffGoalsPage() {
                           <td className="px-3 py-2 text-right tabular-nums bg-emerald-500/5">{ach}</td>
                           <td className="px-3 py-2 text-right tabular-nums bg-emerald-500/5">
                             <span className={
+                              rate >= 120 ? "text-amber-500 font-extrabold" :
                               rate >= 100 ? "text-emerald-600 font-bold" :
                               rate >= 70 ? "text-amber-600 font-semibold" :
                               "text-muted-foreground"
                             }>
-                              {total > 0 ? `${rate}%` : "-"}
+                              {(mobileBase > 0 || total > 0) ? `${rate}%${rate >= 100 ? " ⭐" : ""}` : "-"}
                             </span>
                           </td>
                         </tr>
@@ -851,13 +898,26 @@ export default function StaffGoalsPage() {
                             <td key={m.key} className="px-2 py-2 text-center text-xs">
                               <div className="tabular-nums">{sum}</div>
                               {goal > 0 && (
-                                <div className={cn(
-                                  "text-[10px]",
-                                  sum >= goal ? "text-emerald-500" :
-                                  sum >= goal * 0.8 ? "text-amber-500" : "text-muted-foreground",
-                                )}>
-                                  {ratio2}%
-                                </div>
+                                <>
+                                  <div className={cn(
+                                    "text-[10px] font-semibold",
+                                    ratio2 >= 120 ? "text-amber-500" :
+                                    ratio2 >= 100 ? "text-amber-600" :
+                                    ratio2 >= 80 ? "text-emerald-500" : "text-muted-foreground",
+                                  )}>
+                                    {ratio2}%{ratio2 >= 100 && "⭐"}
+                                  </div>
+                                  <div className="h-1 rounded-full bg-muted overflow-hidden mx-auto w-16 mt-0.5">
+                                    <div
+                                      className={cn(
+                                        "h-full transition-all",
+                                        ratio2 >= 100 ? "bg-amber-500" :
+                                        ratio2 >= 80 ? "bg-emerald-500" : "bg-primary/60",
+                                      )}
+                                      style={{ width: `${Math.min(100, ratio2)}%` }}
+                                    />
+                                  </div>
+                                </>
                               )}
                             </td>
                           );

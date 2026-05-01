@@ -24,6 +24,7 @@ import { formatKRWShort } from "@/data/financeData";
 import { useIncentiveRates } from "@/hooks/useIncentiveRates";
 import { calcTotalIncentive, forecastIncentive, calcIncentiveForSale } from "@/lib/incentiveEngine";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 interface Profile {
   user_id: string;
@@ -361,15 +362,19 @@ export default function StaffStatusPage() {
     return rows;
   }, [salesByOwner, filteredProfiles, incentiveRates]);
 
-  // Achievement-rate ranking — average % across all configured count goals
+  // Achievement-rate ranking — 모바일 중심 핵심 달성률 (대표 지표) + 항목 hits
+  // 총 달성률 = 모바일 실적 / 모바일 목표 (모바일 미설정 시 전 항목 건수 합산 대비 합산 목표)
   const achievementLeaderboard = useMemo(() => {
     const rows = filteredProfiles.map((p) => {
       const myGoals = goals.filter((g) => g.user_id === p.user_id && g.goal_type === "count" && Number(g.goal_value || g.goal_count) > 0);
       const list = (salesByOwner.get(p.user_id) ?? []).filter(isSuccess);
       if (myGoals.length === 0) return { profile: p, avgPct: 0, goalCount: 0, hits: 0 };
       const prodCount = (prod: string) => list.filter((s) => productBucket(s.product) === prod).length;
-      let totalPct = 0;
+
+      // 항목별 개별 달성률 — hits 카운트 + 합산 fallback
       let hits = 0;
+      let sumAch = 0;
+      let sumGoal = 0;
       myGoals.forEach((g) => {
         const goalVal = Number(g.goal_value || g.goal_count);
         let achieved = 0;
@@ -380,11 +385,23 @@ export default function StaffStatusPage() {
         } else {
           achieved = prodCount(gBucket);
         }
-        const pct = Math.min(150, Math.round((achieved / goalVal) * 100));
-        totalPct += pct;
+        const pct = Math.round((achieved / goalVal) * 100);
         if (pct >= 100) hits += 1;
+        sumAch += achieved;
+        sumGoal += goalVal;
       });
-      return { profile: p, avgPct: Math.round(totalPct / myGoals.length), goalCount: myGoals.length, hits };
+
+      // 핵심 지표: 모바일(__all) 달성률을 우선 사용, 없으면 전 항목 합산 기준
+      const mobileGoal = myGoals.find((g) => productBucket(g.product) === "모바일" && g.sale_type === "__all");
+      let avgPct = 0;
+      if (mobileGoal) {
+        const goalVal = Number(mobileGoal.goal_value || mobileGoal.goal_count);
+        const achieved = prodCount("모바일");
+        avgPct = goalVal > 0 ? Math.round((achieved / goalVal) * 100) : 0;
+      } else {
+        avgPct = sumGoal > 0 ? Math.round((sumAch / sumGoal) * 100) : 0;
+      }
+      return { profile: p, avgPct, goalCount: myGoals.length, hits };
     }).filter((r) => r.goalCount > 0);
     rows.sort((a, b) => b.avgPct - a.avgPct || b.hits - a.hits);
     return rows;
@@ -645,7 +662,7 @@ export default function StaffStatusPage() {
 
     const out: { product: string; goal: number; achieved: number; pct: number; saleType: string }[] = [];
 
-    // Mobile broken down by sale_type, plus aggregate
+    // Mobile broken down by sale_type, plus aggregate (각 항목 개별 달성률 — 100% 초과 허용)
     const mobileSuccess = success.filter((s) => productBucket(s.product) === "모바일");
     const mobileGoalAll = myGoals.find((g) => g.product === "모바일" && g.sale_type === "__all");
     const mobileGoalAllVal = mobileGoalAll ? Number(mobileGoalAll.goal_value || mobileGoalAll.goal_count) : 0;
@@ -654,7 +671,7 @@ export default function StaffStatusPage() {
       saleType: "__all",
       goal: mobileGoalAllVal,
       achieved: mobileSuccess.length,
-      pct: mobileGoalAllVal > 0 ? Math.min(100, Math.round((mobileSuccess.length / mobileGoalAllVal) * 100)) : 0,
+      pct: mobileGoalAllVal > 0 ? Math.round((mobileSuccess.length / mobileGoalAllVal) * 100) : 0,
     });
     MOBILE_SALE_TYPES.forEach((st) => {
       const g = myGoals.find((x) => x.product === "모바일" && x.sale_type === st);
@@ -666,7 +683,7 @@ export default function StaffStatusPage() {
           saleType: st,
           goal: goalVal,
           achieved,
-          pct: goalVal > 0 ? Math.min(100, Math.round((achieved / goalVal) * 100)) : 0,
+          pct: goalVal > 0 ? Math.round((achieved / goalVal) * 100) : 0,
         });
       }
     });
@@ -681,7 +698,7 @@ export default function StaffStatusPage() {
         saleType: "__all",
         goal: goalVal,
         achieved,
-        pct: goalVal > 0 ? Math.min(100, Math.round((achieved / goalVal) * 100)) : 0,
+        pct: goalVal > 0 ? Math.round((achieved / goalVal) * 100) : 0,
       });
     });
 
@@ -885,8 +902,8 @@ export default function StaffStatusPage() {
                     <tr className="border-b border-border/40 bg-muted/40 text-[11px] text-muted-foreground">
                       <th className="text-left px-3 py-2 w-14">순위</th>
                       <th className="text-left px-3 py-2">직원</th>
-                      <th className="text-right px-3 py-2">평균 달성률</th>
-                      <th className="text-right px-3 py-2">달성 / 목표 항목</th>
+                      <th className="text-right px-3 py-2">핵심 달성률<br/><span className="text-[9px] text-muted-foreground/70 font-normal">(모바일 기준)</span></th>
+                      <th className="text-right px-3 py-2">100% 항목</th>
                       <th className="px-3 py-2 w-48">진행도</th>
                     </tr>
                   </thead>
@@ -905,10 +922,14 @@ export default function StaffStatusPage() {
                           {r.profile.team && <span className="text-[10px] text-muted-foreground ml-1.5">{r.profile.team}</span>}
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums">
-                          <span className={r.avgPct >= 100 ? "text-emerald-600 font-bold" : "text-foreground font-semibold"}>{r.avgPct}%</span>
+                          <span className={
+                            r.avgPct >= 120 ? "text-amber-500 font-extrabold" :
+                            r.avgPct >= 100 ? "text-amber-600 font-bold" :
+                            "text-foreground font-semibold"
+                          }>{r.avgPct}%{r.avgPct >= 100 && " ⭐"}</span>
                         </td>
                         <td className="px-3 py-2 text-right text-xs text-muted-foreground tabular-nums">{r.hits} / {r.goalCount}</td>
-                        <td className="px-3 py-2"><Progress value={Math.min(100, r.avgPct)} className="h-1.5" /></td>
+                        <td className="px-3 py-2"><Progress value={Math.min(100, r.avgPct)} className={cn("h-1.5", r.avgPct >= 100 && "[&>div]:bg-amber-500")} /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -1316,6 +1337,14 @@ export default function StaffStatusPage() {
                         스마트홈: "hsl(155 75% 55%)",
                         "2ND": "hsl(15 85% 65%)",
                       };
+                      const over = g.pct >= 100;
+                      const cls = g.pct >= 120
+                        ? "text-amber-500 font-extrabold"
+                        : g.pct >= 100
+                        ? "text-amber-600 font-bold"
+                        : g.pct >= 70
+                        ? "text-emerald-500 font-semibold"
+                        : "text-muted-foreground font-medium";
                       return (
                         <div key={g.product} className="space-y-1">
                           <div className="flex items-center justify-between text-xs">
@@ -1326,13 +1355,16 @@ export default function StaffStatusPage() {
                             <span className="text-muted-foreground tabular-nums">
                               <span className="text-amber-700 font-semibold">{g.achieved}</span>
                               {g.goal > 0 ? (
-                                <> / {g.goal}대 · <span className={g.pct >= 100 ? "text-emerald-400 font-bold" : "text-emerald-300 font-semibold"}>{g.pct}%</span></>
+                                <> / {g.goal}대 · <span className={cls}>{g.pct}%{over && " ⭐"}</span></>
                               ) : (
                                 <> · 목표 미설정</>
                               )}
                             </span>
                           </div>
-                          <Progress value={g.goal > 0 ? g.pct : 0} className="h-2" />
+                          <Progress
+                            value={g.goal > 0 ? Math.min(100, g.pct) : 0}
+                            className={cn("h-2", over && "[&>div]:bg-amber-500")}
+                          />
                         </div>
                       );
                     })}
