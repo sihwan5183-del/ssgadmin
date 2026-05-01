@@ -181,6 +181,70 @@ export function useFinanceData(): FinanceData {
       return category === "광고비" || category === "기타지출" || category === "고정지출";
     });
 
+    /**
+     * 직전 동일 길이 구간의 핵심 합계를 계산.
+     * 메인 합산과 동일한 정의(수익=brakedown 합, 지출=brakedown 합) 를 사용해야
+     * 카드 표시값과 비교 기준이 일치한다.
+     */
+    const computeCoreTotals = (sRows: any[], spRows: any[]) => {
+      let totalSuccess = 0;
+      let sumCommission = 0,
+        sumVas = 0,
+        sumReceivable = 0,
+        sumVoucher = 0,
+        sumTradeIn = 0,
+        sumDistributor = 0,
+        sumCashOpen = 0,
+        sumExtraSubsidy = 0,
+        sumCustomerSupport = 0,
+        sumCorpCard = 0,
+        sumMoyoFee = 0;
+      for (const r of sRows) {
+        totalSuccess += 1;
+        const p = calcDashboardProfit(r);
+        sumCommission += p.salesCommission;
+        sumVas += p.vasFee;
+        sumReceivable += p.receivableAmount;
+        sumVoucher += p.voucherAmount;
+        sumTradeIn += p.tradeInConfirmed;
+        sumDistributor += p.distributor;
+        sumCashOpen += p.cashSupport;
+        sumExtraSubsidy += p.offerSubsidy;
+        sumCustomerSupport += p.customerSupport;
+        sumCorpCard += p.cardSubsidy;
+        sumMoyoFee += p.moyoFee;
+      }
+      let adOnly = 0,
+        etcOnly = 0,
+        fixedOnly = 0;
+      for (const r of spRows) {
+        const c = String(r.category ?? "").trim();
+        const v = Number(r.amount ?? 0);
+        if (c === "광고비") adOnly += v;
+        else if (c === "기타지출") etcOnly += v;
+        else if (c === "고정지출") fixedOnly += v;
+      }
+      const totalAdSpend = adOnly + etcOnly + fixedOnly;
+      const totalRevenue =
+        sumCommission + sumVas + sumReceivable + sumVoucher + sumTradeIn;
+      const totalExpense =
+        sumDistributor +
+        sumCashOpen +
+        sumExtraSubsidy +
+        sumCustomerSupport +
+        sumCorpCard +
+        adOnly +
+        etcOnly +
+        fixedOnly +
+        sumMoyoFee;
+      const netMargin = totalRevenue - totalExpense;
+      const roi = totalExpense > 0 ? (netMargin / totalExpense) * 100 : 0;
+      const cpaAvg = totalSuccess > 0 ? totalAdSpend / totalSuccess : 0;
+      return { totalRevenue, totalExpense, netMargin, roi, totalSuccess, cpaAvg };
+    };
+
+    const prev = computeCoreTotals(prevSalesRows, prevSpendRows);
+
     // ---------- 신규 합산 (대표님 정의 정확 매칭) ----------
     let sumCommission = 0;
     let sumVas = 0;
