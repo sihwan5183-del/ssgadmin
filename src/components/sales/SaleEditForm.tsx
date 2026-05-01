@@ -361,8 +361,9 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
         : calcNetFee(baseNumeric),
       custom_fields: {
         ...customFields,
-        // 약정 정보 미선택 시 DB 에 '해당없음' 으로 안전 기록 (모바일 2nd 가 아닐 때만 발생 가능)
-        contract_type: customFields.contract_type || "해당없음",
+        // 약정 정보: 모바일 2nd 가 아니면 비활성 필드이므로 null 로 안전 저장,
+        //          2nd 인 경우 사용자가 선택한 값을 그대로 보관 (필수 검증은 onSubmit 상단에서 처리)
+        contract_type: form.product === "2ND" ? (customFields.contract_type || null) : null,
       },
       pending_items: pendingItems,
       pending_note: pendingNote || null,
