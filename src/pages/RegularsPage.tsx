@@ -85,6 +85,68 @@ const RegularsPage = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // 수정 다이얼로그
+  const [editOpen, setEditOpen] = useState(false);
+  const [editing, setEditing] = useState<Regular | null>(null);
+  const [editForm, setEditForm] = useState({
+    channel: "",
+    customer_name: "",
+    carrier: "",
+    phone: "",
+    birth_date: "",
+    manager: "",
+    coupon_sent: false,
+    converted: false,
+    registered_date: today(),
+    note: "",
+  });
+  const [editSaving, setEditSaving] = useState(false);
+
+  const openEdit = (r: Regular) => {
+    setEditing(r);
+    setEditForm({
+      channel: r.channel ?? "",
+      customer_name: r.customer_name ?? "",
+      carrier: r.carrier ?? "",
+      phone: r.phone ?? "",
+      birth_date: r.birth_date ?? "",
+      manager: r.manager ?? "",
+      coupon_sent: !!r.coupon_sent,
+      converted: !!r.converted,
+      registered_date: r.registered_date ?? today(),
+      note: r.note ?? "",
+    });
+    setEditOpen(true);
+  };
+
+  const saveEdit = async () => {
+    if (!editing) return;
+    if (!editForm.channel) return toast.error("채널을 선택하세요");
+    if (!editForm.customer_name.trim()) return toast.error("고객명을 입력하세요");
+    setEditSaving(true);
+    const { error } = await supabase
+      .from("regulars")
+      .update({
+        channel: editForm.channel,
+        customer_name: editForm.customer_name.trim(),
+        carrier: editForm.carrier || null,
+        phone: editForm.phone || null,
+        birth_date: editForm.birth_date || null,
+        manager: editForm.manager || null,
+        coupon_sent: editForm.coupon_sent,
+        converted: editForm.converted,
+        registered_date: editForm.registered_date,
+        note: editForm.note || null,
+      })
+      .eq("id", editing.id);
+    setEditSaving(false);
+    if (error) return toast.error("수정 실패: " + error.message);
+    toast.success("수정되었습니다");
+    setEditOpen(false);
+    setEditing(null);
+    load();
+  };
+
   // 등록 폼
   const [form, setForm] = useState({
     channel: "",
