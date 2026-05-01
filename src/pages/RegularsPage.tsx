@@ -826,6 +826,149 @@ const RegularsPage = () => {
         loading={bulkBusy}
         confirmLabel="삭제"
       />
+
+      {/* 단골 정보 수정 다이얼로그 */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="size-4 text-primary" />
+              단골 정보 수정
+              {editing?.customer_name && (
+                <Badge variant="outline" className="ml-1 text-[11px]">
+                  {editing.customer_name}
+                </Badge>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* 등록 폼과 동일한 레이아웃 */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+            <div className="md:col-span-2">
+              <Label className="text-xs">채널 *</Label>
+              <Select value={editForm.channel} onValueChange={(v) => setEditForm({ ...editForm, channel: v })}>
+                <SelectTrigger className="mt-1.5"><SelectValue placeholder="채널 선택" /></SelectTrigger>
+                <SelectContent>
+                  {channelOptions.map((o) => (
+                    <SelectItem key={o} value={o}>{o}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-2">
+              <Label className="text-xs">통신사</Label>
+              <Select value={editForm.carrier} onValueChange={(v) => setEditForm({ ...editForm, carrier: v })}>
+                <SelectTrigger className="mt-1.5"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectContent>
+                  {CARRIERS.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-2">
+              <Label className="text-xs">성함 *</Label>
+              <Input
+                className="mt-1.5"
+                value={editForm.customer_name}
+                onChange={(e) => setEditForm({ ...editForm, customer_name: e.target.value })}
+              />
+            </div>
+            <div className="md:col-span-3">
+              <Label className="text-xs">연락처</Label>
+              <Input
+                className="mt-1.5"
+                value={editForm.phone}
+                onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                placeholder={editForm.carrier ? "010-0000-0000" : "통신사를 먼저 선택"}
+                disabled={!editForm.carrier}
+              />
+            </div>
+            <div className="md:col-span-3">
+              <Label className="text-xs">자사 전환</Label>
+              <div
+                className={`mt-1.5 h-10 px-3 rounded-md border flex items-center gap-2 transition-colors ${
+                  editForm.converted
+                    ? "bg-emerald-500/10 border-emerald-500/40"
+                    : "bg-background/40 border-border/50"
+                }`}
+              >
+                <Switch
+                  checked={editForm.converted}
+                  onCheckedChange={(v) => setEditForm({ ...editForm, converted: v })}
+                />
+                <span className="text-xs text-muted-foreground">
+                  {editForm.converted ? "전환 완료 ✓" : "타사 → 자사 가입 시 ON"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+            <div className="md:col-span-2">
+              <Label className="text-xs">생년월일</Label>
+              <Input
+                className="mt-1.5"
+                value={editForm.birth_date}
+                onChange={(e) => setEditForm({ ...editForm, birth_date: e.target.value })}
+                placeholder="YYYY-MM-DD"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <Label className="text-xs">담당자</Label>
+              <Input
+                className="mt-1.5"
+                value={editForm.manager}
+                onChange={(e) => setEditForm({ ...editForm, manager: e.target.value })}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <Label className="text-xs">등록일</Label>
+              <Input
+                type="date"
+                className="mt-1.5"
+                value={editForm.registered_date}
+                onChange={(e) => setEditForm({ ...editForm, registered_date: e.target.value })}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <Label className="text-xs">쿠폰 발송</Label>
+              <div className="mt-1.5 h-10 px-3 rounded-md border border-border/50 bg-background/40 flex items-center gap-2">
+                <Switch
+                  checked={editForm.coupon_sent}
+                  onCheckedChange={(v) => setEditForm({ ...editForm, coupon_sent: v })}
+                />
+                <span className="text-xs text-muted-foreground">
+                  {editForm.coupon_sent ? "발송됨" : "미발송"}
+                </span>
+              </div>
+            </div>
+            <div className="md:col-span-4">
+              <Label className="text-xs">메모</Label>
+              <Input
+                className="mt-1.5"
+                value={editForm.note}
+                onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
+                placeholder="고객 특이사항"
+              />
+            </div>
+          </div>
+
+          {editing?.updated_at && (
+            <p className="text-[11px] text-muted-foreground mt-1">
+              마지막 수정:{" "}
+              {new Date(editing.updated_at).toLocaleString("ko-KR")}
+            </p>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>취소</Button>
+            <Button onClick={saveEdit} disabled={editSaving} className="bg-gradient-primary">
+              {editSaving ? "저장 중…" : "저장"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
