@@ -41,6 +41,7 @@ interface SaleLite {
 const PAGE_SIZE = 100;
 
 function MissingDocsSection() {
+  const { resolve: resolveStaff } = useStaffNames();
   const [rows, setRows] = useState<SaleLite[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
