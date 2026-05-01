@@ -119,6 +119,7 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   const [busy, setBusy] = useState(false);
   const { fields: dynamicFields } = useFieldDefinitions("sales");
   const { calc: calcNetFee, formula: netFeeFormula } = useNetFeeFormula();
+  const { models: deviceModels } = useDeviceModels(true);
   const [staffOptions, setStaffOptions] = useState<{ user_id: string; display_name: string; store: string | null }[]>([]);
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
   const [linkedInquiryId, setLinkedInquiryId] = useState<string | null>(null);
