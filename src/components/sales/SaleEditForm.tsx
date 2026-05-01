@@ -550,14 +550,14 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
               <Input value={form.birth_date ?? ""} onChange={(e) => set("birth_date", e.target.value)} placeholder="900101" className="h-9 bg-input/60 text-xs" />
             </Field>
             <Field label="연락처">
-              <Input value={form.phone ?? ""} onChange={(e) => set("phone", e.target.value)} placeholder="010-0000-0000" className="h-9 bg-input/60 text-xs" inputMode="tel" />
+              <Input value={form.phone ?? ""} onChange={(e) => set("phone", formatPhone(e.target.value))} placeholder="010-0000-0000" className="h-9 bg-input/60 text-xs" inputMode="numeric" type="tel" maxLength={13} />
             </Field>
             <Field label="가입 번호">
               <Input
                 value={customFields.subscription_no ?? ""}
-                onChange={(e) => setCustomFields((f) => ({ ...f, subscription_no: e.target.value }))}
+                onChange={(e) => setCustomFields((f) => ({ ...f, subscription_no: formatPhone(e.target.value) }))}
                 placeholder="010-0000-0000"
-                className="h-9 bg-input/60 text-xs" inputMode="tel"
+                className="h-9 bg-input/60 text-xs" inputMode="numeric" type="tel"
                 maxLength={13}
               />
             </Field>
