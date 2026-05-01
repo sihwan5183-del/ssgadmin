@@ -560,6 +560,17 @@ const RegularsPage = () => {
                     >
                       {r.channel}
                     </span>
+                    {r.carrier && (
+                      <span
+                        className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md ${
+                          isOurCarrier(r.carrier)
+                            ? "bg-primary/15 text-primary-glow"
+                            : "bg-amber-500/15 text-amber-600 border border-amber-500/30"
+                        }`}
+                      >
+                        {!isOurCarrier(r.carrier) && "🔁 "}{r.carrier}
+                      </span>
+                    )}
                   </div>
                 }
                 meta={
