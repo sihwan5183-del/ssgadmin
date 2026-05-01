@@ -61,6 +61,18 @@ const formatKRW = (n: number) =>
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
+/**
+ * 로컬 타임존 기준 YYYY-MM-DD 문자열로 변환.
+ * `Date.toISOString()` 는 UTC 기준이라 KST(+09:00) 환경에서 자정이 전날로 밀리는
+ * 버그(예: 28일 선택 → 27일 저장)를 방지하기 위해 로컬 컴포넌트를 직접 조립한다.
+ */
+const toLocalISO = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
 export default function ExpenseInputPage() {
   const { user } = useAuth();
   const { isAdmin } = useRole();
