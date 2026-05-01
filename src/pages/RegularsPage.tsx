@@ -369,14 +369,28 @@ const RegularsPage = () => {
               placeholder="홍길동"
             />
           </div>
-          <div>
-            <Label className="text-xs">연락처</Label>
-            <Input
-              className="mt-1.5"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              placeholder="010-0000-0000"
-            />
+          <div className="md:col-span-2 grid grid-cols-[140px_1fr] gap-2">
+            <div>
+              <Label className="text-xs">통신사 *</Label>
+              <Select value={form.carrier} onValueChange={(v) => setForm({ ...form, carrier: v })}>
+                <SelectTrigger className="mt-1.5"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectContent>
+                  {CARRIERS.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">연락처</Label>
+              <Input
+                className="mt-1.5"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                placeholder={form.carrier ? "010-0000-0000" : "통신사를 먼저 선택"}
+                disabled={!form.carrier}
+              />
+            </div>
           </div>
           <div>
             <Label className="text-xs">생년월일</Label>
