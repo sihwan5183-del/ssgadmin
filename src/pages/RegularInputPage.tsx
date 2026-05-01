@@ -394,7 +394,7 @@ const RegularInputPage = () => {
                         <span className="text-xs text-muted-foreground">-</span>
                       )}
                     </td>
-                    <td className="py-2 px-2 text-muted-foreground tabular-nums">{r.phone ?? "-"}</td>
+                    <td className="py-2 px-2 text-muted-foreground tabular-nums">{r.phone ? formatPhone(r.phone) : "-"}</td>
                     <td className="py-2 px-2 text-muted-foreground">{r.manager ?? "-"}</td>
                     <td className="py-2 px-2 text-center">
                       <Switch
