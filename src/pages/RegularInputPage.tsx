@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { toast } from "sonner";
+import { formatPhone } from "@/lib/phoneFormat";
 
 interface Regular {
   id: string;
@@ -242,9 +243,12 @@ const RegularInputPage = () => {
             <Label className="text-xs">연락처</Label>
             <Input
               value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })}
               placeholder={form.carrier ? "010-0000-0000" : "통신사를 먼저 선택"}
               disabled={!form.carrier}
+              type="tel"
+              inputMode="numeric"
+              maxLength={13}
             />
           </div>
           <div className="md:col-span-3 space-y-1.5">
