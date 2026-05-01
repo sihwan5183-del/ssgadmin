@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { formatStaffName } from "@/lib/staffName";
 
 /**
  * 퇴사/삭제 처리된 user_id 집합을 반환.
@@ -40,4 +41,44 @@ export function ResignedTag({ userId, ids }: { userId: string | null | undefined
       퇴사자
     </span>
   );
+}
+
+/**
+ * userId -> { name, resigned, displayName('홍길동(퇴사자)') } 맵.
+ * 통계 합산엔 영향이 없고, 표시 단계에서만 활용한다.
+ */
+export interface StaffNameInfo { name: string; resigned: boolean; displayName: string }
+
+let nameCache: { map: Record<string, StaffNameInfo>; ts: number } | null = null;
+
+export function useStaffNameMap() {
+  const [map, setMap] = useState<Record<string, StaffNameInfo>>(
+    () => nameCache?.map ?? {},
+  );
+  useEffect(() => {
+    let cancelled = false;
+    if (nameCache && Date.now() - nameCache.ts < TTL_MS) {
+      setMap(nameCache.map);
+      return;
+    }
+    supabase
+      .from("profiles")
+      .select("user_id, display_name, status")
+      .then(({ data }) => {
+        if (cancelled) return;
+        const next: Record<string, StaffNameInfo> = {};
+        for (const r of (data ?? []) as { user_id: string; display_name: string; status: string }[]) {
+          const resigned = r.status === "resigned" || r.status === "deleted";
+          next[r.user_id] = {
+            name: r.display_name,
+            resigned,
+            displayName: formatStaffName(r.display_name, resigned),
+          };
+        }
+        nameCache = { map: next, ts: Date.now() };
+        setMap(next);
+      });
+    return () => { cancelled = true; };
+  }, []);
+  return map;
 }
