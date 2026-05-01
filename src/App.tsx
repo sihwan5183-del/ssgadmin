@@ -9,6 +9,7 @@ import { ViewScopeProvider } from "@/contexts/ViewScopeContext";
 import { PeriodProvider } from "@/contexts/PeriodContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { AdminOnlyRoute } from "@/components/auth/AdminOnlyRoute";
 import { AppShell } from "@/components/layout/AppShell";
 import Index from "./pages/Index.tsx";
 import InputPage from "./pages/InputPage.tsx";
@@ -107,7 +108,14 @@ const App = () => {
                         <Route path="/staff-status" element={<StaffStatusPage />} />
                         <Route path="/admin" element={<AdminPage />} />
                         <Route path="/admin/menu" element={<MenuManagerPage />} />
-                        <Route path="/admin/staff-goals" element={<StaffGoalsPage />} />
+                        <Route
+                          path="/admin/staff-goals"
+                          element={
+                            <AdminOnlyRoute>
+                              <StaffGoalsPage />
+                            </AdminOnlyRoute>
+                          }
+                        />
                         <Route path="/admin/pending-items" element={<PendingItemsAdminPage />} />
                         <Route path="/admin/accounts" element={<AccountManagementPage />}>
                           <Route path="pending" element={<AccountPendingPage />} />
