@@ -35,9 +35,9 @@ export const usePendingItemDefinitions = () => {
 
   useEffect(() => {
     refresh();
-    // realtime 구독: subscribe() 이전에 모든 listener 등록 — 이전 패턴 회피
+    // realtime 구독: 채널명을 고유하게 생성해야 동일 hook 다중 마운트 시 충돌이 없음
     const channel = supabase
-      .channel("realtime:pending-item-definitions")
+      .channel(`pending-item-definitions-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "pending_item_definitions" },
