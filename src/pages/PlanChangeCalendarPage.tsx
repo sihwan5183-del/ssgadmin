@@ -19,7 +19,7 @@ import { format } from "date-fns";
 interface SaleRow {
   id: string;
   customer_name: string | null;
-  customer_phone: string | null;
+  phone: string | null;
   open_date: string | null;
   rate_plan: string | null;
   sale_type: string | null;
@@ -60,7 +60,7 @@ export default function PlanChangeCalendarPage() {
     const { data, error } = await supabase
       .from("sales")
       .select(
-        "id, customer_name, customer_phone, open_date, rate_plan, sale_type, plan_change_due_date, plan_change_completed_at, plan_change_note"
+        "id, customer_name, phone, open_date, rate_plan, sale_type, plan_change_due_date, plan_change_completed_at, plan_change_note"
       )
       .gte("plan_change_due_date", range.startDate)
       .lte("plan_change_due_date", range.endDate)
@@ -322,13 +322,13 @@ export default function PlanChangeCalendarPage() {
                   <tr key={r.id} className="border-b border-border/30 hover:bg-muted/20">
                     <td className="px-4 py-3 font-medium">{r.customer_name ?? "-"}</td>
                     <td className="px-3 py-3 text-muted-foreground">
-                      {r.customer_phone ? (
+                      {r.phone ? (
                         <a
-                          href={`tel:${r.customer_phone}`}
+                          href={`tel:${r.phone}`}
                           className="inline-flex items-center gap-1 hover:text-primary"
                         >
                           <Phone className="size-3" />
-                          {r.customer_phone}
+                          {r.phone}
                         </a>
                       ) : (
                         "-"
