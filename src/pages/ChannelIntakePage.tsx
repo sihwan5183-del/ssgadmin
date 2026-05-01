@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
@@ -21,7 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   PhoneOff, RefreshCw, XCircle, Phone, Search, Clock, AlertTriangle,
-  MessageSquare, Plus, BarChart3, ListPlus, ChevronRight, Pencil, Trash2, History,
+  MessageSquare, Plus, BarChart3, ListPlus, ChevronRight, Pencil, Trash2, History, Download,
 } from "lucide-react";
 import {
   Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, Funnel, FunnelChart,
