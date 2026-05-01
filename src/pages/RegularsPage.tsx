@@ -176,6 +176,12 @@ const RegularsPage = () => {
   const [filterConverted, setFilterConverted] = useState<string>("all");
   const [filterCarrier, setFilterCarrier] = useState<string>("all");
   const [onlyConverted, setOnlyConverted] = useState<boolean>(false);
+  const [filterStaff, setFilterStaff] = useState<string>("all");
+  // 직원별 통계 기간 필터 (YYYY-MM, 'all' 이면 전체)
+  const [staffStatMonth, setStaffStatMonth] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
 
   const load = async () => {
     setLoading(true);
@@ -190,6 +196,10 @@ const RegularsPage = () => {
 
   useEffect(() => {
     load();
+    (async () => {
+      const { data } = await supabase.from("profiles").select("user_id, display_name");
+      setProfiles((data ?? []) as Array<{ user_id: string; display_name: string }>);
+    })();
   }, []);
 
   const submit = async () => {
