@@ -231,6 +231,41 @@ export default function AdCalendarPage() {
     return m;
   }, [filteredCampaigns]);
 
+  // 일자별 매체별 지출 세부 (툴팁용) — 같은 매체/캠페인 중복 합산 방지를 위해 캠페인 id 단위로 누적
+  const dailySpendBreakdown = useMemo(() => {
+    // key: date, value: Map<media, amount>
+    const m = new Map<string, Map<string, number>>();
+    const seen = new Set<string>(); // `${date}|${campaignId}` — 동일 캠페인이 같은 날짜에 두 번 더해지지 않도록 가드
+    for (const c of filteredCampaigns) {
+      const start = new Date(c.start_date);
+      const end = new Date(c.end_date);
+      if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) continue;
+      const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
+      const per = (c.total_budget || 0) / days;
+      const cur = new Date(start);
+      while (cur <= end) {
+        const k = isoDate(cur);
+        const guard = `${k}|${c.id}`;
+        if (!seen.has(guard)) {
+          seen.add(guard);
+          const dayMap = m.get(k) ?? new Map<string, number>();
+          dayMap.set(c.media, (dayMap.get(c.media) ?? 0) + per);
+          m.set(k, dayMap);
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+    return m;
+  }, [filteredCampaigns]);
+
+  // 월 일평균 지출
+  const monthAvgDaily = useMemo(() => {
+    const s = new Date(monthStart);
+    const e = new Date(monthEnd);
+    const days = Math.max(1, Math.round((e.getTime() - s.getTime()) / 86400000) + 1);
+    return monthTotal / days;
+  }, [monthStart, monthEnd, monthTotal === undefined ? 0 : monthTotal]);
+
   const monthTotal = useMemo(() => {
     let total = 0;
     for (const c of campaigns) {
