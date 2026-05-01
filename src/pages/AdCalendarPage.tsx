@@ -561,6 +561,14 @@ export default function AdCalendarPage() {
                     const p = getMediaPalette(c.media);
                     const isStart = c.start_date === key;
                     const isEnd = c.end_date === key;
+                    // 해당 캠페인의 집행 기간/일수와 하루치 금액 계산
+                    const cStart = new Date(c.start_date);
+                    const cEnd = new Date(c.end_date);
+                    const cDays = Math.max(
+                      1,
+                      Math.round((cEnd.getTime() - cStart.getTime()) / 86400000) + 1,
+                    );
+                    const cPerDay = Math.round((c.total_budget || 0) / cDays);
                     return (
                       <Tooltip key={c.id}>
                         <TooltipTrigger asChild>
@@ -586,15 +594,18 @@ export default function AdCalendarPage() {
                               {c.image_url && <ImageIcon className="size-2.5 opacity-70 shrink-0" />}
                             </div>
                             <div className="truncate text-white/95 font-medium">{c.topic}</div>
-                            <div className="tabular-nums font-semibold text-white/85">₩{fmtKRW(c.total_budget || 0)}</div>
+                            <div className="tabular-nums font-semibold text-white/85 break-all">
+                              ₩{fmtKRW(cPerDay)}<span className="text-[8px] opacity-75 ml-0.5">/일</span>
+                            </div>
                           </button>
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-xs">
                           <div className="space-y-0.5 text-xs">
                             <div className="font-semibold">{c.topic}</div>
                             <div className="text-muted-foreground">{c.media}{c.channel ? ` · ${c.channel}` : ""}</div>
-                            <div className="text-muted-foreground">{c.start_date} ~ {c.end_date}</div>
-                            <div className="tabular-nums">총 예산 ₩{(c.total_budget || 0).toLocaleString("ko-KR")}</div>
+                            <div className="text-muted-foreground">집행 기간 {c.start_date} ~ {c.end_date} ({cDays}일)</div>
+                            <div className="tabular-nums">총 집행 예산 ₩{(c.total_budget || 0).toLocaleString("ko-KR")}원</div>
+                            <div className="tabular-nums text-primary-glow">하루치 ₩{cPerDay.toLocaleString("ko-KR")}원</div>
                             {c.note && <div className="text-muted-foreground line-clamp-3 mt-1">{c.note}</div>}
                           </div>
                         </TooltipContent>
@@ -619,6 +630,13 @@ export default function AdCalendarPage() {
                         <div className="space-y-1.5">
                           {dayItems.map((c) => {
                             const pp = getMediaPalette(c.media);
+                            const cStart = new Date(c.start_date);
+                            const cEnd = new Date(c.end_date);
+                            const cDays = Math.max(
+                              1,
+                              Math.round((cEnd.getTime() - cStart.getTime()) / 86400000) + 1,
+                            );
+                            const cPerDay = Math.round((c.total_budget || 0) / cDays);
                             return (
                               <button
                                 key={c.id}
@@ -631,9 +649,10 @@ export default function AdCalendarPage() {
                               >
                                 <div className="font-bold flex items-center justify-between gap-2">
                                   <span>{c.media}</span>
-                                  <span className="tabular-nums font-semibold text-white/90">₩{fmtKRW(c.total_budget || 0)}</span>
+                                  <span className="tabular-nums font-semibold text-white/90">₩{fmtKRW(cPerDay)}<span className="text-[9px] opacity-75 ml-0.5">/일</span></span>
                                 </div>
                                 <div className="text-white/95 font-medium truncate mt-0.5">{c.topic}</div>
+                                <div className="text-[10px] text-white/70 mt-0.5 tabular-nums">총 ₩{(c.total_budget || 0).toLocaleString("ko-KR")}원 · {cDays}일</div>
                               </button>
                             );
                           })}
