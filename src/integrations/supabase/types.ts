@@ -1454,6 +1454,7 @@ export type Database = {
       regulars: {
         Row: {
           birth_date: string | null
+          carrier: string | null
           channel: string
           converted: boolean
           coupon_sent: boolean
@@ -1469,6 +1470,7 @@ export type Database = {
         }
         Insert: {
           birth_date?: string | null
+          carrier?: string | null
           channel: string
           converted?: boolean
           coupon_sent?: boolean
@@ -1484,6 +1486,7 @@ export type Database = {
         }
         Update: {
           birth_date?: string | null
+          carrier?: string | null
           channel?: string
           converted?: boolean
           coupon_sent?: boolean
