@@ -898,13 +898,26 @@ export default function StaffGoalsPage() {
                             <td key={m.key} className="px-2 py-2 text-center text-xs">
                               <div className="tabular-nums">{sum}</div>
                               {goal > 0 && (
-                                <div className={cn(
-                                  "text-[10px]",
-                                  sum >= goal ? "text-emerald-500" :
-                                  sum >= goal * 0.8 ? "text-amber-500" : "text-muted-foreground",
-                                )}>
-                                  {ratio2}%
-                                </div>
+                                <>
+                                  <div className={cn(
+                                    "text-[10px] font-semibold",
+                                    ratio2 >= 120 ? "text-amber-500" :
+                                    ratio2 >= 100 ? "text-amber-600" :
+                                    ratio2 >= 80 ? "text-emerald-500" : "text-muted-foreground",
+                                  )}>
+                                    {ratio2}%{ratio2 >= 100 && "⭐"}
+                                  </div>
+                                  <div className="h-1 rounded-full bg-muted overflow-hidden mx-auto w-16 mt-0.5">
+                                    <div
+                                      className={cn(
+                                        "h-full transition-all",
+                                        ratio2 >= 100 ? "bg-amber-500" :
+                                        ratio2 >= 80 ? "bg-emerald-500" : "bg-primary/60",
+                                      )}
+                                      style={{ width: `${Math.min(100, ratio2)}%` }}
+                                    />
+                                  </div>
+                                </>
                               )}
                             </td>
                           );
