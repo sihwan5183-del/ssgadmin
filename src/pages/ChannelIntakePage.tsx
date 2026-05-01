@@ -730,26 +730,26 @@ const ChannelIntakePage = () => {
                         newLead && "bg-orange-50 dark:bg-orange-950/20",
                         abandoned && !newLead && "bg-destructive/5"
                       )}>
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2 align-middle">
                           <Checkbox
                             checked={selectedIds.has(r.id)}
                             onCheckedChange={() => toggleOne(r.id)}
                             aria-label="선택"
                           />
                         </td>
-                        <td className="px-3 py-2 text-xs tabular-nums">{r.inquiry_date}</td>
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2 text-xs tabular-nums align-middle">{r.inquiry_date}</td>
+                        <td className="px-3 py-2 align-middle">
                           <Badge variant="outline" className="text-[10px]">{r.channel}</Badge>
                         </td>
-                        <td className="px-3 py-2 text-xs font-medium">{r.customer_name ?? "-"}</td>
-                        <td className="px-3 py-2 text-xs">
+                        <td className="px-3 py-2 text-xs font-medium align-middle">{r.customer_name ?? "-"}</td>
+                        <td className="px-3 py-2 text-xs align-middle">
                           {r.phone ? (
                             <a href={`tel:${r.phone}`} className="flex items-center gap-1 text-foreground/80 hover:text-foreground">
                               <Phone className="size-3" /> {r.phone}
                             </a>
                           ) : "-"}
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2 align-middle">
                           <div className="flex items-center gap-1.5">
                             <Badge
                               className={cn(
@@ -776,27 +776,54 @@ const ChannelIntakePage = () => {
                             </span>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-[10px] tabular-nums text-muted-foreground">
+                        <td className="px-3 py-2 text-[10px] tabular-nums text-muted-foreground align-middle">
                           {r.retry_at ? (
                             <span className="flex items-center gap-1">
                               <Clock className="size-3" /> {formatTime(r.retry_at)}
                             </span>
                           ) : "-"}
                         </td>
-                        <td className="px-3 py-2 text-[10px] tabular-nums text-muted-foreground">
+                        <td className="px-3 py-2 text-[10px] tabular-nums text-muted-foreground align-middle">
                           {formatTime(r.last_action_at)}
                         </td>
-                        <td className="px-3 py-2 text-xs">{r.manager ?? "-"}</td>
-                        <td className="px-3 py-2 text-right whitespace-nowrap">
-                          <Button size="sm" variant="ghost" className="h-7 text-xs mr-1" onClick={() => setSelectedInquiry(r)}>
-                            <MessageSquare className="size-3 mr-1" /> 기록
-                          </Button>
-                          <Button size="sm" variant="outline" className="h-7 text-xs mr-1" onClick={() => openStatusEditor(r)}>
-                            상태변경
-                          </Button>
-                          <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => openDetailEditor(r)}>
-                            <Pencil className="size-3" /> 수정
-                          </Button>
+                        <td className="px-3 py-2 text-xs align-middle">{r.manager ?? "-"}</td>
+                        <td className="px-3 py-2 align-middle">
+                          <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                            <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setSelectedInquiry(r)}>
+                              <MessageSquare className="size-3 mr-1" /> 기록
+                            </Button>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button size="sm" variant="outline" className="h-8 text-xs">
+                                  상태변경
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent align="end" className="w-auto p-2">
+                                <div className="text-[10px] text-muted-foreground mb-1.5 px-1">
+                                  클릭 한 번으로 상태 변경
+                                </div>
+                                <div className="flex flex-wrap gap-1 max-w-[260px]">
+                                  {CRM_STATUSES.map((s) => {
+                                    const active = (isNewLead(r) ? "미처리" : r.status) === s;
+                                    return (
+                                      <Button
+                                        key={s}
+                                        size="sm"
+                                        variant={active ? "default" : "outline"}
+                                        className="h-7 text-[11px] px-2"
+                                        onClick={() => quickChangeStatus(r, s)}
+                                      >
+                                        {s}
+                                      </Button>
+                                    );
+                                  })}
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                            <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={() => openDetailEditor(r)}>
+                              <Pencil className="size-3" /> 수정
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     );
