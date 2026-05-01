@@ -902,8 +902,8 @@ export default function StaffStatusPage() {
                     <tr className="border-b border-border/40 bg-muted/40 text-[11px] text-muted-foreground">
                       <th className="text-left px-3 py-2 w-14">순위</th>
                       <th className="text-left px-3 py-2">직원</th>
-                      <th className="text-right px-3 py-2">평균 달성률</th>
-                      <th className="text-right px-3 py-2">달성 / 목표 항목</th>
+                      <th className="text-right px-3 py-2">핵심 달성률<br/><span className="text-[9px] text-muted-foreground/70 font-normal">(모바일 기준)</span></th>
+                      <th className="text-right px-3 py-2">100% 항목</th>
                       <th className="px-3 py-2 w-48">진행도</th>
                     </tr>
                   </thead>
