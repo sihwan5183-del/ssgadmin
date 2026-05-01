@@ -13,6 +13,10 @@ import {
   Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell,
 } from "recharts";
 import { HeartHandshake, Send, RefreshCw, Trash2, Search, TrendingUp } from "lucide-react";
+import { Pencil } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
@@ -42,6 +46,8 @@ interface Regular {
   created_by: string;
   carrier?: string | null;
   converted_at?: string | null;
+  updated_at?: string | null;
+  updated_by?: string | null;
 }
 
 const CARRIERS = [
