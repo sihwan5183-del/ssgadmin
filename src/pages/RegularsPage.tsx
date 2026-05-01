@@ -85,6 +85,15 @@ const RegularsPage = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // 직원 프로필 (등록자명 표시용)
+  const [profiles, setProfiles] = useState<Array<{ user_id: string; display_name: string }>>([]);
+  const profileMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of profiles) m.set(p.user_id, p.display_name);
+    return m;
+  }, [profiles]);
+  const nameOf = (uid: string | null | undefined) => (uid && profileMap.get(uid)) || "—";
+
   // 수정 다이얼로그
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<Regular | null>(null);
