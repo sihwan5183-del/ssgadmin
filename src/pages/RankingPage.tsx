@@ -320,7 +320,6 @@ const RankingPage = () => {
       .from("sales")
       .select("id, created_by, manager, device_model, product, sale_type, status, approval_status, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned, vas1, vas2, open_date, custom_fields")
       .in("status", COUNTED_STATUSES)
-      .not("approval_status", "in", `(${EXCLUDED_APPROVAL.join(",")})`)
       .gte("open_date", start)
       .lte("open_date", end)
       .limit(20000);
@@ -330,7 +329,6 @@ const RankingPage = () => {
       .from("sales")
       .select("created_by, manager")
       .in("status", COUNTED_STATUSES)
-      .not("approval_status", "in", `(${EXCLUDED_APPROVAL.join(",")})`)
       .gte("open_date", yd.start)
       .lte("open_date", yd.end);
 
@@ -341,7 +339,6 @@ const RankingPage = () => {
         .from("sales")
         .select("created_by, manager, device_model, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned")
         .in("status", COUNTED_STATUSES)
-        .not("approval_status", "in", `(${EXCLUDED_APPROVAL.join(",")})`)
         .gte("open_date", yPeriod.start)
         .lte("open_date", yPeriod.end)
         .limit(20000);
