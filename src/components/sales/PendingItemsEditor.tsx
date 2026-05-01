@@ -3,8 +3,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Star } from "lucide-react";
+import { usePendingItemDefinitions } from "@/hooks/usePendingItemDefinitions";
 
+/**
+ * @deprecated 이제 항목 목록은 어드민의 [미처리 항목 설정] 에서 관리됩니다.
+ * 폴백/타입 호환을 위해 기본값만 보존.
+ */
 export const PENDING_ITEM_OPTIONS = [
   "약정 처리",
   "할부 등록",
@@ -14,7 +19,7 @@ export const PENDING_ITEM_OPTIONS = [
   "청구계정통합",
   "2ND쉐어링결합",
 ] as const;
-export type PendingItem = (typeof PENDING_ITEM_OPTIONS)[number] | string;
+export type PendingItem = string;
 
 interface Props {
   items: string[];
@@ -38,6 +43,8 @@ export const PendingItemsEditor = ({
   disabled,
   showResolvedToggle = false,
 }: Props) => {
+  const { items: defs, loading } = usePendingItemDefinitions();
+
   const toggle = (item: string) => {
     if (disabled) return;
     if (items.includes(item)) onItemsChange(items.filter((i) => i !== item));
@@ -45,6 +52,9 @@ export const PendingItemsEditor = ({
   };
 
   const hasPending = items.length > 0;
+  // 이전에 등록된 데이터에 들어있지만 어드민이 비활성/삭제한 라벨 — 그대로 유지하되 안내 표기
+  const knownLabels = new Set(defs.map((d) => d.label));
+  const legacyChecked = items.filter((i) => !knownLabels.has(i));
 
   return (
     <div className="rounded-xl border border-border/40 bg-card/40 p-3 space-y-3">
@@ -75,28 +85,54 @@ export const PendingItemsEditor = ({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-1.5">
-        {PENDING_ITEM_OPTIONS.map((opt) => {
-          const checked = items.includes(opt);
-          return (
+      {loading && defs.length === 0 ? (
+        <div className="text-[11px] text-muted-foreground py-2">미처리 항목 목록을 불러오는 중…</div>
+      ) : defs.length === 0 ? (
+        <div className="text-[11px] text-muted-foreground py-2">
+          등록된 미처리 항목이 없습니다. 어드민 → [미처리 항목 설정] 에서 추가해주세요.
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-1.5">
+          {defs.map((d) => {
+            const checked = items.includes(d.label);
+            return (
+              <label
+                key={d.id}
+                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md border text-[11px] whitespace-nowrap cursor-pointer transition-colors ${
+                  checked
+                    ? "border-amber-400 bg-amber-50 text-amber-700"
+                    : "border-border/40 hover:border-primary/30"
+                } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
+                title={d.required ? "필수 체크 항목" : undefined}
+              >
+                <Checkbox
+                  checked={checked}
+                  onCheckedChange={() => toggle(d.label)}
+                  disabled={disabled}
+                />
+                <span className="truncate flex items-center gap-1">
+                  {d.required && <Star className="size-2.5 text-amber-500 fill-amber-400 shrink-0" />}
+                  {d.label}
+                </span>
+              </label>
+            );
+          })}
+          {legacyChecked.map((label) => (
             <label
-              key={opt}
-              className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md border text-[11px] whitespace-nowrap cursor-pointer transition-colors ${
-                checked
-                  ? "border-amber-400 bg-amber-50 text-amber-700"
-                  : "border-border/40 hover:border-primary/30"
-              } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
+              key={`legacy-${label}`}
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded-md border text-[11px] whitespace-nowrap cursor-pointer transition-colors border-amber-400 bg-amber-50/60 text-amber-700"
+              title="현재는 비활성/삭제된 항목 (과거 데이터)"
             >
               <Checkbox
-                checked={checked}
-                onCheckedChange={() => toggle(opt)}
+                checked
+                onCheckedChange={() => toggle(label)}
                 disabled={disabled}
               />
-              <span className="truncate">{opt}</span>
+              <span className="truncate italic opacity-80">{label}</span>
             </label>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <Label className="text-xs text-muted-foreground">미처리 메모 (사유·예정일 등)</Label>
