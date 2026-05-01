@@ -470,6 +470,136 @@ const RegularsPage = () => {
         </div>
       </section>
 
+      {/* 직원별 단골 등록 통계 + 이번 달 TOP 3 */}
+      <section className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
+        {/* 직원별 통계 표 */}
+        <div className="lg:col-span-3 glass rounded-2xl p-5">
+          <div className="flex items-baseline justify-between mb-3 gap-2">
+            <div>
+              <h4 className="text-base font-semibold tracking-tight flex items-center gap-1.5">
+                <Users className="size-4 text-primary-glow" />
+                직원별 단골 등록 현황
+              </h4>
+              <p className="text-xs text-muted-foreground mt-0.5">기간 내 직원이 등록한 단골 수와 자사 전환율</p>
+            </div>
+            <Select value={staffStatMonth} onValueChange={setStaffStatMonth}>
+              <SelectTrigger className="w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 기간</SelectItem>
+                {Array.from({ length: 12 }).map((_, i) => {
+                  const d = new Date();
+                  d.setMonth(d.getMonth() - i);
+                  const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+                  return <SelectItem key={ym} value={ym}>{ym}</SelectItem>;
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+          {staffStats.length === 0 ? (
+            <div className="h-32 grid place-items-center text-sm text-muted-foreground">
+              해당 기간 등록 데이터가 없습니다
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-border/40">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/40 text-muted-foreground text-xs">
+                  <tr>
+                    <th className="text-left px-3 py-2">#</th>
+                    <th className="text-left px-3 py-2">직원명</th>
+                    <th className="text-right px-3 py-2">총 등록</th>
+                    <th className="text-right px-3 py-2">자사 전환</th>
+                    <th className="text-right px-3 py-2">전환율</th>
+                    <th className="text-right px-3 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {staffStats.map((s, idx) => (
+                    <tr
+                      key={s.uid}
+                      className={`border-t border-border/30 hover:bg-muted/20 transition-colors cursor-pointer ${
+                        filterStaff === s.uid ? "bg-primary/5" : ""
+                      }`}
+                      onClick={() => setFilterStaff(filterStaff === s.uid ? "all" : s.uid)}
+                      title="클릭하면 해당 직원 단골만 필터링"
+                    >
+                      <td className="px-3 py-2 tabular-nums text-muted-foreground">{idx + 1}</td>
+                      <td className="px-3 py-2 font-medium">{s.name}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{s.total}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-emerald-600 dark:text-emerald-400">{s.converted}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{s.rate}%</td>
+                      <td className="px-3 py-2 text-right">
+                        <div className="inline-block w-24 h-1.5 rounded-full bg-muted overflow-hidden align-middle">
+                          <div
+                            className="h-full bg-gradient-to-r from-primary to-primary-glow"
+                            style={{ width: `${Math.min(100, s.rate)}%` }}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* 이번 달 TOP 3 */}
+        <div className="lg:col-span-2 glass rounded-2xl p-5">
+          <div className="flex items-baseline justify-between mb-3">
+            <h4 className="text-base font-semibold tracking-tight flex items-center gap-1.5">
+              <Trophy className="size-4 text-amber-500" />
+              이번 달 TOP 3
+            </h4>
+            <span className="text-[11px] text-muted-foreground">단골 등록 랭킹</span>
+          </div>
+          {top3.length === 0 ? (
+            <div className="h-32 grid place-items-center text-sm text-muted-foreground">
+              이번 달 등록 데이터 없음
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {top3.map((s, i) => {
+                const palette = [
+                  { bg: "from-amber-400/30 to-yellow-500/10", text: "text-amber-600 dark:text-amber-400", icon: Trophy, label: "1위" },
+                  { bg: "from-slate-300/30 to-slate-500/10", text: "text-slate-500 dark:text-slate-300", icon: Medal, label: "2위" },
+                  { bg: "from-orange-400/30 to-amber-700/10", text: "text-orange-600 dark:text-orange-400", icon: Award, label: "3위" },
+                ][i];
+                const Icon = palette.icon;
+                const max = top3[0]?.count || 1;
+                return (
+                  <li
+                    key={s.uid}
+                    className={`rounded-xl bg-gradient-to-r ${palette.bg} border border-border/40 p-3`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`size-9 rounded-full bg-background/60 grid place-items-center ${palette.text}`}>
+                        <Icon className="size-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline justify-between">
+                          <span className="font-semibold truncate">{s.name}</span>
+                          <span className="font-bold tabular-nums">
+                            {s.count}
+                            <span className="text-xs text-muted-foreground ml-1">건</span>
+                          </span>
+                        </div>
+                        <div className="mt-1.5 h-1.5 rounded-full bg-background/60 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full bg-gradient-to-r ${palette.bg.replace("/30", "/80").replace("/10", "/60")}`}
+                            style={{ width: `${(s.count / max) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                      <span className={`text-[10px] font-bold ${palette.text}`}>{palette.label}</span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </section>
+
       {/* 등록 폼 */}
       <section className="glass rounded-2xl p-6 mb-6 shadow-card-elevated">
         <div className="flex items-center gap-2 mb-4">
