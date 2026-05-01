@@ -697,6 +697,9 @@ const RegularsPage = () => {
                     <Button size="sm" variant="ghost" onClick={() => remove(r.id)} className="h-10 ml-auto">
                       <Trash2 className="size-4 text-destructive" />
                     </Button>
+                    <Button size="sm" variant="ghost" onClick={() => openEdit(r)} className="h-10">
+                      <Pencil className="size-4 text-primary" />
+                    </Button>
                   </>
                 }
               />
