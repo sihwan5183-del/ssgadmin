@@ -13,7 +13,7 @@ import {
   Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell,
 } from "recharts";
 import { HeartHandshake, Send, RefreshCw, Trash2, Search, TrendingUp } from "lucide-react";
-import { Pencil } from "lucide-react";
+import { Pencil, Users, Trophy, Medal, Award } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -84,6 +84,15 @@ const RegularsPage = () => {
   const [list, setList] = useState<Regular[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // 직원 프로필 (등록자명 표시용)
+  const [profiles, setProfiles] = useState<Array<{ user_id: string; display_name: string }>>([]);
+  const profileMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of profiles) m.set(p.user_id, p.display_name);
+    return m;
+  }, [profiles]);
+  const nameOf = (uid: string | null | undefined) => (uid && profileMap.get(uid)) || "—";
 
   // 수정 다이얼로그
   const [editOpen, setEditOpen] = useState(false);
@@ -167,6 +176,12 @@ const RegularsPage = () => {
   const [filterConverted, setFilterConverted] = useState<string>("all");
   const [filterCarrier, setFilterCarrier] = useState<string>("all");
   const [onlyConverted, setOnlyConverted] = useState<boolean>(false);
+  const [filterStaff, setFilterStaff] = useState<string>("all");
+  // 직원별 통계 기간 필터 (YYYY-MM, 'all' 이면 전체)
+  const [staffStatMonth, setStaffStatMonth] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
 
   const load = async () => {
     setLoading(true);
@@ -181,6 +196,10 @@ const RegularsPage = () => {
 
   useEffect(() => {
     load();
+    (async () => {
+      const { data } = await supabase.from("profiles").select("user_id, display_name");
+      setProfiles((data ?? []) as Array<{ user_id: string; display_name: string }>);
+    })();
   }, []);
 
   const submit = async () => {
@@ -262,6 +281,7 @@ const RegularsPage = () => {
   const filtered = useMemo(() => {
     return list.filter((r) => {
       if (filterChannel !== "all" && r.channel !== filterChannel) return false;
+      if (filterStaff !== "all" && r.created_by !== filterStaff) return false;
       if (onlyConverted && !r.converted) return false;
       if (filterConverted === "y" && !r.converted) return false;
       if (filterConverted === "n" && r.converted) return false;
@@ -277,7 +297,45 @@ const RegularsPage = () => {
       }
       return true;
     });
-  }, [list, q, filterChannel, filterConverted, filterCarrier, onlyConverted]);
+  }, [list, q, filterChannel, filterConverted, filterCarrier, onlyConverted, filterStaff]);
+
+  // 직원별 단골 등록 통계 (월/전체 필터)
+  const staffStats = useMemo(() => {
+    const inMonth = (iso: string) => {
+      if (staffStatMonth === "all") return true;
+      return iso?.startsWith(staffStatMonth);
+    };
+    const map = new Map<string, { uid: string; total: number; converted: number }>();
+    for (const r of list) {
+      if (!inMonth(r.registered_date)) continue;
+      const uid = r.created_by ?? "_unknown";
+      const cur = map.get(uid) ?? { uid, total: 0, converted: 0 };
+      cur.total += 1;
+      if (r.converted) cur.converted += 1;
+      map.set(uid, cur);
+    }
+    return [...map.values()]
+      .map((s) => ({
+        ...s,
+        name: nameOf(s.uid),
+        rate: s.total > 0 ? Math.round((s.converted / s.total) * 1000) / 10 : 0,
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [list, staffStatMonth, profileMap]);
+
+  // 이번 달 TOP 3
+  const top3 = useMemo(() => {
+    const ym = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+    const map = new Map<string, number>();
+    for (const r of list) {
+      if (!r.registered_date?.startsWith(ym)) continue;
+      map.set(r.created_by ?? "_unknown", (map.get(r.created_by ?? "_unknown") ?? 0) + 1);
+    }
+    return [...map.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([uid, count]) => ({ uid, name: nameOf(uid), count }));
+  }, [list, profileMap]);
 
   // 다중 선택
   const bulk = useBulkSelection<string>(filtered.map((r) => r.id));
@@ -409,6 +467,136 @@ const RegularsPage = () => {
               </li>
             ))}
           </ul>
+        </div>
+      </section>
+
+      {/* 직원별 단골 등록 통계 + 이번 달 TOP 3 */}
+      <section className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
+        {/* 직원별 통계 표 */}
+        <div className="lg:col-span-3 glass rounded-2xl p-5">
+          <div className="flex items-baseline justify-between mb-3 gap-2">
+            <div>
+              <h4 className="text-base font-semibold tracking-tight flex items-center gap-1.5">
+                <Users className="size-4 text-primary-glow" />
+                직원별 단골 등록 현황
+              </h4>
+              <p className="text-xs text-muted-foreground mt-0.5">기간 내 직원이 등록한 단골 수와 자사 전환율</p>
+            </div>
+            <Select value={staffStatMonth} onValueChange={setStaffStatMonth}>
+              <SelectTrigger className="w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 기간</SelectItem>
+                {Array.from({ length: 12 }).map((_, i) => {
+                  const d = new Date();
+                  d.setMonth(d.getMonth() - i);
+                  const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+                  return <SelectItem key={ym} value={ym}>{ym}</SelectItem>;
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+          {staffStats.length === 0 ? (
+            <div className="h-32 grid place-items-center text-sm text-muted-foreground">
+              해당 기간 등록 데이터가 없습니다
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-border/40">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/40 text-muted-foreground text-xs">
+                  <tr>
+                    <th className="text-left px-3 py-2">#</th>
+                    <th className="text-left px-3 py-2">직원명</th>
+                    <th className="text-right px-3 py-2">총 등록</th>
+                    <th className="text-right px-3 py-2">자사 전환</th>
+                    <th className="text-right px-3 py-2">전환율</th>
+                    <th className="text-right px-3 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {staffStats.map((s, idx) => (
+                    <tr
+                      key={s.uid}
+                      className={`border-t border-border/30 hover:bg-muted/20 transition-colors cursor-pointer ${
+                        filterStaff === s.uid ? "bg-primary/5" : ""
+                      }`}
+                      onClick={() => setFilterStaff(filterStaff === s.uid ? "all" : s.uid)}
+                      title="클릭하면 해당 직원 단골만 필터링"
+                    >
+                      <td className="px-3 py-2 tabular-nums text-muted-foreground">{idx + 1}</td>
+                      <td className="px-3 py-2 font-medium">{s.name}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{s.total}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-emerald-600 dark:text-emerald-400">{s.converted}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{s.rate}%</td>
+                      <td className="px-3 py-2 text-right">
+                        <div className="inline-block w-24 h-1.5 rounded-full bg-muted overflow-hidden align-middle">
+                          <div
+                            className="h-full bg-gradient-to-r from-primary to-primary-glow"
+                            style={{ width: `${Math.min(100, s.rate)}%` }}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* 이번 달 TOP 3 */}
+        <div className="lg:col-span-2 glass rounded-2xl p-5">
+          <div className="flex items-baseline justify-between mb-3">
+            <h4 className="text-base font-semibold tracking-tight flex items-center gap-1.5">
+              <Trophy className="size-4 text-amber-500" />
+              이번 달 TOP 3
+            </h4>
+            <span className="text-[11px] text-muted-foreground">단골 등록 랭킹</span>
+          </div>
+          {top3.length === 0 ? (
+            <div className="h-32 grid place-items-center text-sm text-muted-foreground">
+              이번 달 등록 데이터 없음
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {top3.map((s, i) => {
+                const palette = [
+                  { bg: "from-amber-400/30 to-yellow-500/10", text: "text-amber-600 dark:text-amber-400", icon: Trophy, label: "1위" },
+                  { bg: "from-slate-300/30 to-slate-500/10", text: "text-slate-500 dark:text-slate-300", icon: Medal, label: "2위" },
+                  { bg: "from-orange-400/30 to-amber-700/10", text: "text-orange-600 dark:text-orange-400", icon: Award, label: "3위" },
+                ][i];
+                const Icon = palette.icon;
+                const max = top3[0]?.count || 1;
+                return (
+                  <li
+                    key={s.uid}
+                    className={`rounded-xl bg-gradient-to-r ${palette.bg} border border-border/40 p-3`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`size-9 rounded-full bg-background/60 grid place-items-center ${palette.text}`}>
+                        <Icon className="size-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline justify-between">
+                          <span className="font-semibold truncate">{s.name}</span>
+                          <span className="font-bold tabular-nums">
+                            {s.count}
+                            <span className="text-xs text-muted-foreground ml-1">건</span>
+                          </span>
+                        </div>
+                        <div className="mt-1.5 h-1.5 rounded-full bg-background/60 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full bg-gradient-to-r ${palette.bg.replace("/30", "/80").replace("/10", "/60")}`}
+                            style={{ width: `${(s.count / max) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                      <span className={`text-[10px] font-bold ${palette.text}`}>{palette.label}</span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
       </section>
 
@@ -590,6 +778,21 @@ const RegularsPage = () => {
               </SelectContent>
             </Select>
           </div>
+          <div className="w-44">
+            <Label className="text-xs">등록 직원</Label>
+            <Select value={filterStaff} onValueChange={setFilterStaff}>
+              <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 직원</SelectItem>
+                {profiles
+                  .slice()
+                  .sort((a, b) => a.display_name.localeCompare(b.display_name, "ko"))
+                  .map((p) => (
+                    <SelectItem key={p.user_id} value={p.user_id}>{p.display_name}</SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Badge variant="outline" className="border-primary/40 text-primary-glow ml-auto">
             {filtered.length}건
           </Badge>
@@ -723,6 +926,7 @@ const RegularsPage = () => {
                   <th className="text-left px-3 py-2">통신사</th>
                   <th className="text-left px-3 py-2">연락처</th>
                   <th className="text-left px-3 py-2">담당자</th>
+                  <th className="text-left px-3 py-2">등록자</th>
                   <th className="text-center px-3 py-2">쿠폰</th>
                   <th className="text-center px-3 py-2">전환</th>
                   <th className="text-right px-3 py-2"> </th>
@@ -779,6 +983,11 @@ const RegularsPage = () => {
                     </td>
                     <td className="px-3 py-2 text-muted-foreground">{r.phone ?? "—"}</td>
                     <td className="px-3 py-2 text-muted-foreground">{r.manager ?? "—"}</td>
+                    <td className="px-3 py-2">
+                      <span className="text-[11px] font-medium px-2 py-1 rounded-md bg-primary/10 text-primary-glow">
+                        {nameOf(r.created_by)}
+                      </span>
+                    </td>
                     <td className="px-3 py-2 text-center">
                       <Switch checked={r.coupon_sent} onCheckedChange={(v) => toggleField(r.id, "coupon_sent", v)} />
                     </td>
