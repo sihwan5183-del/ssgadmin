@@ -11,7 +11,7 @@ import { useFieldDefinitions } from "@/hooks/useFieldDefinitions";
 import { DynamicFieldRenderer } from "@/components/admin/DynamicFieldRenderer";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { useInquiryStatuses } from "@/hooks/useInquiryStatuses";
-import { inquiryStatusClass, INQUIRY_DEFAULT_STATUS } from "@/lib/inquiryStatus";
+import { inquiryStatusClass, inquiryStatusSoftClass, INQUIRY_DEFAULT_STATUS } from "@/lib/inquiryStatus";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
@@ -125,12 +125,13 @@ export const InquiryForm = ({ onSaved }: Props) => {
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">상태</Label>
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger>
-              <SelectValue asChild>
-                <Badge variant="outline" className={cn("text-xs", inquiryStatusClass(status))}>
-                  {status}
-                </Badge>
-              </SelectValue>
+            <SelectTrigger
+              className={cn(
+                "border border-border/40 font-medium transition-colors hover:border-border hover:brightness-[0.97]",
+                inquiryStatusSoftClass(status),
+              )}
+            >
+              <SelectValue>{status}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {statuses.map((s) => (

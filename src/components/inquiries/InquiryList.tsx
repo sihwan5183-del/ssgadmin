@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { Inquiry } from "@/hooks/useInquiries";
 import { useInquiryStatuses } from "@/hooks/useInquiryStatuses";
-import { inquiryStatusClass } from "@/lib/inquiryStatus";
+import { inquiryStatusClass, inquiryStatusSoftClass } from "@/lib/inquiryStatus";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ArrowRight, Trash2, CheckCircle2, Phone } from "lucide-react";
@@ -196,10 +196,14 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
                   <TableCell className="text-xs">{r.manager ?? "-"}</TableCell>
                   <TableCell>
                     <Select value={r.status} onValueChange={(v) => updateStatus(r, v)} disabled={busyId === r.id || !!r.converted_sale_id}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <Badge variant="outline" className={cn("text-xs", inquiryStatusClass(r.status))}>
-                          {r.status}
-                        </Badge>
+                      <SelectTrigger
+                        className={cn(
+                          "h-9 text-xs border border-border/40 rounded-md px-2.5 font-medium",
+                          "transition-colors hover:border-border hover:brightness-[0.97]",
+                          inquiryStatusSoftClass(r.status),
+                        )}
+                      >
+                        <SelectValue>{r.status}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {statuses.map((s) => (
