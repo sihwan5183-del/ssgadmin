@@ -29,9 +29,20 @@ interface Regular {
   note: string | null;
   created_at: string;
   created_by: string;
+  carrier?: string | null;
 }
 
 const today = () => new Date().toISOString().slice(0, 10);
+
+const CARRIERS = [
+  "SKT",
+  "KT",
+  "LGU+",
+  "알뜰폰(SKT망)",
+  "알뜰폰(KT망)",
+  "알뜰폰(LGU+망)",
+] as const;
+const isOurCarrier = (c?: string | null) => c === "LGU+";
 
 const RegularInputPage = () => {
   const { user } = useAuth();
@@ -43,6 +54,7 @@ const RegularInputPage = () => {
   const [form, setForm] = useState({
     channel: "",
     customer_name: "",
+    carrier: "",
     phone: "",
     birth_date: "",
     manager: "",
@@ -72,6 +84,7 @@ const RegularInputPage = () => {
     setForm({
       channel: "",
       customer_name: "",
+      carrier: "",
       phone: "",
       birth_date: "",
       manager: "",
@@ -91,6 +104,7 @@ const RegularInputPage = () => {
       created_by: user.id,
       channel: form.channel,
       customer_name: form.customer_name.trim(),
+      carrier: form.carrier || null,
       phone: form.phone || null,
       birth_date: form.birth_date || null,
       manager: form.manager || null,
@@ -217,13 +231,30 @@ const RegularInputPage = () => {
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs">전화번호</Label>
-            <Input
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              placeholder="010-0000-0000"
-            />
+          <div className="md:col-span-2 grid grid-cols-[140px_1fr] gap-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">통신사 *</Label>
+              <Select
+                value={form.carrier}
+                onValueChange={(v) => setForm({ ...form, carrier: v })}
+              >
+                <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectContent>
+                  {CARRIERS.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">전화번호</Label>
+              <Input
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                placeholder={form.carrier ? "010-0000-0000" : "통신사를 먼저 선택"}
+                disabled={!form.carrier}
+              />
+            </div>
           </div>
 
           <div className="space-y-1.5">
@@ -309,6 +340,7 @@ const RegularInputPage = () => {
                   <th className="text-left py-2 px-2">등록일</th>
                   <th className="text-left py-2 px-2">채널</th>
                   <th className="text-left py-2 px-2">고객명</th>
+                  <th className="text-left py-2 px-2">통신사</th>
                   <th className="text-left py-2 px-2">전화번호</th>
                   <th className="text-left py-2 px-2">담당자</th>
                   <th className="text-center py-2 px-2">쿠폰</th>
@@ -325,6 +357,18 @@ const RegularInputPage = () => {
                       <Badge variant="outline" className="text-xs">{r.channel}</Badge>
                     </td>
                     <td className="py-2 px-2 font-medium">{r.customer_name}</td>
+                    <td className="py-2 px-2">
+                      {r.carrier ? (
+                        <Badge
+                          variant={isOurCarrier(r.carrier) ? "default" : "outline"}
+                          className={`text-[10px] ${isOurCarrier(r.carrier) ? "" : "border-amber-500/50 text-amber-600"}`}
+                        >
+                          {!isOurCarrier(r.carrier) && "🔁 "}{r.carrier}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
+                    </td>
                     <td className="py-2 px-2 text-muted-foreground tabular-nums">{r.phone ?? "-"}</td>
                     <td className="py-2 px-2 text-muted-foreground">{r.manager ?? "-"}</td>
                     <td className="py-2 px-2 text-center">

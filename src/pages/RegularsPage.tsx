@@ -41,7 +41,18 @@ interface Regular {
   note: string | null;
   created_at: string;
   created_by: string;
+  carrier?: string | null;
 }
+
+const CARRIERS = [
+  "SKT",
+  "KT",
+  "LGU+",
+  "알뜰폰(SKT망)",
+  "알뜰폰(KT망)",
+  "알뜰폰(LGU+망)",
+] as const;
+const isOurCarrier = (c?: string | null) => c === "LGU+";
 
 const channelColors: Record<string, string> = {
   당근: "hsl(25 95% 60%)",
@@ -72,6 +83,7 @@ const RegularsPage = () => {
   const [form, setForm] = useState({
     channel: "",
     customer_name: "",
+    carrier: "",
     phone: "",
     birth_date: "",
     manager: "",
@@ -85,6 +97,7 @@ const RegularsPage = () => {
   const [q, setQ] = useState("");
   const [filterChannel, setFilterChannel] = useState<string>("all");
   const [filterConverted, setFilterConverted] = useState<string>("all");
+  const [filterCarrier, setFilterCarrier] = useState<string>("all");
 
   const load = async () => {
     setLoading(true);
@@ -119,6 +132,7 @@ const RegularsPage = () => {
       setForm({
         channel: "",
         customer_name: "",
+        carrier: "",
         phone: "",
         birth_date: "",
         manager: "",
@@ -181,6 +195,11 @@ const RegularsPage = () => {
       if (filterChannel !== "all" && r.channel !== filterChannel) return false;
       if (filterConverted === "y" && !r.converted) return false;
       if (filterConverted === "n" && r.converted) return false;
+      if (filterCarrier !== "all") {
+        if (filterCarrier === "ours" && !isOurCarrier(r.carrier)) return false;
+        else if (filterCarrier === "others" && (isOurCarrier(r.carrier) || !r.carrier)) return false;
+        else if (filterCarrier !== "ours" && filterCarrier !== "others" && r.carrier !== filterCarrier) return false;
+      }
       if (q) {
         const needle = q.toLowerCase();
         const hay = `${r.customer_name} ${r.phone ?? ""} ${r.manager ?? ""}`.toLowerCase();
@@ -188,7 +207,7 @@ const RegularsPage = () => {
       }
       return true;
     });
-  }, [list, q, filterChannel, filterConverted]);
+  }, [list, q, filterChannel, filterConverted, filterCarrier]);
 
   // 다중 선택
   const bulk = useBulkSelection<string>(filtered.map((r) => r.id));
@@ -350,14 +369,28 @@ const RegularsPage = () => {
               placeholder="홍길동"
             />
           </div>
-          <div>
-            <Label className="text-xs">연락처</Label>
-            <Input
-              className="mt-1.5"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              placeholder="010-0000-0000"
-            />
+          <div className="md:col-span-2 grid grid-cols-[140px_1fr] gap-2">
+            <div>
+              <Label className="text-xs">통신사 *</Label>
+              <Select value={form.carrier} onValueChange={(v) => setForm({ ...form, carrier: v })}>
+                <SelectTrigger className="mt-1.5"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectContent>
+                  {CARRIERS.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">연락처</Label>
+              <Input
+                className="mt-1.5"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                placeholder={form.carrier ? "010-0000-0000" : "통신사를 먼저 선택"}
+                disabled={!form.carrier}
+              />
+            </div>
           </div>
           <div>
             <Label className="text-xs">생년월일</Label>
@@ -454,6 +487,20 @@ const RegularsPage = () => {
               </SelectContent>
             </Select>
           </div>
+          <div className="w-44">
+            <Label className="text-xs">통신사</Label>
+            <Select value={filterCarrier} onValueChange={setFilterCarrier}>
+              <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체</SelectItem>
+                <SelectItem value="ours">자사(LGU+)만</SelectItem>
+                <SelectItem value="others">타사만</SelectItem>
+                {CARRIERS.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Badge variant="outline" className="border-primary/40 text-primary-glow ml-auto">
             {filtered.length}건
           </Badge>
@@ -479,8 +526,11 @@ const RegularsPage = () => {
               ...(filterChannel !== "all" ? [{ column: "channel", op: "eq" as const, value: filterChannel }] : []),
               ...(filterConverted === "y" ? [{ column: "converted", op: "eq" as const, value: true }] : []),
               ...(filterConverted === "n" ? [{ column: "converted", op: "eq" as const, value: false }] : []),
+              ...(filterCarrier !== "all" && filterCarrier !== "ours" && filterCarrier !== "others"
+                ? [{ column: "carrier", op: "eq" as const, value: filterCarrier }]
+                : []),
             ],
-            summary: `채널=${filterChannel === "all" ? "전체" : filterChannel} · 전환=${filterConverted === "all" ? "전체" : filterConverted === "y" ? "전환완료" : "미전환"}`,
+            summary: `채널=${filterChannel === "all" ? "전체" : filterChannel} · 전환=${filterConverted === "all" ? "전체" : filterConverted === "y" ? "전환완료" : "미전환"} · 통신사=${filterCarrier === "all" ? "전체" : filterCarrier}`,
           }}
           onDone={load}
         />
@@ -513,6 +563,17 @@ const RegularsPage = () => {
                     >
                       {r.channel}
                     </span>
+                    {r.carrier && (
+                      <span
+                        className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md ${
+                          isOurCarrier(r.carrier)
+                            ? "bg-primary/15 text-primary-glow"
+                            : "bg-amber-500/15 text-amber-600 border border-amber-500/30"
+                        }`}
+                      >
+                        {!isOurCarrier(r.carrier) && "🔁 "}{r.carrier}
+                      </span>
+                    )}
                   </div>
                 }
                 meta={
@@ -559,6 +620,7 @@ const RegularsPage = () => {
                   <th className="text-left px-3 py-2">등록일</th>
                   <th className="text-left px-3 py-2">채널</th>
                   <th className="text-left px-3 py-2">고객명</th>
+                  <th className="text-left px-3 py-2">통신사</th>
                   <th className="text-left px-3 py-2">연락처</th>
                   <th className="text-left px-3 py-2">담당자</th>
                   <th className="text-center px-3 py-2">쿠폰</th>
@@ -582,6 +644,22 @@ const RegularsPage = () => {
                       </span>
                     </td>
                     <td className="px-3 py-2 font-medium">{r.customer_name}</td>
+                    <td className="px-3 py-2">
+                      {r.carrier ? (
+                        <span
+                          className={`text-[11px] font-medium px-2 py-1 rounded-md ${
+                            isOurCarrier(r.carrier)
+                              ? "bg-primary/15 text-primary-glow"
+                              : "bg-amber-500/15 text-amber-600 border border-amber-500/30"
+                          }`}
+                          title={isOurCarrier(r.carrier) ? "자사 고객" : "타사 고객"}
+                        >
+                          {!isOurCarrier(r.carrier) && "🔁 "}{r.carrier}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-muted-foreground">{r.phone ?? "—"}</td>
                     <td className="px-3 py-2 text-muted-foreground">{r.manager ?? "—"}</td>
                     <td className="px-3 py-2 text-center">
