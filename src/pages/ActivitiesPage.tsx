@@ -168,7 +168,7 @@ function MissingDocsSection() {
                     </td>
                     <td className="px-3 py-2.5 text-xs">{r.open_date ?? "-"}</td>
                     <td className="px-3 py-2.5 text-xs text-muted-foreground">
-                      {r.channel ?? "-"} / {r.manager ?? "-"}
+                      {r.channel ?? "-"} / {resolveStaff(r.manager, "-")}
                     </td>
                     <td className="px-3 py-2.5">
                       <Badge variant="outline" className="text-[10px]">
@@ -379,7 +379,7 @@ function PendingItemsSection() {
                       <div className="text-muted-foreground font-mono text-[10px]">{r.device_serial ?? "-"}</div>
                     </td>
                     <td className="px-3 py-2.5 text-xs">{r.open_date ?? "-"}</td>
-                    <td className="px-3 py-2.5 text-xs text-muted-foreground">{r.channel ?? "-"} / {r.manager ?? "-"}</td>
+                    <td className="px-3 py-2.5 text-xs text-muted-foreground">{r.channel ?? "-"} / {resolveStaff(r.manager, "-")}</td>
                     <td className="px-3 py-2.5">
                       <div className="flex flex-wrap gap-1 max-w-[260px]">
                         {r.pending_items.map((p, i) => (
