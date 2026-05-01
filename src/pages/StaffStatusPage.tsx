@@ -1332,6 +1332,14 @@ export default function StaffStatusPage() {
                         스마트홈: "hsl(155 75% 55%)",
                         "2ND": "hsl(15 85% 65%)",
                       };
+                      const over = g.pct >= 100;
+                      const cls = g.pct >= 120
+                        ? "text-amber-500 font-extrabold"
+                        : g.pct >= 100
+                        ? "text-amber-600 font-bold"
+                        : g.pct >= 70
+                        ? "text-emerald-500 font-semibold"
+                        : "text-muted-foreground font-medium";
                       return (
                         <div key={g.product} className="space-y-1">
                           <div className="flex items-center justify-between text-xs">
@@ -1342,13 +1350,16 @@ export default function StaffStatusPage() {
                             <span className="text-muted-foreground tabular-nums">
                               <span className="text-amber-700 font-semibold">{g.achieved}</span>
                               {g.goal > 0 ? (
-                                <> / {g.goal}대 · <span className={g.pct >= 100 ? "text-emerald-400 font-bold" : "text-emerald-300 font-semibold"}>{g.pct}%</span></>
+                                <> / {g.goal}대 · <span className={cls}>{g.pct}%{over && " ⭐"}</span></>
                               ) : (
                                 <> · 목표 미설정</>
                               )}
                             </span>
                           </div>
-                          <Progress value={g.goal > 0 ? g.pct : 0} className="h-2" />
+                          <Progress
+                            value={g.goal > 0 ? Math.min(100, g.pct) : 0}
+                            className={cn("h-2", over && "[&>div]:bg-amber-500")}
+                          />
                         </div>
                       );
                     })}
