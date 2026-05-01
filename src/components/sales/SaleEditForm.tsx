@@ -321,8 +321,10 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    if (!customFields.contract_type) {
-      toast.error("약정 정보를 선택해주세요", { description: "선택약정 또는 이통사지원금 중 하나를 선택해야 합니다." });
+    // 약정 정보(선택약정/이통사지원금)는 [모바일 2nd] 상품에서만 필수
+    const is2nd = form.product === "2ND";
+    if (is2nd && !customFields.contract_type) {
+      toast.error("약정 정보를 선택해주세요", { description: "[모바일 2nd] 상품은 선택약정 또는 이통사지원금 중 하나를 선택해야 합니다." });
       return;
     }
     // 단말기 모델: 마스터에 등록된 정확한 펫네임만 허용
@@ -357,7 +359,11 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
       net_fee: form.net_fee != null && form.net_fee !== 0
         ? num(form.net_fee)
         : calcNetFee(baseNumeric),
-      custom_fields: customFields,
+      custom_fields: {
+        ...customFields,
+        // 약정 정보 미선택 시 DB 에 '해당없음' 으로 안전 기록 (모바일 2nd 가 아닐 때만 발생 가능)
+        contract_type: customFields.contract_type || "해당없음",
+      },
       pending_items: pendingItems,
       pending_note: pendingNote || null,
       pending_resolved: pendingItems.length === 0 ? true : pendingResolved,
@@ -671,10 +677,12 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
               </Field>
             </div>
             <div className="col-span-12 md:col-span-3">
-              <Field label="약정 정보 *">
+              <Field label={form.product === "2ND" ? "약정 정보 *" : "약정 정보"}>
                 <div className={cn(
                   "inline-flex h-9 w-full rounded-md border bg-input/60 p-0.5 text-xs",
-                  customFields.contract_type ? "border-border/40" : "border-destructive/60"
+                  form.product === "2ND" && !customFields.contract_type
+                    ? "border-destructive/60"
+                    : "border-border/40"
                 )}>
                   {[
                     { v: "선택약정", label: "선택약정" },
@@ -698,6 +706,11 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                     );
                   })}
                 </div>
+                {form.product !== "2ND" && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    선택 사항 — 미선택 시 ‘해당없음’으로 저장됩니다
+                  </p>
+                )}
               </Field>
             </div>
           </div>
