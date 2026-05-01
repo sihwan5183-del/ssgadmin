@@ -361,15 +361,19 @@ export default function StaffStatusPage() {
     return rows;
   }, [salesByOwner, filteredProfiles, incentiveRates]);
 
-  // Achievement-rate ranking — average % across all configured count goals
+  // Achievement-rate ranking — 모바일 중심 핵심 달성률 (대표 지표) + 항목 hits
+  // 총 달성률 = 모바일 실적 / 모바일 목표 (모바일 미설정 시 전 항목 건수 합산 대비 합산 목표)
   const achievementLeaderboard = useMemo(() => {
     const rows = filteredProfiles.map((p) => {
       const myGoals = goals.filter((g) => g.user_id === p.user_id && g.goal_type === "count" && Number(g.goal_value || g.goal_count) > 0);
       const list = (salesByOwner.get(p.user_id) ?? []).filter(isSuccess);
       if (myGoals.length === 0) return { profile: p, avgPct: 0, goalCount: 0, hits: 0 };
       const prodCount = (prod: string) => list.filter((s) => productBucket(s.product) === prod).length;
-      let totalPct = 0;
+
+      // 항목별 개별 달성률 — hits 카운트 + 합산 fallback
       let hits = 0;
+      let sumAch = 0;
+      let sumGoal = 0;
       myGoals.forEach((g) => {
         const goalVal = Number(g.goal_value || g.goal_count);
         let achieved = 0;
@@ -380,11 +384,23 @@ export default function StaffStatusPage() {
         } else {
           achieved = prodCount(gBucket);
         }
-        const pct = Math.min(150, Math.round((achieved / goalVal) * 100));
-        totalPct += pct;
+        const pct = Math.round((achieved / goalVal) * 100);
         if (pct >= 100) hits += 1;
+        sumAch += achieved;
+        sumGoal += goalVal;
       });
-      return { profile: p, avgPct: Math.round(totalPct / myGoals.length), goalCount: myGoals.length, hits };
+
+      // 핵심 지표: 모바일(__all) 달성률을 우선 사용, 없으면 전 항목 합산 기준
+      const mobileGoal = myGoals.find((g) => productBucket(g.product) === "모바일" && g.sale_type === "__all");
+      let avgPct = 0;
+      if (mobileGoal) {
+        const goalVal = Number(mobileGoal.goal_value || mobileGoal.goal_count);
+        const achieved = prodCount("모바일");
+        avgPct = goalVal > 0 ? Math.round((achieved / goalVal) * 100) : 0;
+      } else {
+        avgPct = sumGoal > 0 ? Math.round((sumAch / sumGoal) * 100) : 0;
+      }
+      return { profile: p, avgPct, goalCount: myGoals.length, hits };
     }).filter((r) => r.goalCount > 0);
     rows.sort((a, b) => b.avgPct - a.avgPct || b.hits - a.hits);
     return rows;
@@ -645,7 +661,7 @@ export default function StaffStatusPage() {
 
     const out: { product: string; goal: number; achieved: number; pct: number; saleType: string }[] = [];
 
-    // Mobile broken down by sale_type, plus aggregate
+    // Mobile broken down by sale_type, plus aggregate (각 항목 개별 달성률 — 100% 초과 허용)
     const mobileSuccess = success.filter((s) => productBucket(s.product) === "모바일");
     const mobileGoalAll = myGoals.find((g) => g.product === "모바일" && g.sale_type === "__all");
     const mobileGoalAllVal = mobileGoalAll ? Number(mobileGoalAll.goal_value || mobileGoalAll.goal_count) : 0;
@@ -654,7 +670,7 @@ export default function StaffStatusPage() {
       saleType: "__all",
       goal: mobileGoalAllVal,
       achieved: mobileSuccess.length,
-      pct: mobileGoalAllVal > 0 ? Math.min(100, Math.round((mobileSuccess.length / mobileGoalAllVal) * 100)) : 0,
+      pct: mobileGoalAllVal > 0 ? Math.round((mobileSuccess.length / mobileGoalAllVal) * 100) : 0,
     });
     MOBILE_SALE_TYPES.forEach((st) => {
       const g = myGoals.find((x) => x.product === "모바일" && x.sale_type === st);
@@ -666,7 +682,7 @@ export default function StaffStatusPage() {
           saleType: st,
           goal: goalVal,
           achieved,
-          pct: goalVal > 0 ? Math.min(100, Math.round((achieved / goalVal) * 100)) : 0,
+          pct: goalVal > 0 ? Math.round((achieved / goalVal) * 100) : 0,
         });
       }
     });
@@ -681,7 +697,7 @@ export default function StaffStatusPage() {
         saleType: "__all",
         goal: goalVal,
         achieved,
-        pct: goalVal > 0 ? Math.min(100, Math.round((achieved / goalVal) * 100)) : 0,
+        pct: goalVal > 0 ? Math.round((achieved / goalVal) * 100) : 0,
       });
     });
 
