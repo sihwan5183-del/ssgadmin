@@ -1457,6 +1457,7 @@ export type Database = {
           carrier: string | null
           channel: string
           converted: boolean
+          converted_at: string | null
           coupon_sent: boolean
           created_at: string
           created_by: string
@@ -1473,6 +1474,7 @@ export type Database = {
           carrier?: string | null
           channel: string
           converted?: boolean
+          converted_at?: string | null
           coupon_sent?: boolean
           created_at?: string
           created_by: string
@@ -1489,6 +1491,7 @@ export type Database = {
           carrier?: string | null
           channel?: string
           converted?: boolean
+          converted_at?: string | null
           coupon_sent?: boolean
           created_at?: string
           created_by?: string

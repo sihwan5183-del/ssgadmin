@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -42,6 +41,7 @@ interface Regular {
   created_at: string;
   created_by: string;
   carrier?: string | null;
+  converted_at?: string | null;
 }
 
 const CARRIERS = [
@@ -98,6 +98,7 @@ const RegularsPage = () => {
   const [filterChannel, setFilterChannel] = useState<string>("all");
   const [filterConverted, setFilterConverted] = useState<string>("all");
   const [filterCarrier, setFilterCarrier] = useState<string>("all");
+  const [onlyConverted, setOnlyConverted] = useState<boolean>(false);
 
   const load = async () => {
     setLoading(true);
@@ -193,6 +194,7 @@ const RegularsPage = () => {
   const filtered = useMemo(() => {
     return list.filter((r) => {
       if (filterChannel !== "all" && r.channel !== filterChannel) return false;
+      if (onlyConverted && !r.converted) return false;
       if (filterConverted === "y" && !r.converted) return false;
       if (filterConverted === "n" && r.converted) return false;
       if (filterCarrier !== "all") {
@@ -207,7 +209,7 @@ const RegularsPage = () => {
       }
       return true;
     });
-  }, [list, q, filterChannel, filterConverted, filterCarrier]);
+  }, [list, q, filterChannel, filterConverted, filterCarrier, onlyConverted]);
 
   // 다중 선택
   const bulk = useBulkSelection<string>(filtered.map((r) => r.id));
@@ -348,8 +350,9 @@ const RegularsPage = () => {
           <HeartHandshake className="size-5 text-primary-glow" />
           <h3 className="text-lg font-semibold tracking-tight">새 단골 등록</h3>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
+        {/* 핵심 입력행: 통신사 → 성함 → 연락처 → 자사전환 (한 줄 정렬) */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+          <div className="md:col-span-2">
             <Label className="text-xs">채널 *</Label>
             <Select value={form.channel} onValueChange={(v) => setForm({ ...form, channel: v })}>
               <SelectTrigger className="mt-1.5"><SelectValue placeholder="채널 선택" /></SelectTrigger>
@@ -360,8 +363,19 @@ const RegularsPage = () => {
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <Label className="text-xs">고객명 *</Label>
+          <div className="md:col-span-2">
+            <Label className="text-xs">통신사 *</Label>
+            <Select value={form.carrier} onValueChange={(v) => setForm({ ...form, carrier: v })}>
+              <SelectTrigger className="mt-1.5"><SelectValue placeholder="선택" /></SelectTrigger>
+              <SelectContent>
+                {CARRIERS.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="md:col-span-2">
+            <Label className="text-xs">성함 *</Label>
             <Input
               className="mt-1.5"
               value={form.customer_name}
@@ -369,30 +383,39 @@ const RegularsPage = () => {
               placeholder="홍길동"
             />
           </div>
-          <div className="md:col-span-2 grid grid-cols-[140px_1fr] gap-2">
-            <div>
-              <Label className="text-xs">통신사 *</Label>
-              <Select value={form.carrier} onValueChange={(v) => setForm({ ...form, carrier: v })}>
-                <SelectTrigger className="mt-1.5"><SelectValue placeholder="선택" /></SelectTrigger>
-                <SelectContent>
-                  {CARRIERS.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs">연락처</Label>
-              <Input
-                className="mt-1.5"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                placeholder={form.carrier ? "010-0000-0000" : "통신사를 먼저 선택"}
-                disabled={!form.carrier}
+          <div className="md:col-span-3">
+            <Label className="text-xs">연락처</Label>
+            <Input
+              className="mt-1.5"
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              placeholder={form.carrier ? "010-0000-0000" : "통신사를 먼저 선택"}
+              disabled={!form.carrier}
+            />
+          </div>
+          <div className="md:col-span-3">
+            <Label className="text-xs">자사 전환</Label>
+            <div
+              className={`mt-1.5 h-10 px-3 rounded-md border flex items-center gap-2 transition-colors ${
+                form.converted
+                  ? "bg-emerald-500/10 border-emerald-500/40"
+                  : "bg-background/40 border-border/50"
+              }`}
+            >
+              <Switch
+                checked={form.converted}
+                onCheckedChange={(v) => setForm({ ...form, converted: v })}
               />
+              <span className="text-xs text-muted-foreground">
+                {form.converted ? "전환 완료 ✓" : "타사 → 자사 가입 시 ON"}
+              </span>
             </div>
           </div>
-          <div>
+        </div>
+
+        {/* 보조 입력행 */}
+        <div className="mt-3 grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+          <div className="md:col-span-2">
             <Label className="text-xs">생년월일</Label>
             <Input
               className="mt-1.5"
@@ -401,7 +424,7 @@ const RegularsPage = () => {
               placeholder="YYYY-MM-DD"
             />
           </div>
-          <div>
+          <div className="md:col-span-2">
             <Label className="text-xs">담당자</Label>
             <Input
               className="mt-1.5"
@@ -409,7 +432,7 @@ const RegularsPage = () => {
               onChange={(e) => setForm({ ...form, manager: e.target.value })}
             />
           </div>
-          <div>
+          <div className="md:col-span-2">
             <Label className="text-xs">등록일</Label>
             <Input
               type="date"
@@ -418,27 +441,25 @@ const RegularsPage = () => {
               onChange={(e) => setForm({ ...form, registered_date: e.target.value })}
             />
           </div>
-          <div className="flex items-center gap-3 mt-6">
-            <Switch
-              checked={form.coupon_sent}
-              onCheckedChange={(v) => setForm({ ...form, coupon_sent: v })}
-            />
-            <Label className="text-sm">쿠폰 발송</Label>
+          <div className="md:col-span-2">
+            <Label className="text-xs">쿠폰 발송</Label>
+            <div className="mt-1.5 h-10 px-3 rounded-md border border-border/50 bg-background/40 flex items-center gap-2">
+              <Switch
+                checked={form.coupon_sent}
+                onCheckedChange={(v) => setForm({ ...form, coupon_sent: v })}
+              />
+              <span className="text-xs text-muted-foreground">
+                {form.coupon_sent ? "발송됨" : "미발송"}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-3 mt-6">
-            <Switch
-              checked={form.converted}
-              onCheckedChange={(v) => setForm({ ...form, converted: v })}
-            />
-            <Label className="text-sm">자사 전환</Label>
-          </div>
-          <div className="md:col-span-2 lg:col-span-4">
+          <div className="md:col-span-4">
             <Label className="text-xs">메모</Label>
-            <Textarea
+            <Input
               className="mt-1.5"
-              rows={2}
               value={form.note}
               onChange={(e) => setForm({ ...form, note: e.target.value })}
+              placeholder="고객 특이사항"
             />
           </div>
         </div>
@@ -504,6 +525,14 @@ const RegularsPage = () => {
           <Badge variant="outline" className="border-primary/40 text-primary-glow ml-auto">
             {filtered.length}건
           </Badge>
+          <label className="flex items-center gap-2 px-2.5 h-9 rounded-md border border-emerald-500/40 bg-emerald-500/5 cursor-pointer text-xs">
+            <Checkbox
+              checked={onlyConverted}
+              onCheckedChange={(v) => setOnlyConverted(!!v)}
+              className="border-emerald-600 data-[state=checked]:bg-emerald-600"
+            />
+            <span className="text-emerald-700 dark:text-emerald-400 font-medium">전환완료만 보기</span>
+          </label>
           {isAdmin && (
             <Button
               variant="outline"
@@ -630,7 +659,12 @@ const RegularsPage = () => {
               </thead>
               <tbody>
                 {filtered.map((r) => (
-                  <tr key={r.id} className={`border-t border-border/30 hover:bg-muted/20 ${bulk.isSelected(r.id) ? "bg-primary/5" : ""}`}>
+                  <tr
+                    key={r.id}
+                    className={`border-t border-border/30 hover:bg-muted/20 transition-colors ${
+                      r.converted ? "bg-emerald-500/[0.07]" : ""
+                    } ${bulk.isSelected(r.id) ? "bg-primary/5" : ""}`}
+                  >
                     <td className="px-3 py-2">
                       <Checkbox checked={bulk.isSelected(r.id)} onCheckedChange={() => bulk.toggle(r.id)} />
                     </td>
@@ -643,7 +677,19 @@ const RegularsPage = () => {
                         {r.channel}
                       </span>
                     </td>
-                    <td className="px-3 py-2 font-medium">{r.customer_name}</td>
+                    <td className="px-3 py-2 font-medium">
+                      <div className="flex items-center gap-1.5">
+                        <span>{r.customer_name}</span>
+                        {r.converted && (
+                          <span
+                            className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30"
+                            title={r.converted_at ? `전환일: ${new Date(r.converted_at).toLocaleDateString("ko-KR")}` : "전환 완료"}
+                          >
+                            ✓ 전환완료
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-3 py-2">
                       {r.carrier ? (
                         <span
