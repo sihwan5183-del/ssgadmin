@@ -246,6 +246,15 @@ export default function StaffGoalsPage() {
     effectiveCount(getEntry(uid, itemKey), mobileBaseFor(uid));
   const totalFor = (uid: string) => mapping.reduce((sum, m) => sum + cellCount(uid, m.key), 0);
   const achievedFor = (uid: string) => mapping.reduce((sum, m) => sum + (achievedMap[goalKey(uid, m.key)] ?? 0), 0);
+  // 핵심 달성률 = 모바일 실적 ÷ 모바일 목표 (모바일 미설정 시 전 항목 합산 기준 fallback)
+  const coreRateFor = (uid: string) => {
+    const mGoal = cellCount(uid, MOBILE_KEY);
+    const mAch = achievedMap[goalKey(uid, MOBILE_KEY)] ?? 0;
+    if (mGoal > 0) return Math.round((mAch / mGoal) * 100);
+    const total = totalFor(uid);
+    const ach = achievedFor(uid);
+    return total > 0 ? Math.round((ach / total) * 100) : 0;
+  };
 
   /* Cell helpers (team) */
   const getTeamEntry = (team: string, itemKey: string): GoalEntry =>
