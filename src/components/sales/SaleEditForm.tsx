@@ -677,10 +677,12 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
               </Field>
             </div>
             <div className="col-span-12 md:col-span-3">
-              <Field label="약정 정보 *">
+              <Field label={form.product === "2ND" ? "약정 정보 *" : "약정 정보"}>
                 <div className={cn(
                   "inline-flex h-9 w-full rounded-md border bg-input/60 p-0.5 text-xs",
-                  customFields.contract_type ? "border-border/40" : "border-destructive/60"
+                  form.product === "2ND" && !customFields.contract_type
+                    ? "border-destructive/60"
+                    : "border-border/40"
                 )}>
                   {[
                     { v: "선택약정", label: "선택약정" },
@@ -704,6 +706,11 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                     );
                   })}
                 </div>
+                {form.product !== "2ND" && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    선택 사항 — 미선택 시 ‘해당없음’으로 저장됩니다
+                  </p>
+                )}
               </Field>
             </div>
           </div>
