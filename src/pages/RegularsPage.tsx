@@ -42,6 +42,7 @@ interface Regular {
   created_at: string;
   created_by: string;
   carrier?: string | null;
+  converted_at?: string | null;
 }
 
 const CARRIERS = [
@@ -98,6 +99,7 @@ const RegularsPage = () => {
   const [filterChannel, setFilterChannel] = useState<string>("all");
   const [filterConverted, setFilterConverted] = useState<string>("all");
   const [filterCarrier, setFilterCarrier] = useState<string>("all");
+  const [onlyConverted, setOnlyConverted] = useState<boolean>(false);
 
   const load = async () => {
     setLoading(true);
@@ -193,6 +195,7 @@ const RegularsPage = () => {
   const filtered = useMemo(() => {
     return list.filter((r) => {
       if (filterChannel !== "all" && r.channel !== filterChannel) return false;
+      if (onlyConverted && !r.converted) return false;
       if (filterConverted === "y" && !r.converted) return false;
       if (filterConverted === "n" && r.converted) return false;
       if (filterCarrier !== "all") {
@@ -207,7 +210,7 @@ const RegularsPage = () => {
       }
       return true;
     });
-  }, [list, q, filterChannel, filterConverted, filterCarrier]);
+  }, [list, q, filterChannel, filterConverted, filterCarrier, onlyConverted]);
 
   // 다중 선택
   const bulk = useBulkSelection<string>(filtered.map((r) => r.id));
