@@ -30,6 +30,7 @@ interface Regular {
   created_at: string;
   created_by: string;
   carrier?: string | null;
+  converted_at?: string | null;
 }
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -206,14 +207,12 @@ const RegularInputPage = () => {
           <HeartHandshake className="size-4 text-primary" />새 단골 등록
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="space-y-1.5">
+        {/* 핵심 입력행: 채널 → 통신사 → 성함 → 연락처 → 자사전환 */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+          <div className="md:col-span-2 space-y-1.5">
             <Label className="text-xs">채널 *</Label>
-            <Select
-              value={form.channel}
-              onValueChange={(v) => setForm({ ...form, channel: v })}
-            >
-              <SelectTrigger><SelectValue placeholder="인입 경로 선택" /></SelectTrigger>
+            <Select value={form.channel} onValueChange={(v) => setForm({ ...form, channel: v })}>
+              <SelectTrigger><SelectValue placeholder="채널 선택" /></SelectTrigger>
               <SelectContent>
                 {channelOptions.map((o) => (
                   <SelectItem key={o} value={o}>{o}</SelectItem>
@@ -221,43 +220,57 @@ const RegularInputPage = () => {
               </SelectContent>
             </Select>
           </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">고객명 *</Label>
+          <div className="md:col-span-2 space-y-1.5">
+            <Label className="text-xs">통신사 *</Label>
+            <Select value={form.carrier} onValueChange={(v) => setForm({ ...form, carrier: v })}>
+              <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+              <SelectContent>
+                {CARRIERS.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="md:col-span-2 space-y-1.5">
+            <Label className="text-xs">성함 *</Label>
             <Input
               value={form.customer_name}
               onChange={(e) => setForm({ ...form, customer_name: e.target.value })}
               placeholder="홍길동"
             />
           </div>
-
-          <div className="md:col-span-2 grid grid-cols-[140px_1fr] gap-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs">통신사 *</Label>
-              <Select
-                value={form.carrier}
-                onValueChange={(v) => setForm({ ...form, carrier: v })}
-              >
-                <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
-                <SelectContent>
-                  {CARRIERS.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">전화번호</Label>
-              <Input
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                placeholder={form.carrier ? "010-0000-0000" : "통신사를 먼저 선택"}
-                disabled={!form.carrier}
+          <div className="md:col-span-3 space-y-1.5">
+            <Label className="text-xs">연락처</Label>
+            <Input
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              placeholder={form.carrier ? "010-0000-0000" : "통신사를 먼저 선택"}
+              disabled={!form.carrier}
+            />
+          </div>
+          <div className="md:col-span-3 space-y-1.5">
+            <Label className="text-xs">자사 전환</Label>
+            <div
+              className={`h-10 px-3 rounded-md border flex items-center gap-2 transition-colors ${
+                form.converted
+                  ? "bg-emerald-500/10 border-emerald-500/40"
+                  : "bg-background/40 border-border/50"
+              }`}
+            >
+              <Switch
+                checked={form.converted}
+                onCheckedChange={(v) => setForm({ ...form, converted: v })}
               />
+              <span className="text-xs text-muted-foreground">
+                {form.converted ? "전환 완료 ✓" : "타사 → 자사 가입 시 ON"}
+              </span>
             </div>
           </div>
+        </div>
 
-          <div className="space-y-1.5">
+        {/* 보조 입력행 */}
+        <div className="mt-3 grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+          <div className="md:col-span-2 space-y-1.5">
             <Label className="text-xs">생년월일</Label>
             <Input
               value={form.birth_date}
@@ -265,8 +278,7 @@ const RegularInputPage = () => {
               placeholder="900101"
             />
           </div>
-
-          <div className="space-y-1.5">
+          <div className="md:col-span-2 space-y-1.5">
             <Label className="text-xs">담당자</Label>
             <Input
               value={form.manager}
@@ -274,8 +286,7 @@ const RegularInputPage = () => {
               placeholder="담당 직원"
             />
           </div>
-
-          <div className="space-y-1.5">
+          <div className="md:col-span-2 space-y-1.5">
             <Label className="text-xs">등록일</Label>
             <Input
               type="date"
@@ -283,30 +294,24 @@ const RegularInputPage = () => {
               onChange={(e) => setForm({ ...form, registered_date: e.target.value })}
             />
           </div>
-
-          <div className="flex items-center gap-3 px-3 rounded-md border border-border/50 bg-background/40">
-            <Switch
-              checked={form.coupon_sent}
-              onCheckedChange={(v) => setForm({ ...form, coupon_sent: v })}
-            />
-            <Label className="text-xs cursor-pointer">쿠폰 발송 완료</Label>
+          <div className="md:col-span-2 space-y-1.5">
+            <Label className="text-xs">쿠폰 발송</Label>
+            <div className="h-10 px-3 rounded-md border border-border/50 bg-background/40 flex items-center gap-2">
+              <Switch
+                checked={form.coupon_sent}
+                onCheckedChange={(v) => setForm({ ...form, coupon_sent: v })}
+              />
+              <span className="text-xs text-muted-foreground">
+                {form.coupon_sent ? "발송됨" : "미발송"}
+              </span>
+            </div>
           </div>
-
-          <div className="flex items-center gap-3 px-3 rounded-md border border-border/50 bg-background/40">
-            <Switch
-              checked={form.converted}
-              onCheckedChange={(v) => setForm({ ...form, converted: v })}
-            />
-            <Label className="text-xs cursor-pointer">자사 전환됨</Label>
-          </div>
-
-          <div className="space-y-1.5 md:col-span-2 lg:col-span-4">
+          <div className="md:col-span-4 space-y-1.5">
             <Label className="text-xs">메모</Label>
-            <Textarea
+            <Input
               value={form.note}
               onChange={(e) => setForm({ ...form, note: e.target.value })}
               placeholder="고객 특이사항, 관심 상품 등"
-              rows={2}
             />
           </div>
         </div>
