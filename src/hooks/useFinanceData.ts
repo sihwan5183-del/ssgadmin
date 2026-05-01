@@ -499,6 +499,7 @@ export function useFinanceData(): FinanceData {
       roi,
       cpaAvg,
       marginRate,
+      prev,
       moyoAppliedCount,
       moyoExcludedCount,
       moyoFee,
@@ -515,5 +516,5 @@ export function useFinanceData(): FinanceData {
       hasSales: totalSuccess > 0,
       hasSpend: totalAdSpend > 0,
     };
-  }, [salesRows, spendRows, startDate, endDate, loading, categories, includedExpenseLabels, excludedLabels]);
+  }, [salesRows, spendRows, prevSalesRows, prevSpendRows, startDate, endDate, loading, categories, includedExpenseLabels, excludedLabels]);
 }
