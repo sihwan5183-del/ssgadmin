@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, Save } from "lucide-react";
+import { Search } from "lucide-react";
 import { StaffDetailDialog } from "@/components/admin/accounts/StaffDetailDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStores } from "@/hooks/useStores";
@@ -54,24 +54,18 @@ export default function AccountStaffPage() {
   const { isAdmin } = useRole();
   const { stores } = useStores();
   const yearMonth = useMemo(() => new Date().toISOString().slice(0, 7), []);
-  const [inflowMap, setInflowMap] = useState<Record<string, number>>({});
   const [successMap, setSuccessMap] = useState<Record<string, number>>({});
-  const [inflowEdit, setInflowEdit] = useState<Record<string, string>>({});
-  const [savingInflow, setSavingInflow] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     const monthStart = `${yearMonth}-01`;
     const monthEnd = new Date(new Date(monthStart).getFullYear(), new Date(monthStart).getMonth() + 1, 0).toISOString().slice(0, 10);
-    const [{ data: profs }, { data: roleRows }, { data: inflowRows }, { data: salesRows }] = await Promise.all([
+    const [{ data: profs }, { data: roleRows }, { data: salesRows }] = await Promise.all([
       supabase
         .from("profiles")
         .select("user_id, display_name, phone, team, store, position, status, hire_date, created_at")
         .order("created_at", { ascending: false }),
       supabase.from("user_roles").select("user_id, role"),
-      supabase.from("staff_monthly_inquiries")
-        .select("user_id, inflow_count")
-        .eq("year_month", yearMonth),
       supabase.from("sales")
         .select("created_by, approval_status")
         .gte("open_date", monthStart)
@@ -84,9 +78,6 @@ export default function AccountStaffPage() {
       (roleMap[r.user_id] ||= []).push(r.role);
     }
     setRolesByUser(roleMap);
-    const im: Record<string, number> = {};
-    (inflowRows ?? []).forEach((r: any) => { im[r.user_id] = r.inflow_count; });
-    setInflowMap(im);
     const sm: Record<string, number> = {};
     (salesRows ?? []).forEach((r: any) => {
       if (r.approval_status === "취소" || r.approval_status === "반려") return;
@@ -104,26 +95,6 @@ export default function AccountStaffPage() {
   }, [yearMonth]);
 
   useEffect(() => { refresh(); }, [refresh]);
-
-  const saveInflow = async (uid: string) => {
-    const v = inflowEdit[uid];
-    if (v === undefined) return;
-    const num = Math.max(0, parseInt(v || "0", 10) || 0);
-    setSavingInflow(uid);
-    try {
-      const { error } = await supabase
-        .from("staff_monthly_inquiries")
-        .upsert({ user_id: uid, year_month: yearMonth, inflow_count: num }, { onConflict: "user_id,year_month" });
-      if (error) throw error;
-      setInflowMap((m) => ({ ...m, [uid]: num }));
-      setInflowEdit((m) => { const x = { ...m }; delete x[uid]; return x; });
-      toast.success("인입 건수 저장됨");
-    } catch (e: any) {
-      toast.error("저장 실패: " + (e.message ?? ""));
-    } finally {
-      setSavingInflow(null);
-    }
-  };
 
   const performSoftDelete = async () => {
     if (!deleteTarget) return;
