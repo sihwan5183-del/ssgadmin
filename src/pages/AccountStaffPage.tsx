@@ -186,9 +186,7 @@ export default function AccountStaffPage() {
                   <th className="text-left px-3 py-2">연락처</th>
                   <th className="text-left px-3 py-2">입사일</th>
                   <th className="text-left px-3 py-2">상태</th>
-                  <th className="text-right px-3 py-2">인입({yearMonth.slice(5)})</th>
                   <th className="text-right px-3 py-2">개통</th>
-                  <th className="text-right px-3 py-2">전환율</th>
                   <th className="text-right px-3 py-2"></th>
                 </tr>
               </thead>
@@ -196,10 +194,7 @@ export default function AccountStaffPage() {
                 {filtered.map((r) => {
                   const s = STATUS_BADGE[r.status] ?? { label: r.status, variant: "outline" as const };
                   const rs = rolesByUser[r.user_id] ?? [];
-                  const inflow = inflowMap[r.user_id] ?? 0;
                   const success = successMap[r.user_id] ?? 0;
-                  const conv = inflow > 0 ? Math.round((success / inflow) * 100) : 0;
-                  const editVal = inflowEdit[r.user_id];
                   return (
                     <tr key={r.user_id} className="border-b border-border/30 hover:bg-muted/30">
                       <td className="px-3 py-2 font-medium">{r.display_name}</td>
@@ -219,28 +214,7 @@ export default function AccountStaffPage() {
                       <td className="px-3 py-2 text-muted-foreground">{r.phone ?? "-"}</td>
                       <td className="px-3 py-2 text-muted-foreground">{r.hire_date ?? "-"}</td>
                       <td className="px-3 py-2"><Badge variant={s.variant}>{s.label}</Badge></td>
-                      <td className="px-3 py-2 text-right">
-                        {isAdmin ? (
-                          <div className="flex items-center justify-end gap-1">
-                            <Input
-                              type="number" min={0} className="h-7 w-20 text-right tabular-nums"
-                              value={editVal !== undefined ? editVal : String(inflow)}
-                              onChange={(e) => setInflowEdit((m) => ({ ...m, [r.user_id]: e.target.value }))}
-                            />
-                            {editVal !== undefined && (
-                              <Button size="sm" variant="ghost" className="h-7 px-2" disabled={savingInflow === r.user_id} onClick={() => saveInflow(r.user_id)}>
-                                <Save className="size-3.5" />
-                              </Button>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="tabular-nums text-muted-foreground">{inflow}</span>
-                        )}
-                      </td>
                       <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{success}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">
-                        <span className={conv >= 50 ? "text-emerald-600 font-semibold" : conv >= 25 ? "text-amber-600 font-medium" : "text-muted-foreground"}>{inflow > 0 ? `${conv}%` : "-"}</span>
-                      </td>
                       <td className="px-3 py-2 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button size="sm" variant="ghost" onClick={() => setSelected({ id: r.user_id, email: emails[r.user_id] ?? null })}>상세</Button>
