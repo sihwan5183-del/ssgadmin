@@ -520,6 +520,84 @@ const ChannelIntakePage = () => {
     refresh();
   };
 
+  // ── 빠른 상태 변경 (드롭다운 → 필터 버튼 클릭) ──
+  const quickChangeStatus = async (row: InquiryRow, next: string) => {
+    if (next === row.status) return;
+    // 추가 입력이 필요한 상태는 기존 다이얼로그를 연다
+    if (next === "실패" || next === "부재" || next === "재케어") {
+      setEditingRow(row);
+      setEditStatus(next);
+      setEditRetryAt(row.retry_at?.slice(0, 16) ?? "");
+      setEditFailReason(row.fail_reason ?? "");
+      return;
+    }
+    const prevStatus = row.status;
+    const { error } = await supabase
+      .from("inquiries")
+      .update({
+        status: next,
+        retry_at: null,
+        fail_reason: null,
+        last_action_at: new Date().toISOString(),
+      })
+      .eq("id", row.id);
+    if (error) { toast.error(error.message); return; }
+    if (user) {
+      await supabase.from("inquiry_logs").insert({
+        inquiry_id: row.id,
+        action: "상태변경",
+        content: `${prevStatus || "-"} → ${next}`,
+        created_by: user.id,
+      });
+    }
+    toast.success(`상태 변경: ${next}`);
+    refresh();
+  };
+
+  // ── CSV 다운로드 (현재 필터링된 결과만) ──
+  const downloadCSV = () => {
+    if (filtered.length === 0) {
+      toast.info("다운로드할 데이터가 없습니다");
+      return;
+    }
+    const headers = [
+      "인입일", "채널", "고객명", "연락처", "상태", "재연락",
+      "최종액션", "담당자", "상담내용", "메모", "실패사유",
+    ];
+    const escape = (v: any) => {
+      const s = v == null ? "" : String(v);
+      if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const lines = [headers.join(",")];
+    filtered.forEach((r) => {
+      lines.push([
+        r.inquiry_date,
+        r.channel,
+        r.customer_name,
+        r.phone,
+        isNewLead(r) ? "미처리" : r.status,
+        r.retry_at ? formatTime(r.retry_at) : "",
+        formatTime(r.last_action_at),
+        r.manager,
+        r.content,
+        r.note,
+        r.fail_reason,
+      ].map(escape).join(","));
+    });
+    const csv = "\uFEFF" + lines.join("\n"); // BOM for Excel Korean
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `인입관리_${startDate}_${endDate}_${statusFilter}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`${filtered.length}건 다운로드`);
+  };
+
   const statusCounts = useMemo(() => {
     const map: Record<string, number> = { 전체: rows.length };
     CRM_STATUSES.forEach((s) => {
