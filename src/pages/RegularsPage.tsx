@@ -41,7 +41,18 @@ interface Regular {
   note: string | null;
   created_at: string;
   created_by: string;
+  carrier?: string | null;
 }
+
+const CARRIERS = [
+  "SKT",
+  "KT",
+  "LGU+",
+  "알뜰폰(SKT망)",
+  "알뜰폰(KT망)",
+  "알뜰폰(LGU+망)",
+] as const;
+const isOurCarrier = (c?: string | null) => c === "LGU+";
 
 const channelColors: Record<string, string> = {
   당근: "hsl(25 95% 60%)",
@@ -72,6 +83,7 @@ const RegularsPage = () => {
   const [form, setForm] = useState({
     channel: "",
     customer_name: "",
+    carrier: "",
     phone: "",
     birth_date: "",
     manager: "",
@@ -85,6 +97,7 @@ const RegularsPage = () => {
   const [q, setQ] = useState("");
   const [filterChannel, setFilterChannel] = useState<string>("all");
   const [filterConverted, setFilterConverted] = useState<string>("all");
+  const [filterCarrier, setFilterCarrier] = useState<string>("all");
 
   const load = async () => {
     setLoading(true);
@@ -119,6 +132,7 @@ const RegularsPage = () => {
       setForm({
         channel: "",
         customer_name: "",
+        carrier: "",
         phone: "",
         birth_date: "",
         manager: "",
@@ -181,6 +195,11 @@ const RegularsPage = () => {
       if (filterChannel !== "all" && r.channel !== filterChannel) return false;
       if (filterConverted === "y" && !r.converted) return false;
       if (filterConverted === "n" && r.converted) return false;
+      if (filterCarrier !== "all") {
+        if (filterCarrier === "ours" && !isOurCarrier(r.carrier)) return false;
+        else if (filterCarrier === "others" && (isOurCarrier(r.carrier) || !r.carrier)) return false;
+        else if (filterCarrier !== "ours" && filterCarrier !== "others" && r.carrier !== filterCarrier) return false;
+      }
       if (q) {
         const needle = q.toLowerCase();
         const hay = `${r.customer_name} ${r.phone ?? ""} ${r.manager ?? ""}`.toLowerCase();
@@ -188,7 +207,7 @@ const RegularsPage = () => {
       }
       return true;
     });
-  }, [list, q, filterChannel, filterConverted]);
+  }, [list, q, filterChannel, filterConverted, filterCarrier]);
 
   // 다중 선택
   const bulk = useBulkSelection<string>(filtered.map((r) => r.id));
