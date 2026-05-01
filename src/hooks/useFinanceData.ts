@@ -116,17 +116,19 @@ const isoWeekKey = (iso: string) => {
 };
 
 export function useFinanceData(): FinanceData {
-  const { startDate, endDate } = usePeriod();
+  const { startDate, endDate, prevStartDate, prevEndDate } = usePeriod();
   const { categories, includedExpenseLabels, excludedLabels } = useBudgetCategories();
   const [salesRows, setSalesRows] = useState<any[]>([]);
   const [spendRows, setSpendRows] = useState<any[]>([]);
+  const [prevSalesRows, setPrevSalesRows] = useState<any[]>([]);
+  const [prevSpendRows, setPrevSpendRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const [salesRes, spendRes] = await Promise.all([
+      const [salesRes, spendRes, prevSalesRes, prevSpendRes] = await Promise.all([
         supabase
           .from("sales")
           .select(
@@ -142,16 +144,33 @@ export function useFinanceData(): FinanceData {
           .gte("spend_date", startDate)
           .lte("spend_date", endDate)
           .limit(10000),
+        supabase
+          .from("sales")
+          .select(
+            "channel, product, open_date, unit_price, distributor_amount, cash_support_amount, extra_subsidy, customer_support_amount, corp_card_amount, receivable_amount, vas_fee, net_fee, voucher, voucher_returned, trade_in_enabled, trade_in_confirmed, moyo_excluded, custom_fields",
+          )
+          .gte("open_date", prevStartDate)
+          .lte("open_date", prevEndDate)
+          .in("status", ["개통완료", "설치완료"])
+          .limit(10000),
+        supabase
+          .from("ad_spend")
+          .select("category, amount, spend_date")
+          .gte("spend_date", prevStartDate)
+          .lte("spend_date", prevEndDate)
+          .limit(10000),
       ]);
       if (cancelled) return;
       setSalesRows(salesRes.data ?? []);
       setSpendRows(spendRes.data ?? []);
+      setPrevSalesRows(prevSalesRes.data ?? []);
+      setPrevSpendRows(prevSpendRes.data ?? []);
       setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [startDate, endDate]);
+  }, [startDate, endDate, prevStartDate, prevEndDate]);
 
   return useMemo<FinanceData>(() => {
     // ※ 모든 행은 status=개통완료 (쿼리에서 필터됨).
