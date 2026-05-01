@@ -13,6 +13,10 @@ import {
   Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell,
 } from "recharts";
 import { HeartHandshake, Send, RefreshCw, Trash2, Search, TrendingUp } from "lucide-react";
+import { Pencil } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
@@ -42,6 +46,8 @@ interface Regular {
   created_by: string;
   carrier?: string | null;
   converted_at?: string | null;
+  updated_at?: string | null;
+  updated_by?: string | null;
 }
 
 const CARRIERS = [
@@ -78,6 +84,68 @@ const RegularsPage = () => {
   const [list, setList] = useState<Regular[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // 수정 다이얼로그
+  const [editOpen, setEditOpen] = useState(false);
+  const [editing, setEditing] = useState<Regular | null>(null);
+  const [editForm, setEditForm] = useState({
+    channel: "",
+    customer_name: "",
+    carrier: "",
+    phone: "",
+    birth_date: "",
+    manager: "",
+    coupon_sent: false,
+    converted: false,
+    registered_date: today(),
+    note: "",
+  });
+  const [editSaving, setEditSaving] = useState(false);
+
+  const openEdit = (r: Regular) => {
+    setEditing(r);
+    setEditForm({
+      channel: r.channel ?? "",
+      customer_name: r.customer_name ?? "",
+      carrier: r.carrier ?? "",
+      phone: r.phone ?? "",
+      birth_date: r.birth_date ?? "",
+      manager: r.manager ?? "",
+      coupon_sent: !!r.coupon_sent,
+      converted: !!r.converted,
+      registered_date: r.registered_date ?? today(),
+      note: r.note ?? "",
+    });
+    setEditOpen(true);
+  };
+
+  const saveEdit = async () => {
+    if (!editing) return;
+    if (!editForm.channel) return toast.error("채널을 선택하세요");
+    if (!editForm.customer_name.trim()) return toast.error("고객명을 입력하세요");
+    setEditSaving(true);
+    const { error } = await supabase
+      .from("regulars")
+      .update({
+        channel: editForm.channel,
+        customer_name: editForm.customer_name.trim(),
+        carrier: editForm.carrier || null,
+        phone: editForm.phone || null,
+        birth_date: editForm.birth_date || null,
+        manager: editForm.manager || null,
+        coupon_sent: editForm.coupon_sent,
+        converted: editForm.converted,
+        registered_date: editForm.registered_date,
+        note: editForm.note || null,
+      })
+      .eq("id", editing.id);
+    setEditSaving(false);
+    if (error) return toast.error("수정 실패: " + error.message);
+    toast.success("수정되었습니다");
+    setEditOpen(false);
+    setEditing(null);
+    load();
+  };
 
   // 등록 폼
   const [form, setForm] = useState({
@@ -629,6 +697,9 @@ const RegularsPage = () => {
                     <Button size="sm" variant="ghost" onClick={() => remove(r.id)} className="h-10 ml-auto">
                       <Trash2 className="size-4 text-destructive" />
                     </Button>
+                    <Button size="sm" variant="ghost" onClick={() => openEdit(r)} className="h-10">
+                      <Pencil className="size-4 text-primary" />
+                    </Button>
                   </>
                 }
               />
@@ -715,9 +786,19 @@ const RegularsPage = () => {
                       <Switch checked={r.converted} onCheckedChange={(v) => toggleField(r.id, "converted", v)} />
                     </td>
                     <td className="px-3 py-2 text-right">
-                      <Button size="icon" variant="ghost" onClick={() => remove(r.id)}>
-                        <Trash2 className="size-4 text-destructive" />
-                      </Button>
+                      <div className="inline-flex items-center gap-1 justify-end">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => openEdit(r)}
+                          title="수정"
+                        >
+                          <Pencil className="size-4 text-primary" />
+                        </Button>
+                        <Button size="icon" variant="ghost" onClick={() => remove(r.id)} title="삭제">
+                          <Trash2 className="size-4 text-destructive" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -745,6 +826,149 @@ const RegularsPage = () => {
         loading={bulkBusy}
         confirmLabel="삭제"
       />
+
+      {/* 단골 정보 수정 다이얼로그 */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="size-4 text-primary" />
+              단골 정보 수정
+              {editing?.customer_name && (
+                <Badge variant="outline" className="ml-1 text-[11px]">
+                  {editing.customer_name}
+                </Badge>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* 등록 폼과 동일한 레이아웃 */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+            <div className="md:col-span-2">
+              <Label className="text-xs">채널 *</Label>
+              <Select value={editForm.channel} onValueChange={(v) => setEditForm({ ...editForm, channel: v })}>
+                <SelectTrigger className="mt-1.5"><SelectValue placeholder="채널 선택" /></SelectTrigger>
+                <SelectContent>
+                  {channelOptions.map((o) => (
+                    <SelectItem key={o} value={o}>{o}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-2">
+              <Label className="text-xs">통신사</Label>
+              <Select value={editForm.carrier} onValueChange={(v) => setEditForm({ ...editForm, carrier: v })}>
+                <SelectTrigger className="mt-1.5"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectContent>
+                  {CARRIERS.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-2">
+              <Label className="text-xs">성함 *</Label>
+              <Input
+                className="mt-1.5"
+                value={editForm.customer_name}
+                onChange={(e) => setEditForm({ ...editForm, customer_name: e.target.value })}
+              />
+            </div>
+            <div className="md:col-span-3">
+              <Label className="text-xs">연락처</Label>
+              <Input
+                className="mt-1.5"
+                value={editForm.phone}
+                onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                placeholder={editForm.carrier ? "010-0000-0000" : "통신사를 먼저 선택"}
+                disabled={!editForm.carrier}
+              />
+            </div>
+            <div className="md:col-span-3">
+              <Label className="text-xs">자사 전환</Label>
+              <div
+                className={`mt-1.5 h-10 px-3 rounded-md border flex items-center gap-2 transition-colors ${
+                  editForm.converted
+                    ? "bg-emerald-500/10 border-emerald-500/40"
+                    : "bg-background/40 border-border/50"
+                }`}
+              >
+                <Switch
+                  checked={editForm.converted}
+                  onCheckedChange={(v) => setEditForm({ ...editForm, converted: v })}
+                />
+                <span className="text-xs text-muted-foreground">
+                  {editForm.converted ? "전환 완료 ✓" : "타사 → 자사 가입 시 ON"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+            <div className="md:col-span-2">
+              <Label className="text-xs">생년월일</Label>
+              <Input
+                className="mt-1.5"
+                value={editForm.birth_date}
+                onChange={(e) => setEditForm({ ...editForm, birth_date: e.target.value })}
+                placeholder="YYYY-MM-DD"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <Label className="text-xs">담당자</Label>
+              <Input
+                className="mt-1.5"
+                value={editForm.manager}
+                onChange={(e) => setEditForm({ ...editForm, manager: e.target.value })}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <Label className="text-xs">등록일</Label>
+              <Input
+                type="date"
+                className="mt-1.5"
+                value={editForm.registered_date}
+                onChange={(e) => setEditForm({ ...editForm, registered_date: e.target.value })}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <Label className="text-xs">쿠폰 발송</Label>
+              <div className="mt-1.5 h-10 px-3 rounded-md border border-border/50 bg-background/40 flex items-center gap-2">
+                <Switch
+                  checked={editForm.coupon_sent}
+                  onCheckedChange={(v) => setEditForm({ ...editForm, coupon_sent: v })}
+                />
+                <span className="text-xs text-muted-foreground">
+                  {editForm.coupon_sent ? "발송됨" : "미발송"}
+                </span>
+              </div>
+            </div>
+            <div className="md:col-span-4">
+              <Label className="text-xs">메모</Label>
+              <Input
+                className="mt-1.5"
+                value={editForm.note}
+                onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
+                placeholder="고객 특이사항"
+              />
+            </div>
+          </div>
+
+          {editing?.updated_at && (
+            <p className="text-[11px] text-muted-foreground mt-1">
+              마지막 수정:{" "}
+              {new Date(editing.updated_at).toLocaleString("ko-KR")}
+            </p>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>취소</Button>
+            <Button onClick={saveEdit} disabled={editSaving} className="bg-gradient-primary">
+              {editSaving ? "저장 중…" : "저장"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
