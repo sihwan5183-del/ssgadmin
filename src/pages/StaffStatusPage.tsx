@@ -922,10 +922,14 @@ export default function StaffStatusPage() {
                           {r.profile.team && <span className="text-[10px] text-muted-foreground ml-1.5">{r.profile.team}</span>}
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums">
-                          <span className={r.avgPct >= 100 ? "text-emerald-600 font-bold" : "text-foreground font-semibold"}>{r.avgPct}%</span>
+                          <span className={
+                            r.avgPct >= 120 ? "text-amber-500 font-extrabold" :
+                            r.avgPct >= 100 ? "text-amber-600 font-bold" :
+                            "text-foreground font-semibold"
+                          }>{r.avgPct}%{r.avgPct >= 100 && " ⭐"}</span>
                         </td>
                         <td className="px-3 py-2 text-right text-xs text-muted-foreground tabular-nums">{r.hits} / {r.goalCount}</td>
-                        <td className="px-3 py-2"><Progress value={Math.min(100, r.avgPct)} className="h-1.5" /></td>
+                        <td className="px-3 py-2"><Progress value={Math.min(100, r.avgPct)} className={cn("h-1.5", r.avgPct >= 100 && "[&>div]:bg-amber-500")} /></td>
                       </tr>
                     ))}
                   </tbody>
