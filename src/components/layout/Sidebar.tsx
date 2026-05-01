@@ -17,11 +17,12 @@ export const Sidebar = () => {
   const currentRole: MenuRole = isAdmin ? "admin" : isManager ? "manager" : "user";
 
   // 사원에게는 노출하지 않을 경로 (팀장 이상 전용)
-  // - 지출/매출 정산, 업체 관리(SEG), 관리자 설정, 직원/계정 관리, 인센티브/제품 마스터, 다운로드
+  // - 매출 정산, 업체 관리(SEG), 관리자 설정, 직원/계정 관리, 인센티브/제품 마스터, 다운로드
+  // 지출 비용 관리(/ad-spend, /expense-input)는 모든 직원 접근 허용 (본인 작성 건만 수정 가능)
   const STAFF_BLOCKED_PREFIXES = [
-    "/expense", "/expenses", "/seg", "/admin", "/account",
+    "/seg", "/admin", "/account",
     "/menu-manager", "/incentive", "/product-rate", "/equipment",
-    "/budget", "/device-models", "/field-options", "/downloads",
+    "/budget", "/device-models", "/field-options", "/downloads", "/expenses",
     "/staff-status", "/team",
   ];
 
