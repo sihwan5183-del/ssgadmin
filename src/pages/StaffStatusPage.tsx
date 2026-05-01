@@ -30,6 +30,7 @@ interface Profile {
   user_id: string;
   display_name: string;
   team: string | null;
+  status?: string | null;
 }
 
 interface SaleRow {
