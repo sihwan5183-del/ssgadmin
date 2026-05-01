@@ -412,6 +412,11 @@ const RankingPage = () => {
 
     const productBucketLoose = (p?: string | null): "모바일" | "인터넷" | "TV프리" | "스마트홈" | "부가서비스" | "기타" => {
       const v = (p ?? "").toString();
+      // 새 직원별 목표 셋팅 페이지 매핑 키 호환
+      if (v === "mobile" || v === "second") return "모바일";
+      if (v === "internet") return "인터넷";
+      if (v === "tv") return "TV프리";
+      if (v === "smarthome") return "스마트홈";
       if (/TV ?프리|티비프리|tvfree|tv free/i.test(v)) return "TV프리";
       if (/스마트홈|smart ?home|허브|구글홈|애플홈/i.test(v)) return "스마트홈";
       if (/인터넷|기가|wifi/i.test(v)) return "인터넷";
