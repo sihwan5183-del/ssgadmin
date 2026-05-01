@@ -746,7 +746,7 @@ const ChannelIntakePage = () => {
                         <td className="px-3 py-2 text-xs align-middle">
                           {r.phone ? (
                             <a href={`tel:${r.phone}`} className="flex items-center gap-1 text-foreground/80 hover:text-foreground">
-                              <Phone className="size-3" /> {r.phone}
+                              <Phone className="size-3" /> {formatPhone(r.phone)}
                             </a>
                           ) : "-"}
                         </td>
