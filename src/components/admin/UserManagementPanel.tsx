@@ -37,6 +37,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { BulkActionBar } from "@/components/common/BulkActionBar";
 import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
+import { formatPhone } from "@/lib/phoneFormat";
 
 interface UserRow {
   user_id: string;
@@ -373,7 +374,7 @@ export function UserManagementPanel() {
                 </td>
                 <td className="py-3 px-2">
                   {u.phone ? (
-                    <span className="text-foreground font-mono text-xs">{u.phone}</span>
+                    <span className="text-foreground font-mono text-xs">{formatPhone(u.phone)}</span>
                   ) : (
                     <span className="text-destructive text-xs">미등록</span>
                   )}
