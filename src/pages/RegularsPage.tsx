@@ -526,8 +526,11 @@ const RegularsPage = () => {
               ...(filterChannel !== "all" ? [{ column: "channel", op: "eq" as const, value: filterChannel }] : []),
               ...(filterConverted === "y" ? [{ column: "converted", op: "eq" as const, value: true }] : []),
               ...(filterConverted === "n" ? [{ column: "converted", op: "eq" as const, value: false }] : []),
+              ...(filterCarrier !== "all" && filterCarrier !== "ours" && filterCarrier !== "others"
+                ? [{ column: "carrier", op: "eq" as const, value: filterCarrier }]
+                : []),
             ],
-            summary: `채널=${filterChannel === "all" ? "전체" : filterChannel} · 전환=${filterConverted === "all" ? "전체" : filterConverted === "y" ? "전환완료" : "미전환"}`,
+            summary: `채널=${filterChannel === "all" ? "전체" : filterChannel} · 전환=${filterConverted === "all" ? "전체" : filterConverted === "y" ? "전환완료" : "미전환"} · 통신사=${filterCarrier === "all" ? "전체" : filterCarrier}`,
           }}
           onDone={load}
         />
