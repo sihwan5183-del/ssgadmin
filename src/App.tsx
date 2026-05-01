@@ -45,6 +45,7 @@ import AccountStaffPage from "./pages/AccountStaffPage.tsx";
 import AccountRolesPage from "./pages/AccountRolesPage.tsx";
 import SegPartnersPage from "./pages/SegPartnersPage.tsx";
 import SegCalendarPage from "./pages/SegCalendarPage.tsx";
+import StaffGoalsPage from "./pages/StaffGoalsPage.tsx";
 
 const queryClient = new QueryClient();
 
