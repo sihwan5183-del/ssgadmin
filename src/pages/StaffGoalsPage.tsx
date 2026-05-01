@@ -597,19 +597,10 @@ export default function StaffGoalsPage() {
                           )}
                         </th>
                       ))}
-                      <th className="text-right px-3 py-2 bg-primary/5">월 총합</th>
-                      <th className="text-right px-3 py-2 bg-emerald-500/5">실적 합계</th>
-                      <th className="text-right px-3 py-2 bg-emerald-500/5">
-                        핵심 달성률
-                        <div className="text-[9px] text-muted-foreground/70 font-normal">모바일 기준</div>
-                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredStaff.map((s) => {
-                      const total = totalFor(s.user_id);
-                      const ach = achievedFor(s.user_id);
-                      const rate = coreRateFor(s.user_id);
                       const mobileBase = mobileBaseFor(s.user_id);
                       return (
                         <tr key={s.user_id} className="border-b border-border/30 hover:bg-muted/20">
@@ -733,23 +724,11 @@ export default function StaffGoalsPage() {
                               </td>
                             );
                           })}
-                          <td className="px-3 py-2 text-right tabular-nums font-semibold bg-primary/5">{total}</td>
-                          <td className="px-3 py-2 text-right tabular-nums bg-emerald-500/5">{ach}</td>
-                          <td className="px-3 py-2 text-right tabular-nums bg-emerald-500/5">
-                            <span className={
-                              rate >= 120 ? "text-amber-500 font-extrabold" :
-                              rate >= 100 ? "text-emerald-600 font-bold" :
-                              rate >= 70 ? "text-amber-600 font-semibold" :
-                              "text-muted-foreground"
-                            }>
-                              {(mobileBase > 0 || total > 0) ? `${rate}%${rate >= 100 ? " ⭐" : ""}` : "-"}
-                            </span>
-                          </td>
                         </tr>
                       );
                     })}
                     {filteredStaff.length === 0 && (
-                      <tr><td colSpan={mapping.length + 6} className="text-center py-10 text-muted-foreground text-sm">결과 없음</td></tr>
+                      <tr><td colSpan={mapping.length + 3} className="text-center py-10 text-muted-foreground text-sm">결과 없음</td></tr>
                     )}
                   </tbody>
                 </table>
