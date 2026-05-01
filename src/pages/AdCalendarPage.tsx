@@ -258,13 +258,6 @@ export default function AdCalendarPage() {
     return m;
   }, [filteredCampaigns]);
 
-  // 월 일평균 지출
-  const monthAvgDaily = useMemo(() => {
-    const s = new Date(monthStart);
-    const e = new Date(monthEnd);
-    const days = Math.max(1, Math.round((e.getTime() - s.getTime()) / 86400000) + 1);
-    return monthTotal / days;
-  }, [monthStart, monthEnd, monthTotal === undefined ? 0 : monthTotal]);
 
   const monthTotal = useMemo(() => {
     let total = 0;
