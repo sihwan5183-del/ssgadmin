@@ -25,6 +25,8 @@ import { useIncentiveRates } from "@/hooks/useIncentiveRates";
 import { calcTotalIncentive, forecastIncentive, calcIncentiveForSale } from "@/lib/incentiveEngine";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { formatStaffName } from "@/lib/staffName";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface Profile {
   user_id: string;
