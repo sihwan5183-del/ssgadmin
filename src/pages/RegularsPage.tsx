@@ -783,9 +783,19 @@ const RegularsPage = () => {
                       <Switch checked={r.converted} onCheckedChange={(v) => toggleField(r.id, "converted", v)} />
                     </td>
                     <td className="px-3 py-2 text-right">
-                      <Button size="icon" variant="ghost" onClick={() => remove(r.id)}>
-                        <Trash2 className="size-4 text-destructive" />
-                      </Button>
+                      <div className="inline-flex items-center gap-1 justify-end">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => openEdit(r)}
+                          title="수정"
+                        >
+                          <Pencil className="size-4 text-primary" />
+                        </Button>
+                        <Button size="icon" variant="ghost" onClick={() => remove(r.id)} title="삭제">
+                          <Trash2 className="size-4 text-destructive" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
