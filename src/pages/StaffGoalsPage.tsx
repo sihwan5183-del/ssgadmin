@@ -194,7 +194,7 @@ export default function StaffGoalsPage() {
     // 실적 집계
     const am: Record<string, number> = {};
     (salesRows ?? []).forEach((s: any) => {
-      if (s.approval_status === "취소" || s.approval_status === "반려") return;
+      // 정책: [저장]된 모든 실적은 검수 상태와 무관하게 달성 카운트에 즉시 반영
       const key = bucketProduct(s.product, mapping);
       if (!key || !s.created_by) return;
       am[goalKey(s.created_by, key)] = (am[goalKey(s.created_by, key)] ?? 0) + 1;
