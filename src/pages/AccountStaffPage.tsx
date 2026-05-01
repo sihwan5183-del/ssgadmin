@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useStores } from "@/hooks/useStores";
 import { ROLE_LABELS, type AppRole } from "@/hooks/useRole";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
-import { useRole } from "@/hooks/useRole";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -51,7 +50,6 @@ export default function AccountStaffPage() {
   const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
   const [deleting, setDeleting] = useState(false);
   const { isSuperAdmin } = useSuperAdmin();
-  const { isAdmin } = useRole();
   const { stores } = useStores();
   const yearMonth = useMemo(() => new Date().toISOString().slice(0, 7), []);
   const [successMap, setSuccessMap] = useState<Record<string, number>>({});
@@ -235,7 +233,7 @@ export default function AccountStaffPage() {
                   );
                 })}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={13} className="text-center py-10 text-muted-foreground text-sm">결과 없음</td></tr>
+                  <tr><td colSpan={11} className="text-center py-10 text-muted-foreground text-sm">결과 없음</td></tr>
                 )}
               </tbody>
             </table>
