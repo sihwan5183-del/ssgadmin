@@ -667,6 +667,16 @@ const ChannelIntakePage = () => {
             )}
             <Button
               size="sm"
+              variant="outline"
+              className="h-9 gap-1.5"
+              onClick={downloadCSV}
+              title="현재 필터링된 결과를 CSV 파일로 저장"
+            >
+              <Download className="size-3.5" /> 엑셀(CSV) 다운로드
+              <Badge variant="secondary" className="text-[10px] h-4 px-1 ml-0.5">{filtered.length}</Badge>
+            </Button>
+            <Button
+              size="sm"
               variant="destructive"
               className="h-9 gap-1.5"
               disabled={selectedIds.size === 0}
