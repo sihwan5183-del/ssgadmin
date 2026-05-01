@@ -388,10 +388,25 @@ Deno.serve(async (req) => {
       if (body.user_id === callerId) {
         return json({ error: "본인 계정은 삭제할 수 없습니다" }, 400);
       }
-      // 슈퍼관리자(h860306@naver.com)만 가능
+      // 관리자(admin) 또는 슈퍼관리자(h860306@naver.com) 만 가능
       const { data: callerUser } = await admin.auth.admin.getUserById(callerId);
-      if ((callerUser?.user?.email ?? "").toLowerCase() !== "h860306@naver.com") {
-        return json({ error: "슈퍼관리자만 계정을 삭제할 수 있습니다" }, 403);
+      const callerEmail = (callerUser?.user?.email ?? "").toLowerCase();
+      const isSuper = callerEmail === "h860306@naver.com";
+      // 위에서 isAdmin 으로 통과된 호출만 도달하지만, 명시적 재확인
+      if (!isAdmin && !isSuper) {
+        return json({ error: "관리자만 계정을 삭제할 수 있습니다" }, 403);
+      }
+      // 정지/퇴사 상태 계정만 삭제 허용 (활성/대기 계정 보호)
+      const { data: targetProf } = await admin
+        .from("profiles")
+        .select("status")
+        .eq("user_id", body.user_id)
+        .maybeSingle();
+      const targetStatus = (targetProf?.status ?? "").toLowerCase();
+      if (!isSuper && targetStatus !== "suspended" && targetStatus !== "resigned") {
+        return json({
+          error: "정지(suspended) 또는 퇴사(resigned) 상태의 계정만 삭제할 수 있습니다",
+        }, 400);
       }
       // 소프트 삭제: 데이터 보존, 로그인 차단, 모든 세션 종료
       const { error: banErr } = await admin.auth.admin.updateUserById(body.user_id, {

@@ -25,11 +25,14 @@ import { useIncentiveRates } from "@/hooks/useIncentiveRates";
 import { calcTotalIncentive, forecastIncentive, calcIncentiveForSale } from "@/lib/incentiveEngine";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { formatStaffName } from "@/lib/staffName";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface Profile {
   user_id: string;
   display_name: string;
   team: string | null;
+  status?: string | null;
 }
 
 interface SaleRow {
@@ -188,6 +191,7 @@ export default function StaffStatusPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [search, setSearch] = useState("");
   const [team, setTeam] = useState<string>("__all");
+  const [includeResigned, setIncludeResigned] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [allSales, setAllSales] = useState<SaleRow[]>([]);
   const [allInquiries, setAllInquiries] = useState<InquiryRow[]>([]);
@@ -223,8 +227,8 @@ export default function StaffStatusPage() {
     (async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("user_id, display_name, team")
-        .eq("status", "active")
+        .select("user_id, display_name, team, status")
+        .in("status", ["active", "leave", "suspended", "resigned", "deleted"])
         .order("display_name");
       const list = (data ?? []) as Profile[];
       const visible = canViewAll ? list : list.filter((p) => p.user_id === user.id);
@@ -243,9 +247,11 @@ export default function StaffStatusPage() {
     return profiles.filter((p) => {
       if (team !== "__all" && (p.team ?? "") !== team) return false;
       if (search && !p.display_name.toLowerCase().includes(search.toLowerCase())) return false;
+      const resigned = p.status === "resigned" || p.status === "deleted";
+      if (resigned && !includeResigned) return false;
       return true;
     });
-  }, [profiles, search, team]);
+  }, [profiles, search, team, includeResigned]);
 
   const selected = profiles.find((p) => p.user_id === selectedId) ?? null;
 
@@ -805,6 +811,15 @@ export default function StaffStatusPage() {
                 </SelectContent>
               </Select>
             )}
+            {canViewAll && (
+              <label className="inline-flex items-center gap-2 text-xs text-muted-foreground select-none">
+                <Checkbox
+                  checked={includeResigned}
+                  onCheckedChange={(v) => setIncludeResigned(!!v)}
+                />
+                <span>퇴사자 포함 보기</span>
+              </label>
+            )}
           </div>
         </Card>
 
@@ -847,7 +862,9 @@ export default function StaffStatusPage() {
                             "bg-card/60 text-muted-foreground"
                           }`}>#{rank}</div>
                           <div className="min-w-0">
-                            <div className="text-sm font-semibold truncate">{row.profile.display_name}</div>
+                            <div className="text-sm font-semibold truncate">
+                              {formatStaffName(row.profile.display_name, row.profile.status)}
+                            </div>
                             {row.profile.team && (
                               <div className="text-[10px] text-muted-foreground truncate">{row.profile.team}</div>
                             )}
@@ -918,7 +935,7 @@ export default function StaffStatusPage() {
                             "bg-muted/50 text-muted-foreground"}`}>{i + 1}</span>
                         </td>
                         <td className="px-3 py-2 font-medium">
-                          {r.profile.display_name}
+                          {formatStaffName(r.profile.display_name, r.profile.status)}
                           {r.profile.team && <span className="text-[10px] text-muted-foreground ml-1.5">{r.profile.team}</span>}
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums">
@@ -951,7 +968,7 @@ export default function StaffStatusPage() {
               <div>
                 <div className="text-xs text-muted-foreground">상세 현황</div>
                 <h2 className="text-xl font-bold flex items-center gap-2">
-                  {selected.display_name}
+                  {formatStaffName(selected.display_name, selected.status)}
                   {selected.team && <Badge variant="outline" className="text-xs">{selected.team}</Badge>}
                 </h2>
               </div>
