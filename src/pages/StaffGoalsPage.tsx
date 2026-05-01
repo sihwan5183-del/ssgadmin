@@ -745,10 +745,6 @@ export default function StaffGoalsPage() {
             </Card>
           ) : teams.map((team) => {
             const mobileBase = teamMobileBase(team);
-            const teamTotal = mapping.reduce((s, m) => s + teamCellCount(team, m.key), 0);
-            const membersTotal = mapping.reduce((s, m) => s + teamMembersSumFor(team, m.key), 0);
-            const ratio = teamTotal > 0 ? Math.min(100, Math.round((membersTotal / teamTotal) * 100)) : 0;
-            const overshoot = teamTotal > 0 && membersTotal > teamTotal;
             return (
               <Card key={team} className="overflow-hidden">
                 <div className="px-4 py-3 border-b border-border/40 flex items-center gap-3 flex-wrap">
@@ -759,25 +755,6 @@ export default function StaffGoalsPage() {
                   <Badge variant="outline" className="text-[10px]">
                     팀원 {staff.filter((s) => (s.team ?? "") === team).length}명
                   </Badge>
-                  <div className="flex-1 min-w-[200px] max-w-md ml-auto">
-                    <div className="flex items-center justify-between text-[11px] mb-1">
-                      <span className="text-muted-foreground">팀 합계 vs 팀 목표</span>
-                      <span className="tabular-nums">
-                        <span className={overshoot ? "text-amber-500 font-semibold" : "font-semibold"}>{membersTotal}</span>
-                        <span className="text-muted-foreground"> / {teamTotal}</span>
-                        <span className="ml-2 text-muted-foreground">({ratio}%)</span>
-                      </span>
-                    </div>
-                    <div className="h-2 rounded-full bg-muted overflow-hidden">
-                      <div
-                        className={cn(
-                          "h-full transition-all",
-                          overshoot ? "bg-amber-500" : ratio >= 100 ? "bg-emerald-500" : "bg-primary",
-                        )}
-                        style={{ width: `${Math.min(100, teamTotal > 0 ? (membersTotal / teamTotal) * 100 : 0)}%` }}
-                      />
-                    </div>
-                  </div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -793,7 +770,6 @@ export default function StaffGoalsPage() {
                             {m.key === MOBILE_KEY && <span className="ml-1 text-[9px] text-primary">(기준)</span>}
                           </th>
                         ))}
-                        <th className="text-right px-3 py-2 bg-primary/5">총합</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -864,11 +840,10 @@ export default function StaffGoalsPage() {
                             </td>
                           );
                         })}
-                        <td className="px-3 py-2 text-right tabular-nums font-bold bg-primary/5">{teamTotal}</td>
                       </tr>
                       {/* 팀원 합계 행 */}
                       <tr className="bg-muted/20">
-                        <td className="px-3 py-2 text-xs text-muted-foreground">팀원 합계</td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground">팀원 합계 (항목별)</td>
                         {mapping.map((m) => {
                           const sum = teamMembersSumFor(team, m.key);
                           const goal = teamCellCount(team, m.key);
@@ -901,7 +876,6 @@ export default function StaffGoalsPage() {
                             </td>
                           );
                         })}
-                        <td className="px-3 py-2 text-right tabular-nums text-xs">{membersTotal}</td>
                       </tr>
                     </tbody>
                   </table>
