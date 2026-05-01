@@ -459,6 +459,15 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                       !f.rate_plan || allowed.length === 0 || allowed.includes(f.rate_plan);
                     return { ...f, product: v, rate_plan: keepRate ? f.rate_plan : null };
                   });
+                  // 모바일 2nd 가 아니면 약정 정보(contract_type) 초기화 — 비활성 필드의 잔존값 제거
+                  if (v !== "2ND") {
+                    setCustomFields((cf) => {
+                      if (!("contract_type" in cf)) return cf;
+                      const next = { ...cf };
+                      delete next.contract_type;
+                      return next;
+                    });
+                  }
                   const defaults = getDefaultsForProduct(v);
                   if (defaults) {
                     const filled = new Set<string>();
