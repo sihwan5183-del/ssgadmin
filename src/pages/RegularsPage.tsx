@@ -648,6 +648,21 @@ const RegularsPage = () => {
               </SelectContent>
             </Select>
           </div>
+          <div className="w-44">
+            <Label className="text-xs">등록 직원</Label>
+            <Select value={filterStaff} onValueChange={setFilterStaff}>
+              <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 직원</SelectItem>
+                {profiles
+                  .slice()
+                  .sort((a, b) => a.display_name.localeCompare(b.display_name, "ko"))
+                  .map((p) => (
+                    <SelectItem key={p.user_id} value={p.user_id}>{p.display_name}</SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Badge variant="outline" className="border-primary/40 text-primary-glow ml-auto">
             {filtered.length}건
           </Badge>
