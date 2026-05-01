@@ -7,6 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -18,6 +26,7 @@ import {
   ArrowDown,
   ArrowUp,
   ListChecks,
+  Pencil,
   Plus,
   Star,
   Trash2,
@@ -42,6 +51,55 @@ export default function PendingItemsAdminPage() {
   const [busy, setBusy] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [newRequired, setNewRequired] = useState(false);
+  // 수정 모달 상태
+  const [editing, setEditing] = useState<PendingItemDefinition | null>(null);
+  const [editLabel, setEditLabel] = useState("");
+  const [editSort, setEditSort] = useState<number>(0);
+  const [editActive, setEditActive] = useState(true);
+  const [editRequired, setEditRequired] = useState(false);
+  const [editBusy, setEditBusy] = useState(false);
+
+  const openEdit = (d: PendingItemDefinition) => {
+    setEditing(d);
+    setEditLabel(d.label);
+    setEditSort(d.sort_order);
+    setEditActive(d.active);
+    setEditRequired(d.required);
+  };
+
+  const saveEdit = async () => {
+    if (!editing) return;
+    const label = editLabel.trim();
+    if (!label) {
+      toast.error("항목 명칭을 입력하세요");
+      return;
+    }
+    if (
+      allItems.some(
+        (d) => d.id !== editing.id && d.label === label,
+      )
+    ) {
+      toast.error("이미 동일한 명칭의 항목이 있습니다");
+      return;
+    }
+    setEditBusy(true);
+    const { error } = await supabase
+      .from("pending_item_definitions")
+      .update({
+        label,
+        sort_order: Number.isFinite(editSort) ? Math.trunc(editSort) : 0,
+        active: editActive,
+        required: editRequired,
+      })
+      .eq("id", editing.id);
+    setEditBusy(false);
+    if (error) {
+      toast.error("수정 실패", { description: error.message });
+      return;
+    }
+    toast.success("수정되었습니다");
+    setEditing(null);
+  };
 
   // realtime 으로도 들어오지만, 사용자가 페이지 진입 직후 즉시 최신화
   useEffect(() => {
@@ -283,15 +341,28 @@ export default function PendingItemsAdminPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7"
-                      onClick={() => removeItem(d.id, d.label)}
-                      aria-label="삭제"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
+                    <div className="inline-flex items-center justify-end gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7"
+                        onClick={() => openEdit(d)}
+                        aria-label="수정"
+                        title="수정"
+                      >
+                        <Pencil className="size-3.5" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => removeItem(d.id, d.label)}
+                        aria-label="삭제"
+                        title="삭제"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -304,6 +375,70 @@ export default function PendingItemsAdminPage() {
         ※ <Star className="inline size-3 text-amber-500 fill-amber-400 align-text-bottom" /> 필수 체크 항목은
         실적 입력 시 별표로 표시됩니다. 향후 검수 단계에서 [필수 항목 미체크 시 다음 단계 진행 차단] 로직과 연동됩니다.
       </p>
+
+      {/* 수정 모달 */}
+      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="size-4" /> 미처리 항목 수정
+            </DialogTitle>
+            <DialogDescription>
+              저장 시 실적 입력창과 검수창에 즉시 반영됩니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs text-muted-foreground">항목 명칭</Label>
+              <Input
+                value={editLabel}
+                onChange={(e) => setEditLabel(e.target.value)}
+                placeholder="예: 제휴카드 발급"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">정렬 순서</Label>
+              <Input
+                type="number"
+                inputMode="numeric"
+                value={editSort}
+                onChange={(e) => setEditSort(Number(e.target.value))}
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                숫자가 작을수록 실적 입력창 체크리스트의 위쪽에 표시됩니다.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-md border border-border/50 bg-card/40">
+                <Label htmlFor="edit-active" className="text-xs cursor-pointer">사용</Label>
+                <Switch
+                  id="edit-active"
+                  checked={editActive}
+                  onCheckedChange={setEditActive}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-md border border-border/50 bg-card/40">
+                <Label htmlFor="edit-required" className="text-xs cursor-pointer flex items-center gap-1">
+                  <Star className="size-3 text-amber-500" /> 필수 체크
+                </Label>
+                <Switch
+                  id="edit-required"
+                  checked={editRequired}
+                  onCheckedChange={setEditRequired}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditing(null)} disabled={editBusy}>
+              취소
+            </Button>
+            <Button onClick={saveEdit} disabled={editBusy}>
+              {editBusy ? "저장 중…" : "저장"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
