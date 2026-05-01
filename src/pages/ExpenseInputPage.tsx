@@ -1196,11 +1196,13 @@ export default function ExpenseInputPage() {
         <PaginationBar page={page} pageSize={PAGE_SIZE} total={total} onChange={setPage} />
       </Card>
 
-      <BulkActionBar count={bulk.selectedCount} onClear={bulk.clear}>
-        <Button size="sm" variant="destructive" onClick={() => setBulkDeleteOpen(true)} disabled={bulkBusy}>
-          <Trash2 className="size-3.5 mr-1" /> 선택 삭제
-        </Button>
-      </BulkActionBar>
+      {isAdmin && (
+        <BulkActionBar count={bulk.selectedCount} onClear={bulk.clear}>
+          <Button size="sm" variant="destructive" onClick={() => setBulkDeleteOpen(true)} disabled={bulkBusy}>
+            <Trash2 className="size-3.5 mr-1" /> 선택 삭제
+          </Button>
+        </BulkActionBar>
+      )}
 
       <BulkDeleteDialog
         open={bulkDeleteOpen}
