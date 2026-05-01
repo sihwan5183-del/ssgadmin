@@ -48,6 +48,8 @@ import SegPartnersPage from "./pages/SegPartnersPage.tsx";
 import SegCalendarPage from "./pages/SegCalendarPage.tsx";
 import StaffGoalsPage from "./pages/StaffGoalsPage.tsx";
 import PendingItemsAdminPage from "./pages/PendingItemsAdminPage.tsx";
+import PlanRetentionAdminPage from "./pages/PlanRetentionAdminPage.tsx";
+import PlanChangeCalendarPage from "./pages/PlanChangeCalendarPage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -117,6 +119,15 @@ const App = () => {
                           }
                         />
                         <Route path="/admin/pending-items" element={<PendingItemsAdminPage />} />
+                        <Route
+                          path="/admin/plan-retention"
+                          element={
+                            <AdminOnlyRoute>
+                              <PlanRetentionAdminPage />
+                            </AdminOnlyRoute>
+                          }
+                        />
+                        <Route path="/plan-change-calendar" element={<PlanChangeCalendarPage />} />
                         <Route path="/admin/accounts" element={<AccountManagementPage />}>
                           <Route path="pending" element={<AccountPendingPage />} />
                           <Route path="staff" element={<AccountStaffPage />} />
