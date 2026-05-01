@@ -463,8 +463,12 @@ export default function AdCalendarPage() {
             )}
           </div>
           <div className="text-sm">
-            <span className="text-muted-foreground">월 집행 합계 </span>
-            <span className="font-bold text-revenue tabular-nums">₩{monthTotal.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</span>
+            <span className="text-muted-foreground">월 지출 합계 </span>
+            <span className="font-bold text-revenue tabular-nums">₩{monthTotal.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}원</span>
+          </div>
+          <div className="text-sm">
+            <span className="text-muted-foreground">일평균 지출 </span>
+            <span className="font-bold text-revenue tabular-nums">₩{Math.round(monthAvgDaily).toLocaleString("ko-KR")}원</span>
           </div>
           <div className="text-sm">
             <span className="text-muted-foreground">캠페인 </span>
