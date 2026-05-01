@@ -811,6 +811,15 @@ export default function StaffStatusPage() {
                 </SelectContent>
               </Select>
             )}
+            {canViewAll && (
+              <label className="inline-flex items-center gap-2 text-xs text-muted-foreground select-none">
+                <Checkbox
+                  checked={includeResigned}
+                  onCheckedChange={(v) => setIncludeResigned(!!v)}
+                />
+                <span>퇴사자 포함 보기</span>
+              </label>
+            )}
           </div>
         </Card>
 
