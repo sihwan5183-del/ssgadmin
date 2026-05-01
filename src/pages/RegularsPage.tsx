@@ -13,7 +13,7 @@ import {
   Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell,
 } from "recharts";
 import { HeartHandshake, Send, RefreshCw, Trash2, Search, TrendingUp } from "lucide-react";
-import { Pencil } from "lucide-react";
+import { Pencil, Users, Trophy, Medal, Award } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
