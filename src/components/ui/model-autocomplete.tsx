@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Smartphone, Check, Star } from "lucide-react";
+import { AlertTriangle, Smartphone, Check, Star, XCircle } from "lucide-react";
 import { useDeviceModels, type DeviceModel } from "@/hooks/useDeviceModels";
 import { cn } from "@/lib/utils";
 
@@ -10,19 +10,20 @@ interface Props {
   onChange: (petName: string) => void;
   placeholder?: string;
   className?: string;
-  /** 미등록 모델 입력 시 콜백 (false 반환 시 onChange 막힘 — 현재는 정보용) */
+  /** 미등록 모델 입력 시 콜백 (정보용) */
   onUnmapped?: (raw: string) => void;
   disabled?: boolean;
 }
 
 /**
- * 모델명 자동완성 입력 — 어드민 마스터에 등록된 펫네임/공식명/유사어 검색.
- * 미등록값 입력 시 경고 배지 표시. 선택 시 펫네임으로 정규화해 저장.
+ * 모델명 검색 입력 — 어드민 마스터에 등록된 펫네임/공식명/유사어를 후보로 보여줌.
+ * 자동 매칭/자동 등록 없음. 사용자가 드롭다운에서 직접 클릭하거나 Enter 로 선택해야만
+ * 실제 값이 저장되며, 그 외 텍스트 입력은 임시 입력으로만 유지됨 (저장 시 차단).
  */
 export const ModelAutocomplete = ({
   value, onChange, placeholder, className, onUnmapped, disabled,
 }: Props) => {
-  const { searchModels, matchModel, models, loading } = useDeviceModels(true);
+  const { searchModels, models, loading } = useDeviceModels(true);
   const [input, setInput] = useState(value ?? "");
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
@@ -46,9 +47,13 @@ export const ModelAutocomplete = ({
     const sb = (b as any).is_strategy ? 1 : 0;
     return sb - sa;
   });
-  const matched = matchModel(input);
-  const isMapped = !!matched && matched.model_name === input;
-  const showUnmappedWarn = !loading && input.trim().length > 0 && !matched;
+  // 정확 매칭 (펫네임 == 입력값) — 자동 매칭 로직 제거, 100% 일치만 인정
+  const isConfirmed =
+    !!value && models.some((m) => m.model_name === value) && input === value;
+  const showNoMatch =
+    !loading && input.trim().length > 0 && !isConfirmed && suggestions.length === 0;
+  const showNeedsConfirm =
+    !loading && input.trim().length > 0 && !isConfirmed && suggestions.length > 0;
 
   const choose = (m: DeviceModel) => {
     setInput(m.model_name);
@@ -62,16 +67,14 @@ export const ModelAutocomplete = ({
         value={input}
         disabled={disabled}
         onChange={(e) => {
-          setInput(e.target.value);
+          const v = e.target.value;
+          setInput(v);
           setOpen(true);
           setHighlight(0);
-          // 즉시 매칭되면 펫네임으로 저장, 아니면 원본 그대로
-          const m = matchModel(e.target.value);
-          if (m) onChange(m.model_name);
-          else {
-            onChange(e.target.value);
-            onUnmapped?.(e.target.value);
-          }
+          // 자동 매칭/자동 등록 없음 — 사용자가 후보를 클릭/Enter 로 선택해야만 onChange 발생
+          // 텍스트가 변경되면 기존에 확정된 값은 무효화
+          if (value) onChange("");
+          if (v.trim()) onUnmapped?.(v);
         }}
         onFocus={() => setOpen(true)}
         onKeyDown={(e) => {
@@ -89,28 +92,35 @@ export const ModelAutocomplete = ({
             setOpen(false);
           }
         }}
-        placeholder={placeholder ?? "모델명 입력 (예: 942, S26, SM-S942N)"}
-        className="h-11 bg-input/60 pr-9"
+        placeholder={placeholder ?? "모델명 검색 후 목록에서 선택 (예: S26)"}
+        className={cn(
+          "h-11 bg-input/60 pr-9",
+          showNoMatch && "border-destructive/60 focus-visible:ring-destructive/40",
+          showNeedsConfirm && "border-amber-400/60",
+        )}
+        aria-invalid={showNoMatch || showNeedsConfirm}
       />
       {/* 상태 아이콘 */}
       <div className="absolute right-2 top-1/2 -translate-y-1/2">
-        {isMapped ? (
+        {isConfirmed ? (
           <Check className="size-4 text-emerald-400" />
-        ) : showUnmappedWarn ? (
+        ) : showNoMatch ? (
+          <XCircle className="size-4 text-destructive" />
+        ) : showNeedsConfirm ? (
           <AlertTriangle className="size-4 text-amber-400" />
         ) : null}
       </div>
 
-      {showUnmappedWarn && (
-        <div className="mt-1 text-[11px] text-amber-400 flex items-center gap-1">
-          <AlertTriangle className="size-3" />
-          등록되지 않은 모델입니다. 어드민에서 확인해주세요.
+      {showNoMatch && (
+        <div className="mt-1 text-[11px] text-destructive flex items-center gap-1">
+          <XCircle className="size-3" />
+          일치하는 모델이 없습니다. 관리자에게 모델 등록을 요청하세요.
         </div>
       )}
-      {matched && !isMapped && (
-        <div className="mt-1 text-[11px] text-emerald-400 flex items-center gap-1">
-          <Check className="size-3" />
-          저장 시 <b className="font-semibold">{matched.model_name}</b> 으로 자동 통합됩니다.
+      {showNeedsConfirm && (
+        <div className="mt-1 text-[11px] text-amber-400 flex items-center gap-1">
+          <AlertTriangle className="size-3" />
+          아래 목록에서 모델을 직접 선택해야 저장됩니다.
         </div>
       )}
 
