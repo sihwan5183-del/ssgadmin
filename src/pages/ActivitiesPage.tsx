@@ -23,6 +23,7 @@ import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
 import { PlannerSuperView } from "@/components/sales/PlannerSuperView";
 import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
+import { useStaffNames } from "@/hooks/useStaffNames";
 
 interface SaleLite {
   id: string;
