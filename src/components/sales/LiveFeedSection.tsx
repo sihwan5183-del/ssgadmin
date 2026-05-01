@@ -13,6 +13,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useViewScope } from "@/contexts/ViewScopeContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useStaffNames } from "@/hooks/useStaffNames";
 import { useRole } from "@/hooks/useRole";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
@@ -63,6 +64,7 @@ function timeAgo(iso: string) {
 }
 
 export function LiveFeedSection() {
+  const { resolve: resolveStaff } = useStaffNames();
   const { scope } = useViewScope();
   const { user } = useAuth();
   const { isAdmin, isManager } = useRole();
@@ -292,7 +294,7 @@ export function LiveFeedSection() {
                       <div className="mt-1 text-[11px] text-muted-foreground flex items-center gap-3 flex-wrap">
                         <span className="flex items-center gap-1"><Smartphone className="size-3" />{r.device_model ?? "-"}</span>
                         <span className="flex items-center gap-1"><Phone className="size-3" />{r.phone ?? "-"}</span>
-                        <span>{r.channel ?? "-"} · {r.manager ?? "-"}</span>
+                        <span>{r.channel ?? "-"} · {resolveStaff(r.manager, "-")}</span>
                       </div>
                       {hasPending && (
                         <div className="mt-1.5 flex flex-wrap gap-1">
@@ -359,7 +361,7 @@ export function LiveFeedSection() {
                       <ArrowUpRight className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100 ml-auto" />
                     </div>
                     <div className="text-[10px] text-muted-foreground truncate">
-                      {r.device_model ?? "-"} · {r.open_date ?? "-"} · {r.manager ?? "-"}
+                      {r.device_model ?? "-"} · {r.open_date ?? "-"} · {resolveStaff(r.manager, "-")}
                     </div>
                   </button>
                 ))

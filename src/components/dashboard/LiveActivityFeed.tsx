@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle2, FileSearch, ShieldCheck, Radio, Activity } from "lucide-react";
+import { useStaffNames } from "@/hooks/useStaffNames";
 
 type FeedItem = {
   id: string;
@@ -30,6 +31,7 @@ const fmtTime = (iso: string) => {
 export const LiveActivityFeed = () => {
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const { resolve: resolveStaff } = useStaffNames();
 
   const load = async () => {
     const { data } = await supabase
@@ -118,7 +120,7 @@ export const LiveActivityFeed = () => {
                       </div>
                       <div className="text-[10px] text-muted-foreground truncate">
                         {it.subtitle}
-                        {it.manager ? ` · ${it.manager}` : ""}
+                        {it.manager ? ` · ${resolveStaff(it.manager, it.manager)}` : ""}
                       </div>
                     </div>
                     <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{fmtTime(it.at)}</span>

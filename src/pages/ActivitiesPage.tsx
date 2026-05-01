@@ -23,6 +23,7 @@ import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
 import { PlannerSuperView } from "@/components/sales/PlannerSuperView";
 import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
+import { useStaffNames } from "@/hooks/useStaffNames";
 
 interface SaleLite {
   id: string;
@@ -40,6 +41,7 @@ interface SaleLite {
 const PAGE_SIZE = 100;
 
 function MissingDocsSection() {
+  const { resolve: resolveStaff } = useStaffNames();
   const [rows, setRows] = useState<SaleLite[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -166,7 +168,7 @@ function MissingDocsSection() {
                     </td>
                     <td className="px-3 py-2.5 text-xs">{r.open_date ?? "-"}</td>
                     <td className="px-3 py-2.5 text-xs text-muted-foreground">
-                      {r.channel ?? "-"} / {r.manager ?? "-"}
+                      {r.channel ?? "-"} / {resolveStaff(r.manager, "-")}
                     </td>
                     <td className="px-3 py-2.5">
                       <Badge variant="outline" className="text-[10px]">
@@ -225,6 +227,7 @@ interface PendingSale {
 }
 
 function PendingItemsSection() {
+  const { resolve: resolveStaff } = useStaffNames();
   const [rows, setRows] = useState<PendingSale[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -376,7 +379,7 @@ function PendingItemsSection() {
                       <div className="text-muted-foreground font-mono text-[10px]">{r.device_serial ?? "-"}</div>
                     </td>
                     <td className="px-3 py-2.5 text-xs">{r.open_date ?? "-"}</td>
-                    <td className="px-3 py-2.5 text-xs text-muted-foreground">{r.channel ?? "-"} / {r.manager ?? "-"}</td>
+                    <td className="px-3 py-2.5 text-xs text-muted-foreground">{r.channel ?? "-"} / {resolveStaff(r.manager, "-")}</td>
                     <td className="px-3 py-2.5">
                       <div className="flex flex-wrap gap-1 max-w-[260px]">
                         {r.pending_items.map((p, i) => (
