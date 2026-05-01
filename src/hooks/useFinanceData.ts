@@ -60,6 +60,15 @@ export interface FinanceData {
   roi: number;                  // netMargin / totalExpense * 100
   cpaAvg: number;               // totalAdSpend / totalSuccess
   marginRate: number;           // netMargin / totalRevenue * 100
+  // 직전 동일 길이 구간 (증감 비교용)
+  prev: {
+    totalRevenue: number;
+    totalExpense: number;
+    netMargin: number;
+    roi: number;
+    totalSuccess: number;
+    cpaAvg: number;
+  };
   // 신규 정밀 합산 (대표님 정의 기준)
   revenueBreakdown: { label: string; amount: number; key: string }[];
   expenseBreakdown: { label: string; amount: number; key: string }[];
