@@ -227,6 +227,7 @@ interface PendingSale {
 }
 
 function PendingItemsSection() {
+  const { resolve: resolveStaff } = useStaffNames();
   const [rows, setRows] = useState<PendingSale[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
