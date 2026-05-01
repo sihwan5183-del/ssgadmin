@@ -340,6 +340,7 @@ const RegularInputPage = () => {
                   <th className="text-left py-2 px-2">등록일</th>
                   <th className="text-left py-2 px-2">채널</th>
                   <th className="text-left py-2 px-2">고객명</th>
+                  <th className="text-left py-2 px-2">통신사</th>
                   <th className="text-left py-2 px-2">전화번호</th>
                   <th className="text-left py-2 px-2">담당자</th>
                   <th className="text-center py-2 px-2">쿠폰</th>
@@ -356,6 +357,18 @@ const RegularInputPage = () => {
                       <Badge variant="outline" className="text-xs">{r.channel}</Badge>
                     </td>
                     <td className="py-2 px-2 font-medium">{r.customer_name}</td>
+                    <td className="py-2 px-2">
+                      {r.carrier ? (
+                        <Badge
+                          variant={isOurCarrier(r.carrier) ? "default" : "outline"}
+                          className={`text-[10px] ${isOurCarrier(r.carrier) ? "" : "border-amber-500/50 text-amber-600"}`}
+                        >
+                          {!isOurCarrier(r.carrier) && "🔁 "}{r.carrier}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
+                    </td>
                     <td className="py-2 px-2 text-muted-foreground tabular-nums">{r.phone ?? "-"}</td>
                     <td className="py-2 px-2 text-muted-foreground">{r.manager ?? "-"}</td>
                     <td className="py-2 px-2 text-center">
