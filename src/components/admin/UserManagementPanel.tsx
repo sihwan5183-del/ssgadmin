@@ -445,7 +445,7 @@ export function UserManagementPanel() {
                 <Input value={editing.display_name ?? ""} onChange={(e) => setEditing({ ...editing, display_name: e.target.value })} />
               </Field>
               <Field label="연락처">
-                <Input value={editing.phone ?? ""} onChange={(e) => setEditing({ ...editing, phone: e.target.value })} />
+                <Input value={editing.phone ?? ""} onChange={(e) => setEditing({ ...editing, phone: formatPhone(e.target.value) })} placeholder="010-0000-0000" type="tel" inputMode="numeric" maxLength={13} />
               </Field>
               <Field label="매장">
                 <Input value={editing.store ?? ""} onChange={(e) => setEditing({ ...editing, store: e.target.value })} />
