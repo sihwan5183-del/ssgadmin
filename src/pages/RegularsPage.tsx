@@ -606,6 +606,7 @@ const RegularsPage = () => {
                   <th className="text-left px-3 py-2">등록일</th>
                   <th className="text-left px-3 py-2">채널</th>
                   <th className="text-left px-3 py-2">고객명</th>
+                  <th className="text-left px-3 py-2">통신사</th>
                   <th className="text-left px-3 py-2">연락처</th>
                   <th className="text-left px-3 py-2">담당자</th>
                   <th className="text-center px-3 py-2">쿠폰</th>
@@ -629,6 +630,22 @@ const RegularsPage = () => {
                       </span>
                     </td>
                     <td className="px-3 py-2 font-medium">{r.customer_name}</td>
+                    <td className="px-3 py-2">
+                      {r.carrier ? (
+                        <span
+                          className={`text-[11px] font-medium px-2 py-1 rounded-md ${
+                            isOurCarrier(r.carrier)
+                              ? "bg-primary/15 text-primary-glow"
+                              : "bg-amber-500/15 text-amber-600 border border-amber-500/30"
+                          }`}
+                          title={isOurCarrier(r.carrier) ? "자사 고객" : "타사 고객"}
+                        >
+                          {!isOurCarrier(r.carrier) && "🔁 "}{r.carrier}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-muted-foreground">{r.phone ?? "—"}</td>
                     <td className="px-3 py-2 text-muted-foreground">{r.manager ?? "—"}</td>
                     <td className="px-3 py-2 text-center">
