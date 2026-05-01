@@ -487,6 +487,20 @@ const RegularsPage = () => {
               </SelectContent>
             </Select>
           </div>
+          <div className="w-44">
+            <Label className="text-xs">통신사</Label>
+            <Select value={filterCarrier} onValueChange={setFilterCarrier}>
+              <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체</SelectItem>
+                <SelectItem value="ours">자사(LGU+)만</SelectItem>
+                <SelectItem value="others">타사만</SelectItem>
+                {CARRIERS.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Badge variant="outline" className="border-primary/40 text-primary-glow ml-auto">
             {filtered.length}건
           </Badge>
