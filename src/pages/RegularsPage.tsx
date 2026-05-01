@@ -796,6 +796,7 @@ const RegularsPage = () => {
                   <th className="text-left px-3 py-2">통신사</th>
                   <th className="text-left px-3 py-2">연락처</th>
                   <th className="text-left px-3 py-2">담당자</th>
+                  <th className="text-left px-3 py-2">등록자</th>
                   <th className="text-center px-3 py-2">쿠폰</th>
                   <th className="text-center px-3 py-2">전환</th>
                   <th className="text-right px-3 py-2"> </th>
@@ -852,6 +853,11 @@ const RegularsPage = () => {
                     </td>
                     <td className="px-3 py-2 text-muted-foreground">{r.phone ?? "—"}</td>
                     <td className="px-3 py-2 text-muted-foreground">{r.manager ?? "—"}</td>
+                    <td className="px-3 py-2">
+                      <span className="text-[11px] font-medium px-2 py-1 rounded-md bg-primary/10 text-primary-glow">
+                        {nameOf(r.created_by)}
+                      </span>
+                    </td>
                     <td className="px-3 py-2 text-center">
                       <Switch checked={r.coupon_sent} onCheckedChange={(v) => toggleField(r.id, "coupon_sent", v)} />
                     </td>
