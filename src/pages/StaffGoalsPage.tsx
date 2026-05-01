@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -89,24 +88,6 @@ const effectiveCount = (entry: GoalEntry, mobileBase: number) =>
 /* -------------------- Page -------------------- */
 export default function StaffGoalsPage() {
   const { isAdmin, isManager, loading: roleLoading } = useRole();
-
-  // 접근 권한: 관리자(또는 대표) 만 허용. 그 외 계정은 메인으로 강제 이동
-  useEffect(() => {
-    if (!roleLoading && !isAdmin) {
-      toast.error("접근 권한이 없습니다");
-    }
-  }, [roleLoading, isAdmin]);
-  if (roleLoading) {
-    return (
-      <div className="min-h-[40vh] grid place-items-center text-sm text-muted-foreground">
-        권한 확인 중…
-      </div>
-    );
-  }
-  if (!isAdmin) {
-    return <Navigate to="/" replace />;
-  }
-
   const { stores } = useStores();
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
