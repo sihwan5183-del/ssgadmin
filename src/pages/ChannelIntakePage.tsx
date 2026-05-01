@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
@@ -21,7 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   PhoneOff, RefreshCw, XCircle, Phone, Search, Clock, AlertTriangle,
-  MessageSquare, Plus, BarChart3, ListPlus, ChevronRight, Pencil, Trash2, History,
+  MessageSquare, Plus, BarChart3, ListPlus, ChevronRight, Pencil, Trash2, History, Download,
 } from "lucide-react";
 import {
   Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, Funnel, FunnelChart,
@@ -519,6 +520,84 @@ const ChannelIntakePage = () => {
     refresh();
   };
 
+  // ── 빠른 상태 변경 (드롭다운 → 필터 버튼 클릭) ──
+  const quickChangeStatus = async (row: InquiryRow, next: string) => {
+    if (next === row.status) return;
+    // 추가 입력이 필요한 상태는 기존 다이얼로그를 연다
+    if (next === "실패" || next === "부재" || next === "재케어") {
+      setEditingRow(row);
+      setEditStatus(next);
+      setEditRetryAt(row.retry_at?.slice(0, 16) ?? "");
+      setEditFailReason(row.fail_reason ?? "");
+      return;
+    }
+    const prevStatus = row.status;
+    const { error } = await supabase
+      .from("inquiries")
+      .update({
+        status: next,
+        retry_at: null,
+        fail_reason: null,
+        last_action_at: new Date().toISOString(),
+      })
+      .eq("id", row.id);
+    if (error) { toast.error(error.message); return; }
+    if (user) {
+      await supabase.from("inquiry_logs").insert({
+        inquiry_id: row.id,
+        action: "상태변경",
+        content: `${prevStatus || "-"} → ${next}`,
+        created_by: user.id,
+      });
+    }
+    toast.success(`상태 변경: ${next}`);
+    refresh();
+  };
+
+  // ── CSV 다운로드 (현재 필터링된 결과만) ──
+  const downloadCSV = () => {
+    if (filtered.length === 0) {
+      toast.info("다운로드할 데이터가 없습니다");
+      return;
+    }
+    const headers = [
+      "인입일", "채널", "고객명", "연락처", "상태", "재연락",
+      "최종액션", "담당자", "상담내용", "메모", "실패사유",
+    ];
+    const escape = (v: any) => {
+      const s = v == null ? "" : String(v);
+      if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const lines = [headers.join(",")];
+    filtered.forEach((r) => {
+      lines.push([
+        r.inquiry_date,
+        r.channel,
+        r.customer_name,
+        r.phone,
+        isNewLead(r) ? "미처리" : r.status,
+        r.retry_at ? formatTime(r.retry_at) : "",
+        formatTime(r.last_action_at),
+        r.manager,
+        r.content,
+        r.note,
+        r.fail_reason,
+      ].map(escape).join(","));
+    });
+    const csv = "\uFEFF" + lines.join("\n"); // BOM for Excel Korean
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `인입관리_${startDate}_${endDate}_${statusFilter}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`${filtered.length}건 다운로드`);
+  };
+
   const statusCounts = useMemo(() => {
     const map: Record<string, number> = { 전체: rows.length };
     CRM_STATUSES.forEach((s) => {
@@ -588,6 +667,16 @@ const ChannelIntakePage = () => {
             )}
             <Button
               size="sm"
+              variant="outline"
+              className="h-9 gap-1.5"
+              onClick={downloadCSV}
+              title="현재 필터링된 결과를 CSV 파일로 저장"
+            >
+              <Download className="size-3.5" /> 엑셀(CSV) 다운로드
+              <Badge variant="secondary" className="text-[10px] h-4 px-1 ml-0.5">{filtered.length}</Badge>
+            </Button>
+            <Button
+              size="sm"
               variant="destructive"
               className="h-9 gap-1.5"
               disabled={selectedIds.size === 0}
@@ -641,26 +730,26 @@ const ChannelIntakePage = () => {
                         newLead && "bg-orange-50 dark:bg-orange-950/20",
                         abandoned && !newLead && "bg-destructive/5"
                       )}>
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2 align-middle">
                           <Checkbox
                             checked={selectedIds.has(r.id)}
                             onCheckedChange={() => toggleOne(r.id)}
                             aria-label="선택"
                           />
                         </td>
-                        <td className="px-3 py-2 text-xs tabular-nums">{r.inquiry_date}</td>
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2 text-xs tabular-nums align-middle">{r.inquiry_date}</td>
+                        <td className="px-3 py-2 align-middle">
                           <Badge variant="outline" className="text-[10px]">{r.channel}</Badge>
                         </td>
-                        <td className="px-3 py-2 text-xs font-medium">{r.customer_name ?? "-"}</td>
-                        <td className="px-3 py-2 text-xs">
+                        <td className="px-3 py-2 text-xs font-medium align-middle">{r.customer_name ?? "-"}</td>
+                        <td className="px-3 py-2 text-xs align-middle">
                           {r.phone ? (
                             <a href={`tel:${r.phone}`} className="flex items-center gap-1 text-foreground/80 hover:text-foreground">
                               <Phone className="size-3" /> {r.phone}
                             </a>
                           ) : "-"}
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2 align-middle">
                           <div className="flex items-center gap-1.5">
                             <Badge
                               className={cn(
@@ -687,27 +776,54 @@ const ChannelIntakePage = () => {
                             </span>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-[10px] tabular-nums text-muted-foreground">
+                        <td className="px-3 py-2 text-[10px] tabular-nums text-muted-foreground align-middle">
                           {r.retry_at ? (
                             <span className="flex items-center gap-1">
                               <Clock className="size-3" /> {formatTime(r.retry_at)}
                             </span>
                           ) : "-"}
                         </td>
-                        <td className="px-3 py-2 text-[10px] tabular-nums text-muted-foreground">
+                        <td className="px-3 py-2 text-[10px] tabular-nums text-muted-foreground align-middle">
                           {formatTime(r.last_action_at)}
                         </td>
-                        <td className="px-3 py-2 text-xs">{r.manager ?? "-"}</td>
-                        <td className="px-3 py-2 text-right whitespace-nowrap">
-                          <Button size="sm" variant="ghost" className="h-7 text-xs mr-1" onClick={() => setSelectedInquiry(r)}>
-                            <MessageSquare className="size-3 mr-1" /> 기록
-                          </Button>
-                          <Button size="sm" variant="outline" className="h-7 text-xs mr-1" onClick={() => openStatusEditor(r)}>
-                            상태변경
-                          </Button>
-                          <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => openDetailEditor(r)}>
-                            <Pencil className="size-3" /> 수정
-                          </Button>
+                        <td className="px-3 py-2 text-xs align-middle">{r.manager ?? "-"}</td>
+                        <td className="px-3 py-2 align-middle">
+                          <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                            <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setSelectedInquiry(r)}>
+                              <MessageSquare className="size-3 mr-1" /> 기록
+                            </Button>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button size="sm" variant="outline" className="h-8 text-xs">
+                                  상태변경
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent align="end" className="w-auto p-2">
+                                <div className="text-[10px] text-muted-foreground mb-1.5 px-1">
+                                  클릭 한 번으로 상태 변경
+                                </div>
+                                <div className="flex flex-wrap gap-1 max-w-[260px]">
+                                  {CRM_STATUSES.map((s) => {
+                                    const active = (isNewLead(r) ? "미처리" : r.status) === s;
+                                    return (
+                                      <Button
+                                        key={s}
+                                        size="sm"
+                                        variant={active ? "default" : "outline"}
+                                        className="h-7 text-[11px] px-2"
+                                        onClick={() => quickChangeStatus(r, s)}
+                                      >
+                                        {s}
+                                      </Button>
+                                    );
+                                  })}
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                            <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={() => openDetailEditor(r)}>
+                              <Pencil className="size-3" /> 수정
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     );
