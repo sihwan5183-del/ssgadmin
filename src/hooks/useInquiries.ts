@@ -29,9 +29,11 @@ interface Range {
 export const useInquiries = (range?: Range) => {
   const [rows, setRows] = useState<Inquiry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
+    setError(null);
     let q = supabase
       .from("inquiries")
       .select("*")
@@ -40,13 +42,28 @@ export const useInquiries = (range?: Range) => {
     if (range?.startDate) q = q.gte("inquiry_date", range.startDate);
     if (range?.endDate) q = q.lte("inquiry_date", range.endDate);
     const { data, error } = await q;
-    if (!error) setRows((data ?? []) as Inquiry[]);
+    if (error) {
+      setError(error.message);
+    } else {
+      setRows((data ?? []) as Inquiry[]);
+    }
     setLoading(false);
   }, [range?.startDate, range?.endDate]);
 
   useEffect(() => {
     refresh();
-  }, [refresh]);
+    const channel = supabase
+      .channel(`realtime:inquiries:${range?.startDate ?? ""}:${range?.endDate ?? ""}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "inquiries" },
+        () => refresh(),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refresh, range?.startDate, range?.endDate]);
 
-  return { rows, loading, refresh };
+  return { rows, loading, error, refresh };
 };
