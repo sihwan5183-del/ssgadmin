@@ -177,10 +177,9 @@ function buildInquiryOwnerResolver(profiles: Profile[]) {
   };
 }
 
-// "성공" = 취소/반려가 아닌 모든 것
-function isSuccess(s: SaleRow) {
-  const st = s.approval_status;
-  return st !== "취소" && st !== "반려";
+// "성공" = [저장]된 모든 실적 — 검수 상태(승인대기/검수완료/반려/수정요청)와 무관하게 모두 집계
+function isSuccess(_s: SaleRow) {
+  return true;
 }
 
 export default function StaffStatusPage() {

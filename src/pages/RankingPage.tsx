@@ -122,10 +122,13 @@ const periodUpToYesterday = (period: string) => {
   return { start, end: yISO };
 };
 
-/** 개통완료만 집계 — 취소·반납·반려는 실시간 차감 */
+/** 개통완료만 집계 — 취소·반납은 실시간 차감 */
 const COUNTED_STATUSES = ["개통완료"];
-/** 집계에서 제외할 승인 상태 */
-const EXCLUDED_APPROVAL = ["취소", "반려"];
+/**
+ * 집계에서 제외할 승인 상태 — 운영 정책상 [저장] 즉시 모든 검수 상태(승인대기/검수완료/반려/수정요청)
+ * 가 실적 합계와 달성률에 반영되어야 하므로, 빈 목록을 유지합니다. 검수 상태는 UI 뱃지로만 구분합니다.
+ */
+const EXCLUDED_APPROVAL: string[] = [];
 
 /** 상품 버킷 — staff 페이지와 동일 규칙 */
 const productBucket = (p: string | null): "모바일" | "인터넷" | "TV프리" | "스마트홈" | "기타" => {
@@ -317,7 +320,6 @@ const RankingPage = () => {
       .from("sales")
       .select("id, created_by, manager, device_model, product, sale_type, status, approval_status, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned, vas1, vas2, open_date, custom_fields")
       .in("status", COUNTED_STATUSES)
-      .not("approval_status", "in", `(${EXCLUDED_APPROVAL.join(",")})`)
       .gte("open_date", start)
       .lte("open_date", end)
       .limit(20000);
@@ -327,7 +329,6 @@ const RankingPage = () => {
       .from("sales")
       .select("created_by, manager")
       .in("status", COUNTED_STATUSES)
-      .not("approval_status", "in", `(${EXCLUDED_APPROVAL.join(",")})`)
       .gte("open_date", yd.start)
       .lte("open_date", yd.end);
 
@@ -338,7 +339,6 @@ const RankingPage = () => {
         .from("sales")
         .select("created_by, manager, device_model, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned")
         .in("status", COUNTED_STATUSES)
-        .not("approval_status", "in", `(${EXCLUDED_APPROVAL.join(",")})`)
         .gte("open_date", yPeriod.start)
         .lte("open_date", yPeriod.end)
         .limit(20000);
