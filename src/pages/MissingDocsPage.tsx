@@ -11,6 +11,7 @@ import { FileWarning, Search, Upload, Phone, User, Smartphone, AlertTriangle } f
 import { supabase } from "@/integrations/supabase/client";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { toast } from "sonner";
+import { useStaffNames } from "@/hooks/useStaffNames";
 
 interface SaleLite {
   id: string;
@@ -32,6 +33,7 @@ export default function MissingDocsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<SaleLite | null>(null);
+  const { resolve: resolveStaff } = useStaffNames();
 
   const load = async () => {
     setLoading(true);
@@ -163,7 +165,7 @@ export default function MissingDocsPage() {
                     </td>
                     <td className="px-3 py-2.5 text-xs">{r.open_date ?? "-"}</td>
                     <td className="px-3 py-2.5 text-xs text-muted-foreground">
-                      {r.channel ?? "-"} / {r.manager ?? "-"}
+                      {r.channel ?? "-"} / {resolveStaff(r.manager, "-")}
                     </td>
                     <td className="px-3 py-2.5">
                       <Badge variant="outline" className="text-[10px]">
