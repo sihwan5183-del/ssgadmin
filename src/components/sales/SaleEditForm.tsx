@@ -321,8 +321,10 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    if (!customFields.contract_type) {
-      toast.error("약정 정보를 선택해주세요", { description: "선택약정 또는 이통사지원금 중 하나를 선택해야 합니다." });
+    // 약정 정보(선택약정/이통사지원금)는 [모바일 2nd] 상품에서만 필수
+    const is2nd = form.product === "2ND";
+    if (is2nd && !customFields.contract_type) {
+      toast.error("약정 정보를 선택해주세요", { description: "[모바일 2nd] 상품은 선택약정 또는 이통사지원금 중 하나를 선택해야 합니다." });
       return;
     }
     // 단말기 모델: 마스터에 등록된 정확한 펫네임만 허용
