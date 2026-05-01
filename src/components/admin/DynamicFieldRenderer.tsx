@@ -4,6 +4,21 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { FieldDefinition } from "@/hooks/useFieldDefinitions";
+import { formatPhone } from "@/lib/phoneFormat";
+
+const isPhoneField = (f: FieldDefinition): boolean => {
+  const key = (f.field_key ?? "").toLowerCase();
+  const label = (f.label ?? "").toLowerCase();
+  return (
+    key === "phone" ||
+    key === "tel" ||
+    key.endsWith("_phone") ||
+    key.endsWith("_tel") ||
+    label.includes("연락처") ||
+    label.includes("전화") ||
+    label.includes("휴대폰")
+  );
+};
 
 interface Props {
   fields: FieldDefinition[];
@@ -49,6 +64,16 @@ export const DynamicFieldRenderer = ({ fields, values, onChange }: Props) => {
                     ))}
                   </SelectContent>
                 </Select>
+              ) : isPhoneField(f) && f.field_type !== "number" && f.field_type !== "date" ? (
+                <Input
+                  id={id}
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={13}
+                  placeholder="010-0000-0000"
+                  value={formatPhone(String(v ?? ""))}
+                  onChange={(e) => set(f.field_key, formatPhone(e.target.value))}
+                />
               ) : (
                 <Input
                   id={id}
