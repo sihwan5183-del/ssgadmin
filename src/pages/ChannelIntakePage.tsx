@@ -365,6 +365,8 @@ const ChannelIntakePage = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  // 정렬 모드: 기본(미처리 우선) | 최신 상담 순
+  const [sortMode, setSortMode] = useState<"default" | "recent_log">("default");
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -400,6 +402,32 @@ const ChannelIntakePage = () => {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  // 실시간: 누군가 inquiry_logs 에 새 상담 기록을 추가하면 즉시 반영
+  useEffect(() => {
+    const channel = supabase
+      .channel("realtime:inquiry_logs:list")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "inquiry_logs" },
+        (payload) => {
+          const l: any = payload.new;
+          if (!l?.inquiry_id) return;
+          setLastLogs((prev) => {
+            const cur = prev[l.inquiry_id];
+            if (cur && new Date(cur.created_at).getTime() >= new Date(l.created_at).getTime()) return prev;
+            return {
+              ...prev,
+              [l.inquiry_id]: { action: l.action, content: l.content, created_at: l.created_at },
+            };
+          });
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const filtered = useMemo(() => {
     let list = rows;
     // "미처리" 필터는 isNewLead 로직 적용
@@ -416,14 +444,23 @@ const ChannelIntakePage = () => {
           .some((v) => String(v).toLowerCase().includes(q))
       );
     }
-    // 미처리 항목 최상단 고정
-    list = [...list].sort((a, b) => {
-      const aNew = isNewLead(a) ? 0 : 1;
-      const bNew = isNewLead(b) ? 0 : 1;
-      return aNew - bNew;
-    });
+    if (sortMode === "recent_log") {
+      // 최신 상담 기록 순 (기록 없는 건은 last_action_at, 그것도 없으면 created_at)
+      list = [...list].sort((a, b) => {
+        const at = lastLogs[a.id]?.created_at ?? a.last_action_at ?? a.created_at;
+        const bt = lastLogs[b.id]?.created_at ?? b.last_action_at ?? b.created_at;
+        return new Date(bt).getTime() - new Date(at).getTime();
+      });
+    } else {
+      // 기본: 미처리 항목 최상단 고정
+      list = [...list].sort((a, b) => {
+        const aNew = isNewLead(a) ? 0 : 1;
+        const bNew = isNewLead(b) ? 0 : 1;
+        return aNew - bNew;
+      });
+    }
     return list;
-  }, [rows, statusFilter, search]);
+  }, [rows, statusFilter, search, sortMode, lastLogs]);
 
   const openStatusEditor = (row: InquiryRow) => {
     setEditingRow(row);
