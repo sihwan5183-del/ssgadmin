@@ -78,7 +78,7 @@ const Section = ({
   children: React.ReactNode;
   right?: React.ReactNode;
 }) => (
-  <Card className="p-4 space-y-3">
+  <Card className="p-3 space-y-2">
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2 text-sm font-semibold">
         <Icon className="size-4 text-primary" />
@@ -354,9 +354,9 @@ export function InquiryDetailDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
           {/* ===== LEFT (cols 1-2) ===== */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="lg:col-span-2 space-y-3">
             {/* Customer info (editable) */}
             <Section
               icon={User}
@@ -466,10 +466,59 @@ export function InquiryDetailDialog({
                 </div>
               </Section>
             )}
+
+            {/* Timeline — wide, left column */}
+            <Section
+              icon={Clock}
+              title="상담 히스토리"
+              right={
+                <span className="text-[10px] text-muted-foreground tabular-nums">
+                  총 {logs.length}건
+                </span>
+              }
+            >
+              {logs.length === 0 ? (
+                <div className="text-xs text-muted-foreground py-6 text-center">
+                  기록이 없습니다
+                </div>
+              ) : (
+                <ol className="relative pl-4">
+                  {/* vertical guide line */}
+                  <span
+                    aria-hidden
+                    className="absolute left-[5px] top-1 bottom-1 w-px bg-border/60"
+                  />
+                  {logs.map((log) => (
+                    <li key={log.id} className="relative pb-3 last:pb-0">
+                      <span
+                        aria-hidden
+                        className="absolute -left-[11px] top-1.5 size-2.5 rounded-full bg-primary ring-2 ring-background"
+                      />
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className="text-[10px] h-4">
+                          {log.action}
+                        </Badge>
+                        <span className="text-[11px] text-foreground/80 font-medium">
+                          {resolveStaff(log.created_by, "직원")}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground tabular-nums ml-auto">
+                          {formatTime(log.created_at)}
+                        </span>
+                      </div>
+                      {log.content && (
+                        <p className="text-xs text-foreground/90 mt-1 leading-relaxed whitespace-pre-wrap break-words">
+                          {log.content}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </Section>
           </div>
 
           {/* ===== RIGHT SIDEBAR ===== */}
-          <div className="space-y-4">
+          <div className="space-y-3 lg:sticky lg:top-[68px] lg:self-start">
             {/* Assignee */}
             <Section
               icon={UserCog}
@@ -494,14 +543,14 @@ export function InquiryDetailDialog({
                   )}
                 </SelectContent>
               </Select>
-              <div className="mt-2 text-[11px] text-muted-foreground">
+              <div className="mt-1.5 text-[11px] text-muted-foreground">
                 현재 담당자: <span className="text-foreground/80 font-medium">{manager || "미지정"}</span>
               </div>
             </Section>
 
             {/* Status / open method */}
             <Section icon={Tag} title="고객 상태 관리">
-              <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10px] text-muted-foreground mb-1 block">상태값</label>
                   <Select value={status} onValueChange={changeStatus}>
@@ -542,7 +591,7 @@ export function InquiryDetailDialog({
                 placeholder="상담 메모를 입력하세요…"
                 className="text-xs"
               />
-              <div className="flex items-center justify-between mt-2">
+              <div className="flex items-center justify-between mt-1.5">
                 <div className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
                   <Sparkles className="size-3" /> 퀵 메모
                 </div>
@@ -550,7 +599,7 @@ export function InquiryDetailDialog({
                   <Send className="size-3" /> 등록
                 </Button>
               </div>
-              <div className="flex flex-wrap gap-1.5 mt-2">
+              <div className="flex flex-wrap gap-1 mt-1.5">
                 {quickMemos.length === 0 ? (
                   <div className="text-[10px] text-muted-foreground">
                     퀵 메모가 없습니다. 관리자 → 항목 옵션 관리에서 추가하세요.
@@ -561,7 +610,7 @@ export function InquiryDetailDialog({
                       key={q}
                       size="sm"
                       variant="outline"
-                      className="h-7 text-[11px] px-2"
+                      className="h-6 text-[11px] px-2"
                       onClick={() => {
                         setMemo((m) => (m ? `${m} ${q}` : q));
                       }}
@@ -570,40 +619,6 @@ export function InquiryDetailDialog({
                     >
                       {q}
                     </Button>
-                  ))
-                )}
-              </div>
-            </Section>
-
-            {/* Timeline */}
-            <Section icon={Clock} title="상담 히스토리">
-              <div className="max-h-[360px] overflow-y-auto pr-1 space-y-0">
-                {logs.length === 0 ? (
-                  <div className="text-xs text-muted-foreground py-4 text-center">기록이 없습니다</div>
-                ) : (
-                  logs.map((log, i) => (
-                    <div key={log.id} className="flex gap-2.5 py-2 border-b border-border/30 last:border-0">
-                      <div className="flex flex-col items-center pt-1.5">
-                        <div className="size-2 rounded-full bg-primary" />
-                        {i < logs.length - 1 && <div className="w-px flex-1 bg-border/40 mt-1" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline" className="text-[10px] h-4">{log.action}</Badge>
-                          <span className="text-[10px] text-foreground/70 font-medium">
-                            {resolveStaff(log.created_by, "직원")}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground tabular-nums ml-auto">
-                            {formatTime(log.created_at)}
-                          </span>
-                        </div>
-                        {log.content && (
-                          <p className="text-xs text-foreground/85 mt-1 whitespace-pre-wrap break-words">
-                            {log.content}
-                          </p>
-                        )}
-                      </div>
-                    </div>
                   ))
                 )}
               </div>
