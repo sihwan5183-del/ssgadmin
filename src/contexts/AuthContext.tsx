@@ -64,12 +64,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [profileStatus, setProfileStatus] = useState<string | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
+  // 세션 시작 시각 — 이 시각 이후 force_logout_at 이 갱신되면 강제 로그아웃
+  const sessionStartedAtRef = useRef<number>(Date.now());
+  const forcedRef = useRef<boolean>(false);
+
+  const forceLogoutWithMessage = async () => {
+    if (forcedRef.current) return;
+    forcedRef.current = true;
+    toast.error("권한이 변경되어 다시 로그인해야 합니다", { duration: 6000 });
+    await supabase.auth.signOut();
+    // 로그인 페이지로 이동
+    if (typeof window !== "undefined" && !window.location.pathname.startsWith("/auth")) {
+      window.location.replace("/auth");
+    }
+  };
 
   const enforceActive = async (s: Session | null) => {
     if (!s?.user) return;
     const { data } = await supabase
       .from("profiles")
-      .select("status, display_name")
+      .select("status, display_name, force_logout_at")
       .eq("user_id", s.user.id)
       .maybeSingle();
     if (data) {
@@ -84,10 +98,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             : "퇴사 처리된 계정입니다. 관리자에게 문의하세요."
         );
         await supabase.auth.signOut();
+        return;
       }
       if (data.status === "suspended") {
         toast.error("정지된 계정입니다. 관리자에게 문의하세요.");
         await supabase.auth.signOut();
+        return;
+      }
+      // 권한 변경 강제 로그아웃 체크
+      const flo = (data as { force_logout_at?: string | null }).force_logout_at;
+      if (flo) {
+        const floMs = new Date(flo).getTime();
+        if (!isNaN(floMs) && floMs > sessionStartedAtRef.current) {
+          await forceLogoutWithMessage();
+        }
       }
       // pending status is handled in ProtectedRoute
     }
@@ -98,6 +122,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(s);
       setLoading(false);
       if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        if (event === "SIGNED_IN") {
+          sessionStartedAtRef.current = Date.now();
+          forcedRef.current = false;
+        }
         // 다음 tick에서 실행 (deadlock 방지)
         setTimeout(() => enforceActive(s), 0);
       }
@@ -108,10 +136,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setLoading(false);
+      // 페이지 로드 = 세션 시작 시각으로 간주 (이전 토큰 사용 중일 수 있으므로 보수적으로 현재시각)
+      sessionStartedAtRef.current = Date.now();
       setTimeout(() => enforceActive(data.session), 0);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // 실시간 권한/프로필 변경 감지 → 즉시 강제 로그아웃 체크
+  useEffect(() => {
+    if (!session?.user) return;
+    const uid = session.user.id;
+    const ch = supabase
+      .channel(`force-logout-${uid}-${Math.random().toString(36).slice(2)}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "profiles", filter: `user_id=eq.${uid}` },
+        (payload) => {
+          const flo = (payload.new as { force_logout_at?: string | null })?.force_logout_at;
+          if (flo) {
+            const floMs = new Date(flo).getTime();
+            if (!isNaN(floMs) && floMs > sessionStartedAtRef.current) {
+              forceLogoutWithMessage();
+            }
+          }
+        },
+      );
+    ch.subscribe();
+    // 라우트 변경 시에도 한번 더 검증
+    const onFocus = () => enforceActive(session);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      supabase.removeChannel(ch);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [session?.user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 30분 무활동 자동 로그아웃
   useEffect(() => {
