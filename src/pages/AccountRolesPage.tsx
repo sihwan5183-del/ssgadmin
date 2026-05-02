@@ -48,17 +48,17 @@ export default function AccountRolesPage() {
     if (!newStore.trim()) return;
     const { error } = await supabase.from("stores").insert({ name: newStore.trim() });
     if (error) return toast.error("실패", { description: error.message });
-    setNewStore(""); refresh();
+    setNewStore(""); refreshStores();
   };
   const toggleStore = async (s: Store) => {
     await supabase.from("stores").update({ active: !s.active }).eq("id", s.id);
-    refresh();
+    refreshStores();
   };
   const delStore = async (s: Store) => {
     if (!confirm(`'${s.name}' 매장을 삭제할까요?`)) return;
     const { error } = await supabase.from("stores").delete().eq("id", s.id);
     if (error) return toast.error("실패", { description: error.message });
-    refresh();
+    refreshStores();
   };
 
   // 활성 직급별 권한 카운트 (요약 표시)
