@@ -47,6 +47,10 @@ export const InquiryForm = ({ onSaved }: Props) => {
   const [customerName, setCustomerName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [phone, setPhone] = useState("");
+  // 상담 기기 정보 (선택 입력 — custom_fields 에 저장)
+  const [deviceModel, setDeviceModel] = useState("");
+  const [deviceCapacity, setDeviceCapacity] = useState("");
+  const [deviceColor, setDeviceColor] = useState("");
 
   // 관리자 상태 목록이 로드되면 기본값('상담전')이 목록에 있으면 유지,
   // 없으면 첫 번째 항목을 기본값으로 사용.
@@ -90,6 +94,11 @@ export const InquiryForm = ({ onSaved }: Props) => {
       else custom[f.field_key] = v;
     }
 
+    // 상담 기기 정보는 모두 선택 입력 — 값이 있을 때만 custom_fields 에 저장
+    if (deviceModel.trim()) custom.consult_device_model = deviceModel.trim();
+    if (deviceCapacity.trim()) custom.consult_device_capacity = deviceCapacity.trim();
+    if (deviceColor.trim()) custom.consult_device_color = deviceColor.trim();
+
     if (!native.channel) {
       toast.error("채널을 선택해주세요");
       return;
@@ -124,6 +133,9 @@ export const InquiryForm = ({ onSaved }: Props) => {
     setCustomerName("");
     setBirthDate("");
     setPhone("");
+    setDeviceModel("");
+    setDeviceCapacity("");
+    setDeviceColor("");
     setStatus(statuses.includes(INQUIRY_DEFAULT_STATUS) ? INQUIRY_DEFAULT_STATUS : (statuses[0] ?? INQUIRY_DEFAULT_STATUS));
     setInquiryDate(today());
     onSaved();
@@ -200,6 +212,40 @@ export const InquiryForm = ({ onSaved }: Props) => {
         {!loading && (
           <DynamicFieldRenderer fields={visibleFields} values={values} onChange={setValues} />
         )}
+
+        {/* 상담 기기 정보 (선택 입력) */}
+        <div className="col-span-2 md:col-span-4">
+          <div className="flex items-center gap-2 mb-2 mt-1">
+            <span className="text-xs font-semibold text-foreground/80">상담 기기 정보</span>
+            <span className="text-[10px] text-muted-foreground">선택 입력 — 입력하지 않아도 저장됩니다</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">모델명</Label>
+              <Input
+                value={deviceModel}
+                onChange={(e) => setDeviceModel(e.target.value)}
+                placeholder="예: 갤럭시 S25"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">용량 (GB)</Label>
+              <Input
+                value={deviceCapacity}
+                onChange={(e) => setDeviceCapacity(e.target.value)}
+                placeholder="예: 256GB"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">색상</Label>
+              <Input
+                value={deviceColor}
+                onChange={(e) => setDeviceColor(e.target.value)}
+                placeholder="예: 티타늄 블루"
+              />
+            </div>
+          </div>
+        </div>
 
         <div className="col-span-2 md:col-span-4 flex justify-end">
           <Button type="submit" disabled={busy} className="gap-2">
