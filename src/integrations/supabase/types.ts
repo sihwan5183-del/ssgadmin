@@ -1438,6 +1438,7 @@ export type Database = {
           deleted_at: string | null
           deleted_by: string | null
           display_name: string
+          force_logout_at: string | null
           hire_date: string | null
           id: string
           phone: string | null
@@ -1453,6 +1454,7 @@ export type Database = {
           deleted_at?: string | null
           deleted_by?: string | null
           display_name: string
+          force_logout_at?: string | null
           hire_date?: string | null
           id?: string
           phone?: string | null
@@ -1468,6 +1470,7 @@ export type Database = {
           deleted_at?: string | null
           deleted_by?: string | null
           display_name?: string
+          force_logout_at?: string | null
           hire_date?: string | null
           id?: string
           phone?: string | null
@@ -2427,6 +2430,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bump_force_logout_for_user: {
+        Args: { _user_id: string }
+        Returns: undefined
+      }
       can_view_user_data: {
         Args: { _target: string; _viewer: string }
         Returns: boolean
