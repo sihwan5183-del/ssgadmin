@@ -984,6 +984,19 @@ const ChannelIntakePage = () => {
                   />
                 </div>
                 <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">생년월일 (6자리)</label>
+                  <Input
+                    value={detail.birth_date}
+                    onChange={(e) =>
+                      setDetail((d) => ({ ...d, birth_date: e.target.value.replace(/\D+/g, "").slice(0, 6) }))
+                    }
+                    className="h-9"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="900101"
+                  />
+                </div>
+                <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">연락처</label>
                   <Input
                     value={detail.phone}
