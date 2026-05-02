@@ -106,17 +106,17 @@ const AuthPage = () => {
   return (
     <div className="min-h-screen grid place-items-center px-5">
       <div className="w-full max-w-md glass-strong rounded-3xl p-8 shadow-card-elevated relative">
-        <div className="flex items-center gap-3 mb-7">
-          <img
-            src={udakLogo}
-            alt="UDak 로고"
-            className="size-12 rounded-xl object-contain bg-white shadow-glow"
-          />
-          <div>
-            <div className="text-xs text-muted-foreground font-medium tracking-wide">UDak</div>
-            <div className="text-lg font-bold tracking-tight">UDak 영업관리 시스템</div>
-          </div>
-        </div>
+         <div className="flex items-center gap-3 mb-7">
+           <img
+             src={udakLogo}
+             alt="U+다이렉트 로고"
+             className="size-12 rounded-xl object-contain bg-white shadow-glow"
+           />
+           <div>
+             <div className="text-xs text-muted-foreground font-medium tracking-wide">U+다이렉트</div>
+             <div className="text-lg font-bold tracking-tight">영업관리 시스템</div>
+           </div>
+         </div>
 
         <div className="flex p-1 rounded-2xl bg-muted/50 border border-border/40 mb-5">
           {(["login", "signup"] as const).map((m) => (
@@ -204,9 +204,9 @@ const AuthPage = () => {
           </Button>
         </form>
 
-        <p className="text-center text-[10px] text-muted-foreground mt-6">
-          © {new Date().getFullYear()} UDak. All rights reserved.
-        </p>
+         <p className="text-center text-[10px] text-muted-foreground mt-6">
+           © {new Date().getFullYear()} U+다이렉트. All rights reserved.
+         </p>
       </div>
     </div>
   );
