@@ -99,6 +99,20 @@ interface SaleEditFormProps {
   hideSubmit?: boolean;
 }
 
+/**
+ * 약정 정보(선택약정/이통사지원금) 입력 대상 상품 판별.
+ * 모바일 / 2nd(세컨) / USIM 카테고리에서만 약정 입력을 활성화한다.
+ */
+const isContractProduct = (product: string | null | undefined): boolean => {
+  if (!product) return false;
+  const p = String(product).toUpperCase();
+  if (p === "2ND") return true;
+  if (p.includes("USIM")) return true;
+  if (p.includes("세컨") || p.includes("2ND")) return true;
+  if (product.includes("모바일")) return true;
+  return false;
+};
+
 export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hideSubmit = false }: SaleEditFormProps) {
   const { user } = useAuth();
   const { options: CHANNELS } = useFieldOptions("channel");
