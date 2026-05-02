@@ -827,6 +827,10 @@ const ChannelIntakePage = () => {
                     const lastSummary = lastLog
                       ? `[${lastLog.action}] ${lastLog.content ?? ""}`.trim()
                       : (r.note ? `[메모] ${r.note}` : "");
+                    const icf = ((r as any).custom_fields ?? {}) as Record<string, any>;
+                    const consultDevice = [icf.consult_device_model, icf.consult_device_capacity, icf.consult_device_color]
+                      .filter((v) => typeof v === "string" && v.trim().length > 0)
+                      .join(" · ");
                     return (
                       <tr
                         key={r.id}
@@ -900,19 +904,35 @@ const ChannelIntakePage = () => {
                           {formatTime(r.last_action_at)}
                         </td>
                         <td className="px-3 py-2 text-xs align-middle max-w-[260px]">
-                          {lastSummary ? (
+                          {(lastSummary || consultDevice) ? (
                             <TooltipProvider delayDuration={150}>
                               <UITooltip>
                                 <TooltipTrigger asChild>
-                                  <span
-                                    className="block text-foreground/80 cursor-help overflow-hidden text-ellipsis"
-                                    style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}
-                                  >
-                                    {lastSummary}
-                                  </span>
+                                  <div className="cursor-help">
+                                    {consultDevice && (
+                                      <div className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 mb-0.5 max-w-full overflow-hidden">
+                                        <Smartphone className="size-2.5 shrink-0" />
+                                        <span className="truncate">{consultDevice}</span>
+                                      </div>
+                                    )}
+                                    {lastSummary && (
+                                      <span
+                                        className="block text-foreground/80 overflow-hidden text-ellipsis"
+                                        style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}
+                                      >
+                                        {lastSummary}
+                                      </span>
+                                    )}
+                                  </div>
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-sm whitespace-pre-wrap break-words">
-                                  {lastSummary}
+                                  {consultDevice && (
+                                    <div className="text-[11px] mb-1">
+                                      <span className="text-muted-foreground">상담 기기: </span>
+                                      {consultDevice}
+                                    </div>
+                                  )}
+                                  {lastSummary || (consultDevice ? "" : "-")}
                                   {lastLog && (
                                     <div className="text-[10px] text-muted-foreground mt-1 tabular-nums">
                                       {formatTime(lastLog.created_at)}
