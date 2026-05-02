@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,6 +64,7 @@ interface InquiryRow {
   inquiry_date: string;
   channel: string;
   customer_name: string | null;
+  birth_date: string | null;
   phone: string | null;
   content: string | null;
   manager: string | null;
@@ -335,6 +337,8 @@ const ChannelIntakePage = () => {
   const { statuses: CRM_STATUSES, refresh: refreshStatuses } = useInquiryStatuses();
   const { options: channelOptions } = useFieldOptions("inquiry_channel");
   const [rows, setRows] = useState<InquiryRow[]>([]);
+  // inquiry_id → 마지막 상담 기록 요약 (action + content + 시각)
+  const [lastLogs, setLastLogs] = useState<Record<string, { action: string; content: string | null; created_at: string }>>({});
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("전체");
   const [search, setSearch] = useState("");
@@ -347,13 +351,14 @@ const ChannelIntakePage = () => {
   const [detailRow, setDetailRow] = useState<InquiryRow | null>(null);
   const [detail, setDetail] = useState<{
     customer_name: string;
+    birth_date: string;
     phone: string;
     channel: string;
     content: string;
     manager: string;
     note: string;
     status: string;
-  }>({ customer_name: "", phone: "", channel: "", content: "", manager: "", note: "", status: "" });
+  }>({ customer_name: "", birth_date: "", phone: "", channel: "", content: "", manager: "", note: "", status: "" });
   const [detailHistory, setDetailHistory] = useState<LogEntry[]>([]);
   const [savingDetail, setSavingDetail] = useState(false);
   // 일괄 선택
@@ -371,7 +376,24 @@ const ChannelIntakePage = () => {
       .order("inquiry_date", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(2000);
-    setRows((data as InquiryRow[]) ?? []);
+    const list = (data as InquiryRow[]) ?? [];
+    setRows(list);
+    // 마지막 상담 기록 일괄 조회 (현재 보이는 인입들에 대해서만)
+    const ids = list.map((r) => r.id);
+    if (ids.length > 0) {
+      const { data: logs } = await supabase
+        .from("inquiry_logs")
+        .select("inquiry_id,action,content,created_at")
+        .in("inquiry_id", ids)
+        .order("created_at", { ascending: false });
+      const map: Record<string, { action: string; content: string | null; created_at: string }> = {};
+      (logs ?? []).forEach((l: any) => {
+        if (!map[l.inquiry_id]) map[l.inquiry_id] = { action: l.action, content: l.content, created_at: l.created_at };
+      });
+      setLastLogs(map);
+    } else {
+      setLastLogs({});
+    }
     setLoading(false);
     setSelectedIds(new Set());
   }, [startDate, endDate]);
@@ -440,6 +462,7 @@ const ChannelIntakePage = () => {
     setDetailRow(row);
     setDetail({
       customer_name: row.customer_name ?? "",
+      birth_date: row.birth_date ?? "",
       phone: row.phone ?? "",
       channel: row.channel ?? "",
       content: row.content ?? "",
@@ -464,6 +487,7 @@ const ChannelIntakePage = () => {
       .from("inquiries")
       .update({
         customer_name: detail.customer_name || null,
+        birth_date: detail.birth_date || null,
         phone: detail.phone || null,
         channel: detail.channel || detailRow.channel,
         content: detail.content || null,
