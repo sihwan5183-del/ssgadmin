@@ -693,24 +693,6 @@ const ChannelIntakePage = () => {
         {/* 담당자별 상세 리포트 */}
         <StaffTimelinePanel rows={rows as any} />
 
-        {/* Status filter tabs */}
-        <div className="flex flex-wrap gap-2">
-          {["전체", ...CRM_STATUSES].map((s) => (
-            <Button
-              key={s}
-              size="sm"
-              variant={statusFilter === s ? "default" : "outline"}
-              onClick={() => setStatusFilter(s)}
-              className="h-8 text-xs gap-1.5"
-            >
-              {s}
-              <Badge variant="secondary" className="text-[10px] h-4 px-1 ml-1">
-                {statusCounts[s] ?? 0}
-              </Badge>
-            </Button>
-          ))}
-        </div>
-
         {/* Toolbar: Search + Bulk actions (responsive) */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative w-full sm:max-w-md">
@@ -755,6 +737,45 @@ const ChannelIntakePage = () => {
 
         {/* List */}
         <Card className="glass border-border/40 overflow-hidden">
+          {/* List header: title + status filter pills (moved here for at-a-glance filtering) */}
+          <div className="flex flex-col gap-3 px-4 pt-4 pb-3 border-b border-border/40 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="text-sm font-semibold text-foreground shrink-0">
+              인입 고객 현황
+              <span className="ml-2 text-xs font-normal text-muted-foreground tabular-nums">
+                {filtered.length.toLocaleString()}건
+              </span>
+            </h3>
+            <div className="flex flex-wrap gap-1.5 sm:justify-end">
+              {["전체", ...CRM_STATUSES].map((s) => {
+                const active = statusFilter === s;
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setStatusFilter(s)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border px-3 h-7 text-xs font-medium transition-colors",
+                      active
+                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                        : "bg-background/60 text-foreground/80 border-border/60 hover:bg-muted/60 hover:text-foreground",
+                    )}
+                  >
+                    <span>{s}</span>
+                    <span
+                      className={cn(
+                        "inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full px-1 text-[10px] tabular-nums font-semibold",
+                        active
+                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {statusCounts[s] ?? 0}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-xs text-muted-foreground">
