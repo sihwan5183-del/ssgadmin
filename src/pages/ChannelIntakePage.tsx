@@ -773,7 +773,20 @@ const ChannelIntakePage = () => {
                   <th className="text-left px-3 py-2">상태</th>
                   <th className="text-left px-3 py-2">재연락</th>
                   <th className="text-left px-3 py-2">최종액션</th>
-                  <th className="text-left px-3 py-2">마지막 기록</th>
+                  <th className="text-left px-3 py-2">
+                    <button
+                      type="button"
+                      onClick={() => setSortMode((m) => (m === "recent_log" ? "default" : "recent_log"))}
+                      className={cn(
+                        "inline-flex items-center gap-1 hover:text-foreground transition-colors",
+                        sortMode === "recent_log" && "text-primary font-semibold",
+                      )}
+                      title="최신 상담 순으로 정렬"
+                    >
+                      상담 히스토리
+                      <ChevronRight className={cn("size-3 rotate-90 transition-transform", sortMode === "recent_log" && "text-primary")} />
+                    </button>
+                  </th>
                   <th className="text-left px-3 py-2">담당</th>
                   <th className="text-right px-3 py-2">관리</th>
                 </tr>
