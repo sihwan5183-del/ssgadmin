@@ -6,38 +6,27 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Trash2, Building2, ShieldCheck } from "lucide-react";
-import { ROLE_LABELS, type AppRole } from "@/hooks/useRole";
-import { RolePermissionsMatrix } from "@/components/admin/accounts/RolePermissionsMatrix";
+import { Plus, Trash2, Building2, ShieldCheck, Settings } from "lucide-react";
+import { ASSIGNABLE_ROLES } from "@/hooks/useRole";
+import { PositionPermissionDialog } from "@/components/admin/accounts/PositionPermissionDialog";
+import { usePositionPermissionsAll, type PositionRow } from "@/hooks/usePositionPermissions";
 
-interface Position { id: string; name: string; sort_order: number; active: boolean; }
 interface Store { id: string; name: string; code: string | null; region: string | null; active: boolean; }
 
-const ROLE_PERMS: { role: AppRole; perms: string }[] = [
-  { role: "admin", perms: "모든 메뉴/시스템 설정/권한 관리" },
-  { role: "ceo", perms: "관리자 동등 권한 (대표)" },
-  { role: "planner", perms: "판매원장·정산·인센티브 전체 권한" },
-  { role: "manager", perms: "판매원장 조회/수정, 통계" },
-  { role: "team_lead", perms: "소속 매장 직원 실적·활동 조회" },
-  { role: "staff", perms: "본인 실적 입력, 개인 대시보드" },
-  { role: "user", perms: "기본 사용자 (제한)" },
-];
+const SCOPE_LABEL: Record<string, string> = { self: "본인", store: "매장", all: "전체" };
 
 export default function AccountRolesPage() {
-  const [positions, setPositions] = useState<Position[]>([]);
+  const { positions, matrix, loading, refresh } = usePositionPermissionsAll();
   const [stores, setStores] = useState<Store[]>([]);
   const [newPos, setNewPos] = useState("");
   const [newStore, setNewStore] = useState("");
+  const [editPos, setEditPos] = useState<PositionRow | null>(null);
 
-  const refresh = useCallback(async () => {
-    const [{ data: p }, { data: s }] = await Promise.all([
-      supabase.from("positions").select("*").order("sort_order"),
-      supabase.from("stores").select("*").order("name"),
-    ]);
-    setPositions((p ?? []) as Position[]);
-    setStores((s ?? []) as Store[]);
+  const refreshStores = useCallback(async () => {
+    const { data } = await supabase.from("stores").select("*").order("name");
+    setStores((data ?? []) as Store[]);
   }, []);
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => { refreshStores(); }, [refreshStores]);
 
   const addPos = async () => {
     if (!newPos.trim()) return;
@@ -45,11 +34,11 @@ export default function AccountRolesPage() {
     if (error) return toast.error("실패", { description: error.message });
     setNewPos(""); refresh();
   };
-  const togglePos = async (p: Position) => {
+  const togglePos = async (p: PositionRow) => {
     await supabase.from("positions").update({ active: !p.active }).eq("id", p.id);
     refresh();
   };
-  const delPos = async (p: Position) => {
+  const delPos = async (p: PositionRow) => {
     if (!confirm(`'${p.name}' 직급을 삭제할까요?`)) return;
     await supabase.from("positions").delete().eq("id", p.id);
     refresh();
@@ -72,27 +61,64 @@ export default function AccountRolesPage() {
     refresh();
   };
 
+  // 활성 직급별 권한 카운트 (요약 표시)
+  const countAccess = (positionId: string) => {
+    let read = 0, write = 0;
+    Object.entries(matrix).forEach(([k, v]) => {
+      if (!k.startsWith(`${positionId}::`)) return;
+      if (v === "read") read++;
+      else if (v === "write") write++;
+    });
+    return { read, write };
+  };
+
+  const activePositions = positions.filter((p) => p.active);
+
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <RolePermissionsMatrix />
+      {/* 좌: 권한 그룹별 접근 정책 (직급 마스터와 실시간 동기화) */}
       <Card className="p-4">
         <div className="flex items-center gap-2 mb-3">
           <ShieldCheck className="size-4 text-primary" />
           <h2 className="font-semibold">권한 그룹별 접근 정책</h2>
+          <Badge variant="outline" className="ml-auto text-[10px]">직급 마스터와 실시간 동기화</Badge>
         </div>
-        <div className="space-y-1.5">
-          {ROLE_PERMS.map((r) => (
-            <div key={r.role} className="flex items-center justify-between p-2 rounded-lg bg-muted/40 text-sm">
-              <Badge variant="outline" className="font-mono">{ROLE_LABELS[r.role]}</Badge>
-              <span className="text-muted-foreground text-xs text-right ml-3">{r.perms}</span>
-            </div>
-          ))}
-        </div>
+        {loading ? (
+          <div className="text-sm text-muted-foreground">불러오는 중…</div>
+        ) : activePositions.length === 0 ? (
+          <div className="text-sm text-muted-foreground p-4 text-center bg-muted/30 rounded-lg">
+            우측 [직급 마스터]에서 직급을 먼저 추가해주세요.
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {activePositions.map((p) => {
+              const c = countAccess(p.id);
+              const baseLabel = ASSIGNABLE_ROLES.find((r) => r.value === p.base_role)?.label ?? "사원";
+              return (
+                <div key={p.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/40 text-sm">
+                  <Badge variant="outline" className="font-medium">{p.name}</Badge>
+                  <div className="flex-1 flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>기본 {baseLabel}</span>
+                    <span>·</span>
+                    <span>범위 {SCOPE_LABEL[p.data_scope] ?? p.data_scope}</span>
+                    <span>·</span>
+                    <span className="text-blue-600">읽기 {c.read}</span>
+                    <span className="text-emerald-600">수정 {c.write}</span>
+                  </div>
+                  <Button size="sm" variant="ghost" onClick={() => setEditPos(p)}>
+                    <Settings className="size-3.5 mr-1" /> 설정
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        )}
         <p className="text-[11px] text-muted-foreground mt-3">
-          ※ 직원별 권한 추가/제거는 [전체 직원 관리] → 상세 → 권한 그룹에서 토글합니다.
+          ※ 변경은 [일괄 저장] 시 즉시 모든 해당 직급 사용자에게 반영됩니다.
         </p>
       </Card>
 
+      {/* 우: 직급 마스터 */}
       <Card className="p-4">
         <div className="flex items-center gap-2 mb-3">
           <ShieldCheck className="size-4 text-primary" />
@@ -132,6 +158,15 @@ export default function AccountRolesPage() {
           ))}
         </div>
       </Card>
+
+      {editPos && (
+        <PositionPermissionDialog
+          open={!!editPos}
+          onOpenChange={(v) => { if (!v) setEditPos(null); }}
+          position={editPos}
+          onSaved={refresh}
+        />
+      )}
     </div>
   );
 }
