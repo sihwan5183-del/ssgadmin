@@ -33,6 +33,7 @@ import { formatPhone } from "@/lib/phoneFormat";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { InquiryForm } from "@/components/inquiries/InquiryForm";
+import { InquiryDetailDialog } from "@/components/inquiries/InquiryDetailDialog";
 import { FailureAnalysisChart } from "@/components/inquiries/FailureAnalysisChart";
 import { LeadSourceChart } from "@/components/inquiries/LeadSourceChart";
 import { StaffTimelinePanel } from "@/components/inquiries/StaffTimelinePanel";
@@ -806,11 +807,20 @@ const ChannelIntakePage = () => {
                       ? `[${lastLog.action}] ${lastLog.content ?? ""}`.trim()
                       : (r.note ? `[메모] ${r.note}` : "");
                     return (
-                      <tr key={r.id} className={cn(
-                        "border-t border-border/30 hover:bg-muted/20",
-                        newLead && "bg-orange-50 dark:bg-orange-950/20",
-                        abandoned && !newLead && "bg-destructive/5"
-                      )}>
+                      <tr
+                        key={r.id}
+                        className={cn(
+                          "border-t border-border/30 hover:bg-muted/30 cursor-pointer",
+                          newLead && "bg-orange-50 dark:bg-orange-950/20",
+                          abandoned && !newLead && "bg-destructive/5",
+                        )}
+                        onClick={(e) => {
+                          // 컨트롤(체크박스/버튼/셀렉트/링크) 클릭 시 상세 열지 않음
+                          const target = e.target as HTMLElement;
+                          if (target.closest("button, a, input, [role='checkbox'], [data-no-row-open]")) return;
+                          openDetailEditor(r);
+                        }}
+                      >
                         <td className="px-3 py-2 align-middle">
                           <Checkbox
                             checked={selectedIds.has(r.id)}
@@ -1018,137 +1028,12 @@ const ChannelIntakePage = () => {
       </Dialog>
 
       {/* 상세 수정 다이얼로그 (이름/번호/관심상품/상담메모 + 이력) */}
-      <Dialog open={!!detailRow} onOpenChange={(v) => !v && setDetailRow(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Pencil className="size-4" /> 고객 정보 수정
-            </DialogTitle>
-          </DialogHeader>
-          {detailRow && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">고객명</label>
-                  <Input
-                    value={detail.customer_name}
-                    onChange={(e) => setDetail((d) => ({ ...d, customer_name: e.target.value }))}
-                    className="h-9"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">생년월일 (6자리)</label>
-                  <Input
-                    value={detail.birth_date}
-                    onChange={(e) =>
-                      setDetail((d) => ({ ...d, birth_date: e.target.value.replace(/\D+/g, "").slice(0, 6) }))
-                    }
-                    className="h-9"
-                    inputMode="numeric"
-                    maxLength={6}
-                    placeholder="900101"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">연락처</label>
-                  <Input
-                    value={detail.phone}
-                    onChange={(e) => setDetail((d) => ({ ...d, phone: formatPhone(e.target.value) }))}
-                    className="h-9"
-                    type="tel"
-                    inputMode="numeric"
-                    maxLength={13}
-                    placeholder="010-0000-0000"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">채널</label>
-                  <Select
-                    value={detail.channel}
-                    onValueChange={(v) => setDetail((d) => ({ ...d, channel: v }))}
-                  >
-                    <SelectTrigger className="h-9"><SelectValue placeholder="채널 선택" /></SelectTrigger>
-                    <SelectContent>
-                      {(channelOptions.length ? channelOptions : [detailRow.channel]).filter(Boolean).map((c) => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">담당자</label>
-                  <Input
-                    value={detail.manager}
-                    onChange={(e) => setDetail((d) => ({ ...d, manager: e.target.value }))}
-                    className="h-9"
-                  />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="text-xs text-muted-foreground">관심 상품 / 문의 내용</label>
-                  <Textarea
-                    value={detail.content}
-                    onChange={(e) => setDetail((d) => ({ ...d, content: e.target.value }))}
-                    rows={2}
-                  />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="text-xs text-muted-foreground">상담 메모</label>
-                  <Textarea
-                    value={detail.note}
-                    onChange={(e) => setDetail((d) => ({ ...d, note: e.target.value }))}
-                    rows={3}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">상태</label>
-                  <Select
-                    value={detail.status}
-                    onValueChange={(v) => setDetail((d) => ({ ...d, status: v }))}
-                  >
-                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {CRM_STATUSES.map((s) => (
-                        <SelectItem key={s} value={s}>{s}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* 상태 변경 이력 */}
-              <div>
-                <h4 className="text-xs font-semibold flex items-center gap-1.5 mb-2">
-                  <History className="size-3.5" /> 상태 변경 이력
-                </h4>
-                <div className="rounded-md border border-border/40 max-h-48 overflow-y-auto divide-y divide-border/30">
-                  {detailHistory.filter((l) => l.action === "상태변경").length === 0 ? (
-                    <div className="text-xs text-muted-foreground text-center py-4">변경 이력이 없습니다</div>
-                  ) : (
-                    detailHistory
-                      .filter((l) => l.action === "상태변경")
-                      .map((log) => (
-                        <div key={log.id} className="flex items-center gap-2 px-3 py-2 text-xs">
-                          <Badge variant="outline" className="text-[10px] h-4">{log.action}</Badge>
-                          <span className="font-medium">{log.content}</span>
-                          <span className="ml-auto text-[10px] text-muted-foreground tabular-nums">
-                            {formatTime(log.created_at)}
-                          </span>
-                        </div>
-                      ))
-                  )}
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button variant="ghost" onClick={() => setDetailRow(null)}>취소</Button>
-                <Button onClick={saveDetail} disabled={savingDetail}>
-                  {savingDetail ? "저장 중…" : "저장"}
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <InquiryDetailDialog
+        inquiry={detailRow as any}
+        open={!!detailRow}
+        onOpenChange={(v) => !v && setDetailRow(null)}
+        onChanged={refresh}
+      />
 
       {/* 일괄 삭제 확인 */}
       <AlertDialog open={bulkConfirmOpen} onOpenChange={setBulkConfirmOpen}>
