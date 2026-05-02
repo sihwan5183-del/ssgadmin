@@ -9,8 +9,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  User, Smartphone, FileText, Wallet, UserCog, Tag, MessageSquare, Send,
-  Clock, Sparkles, UserPlus,
+  User, Smartphone, Wallet, UserCog, Tag, MessageSquare, Send,
+  Clock, Sparkles, UserPlus, X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -339,9 +339,18 @@ export function InquiryDetailDialog({
             <Badge variant="outline" className="text-[10px]">
               {inquiry.channel}
             </Badge>
-            <span className="ml-auto text-[11px] text-muted-foreground">
+            <span className="ml-auto text-[11px] text-muted-foreground mr-2">
               인입일 {inquiry.inquiry_date}
             </span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 gap-1 text-xs"
+              onClick={() => onOpenChange(false)}
+              aria-label="닫기"
+            >
+              <X className="size-3.5" /> 닫기
+            </Button>
           </DialogTitle>
         </DialogHeader>
 
@@ -397,56 +406,50 @@ export function InquiryDetailDialog({
               </div>
             </Section>
 
-            {/* Device info */}
-            <Section icon={Smartphone} title="기기 정보">
-              {sale ? (
-                <>
-                  <Row label="단말기">{sale.device_model || "-"}</Row>
-                  <Row label="단말 일련번호">{sale.device_serial || "-"}</Row>
-                  <Row label="USIM 모델">{sale.usim_model || "-"}</Row>
-                  <Row label="USIM 일련번호">{sale.usim_serial || "-"}</Row>
-                  <Row label="출고가">{won(sale.unit_price)}</Row>
-                </>
-              ) : (
-                <div className="text-xs text-muted-foreground">개통 전 — 기기 정보가 아직 없습니다.</div>
-              )}
-            </Section>
-
-            {/* Subscription info */}
-            <Section icon={FileText} title="가입 정보">
-              {sale ? (
-                <div className="grid grid-cols-2 gap-x-6">
-                  <div>
-                    <Row label="가입 유형">{sale.sale_type || "-"}</Row>
-                    <Row label="결합/할인">{sale.bundle || "-"}</Row>
-                    <Row label="통신사">{sale.carrier || cf.carrier || "-"}</Row>
-                    <Row label="개통 방식">{sale.open_method || "-"}</Row>
-                  </div>
-                  <div>
-                    <Row label="개통일">{sale.open_date || "-"}</Row>
-                    <Row label="공시지원금">{won(sale.distributor_amount)}</Row>
-                    <Row label="추가 지원금">{won(sale.extra_subsidy)}</Row>
-                    <Row label="현금 지원금">{won(sale.cash_support_amount)}</Row>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-xs text-muted-foreground">개통 전 — 가입 정보가 아직 없습니다.</div>
-              )}
-            </Section>
-
-            {/* Rate plan info */}
-            <Section icon={Tag} title="요금제 정보">
-              {sale ? (
-                <>
-                  <Row label="요금제">{sale.rate_plan || "-"}</Row>
-                  <Row label="부가서비스1">{sale.vas1 || "-"}</Row>
-                  <Row label="부가서비스2">{sale.vas2 || "-"}</Row>
-                  <Row label="부가서비스 비용">{won(sale.vas_fee)}</Row>
-                  <Row label="약정">{cf.contract_type || cf["약정"] || "-"}</Row>
-                </>
-              ) : (
-                <div className="text-xs text-muted-foreground">개통 전 — 요금제 정보가 아직 없습니다.</div>
-              )}
+            {/* 상담 기기 정보 (인입 단계 입력) + 개통된 경우 기기 정보 */}
+            <Section icon={Smartphone} title="상담 기기 정보">
+              {(() => {
+                const icf = ((inquiry as any).custom_fields ?? {}) as Record<string, any>;
+                const cm = icf.consult_device_model || "";
+                const cc = icf.consult_device_capacity || "";
+                const cl = icf.consult_device_color || "";
+                const carrier = sale?.carrier || icf.carrier || cf.carrier || "-";
+                const hasConsult = cm || cc || cl;
+                return (
+                  <>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-2">
+                      <div className="rounded-md border border-border/40 bg-muted/30 p-2.5">
+                        <div className="text-[10px] text-muted-foreground mb-0.5">모델명</div>
+                        <div className="text-xs font-medium text-foreground/90 break-words">{cm || "-"}</div>
+                      </div>
+                      <div className="rounded-md border border-border/40 bg-muted/30 p-2.5">
+                        <div className="text-[10px] text-muted-foreground mb-0.5">용량</div>
+                        <div className="text-xs font-medium text-foreground/90">{cc || "-"}</div>
+                      </div>
+                      <div className="rounded-md border border-border/40 bg-muted/30 p-2.5">
+                        <div className="text-[10px] text-muted-foreground mb-0.5">색상</div>
+                        <div className="text-xs font-medium text-foreground/90">{cl || "-"}</div>
+                      </div>
+                    </div>
+                    <Row label="통신사">
+                      <Badge variant="outline" className="text-[10px]">{carrier}</Badge>
+                    </Row>
+                    {sale && (
+                      <>
+                        <Row label="개통 단말기">{sale.device_model || "-"}</Row>
+                        <Row label="단말 일련번호">{sale.device_serial || "-"}</Row>
+                        <Row label="USIM 일련번호">{sale.usim_serial || "-"}</Row>
+                        <Row label="출고가">{won(sale.unit_price)}</Row>
+                      </>
+                    )}
+                    {!hasConsult && !sale && (
+                      <div className="text-[11px] text-muted-foreground mt-1">
+                        상담 기기 정보가 입력되지 않았습니다.
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </Section>
 
             {/* Settlement / amounts */}
