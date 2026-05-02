@@ -1301,11 +1301,48 @@ export type Database = {
         }
         Relationships: []
       }
+      position_permissions: {
+        Row: {
+          access_level: string
+          id: string
+          permission_key: string
+          position_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          access_level?: string
+          id?: string
+          permission_key: string
+          position_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          access_level?: string
+          id?: string
+          permission_key?: string
+          position_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "position_permissions_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       positions: {
         Row: {
           active: boolean
+          base_role: Database["public"]["Enums"]["app_role"]
           created_at: string
           created_by: string | null
+          data_scope: string
           id: string
           name: string
           sort_order: number
@@ -1313,8 +1350,10 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          base_role?: Database["public"]["Enums"]["app_role"]
           created_at?: string
           created_by?: string | null
+          data_scope?: string
           id?: string
           name: string
           sort_order?: number
@@ -1322,8 +1361,10 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          base_role?: Database["public"]["Enums"]["app_role"]
           created_at?: string
           created_by?: string | null
+          data_scope?: string
           id?: string
           name?: string
           sort_order?: number
