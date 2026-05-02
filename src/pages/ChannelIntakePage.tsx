@@ -873,7 +873,10 @@ const ChannelIntakePage = () => {
                             <TooltipProvider delayDuration={150}>
                               <UITooltip>
                                 <TooltipTrigger asChild>
-                                  <span className="block truncate text-foreground/80 cursor-help">
+                                  <span
+                                    className="block text-foreground/80 cursor-help overflow-hidden text-ellipsis"
+                                    style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}
+                                  >
                                     {lastSummary}
                                   </span>
                                 </TooltipTrigger>
