@@ -15,6 +15,7 @@ import { inquiryStatusClass, inquiryStatusSoftClass, INQUIRY_DEFAULT_STATUS } fr
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
+import { formatPhone } from "@/lib/phoneFormat";
 
 interface Props {
   onSaved: () => void;
@@ -30,6 +31,7 @@ const NATIVE_KEYS = new Set([
   "content",
   "manager",
   "note",
+  "birth_date",
 ]);
 
 export const InquiryForm = ({ onSaved }: Props) => {
@@ -41,6 +43,10 @@ export const InquiryForm = ({ onSaved }: Props) => {
   const [inquiryDate, setInquiryDate] = useState(today());
   const [status, setStatus] = useState<string>(INQUIRY_DEFAULT_STATUS);
   const [values, setValues] = useState<Record<string, any>>({});
+  // 고객 정보 세트 (이름·생년월일·연락처)
+  const [customerName, setCustomerName] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [phone, setPhone] = useState("");
 
   // 관리자 상태 목록이 로드되면 기본값('상담전')이 목록에 있으면 유지,
   // 없으면 첫 번째 항목을 기본값으로 사용.
@@ -89,12 +95,18 @@ export const InquiryForm = ({ onSaved }: Props) => {
       return;
     }
 
+    if (birthDate && !/^\d{6}$/.test(birthDate)) {
+      toast.error("생년월일은 숫자 6자리(예: 900101)로 입력해주세요");
+      return;
+    }
+
     setBusy(true);
     const { error } = await supabase.from("inquiries").insert({
       inquiry_date: inquiryDate,
       channel: native.channel,
-      customer_name: native.customer_name || null,
-      phone: native.phone || null,
+      customer_name: (customerName || native.customer_name || null) as string | null,
+      phone: (phone || native.phone || null) as string | null,
+      birth_date: birthDate || null,
       content: native.content || null,
       manager: native.manager || null,
       note: native.note || null,
@@ -109,10 +121,18 @@ export const InquiryForm = ({ onSaved }: Props) => {
     }
     toast.success("인입 등록 완료");
     setValues({});
+    setCustomerName("");
+    setBirthDate("");
+    setPhone("");
     setStatus(statuses.includes(INQUIRY_DEFAULT_STATUS) ? INQUIRY_DEFAULT_STATUS : (statuses[0] ?? INQUIRY_DEFAULT_STATUS));
     setInquiryDate(today());
     onSaved();
   };
+
+  // 고객 정보 세트는 폼 상단에 고정 노출하므로, 동적 필드에서는 중복 제거
+  const visibleFields = syncedFields.filter(
+    (f) => !["customer_name", "phone", "birth_date"].includes(f.field_key),
+  );
 
   return (
     <Card className="p-4">
@@ -145,9 +165,40 @@ export const InquiryForm = ({ onSaved }: Props) => {
           </Select>
         </div>
 
+        {/* 고객 정보 세트: 고객명 · 생년월일 · 연락처 */}
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">고객명</Label>
+          <Input
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+            placeholder="홍길동"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">생년월일</Label>
+          <Input
+            value={birthDate}
+            onChange={(e) => setBirthDate(e.target.value.replace(/\D+/g, "").slice(0, 6))}
+            placeholder="900101"
+            inputMode="numeric"
+            maxLength={6}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">연락처</Label>
+          <Input
+            value={phone}
+            onChange={(e) => setPhone(formatPhone(e.target.value))}
+            placeholder="010-0000-0000"
+            type="tel"
+            inputMode="numeric"
+            maxLength={13}
+          />
+        </div>
+
         {/* 관리자가 정의한 동적 필드 */}
         {!loading && (
-          <DynamicFieldRenderer fields={syncedFields} values={values} onChange={setValues} />
+          <DynamicFieldRenderer fields={visibleFields} values={values} onChange={setValues} />
         )}
 
         <div className="col-span-2 md:col-span-4 flex justify-end">

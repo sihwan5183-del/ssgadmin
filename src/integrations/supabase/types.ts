@@ -930,6 +930,7 @@ export type Database = {
       }
       inquiries: {
         Row: {
+          birth_date: string | null
           channel: string
           content: string | null
           converted_sale_id: string | null
@@ -949,6 +950,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          birth_date?: string | null
           channel: string
           content?: string | null
           converted_sale_id?: string | null
@@ -968,6 +970,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          birth_date?: string | null
           channel?: string
           content?: string | null
           converted_sale_id?: string | null

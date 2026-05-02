@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,6 +64,7 @@ interface InquiryRow {
   inquiry_date: string;
   channel: string;
   customer_name: string | null;
+  birth_date: string | null;
   phone: string | null;
   content: string | null;
   manager: string | null;
@@ -335,6 +337,8 @@ const ChannelIntakePage = () => {
   const { statuses: CRM_STATUSES, refresh: refreshStatuses } = useInquiryStatuses();
   const { options: channelOptions } = useFieldOptions("inquiry_channel");
   const [rows, setRows] = useState<InquiryRow[]>([]);
+  // inquiry_id → 마지막 상담 기록 요약 (action + content + 시각)
+  const [lastLogs, setLastLogs] = useState<Record<string, { action: string; content: string | null; created_at: string }>>({});
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("전체");
   const [search, setSearch] = useState("");
@@ -347,13 +351,14 @@ const ChannelIntakePage = () => {
   const [detailRow, setDetailRow] = useState<InquiryRow | null>(null);
   const [detail, setDetail] = useState<{
     customer_name: string;
+    birth_date: string;
     phone: string;
     channel: string;
     content: string;
     manager: string;
     note: string;
     status: string;
-  }>({ customer_name: "", phone: "", channel: "", content: "", manager: "", note: "", status: "" });
+  }>({ customer_name: "", birth_date: "", phone: "", channel: "", content: "", manager: "", note: "", status: "" });
   const [detailHistory, setDetailHistory] = useState<LogEntry[]>([]);
   const [savingDetail, setSavingDetail] = useState(false);
   // 일괄 선택
@@ -371,7 +376,24 @@ const ChannelIntakePage = () => {
       .order("inquiry_date", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(2000);
-    setRows((data as InquiryRow[]) ?? []);
+    const list = (data as InquiryRow[]) ?? [];
+    setRows(list);
+    // 마지막 상담 기록 일괄 조회 (현재 보이는 인입들에 대해서만)
+    const ids = list.map((r) => r.id);
+    if (ids.length > 0) {
+      const { data: logs } = await supabase
+        .from("inquiry_logs")
+        .select("inquiry_id,action,content,created_at")
+        .in("inquiry_id", ids)
+        .order("created_at", { ascending: false });
+      const map: Record<string, { action: string; content: string | null; created_at: string }> = {};
+      (logs ?? []).forEach((l: any) => {
+        if (!map[l.inquiry_id]) map[l.inquiry_id] = { action: l.action, content: l.content, created_at: l.created_at };
+      });
+      setLastLogs(map);
+    } else {
+      setLastLogs({});
+    }
     setLoading(false);
     setSelectedIds(new Set());
   }, [startDate, endDate]);
@@ -440,6 +462,7 @@ const ChannelIntakePage = () => {
     setDetailRow(row);
     setDetail({
       customer_name: row.customer_name ?? "",
+      birth_date: row.birth_date ?? "",
       phone: row.phone ?? "",
       channel: row.channel ?? "",
       content: row.content ?? "",
@@ -464,6 +487,7 @@ const ChannelIntakePage = () => {
       .from("inquiries")
       .update({
         customer_name: detail.customer_name || null,
+        birth_date: detail.birth_date || null,
         phone: detail.phone || null,
         channel: detail.channel || detailRow.channel,
         content: detail.content || null,
@@ -707,24 +731,30 @@ const ChannelIntakePage = () => {
                   <th className="text-left px-3 py-2">날짜</th>
                   <th className="text-left px-3 py-2">채널</th>
                   <th className="text-left px-3 py-2">고객</th>
+                  <th className="text-left px-3 py-2">생년월일</th>
                   <th className="text-left px-3 py-2">연락처</th>
                   <th className="text-left px-3 py-2">상태</th>
                   <th className="text-left px-3 py-2">재연락</th>
                   <th className="text-left px-3 py-2">최종액션</th>
+                  <th className="text-left px-3 py-2">마지막 기록</th>
                   <th className="text-left px-3 py-2">담당</th>
                   <th className="text-right px-3 py-2">관리</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={10} className="text-center py-10 text-muted-foreground">불러오는 중…</td></tr>
+                  <tr><td colSpan={12} className="text-center py-10 text-muted-foreground">불러오는 중…</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={10} className="text-center py-10 text-muted-foreground">데이터 없음</td></tr>
+                  <tr><td colSpan={12} className="text-center py-10 text-muted-foreground">데이터 없음</td></tr>
                 ) : (
                   filtered.map((r) => {
                     const newLead = isNewLead(r);
                     const abandoned = !newLead && isAbandoned(r.last_action_at) && !["개통완료", "실패", "종료"].includes(r.status);
                     const displayStatus = newLead ? "미처리" : r.status;
+                    const lastLog = lastLogs[r.id];
+                    const lastSummary = lastLog
+                      ? `[${lastLog.action}] ${lastLog.content ?? ""}`.trim()
+                      : (r.note ? `[메모] ${r.note}` : "");
                     return (
                       <tr key={r.id} className={cn(
                         "border-t border-border/30 hover:bg-muted/20",
@@ -743,6 +773,7 @@ const ChannelIntakePage = () => {
                           <Badge variant="outline" className="text-[10px]">{r.channel}</Badge>
                         </td>
                         <td className="px-3 py-2 text-xs font-medium align-middle">{r.customer_name ?? "-"}</td>
+                        <td className="px-3 py-2 text-xs tabular-nums text-muted-foreground align-middle">{r.birth_date ?? "-"}</td>
                         <td className="px-3 py-2 text-xs align-middle">
                           {r.phone ? (
                             <a href={`tel:${r.phone}`} className="flex items-center gap-1 text-foreground/80 hover:text-foreground">
@@ -786,6 +817,29 @@ const ChannelIntakePage = () => {
                         </td>
                         <td className="px-3 py-2 text-[10px] tabular-nums text-muted-foreground align-middle">
                           {formatTime(r.last_action_at)}
+                        </td>
+                        <td className="px-3 py-2 text-xs align-middle max-w-[260px]">
+                          {lastSummary ? (
+                            <TooltipProvider delayDuration={150}>
+                              <UITooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="block truncate text-foreground/80 cursor-help">
+                                    {lastSummary}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-sm whitespace-pre-wrap break-words">
+                                  {lastSummary}
+                                  {lastLog && (
+                                    <div className="text-[10px] text-muted-foreground mt-1 tabular-nums">
+                                      {formatTime(lastLog.created_at)}
+                                    </div>
+                                  )}
+                                </TooltipContent>
+                              </UITooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </td>
                         <td className="px-3 py-2 text-xs align-middle">{r.manager ?? "-"}</td>
                         <td className="px-3 py-2 align-middle">
@@ -927,6 +981,19 @@ const ChannelIntakePage = () => {
                     value={detail.customer_name}
                     onChange={(e) => setDetail((d) => ({ ...d, customer_name: e.target.value }))}
                     className="h-9"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">생년월일 (6자리)</label>
+                  <Input
+                    value={detail.birth_date}
+                    onChange={(e) =>
+                      setDetail((d) => ({ ...d, birth_date: e.target.value.replace(/\D+/g, "").slice(0, 6) }))
+                    }
+                    className="h-9"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="900101"
                   />
                 </div>
                 <div className="space-y-1">
