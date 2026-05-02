@@ -807,11 +807,20 @@ const ChannelIntakePage = () => {
                       ? `[${lastLog.action}] ${lastLog.content ?? ""}`.trim()
                       : (r.note ? `[메모] ${r.note}` : "");
                     return (
-                      <tr key={r.id} className={cn(
-                        "border-t border-border/30 hover:bg-muted/20",
-                        newLead && "bg-orange-50 dark:bg-orange-950/20",
-                        abandoned && !newLead && "bg-destructive/5"
-                      )}>
+                      <tr
+                        key={r.id}
+                        className={cn(
+                          "border-t border-border/30 hover:bg-muted/30 cursor-pointer",
+                          newLead && "bg-orange-50 dark:bg-orange-950/20",
+                          abandoned && !newLead && "bg-destructive/5",
+                        )}
+                        onClick={(e) => {
+                          // 컨트롤(체크박스/버튼/셀렉트/링크) 클릭 시 상세 열지 않음
+                          const target = e.target as HTMLElement;
+                          if (target.closest("button, a, input, [role='checkbox'], [data-no-row-open]")) return;
+                          openDetailEditor(r);
+                        }}
+                      >
                         <td className="px-3 py-2 align-middle">
                           <Checkbox
                             checked={selectedIds.has(r.id)}
