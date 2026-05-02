@@ -322,10 +322,10 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    // 약정 정보(선택약정/이통사지원금)는 [모바일 2nd] 상품에서만 필수
-    const is2nd = form.product === "2ND";
-    if (is2nd && !customFields.contract_type) {
-      toast.error("약정 정보를 선택해주세요", { description: "[모바일 2nd] 상품은 선택약정 또는 이통사지원금 중 하나를 선택해야 합니다." });
+    // 약정 정보(선택약정/이통사지원금)는 [모바일/2nd/USIM] 상품에서만 필수
+    const contractRequired = isContractProduct(form.product);
+    if (contractRequired && !customFields.contract_type) {
+      toast.error("약정 정보를 선택해주세요", { description: "[모바일/2nd/USIM] 상품은 선택약정 또는 이통사지원금 중 하나를 선택해야 합니다." });
       return;
     }
     // 단말기 모델: 마스터에 등록된 정확한 펫네임만 허용
@@ -362,9 +362,8 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
         : calcNetFee(baseNumeric),
       custom_fields: {
         ...customFields,
-        // 약정 정보: 모바일 2nd 가 아니면 비활성 필드이므로 null 로 안전 저장,
-        //          2nd 인 경우 사용자가 선택한 값을 그대로 보관 (필수 검증은 onSubmit 상단에서 처리)
-        contract_type: form.product === "2ND" ? (customFields.contract_type || null) : null,
+        // 약정 정보: 활성 상품(모바일/2nd/USIM)이 아니면 비활성 필드이므로 null 로 안전 저장
+        contract_type: isContractProduct(form.product) ? (customFields.contract_type || null) : null,
       },
       pending_items: pendingItems,
       pending_note: pendingNote || null,
@@ -461,8 +460,8 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                       !f.rate_plan || allowed.length === 0 || allowed.includes(f.rate_plan);
                     return { ...f, product: v, rate_plan: keepRate ? f.rate_plan : null };
                   });
-                  // 모바일 2nd 가 아니면 약정 정보(contract_type) 초기화 — 비활성 필드의 잔존값 제거
-                  if (v !== "2ND") {
+                  // 활성 상품(모바일/2nd/USIM)이 아니면 약정 정보(contract_type) 초기화 — 비활성 필드의 잔존값 제거
+                  if (!isContractProduct(v)) {
                     setCustomFields((cf) => {
                       if (!("contract_type" in cf)) return cf;
                       const next = { ...cf };
@@ -688,18 +687,18 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
               </Field>
             </div>
             <div className="col-span-12 md:col-span-3">
-              <Field label={form.product === "2ND" ? "약정 정보 *" : "약정 정보"}>
+              <Field label={isContractProduct(form.product) ? "약정 정보 *" : "약정 정보"}>
                 {(() => {
-                  const is2nd = form.product === "2ND";
-                  const disabledTip = "이 상품은 약정 정보를 입력하지 않습니다";
+                  const enabled = isContractProduct(form.product);
+                  const disabledTip = "해당 상품은 약정 정보 입력 대상이 아닙니다";
                   return (
                     <>
                       <div
-                        title={!is2nd ? disabledTip : undefined}
-                        aria-disabled={!is2nd}
+                        title={!enabled ? disabledTip : undefined}
+                        aria-disabled={!enabled}
                         className={cn(
                           "inline-flex h-9 w-full rounded-md border p-0.5 text-xs transition-colors",
-                          !is2nd
+                          !enabled
                             ? "bg-muted/60 border-border/30 cursor-not-allowed opacity-70"
                             : customFields.contract_type
                               ? "bg-input/60 border-border/40"
@@ -710,19 +709,19 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                           { v: "선택약정", label: "선택약정" },
                           { v: "이통사지원금", label: "이통사지원금" },
                         ].map((opt) => {
-                          const active = is2nd && customFields.contract_type === opt.v;
+                          const active = enabled && customFields.contract_type === opt.v;
                           return (
                             <button
                               key={opt.v}
                               type="button"
-                              disabled={!is2nd}
-                              title={!is2nd ? disabledTip : undefined}
+                              disabled={!enabled}
+                              title={!enabled ? disabledTip : undefined}
                               onClick={() =>
-                                is2nd && setCustomFields((f) => ({ ...f, contract_type: opt.v }))
+                                enabled && setCustomFields((f) => ({ ...f, contract_type: opt.v }))
                               }
                               className={cn(
                                 "flex-1 rounded-[5px] font-medium transition-colors",
-                                !is2nd
+                                !enabled
                                   ? "text-muted-foreground/60 cursor-not-allowed"
                                   : active
                                     ? "bg-primary text-primary-foreground shadow-sm"
@@ -734,7 +733,7 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                           );
                         })}
                       </div>
-                      {!is2nd && (
+                      {!enabled && (
                         <p className="text-[10px] text-muted-foreground mt-1">
                           {disabledTip}
                         </p>
