@@ -16,7 +16,7 @@ export const ROLE_LABELS: Record<AppRole, string> = {
   manager: "매니저",
   user: "사용자",
   ceo: "대표",
-  planner: "기획팀",
+  planner: "관리자", // 사용 중지된 라벨 — 호환을 위해 enum 유지
   team_lead: "팀장",
   staff: "일반직원",
 };
