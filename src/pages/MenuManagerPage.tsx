@@ -39,7 +39,7 @@ import { toast } from "sonner";
 
 const ROLE_LABELS: Record<MenuRole, string> = {
   admin: "대표/관리자",
-  manager: "팀장/기획팀",
+  manager: "팀장",
   user: "일반직원",
 };
 const ALL_ROLES: MenuRole[] = ["admin", "manager", "user"];
