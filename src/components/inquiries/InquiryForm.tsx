@@ -15,6 +15,7 @@ import { inquiryStatusClass, inquiryStatusSoftClass, INQUIRY_DEFAULT_STATUS } fr
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
+import { formatPhone } from "@/lib/phoneFormat";
 
 interface Props {
   onSaved: () => void;
@@ -187,7 +188,7 @@ export const InquiryForm = ({ onSaved }: Props) => {
           <Label className="text-xs text-muted-foreground">연락처</Label>
           <Input
             value={phone}
-            onChange={(e) => setPhone(formatPhoneLocal(e.target.value))}
+            onChange={(e) => setPhone(formatPhone(e.target.value))}
             placeholder="010-0000-0000"
             type="tel"
             inputMode="numeric"
