@@ -731,24 +731,30 @@ const ChannelIntakePage = () => {
                   <th className="text-left px-3 py-2">날짜</th>
                   <th className="text-left px-3 py-2">채널</th>
                   <th className="text-left px-3 py-2">고객</th>
+                  <th className="text-left px-3 py-2">생년월일</th>
                   <th className="text-left px-3 py-2">연락처</th>
                   <th className="text-left px-3 py-2">상태</th>
                   <th className="text-left px-3 py-2">재연락</th>
                   <th className="text-left px-3 py-2">최종액션</th>
+                  <th className="text-left px-3 py-2">마지막 기록</th>
                   <th className="text-left px-3 py-2">담당</th>
                   <th className="text-right px-3 py-2">관리</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={10} className="text-center py-10 text-muted-foreground">불러오는 중…</td></tr>
+                  <tr><td colSpan={12} className="text-center py-10 text-muted-foreground">불러오는 중…</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={10} className="text-center py-10 text-muted-foreground">데이터 없음</td></tr>
+                  <tr><td colSpan={12} className="text-center py-10 text-muted-foreground">데이터 없음</td></tr>
                 ) : (
                   filtered.map((r) => {
                     const newLead = isNewLead(r);
                     const abandoned = !newLead && isAbandoned(r.last_action_at) && !["개통완료", "실패", "종료"].includes(r.status);
                     const displayStatus = newLead ? "미처리" : r.status;
+                    const lastLog = lastLogs[r.id];
+                    const lastSummary = lastLog
+                      ? `[${lastLog.action}] ${lastLog.content ?? ""}`.trim()
+                      : (r.note ? `[메모] ${r.note}` : "");
                     return (
                       <tr key={r.id} className={cn(
                         "border-t border-border/30 hover:bg-muted/20",
@@ -767,6 +773,7 @@ const ChannelIntakePage = () => {
                           <Badge variant="outline" className="text-[10px]">{r.channel}</Badge>
                         </td>
                         <td className="px-3 py-2 text-xs font-medium align-middle">{r.customer_name ?? "-"}</td>
+                        <td className="px-3 py-2 text-xs tabular-nums text-muted-foreground align-middle">{r.birth_date ?? "-"}</td>
                         <td className="px-3 py-2 text-xs align-middle">
                           {r.phone ? (
                             <a href={`tel:${r.phone}`} className="flex items-center gap-1 text-foreground/80 hover:text-foreground">
@@ -810,6 +817,29 @@ const ChannelIntakePage = () => {
                         </td>
                         <td className="px-3 py-2 text-[10px] tabular-nums text-muted-foreground align-middle">
                           {formatTime(r.last_action_at)}
+                        </td>
+                        <td className="px-3 py-2 text-xs align-middle max-w-[260px]">
+                          {lastSummary ? (
+                            <TooltipProvider delayDuration={150}>
+                              <UITooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="block truncate text-foreground/80 cursor-help">
+                                    {lastSummary}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-sm whitespace-pre-wrap break-words">
+                                  {lastSummary}
+                                  {lastLog && (
+                                    <div className="text-[10px] text-muted-foreground mt-1 tabular-nums">
+                                      {formatTime(lastLog.created_at)}
+                                    </div>
+                                  )}
+                                </TooltipContent>
+                              </UITooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </td>
                         <td className="px-3 py-2 text-xs align-middle">{r.manager ?? "-"}</td>
                         <td className="px-3 py-2 align-middle">
