@@ -253,30 +253,83 @@ export default function ExpenseInputPage() {
     exportToExcel(data ?? [], AD_SPEND_COLUMNS, `지출내역_${periodLabel.replace(/\s/g, "")}`, "지출");
   };
 
-  const totals = useMemo(() => {
-    const ad = rows.filter((r) => r.category === "광고비");
-    const etc = rows.filter((r) => r.category === "기타지출");
-    const fixed = rows.filter((r) => r.category === "고정지출");
+  // 현재 페이지(보이는 행) 기준 합계 — 보조 지표용
+  const pageTotals = useMemo(() => {
     const sum = (xs: ExpenseRow[]) => xs.reduce((s, r) => s + Number(r.amount || 0), 0);
-    const adTotal = sum(ad);
-    const etcTotal = sum(etc);
-    const fixedTotal = sum(fixed);
-    const byMedia = ad.reduce<Record<string, number>>((acc, r) => {
-      acc[r.media] = (acc[r.media] ?? 0) + Number(r.amount || 0);
-      return acc;
-    }, {});
-    const byType = etc.reduce<Record<string, number>>((acc, r) => {
-      const k = r.expense_type ?? "기타";
-      acc[k] = (acc[k] ?? 0) + Number(r.amount || 0);
-      return acc;
-    }, {});
-    const byFixed = fixed.reduce<Record<string, number>>((acc, r) => {
-      const k = r.expense_type ?? r.media ?? "기타";
-      acc[k] = (acc[k] ?? 0) + Number(r.amount || 0);
-      return acc;
-    }, {});
-    return { adTotal, etcTotal, fixedTotal, byMedia, byType, byFixed, total: adTotal + etcTotal + fixedTotal };
+    return { total: sum(rows) };
   }, [rows]);
+
+  // 선택 기간(전역) 기준 합계 — 메인 KPI / 분류 합계는 모두 이 값을 사용
+  const [periodTotals, setPeriodTotals] = useState<{
+    adTotal: number;
+    etcTotal: number;
+    fixedTotal: number;
+    total: number;
+    byMedia: Record<string, number>;
+    byType: Record<string, number>;
+    byFixed: Record<string, number>;
+  }>({ adTotal: 0, etcTotal: 0, fixedTotal: 0, total: 0, byMedia: {}, byType: {}, byFixed: {} });
+
+  const fetchPeriodTotals = async () => {
+    // 페이지네이션과 무관하게 기간 내 전체 행을 합산
+    const { data, error } = await supabase
+      .from("ad_spend")
+      .select("category, media, expense_type, amount")
+      .gte("spend_date", startDate)
+      .lte("spend_date", endDate);
+    if (error) return;
+    const acc = {
+      adTotal: 0,
+      etcTotal: 0,
+      fixedTotal: 0,
+      total: 0,
+      byMedia: {} as Record<string, number>,
+      byType: {} as Record<string, number>,
+      byFixed: {} as Record<string, number>,
+    };
+    (data ?? []).forEach((r: any) => {
+      const amt = Number(r.amount || 0);
+      acc.total += amt;
+      if (r.category === "광고비") {
+        acc.adTotal += amt;
+        const k = r.media ?? "기타";
+        acc.byMedia[k] = (acc.byMedia[k] ?? 0) + amt;
+      } else if (r.category === "기타지출") {
+        acc.etcTotal += amt;
+        const k = r.expense_type ?? "기타";
+        acc.byType[k] = (acc.byType[k] ?? 0) + amt;
+      } else if (r.category === "고정지출") {
+        acc.fixedTotal += amt;
+        const k = r.expense_type ?? r.media ?? "기타";
+        acc.byFixed[k] = (acc.byFixed[k] ?? 0) + amt;
+      }
+    });
+    setPeriodTotals(acc);
+  };
+
+  useEffect(() => {
+    fetchPeriodTotals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate]);
+
+  // 실시간: ad_spend 변경 시 현재 페이지 + 기간 합계 즉시 갱신
+  useEffect(() => {
+    const ch = supabase
+      .channel("realtime:ad_spend:expense-input")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "ad_spend" },
+        () => {
+          fetchPeriodTotals();
+          fetchRows();
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate, page]);
 
   const submitAd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -527,7 +580,7 @@ export default function ExpenseInputPage() {
             <TrendingUp className="size-3.5 text-expense" /> 총 지출 (실시간)
           </div>
           <div className="mt-2 text-3xl font-bold text-expense tabular-nums">
-            {formatKRW(totals.total + salesAgg.distributor + salesAgg.receivable)}
+            {formatKRW(periodTotals.total + salesAgg.distributor + salesAgg.receivable)}
           </div>
           <div className="text-[11px] text-muted-foreground mt-1">
             광고비 + 기타지출 + <span className="text-foreground">유통망 지원금</span> + <span className="text-foreground">고객입금(고객 지급)</span>
@@ -539,7 +592,7 @@ export default function ExpenseInputPage() {
             <Sparkles className="size-3.5 text-primary-glow" /> 실질 마진 (현금흐름 기준)
           </div>
           <div className="mt-2 text-3xl font-bold text-gradient tabular-nums">
-            {formatKRW(-(salesAgg.distributor + salesAgg.receivable + totals.adTotal))}
+            {formatKRW(-(salesAgg.distributor + salesAgg.receivable + periodTotals.adTotal))}
           </div>
           <div className="text-[11px] text-muted-foreground mt-1">
             − (유통망지원금 + 고객입금 + 마케팅비) · 리베이트는 정산 후 합산
@@ -562,29 +615,29 @@ export default function ExpenseInputPage() {
       {/* 세부 분류 카드 */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         <Card className="p-5 glass">
-          <div className="text-xs text-muted-foreground">전체 지출 누적</div>
-          <div className="mt-2 text-2xl font-bold text-gradient">{formatKRW(totals.total)}</div>
-          <div className="text-[11px] text-muted-foreground mt-1">광고+기타 (수동 입력만)</div>
+          <div className="text-xs text-muted-foreground">선택 기간 총 지출</div>
+          <div className="mt-2 text-2xl font-bold text-gradient">{formatKRW(periodTotals.total)}</div>
+          <div className="text-[11px] text-muted-foreground mt-1">{periodLabel} 전체 합계 (페이지 무관)</div>
         </Card>
         <Card className="p-5 glass">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Megaphone className="size-3.5" /> 광고비
           </div>
-          <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(totals.adTotal)}</div>
+          <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(periodTotals.adTotal)}</div>
           <div className="text-[11px] text-muted-foreground mt-1">매체별 마케팅 집행</div>
         </Card>
         <Card className="p-5 glass">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Receipt className="size-3.5" /> 기타 지출
           </div>
-          <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(totals.etcTotal)}</div>
+          <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(periodTotals.etcTotal)}</div>
           <div className="text-[11px] text-muted-foreground mt-1">임대료 · 통신비 · 운영비 등</div>
         </Card>
         <Card className="p-5 glass border-primary/20">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Repeat className="size-3.5" /> 고정지출
           </div>
-          <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(totals.fixedTotal)}</div>
+          <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(periodTotals.fixedTotal)}</div>
           <div className="text-[11px] text-muted-foreground mt-1">SaaS · 렌탈 · 구독 등 매월 반복</div>
         </Card>
         <Card className="p-5 glass border-expense/20">
@@ -993,13 +1046,13 @@ export default function ExpenseInputPage() {
         <Card className="p-5 glass">
           <div className="text-xs text-muted-foreground mb-3 flex items-center gap-2">
             <Megaphone className="size-3.5" /> 매체별 광고비 합계
-            <span className="ml-auto text-[11px] tabular-nums text-foreground">{formatKRW(totals.adTotal)}</span>
+            <span className="ml-auto text-[11px] tabular-nums text-foreground">{formatKRW(periodTotals.adTotal)}</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {Object.entries(totals.byMedia).length === 0 && (
+            {Object.entries(periodTotals.byMedia).length === 0 && (
               <span className="text-sm text-muted-foreground">아직 데이터가 없습니다</span>
             )}
-            {Object.entries(totals.byMedia)
+            {Object.entries(periodTotals.byMedia)
               .sort((a, b) => b[1] - a[1])
               .map(([m, v]) => (
                 <Badge key={m} variant="outline" className="text-xs">
@@ -1011,13 +1064,13 @@ export default function ExpenseInputPage() {
         <Card className="p-5 glass">
           <div className="text-xs text-muted-foreground mb-3 flex items-center gap-2">
             <Receipt className="size-3.5" /> 항목별 기타지출 합계
-            <span className="ml-auto text-[11px] tabular-nums text-foreground">{formatKRW(totals.etcTotal)}</span>
+            <span className="ml-auto text-[11px] tabular-nums text-foreground">{formatKRW(periodTotals.etcTotal)}</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {Object.entries(totals.byType).length === 0 && (
+            {Object.entries(periodTotals.byType).length === 0 && (
               <span className="text-sm text-muted-foreground">아직 데이터가 없습니다</span>
             )}
-            {Object.entries(totals.byType)
+            {Object.entries(periodTotals.byType)
               .sort((a, b) => b[1] - a[1])
               .map(([t, v]) => (
                 <Badge key={t} variant="outline" className="text-xs">
@@ -1029,13 +1082,13 @@ export default function ExpenseInputPage() {
         <Card className="p-5 glass">
           <div className="text-xs text-muted-foreground mb-3 flex items-center gap-2">
             <Repeat className="size-3.5" /> 항목별 고정지출 합계
-            <span className="ml-auto text-[11px] tabular-nums text-foreground">{formatKRW(totals.fixedTotal)}</span>
+            <span className="ml-auto text-[11px] tabular-nums text-foreground">{formatKRW(periodTotals.fixedTotal)}</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {Object.entries(totals.byFixed).length === 0 && (
+            {Object.entries(periodTotals.byFixed).length === 0 && (
               <span className="text-sm text-muted-foreground">아직 데이터가 없습니다</span>
             )}
-            {Object.entries(totals.byFixed)
+            {Object.entries(periodTotals.byFixed)
               .sort((a, b) => b[1] - a[1])
               .map(([t, v]) => (
                 <Badge key={t} variant="outline" className="text-xs">
@@ -1067,6 +1120,12 @@ export default function ExpenseInputPage() {
               </Button>
             )}
             <span className="text-xs text-muted-foreground">총 {total.toLocaleString()}건</span>
+            <span className="text-[11px] text-muted-foreground">
+              · 현재 페이지 합계 <span className="tabular-nums text-foreground/80">{formatKRW(pageTotals.total)}</span>
+            </span>
+            <span className="text-[11px] text-muted-foreground">
+              · {periodLabel} 전체 합계 <span className="tabular-nums font-semibold text-expense">{formatKRW(periodTotals.total)}</span>
+            </span>
           </div>
         </div>
         <div className="overflow-x-auto">
