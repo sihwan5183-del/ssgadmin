@@ -16,10 +16,10 @@ export const MobileTopBar = () => {
         <div className="size-8 rounded-lg bg-gradient-primary grid place-items-center shadow-glow shrink-0">
           <Sparkles className="size-4 text-primary-foreground" />
         </div>
-        <div className="min-w-0">
-          <div className="text-[10px] text-muted-foreground leading-none">UDak</div>
-          <div className="text-sm font-semibold tracking-tight leading-tight mt-0.5 truncate">영업기획팀</div>
-        </div>
+         <div className="min-w-0">
+           <div className="text-[10px] text-muted-foreground leading-none">U+다이렉트</div>
+           <div className="text-sm font-semibold tracking-tight leading-tight mt-0.5 truncate">영업기획팀</div>
+         </div>
       </div>
       <NotificationBell />
     </div>

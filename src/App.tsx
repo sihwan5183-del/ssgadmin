@@ -53,7 +53,7 @@ import PlanChangeCalendarPage from "./pages/PlanChangeCalendarPage.tsx";
 
 const queryClient = new QueryClient();
 
-const SPLASH_SESSION_KEY = "udak.splash.shown";
+ const SPLASH_SESSION_KEY = "uplus-direct.splash.shown";
 
 const App = () => {
   // 세션 동안 1회만 표시 (앱 진입 시), 새로고침 시 재표시

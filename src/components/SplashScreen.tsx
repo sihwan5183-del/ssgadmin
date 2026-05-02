@@ -33,12 +33,12 @@ export const SplashScreen = ({ onDone }: { onDone: () => void }) => {
         {/* 로고 등장 */}
         <div className="relative">
           <span className="absolute inset-0 rounded-3xl splash-ring" />
-          <img
-            src={udakLogo}
-            alt="UDak"
-            className="relative size-36 md:size-40 object-contain rounded-3xl splash-logo"
-            draggable={false}
-          />
+           <img
+             src={udakLogo}
+             alt="U+다이렉트"
+             className="relative size-36 md:size-40 object-contain rounded-3xl splash-logo"
+             draggable={false}
+           />
         </div>
 
         {/* 슬로건 */}

@@ -77,10 +77,10 @@ export const Sidebar = () => {
         <div className="size-10 rounded-xl bg-gradient-primary grid place-items-center shadow-glow">
           <Sparkles className="size-5 text-primary-foreground" />
         </div>
-        <div>
-          <div className="text-sm text-muted-foreground leading-none">UDak</div>
-          <div className="text-base font-semibold tracking-tight mt-1">영업기획팀</div>
-        </div>
+         <div>
+           <div className="text-sm text-muted-foreground leading-none">U+다이렉트</div>
+           <div className="text-base font-semibold tracking-tight mt-1">영업기획팀</div>
+         </div>
       </div>
 
       <nav className="px-3 py-2 flex-1 overflow-y-auto space-y-1">
