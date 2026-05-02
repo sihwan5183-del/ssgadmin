@@ -556,10 +556,10 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
             <Field label="가입 번호">
               <Input
                 value={customFields.subscription_no ?? ""}
-                onChange={(e) => setCustomFields((f) => ({ ...f, subscription_no: formatPhone(e.target.value) }))}
-                placeholder="010-0000-0000"
-                className="h-9 bg-input/60 text-xs" inputMode="numeric" type="tel"
-                maxLength={13}
+                onChange={(e) => setCustomFields((f) => ({ ...f, subscription_no: e.target.value.replace(/\D+/g, "").slice(0, 12) }))}
+                placeholder="숫자만 입력 (최대 12자리)"
+                className="h-9 bg-input/60 text-xs" inputMode="numeric"
+                maxLength={12}
               />
             </Field>
             <Field label="간단 메모">
