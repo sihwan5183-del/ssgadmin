@@ -368,6 +368,45 @@ const ChannelIntakePage = () => {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   // 정렬 모드: 기본(미처리 우선) | 최신 상담 순
   const [sortMode, setSortMode] = useState<"default" | "recent_log">("default");
+  // 최근 수정된 행 (하이라이트용)
+  const [recentlyUpdatedId, setRecentlyUpdatedId] = useState<string | null>(null);
+  const recentTimerRef = (typeof window !== "undefined" ? (window as any).__intakeRecentTimer : null);
+
+  const flashRow = useCallback((id: string) => {
+    setRecentlyUpdatedId(id);
+    if ((window as any).__intakeRecentTimer) {
+      clearTimeout((window as any).__intakeRecentTimer);
+    }
+    (window as any).__intakeRecentTimer = setTimeout(() => {
+      setRecentlyUpdatedId((cur) => (cur === id ? null : cur));
+    }, 2500);
+  }, []);
+
+  // 단일 행 부분 갱신 — 전체 새로고침 없이 해당 인입 행만 다시 가져와 교체 (스크롤 유지)
+  const refreshOne = useCallback(async (id: string) => {
+    const { data } = await supabase
+      .from("inquiries")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (!data) return;
+    setRows((prev) => prev.map((r) => (r.id === id ? (data as InquiryRow) : r)));
+    // 마지막 상담 기록도 갱신
+    const { data: logs } = await supabase
+      .from("inquiry_logs")
+      .select("inquiry_id,action,content,created_at")
+      .eq("inquiry_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const last = (logs ?? [])[0];
+    if (last) {
+      setLastLogs((prev) => ({
+        ...prev,
+        [id]: { action: last.action, content: last.content, created_at: last.created_at },
+      }));
+    }
+    flashRow(id);
+  }, [flashRow]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -491,8 +530,9 @@ const ChannelIntakePage = () => {
       });
     }
     toast.success("상태 변경 완료");
+    const id = editingRow.id;
     setEditingRow(null);
-    refresh();
+    refreshOne(id);
   };
 
   // ── 상세 수정 ──
@@ -550,8 +590,9 @@ const ChannelIntakePage = () => {
     }
     setSavingDetail(false);
     toast.success("고객 정보가 저장되었습니다");
+    const id = detailRow.id;
     setDetailRow(null);
-    refresh();
+    refreshOne(id);
   };
 
   // ── 일괄 선택/삭제 ──
@@ -614,7 +655,7 @@ const ChannelIntakePage = () => {
       });
     }
     toast.success(`상태 변경: ${next}`);
-    refresh();
+    refreshOne(row.id);
   };
 
   // ── CSV 다운로드 (현재 필터링된 결과만) ──
