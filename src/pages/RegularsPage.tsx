@@ -40,6 +40,7 @@ interface Regular {
   manager: string | null;
   coupon_sent: boolean;
   converted: boolean;
+  activated?: boolean;
   registered_date: string;
   note: string | null;
   created_at: string;
@@ -106,6 +107,7 @@ const RegularsPage = () => {
     manager: "",
     coupon_sent: false,
     converted: false,
+    activated: false,
     registered_date: today(),
     note: "",
   });
@@ -122,6 +124,7 @@ const RegularsPage = () => {
       manager: r.manager ?? "",
       coupon_sent: !!r.coupon_sent,
       converted: !!r.converted,
+      activated: !!r.activated,
       registered_date: r.registered_date ?? today(),
       note: r.note ?? "",
     });
@@ -144,6 +147,7 @@ const RegularsPage = () => {
         manager: editForm.manager || null,
         coupon_sent: editForm.coupon_sent,
         converted: editForm.converted,
+        activated: editForm.activated,
         registered_date: editForm.registered_date,
         note: editForm.note || null,
       })
@@ -166,6 +170,7 @@ const RegularsPage = () => {
     manager: "",
     coupon_sent: false,
     converted: false,
+    activated: false,
     registered_date: today(),
     note: "",
   });
@@ -226,6 +231,7 @@ const RegularsPage = () => {
         manager: "",
         coupon_sent: false,
         converted: false,
+        activated: false,
         registered_date: today(),
         note: "",
       });
