@@ -456,28 +456,19 @@ export default function ProductRatePlansPage() {
         {/* 오른쪽: 매핑 편집 */}
         <Card className="p-6 glass">
           {/* 상품 기본값 설정 */}
-          {activeProduct && filtered.length > 0 && (
+          {activeProduct && filtered.length > 0 && vasEnabled && (
             <div className="mb-6 p-4 rounded-xl border border-border/40 bg-muted/20">
-              <h4 className="text-sm font-semibold mb-3">📋 {activeProduct} 기본 설정</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <Label className="text-xs">기본 판매유형</Label>
-                  <Select
-                    value={firstRow?.default_sale_type ?? ""}
-                    onValueChange={(v) => saveDefaults("default_sale_type", v || null)}
-                  >
-                    <SelectTrigger className="h-9"><SelectValue placeholder="미설정" /></SelectTrigger>
-                    <SelectContent>
-                      {SALE_TYPES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <h4 className="text-sm font-semibold mb-3">📋 {activeProduct} 부가서비스 기본 설정 (선택)</h4>
+              <p className="text-[11px] text-muted-foreground mb-3">
+                요금제별 [연관 부가서비스]를 지정하지 않은 경우 사용되는 폴백 기본값입니다.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div>
                   <Label className="text-xs">기본 부가서비스 1</Label>
                   <Input
                     value={firstRow?.default_vas1 ?? ""}
                     onChange={(e) => saveDefaults("default_vas1", e.target.value || null)}
-                    placeholder="예: 주셋톱"
+                    placeholder="예: 음악감상서비스"
                     className="h-9"
                   />
                 </div>
@@ -486,7 +477,7 @@ export default function ProductRatePlansPage() {
                   <Input
                     value={firstRow?.default_vas2 ?? ""}
                     onChange={(e) => saveDefaults("default_vas2", e.target.value || null)}
-                    placeholder="예: 부셋톱"
+                    placeholder="예: 데이터팩"
                     className="h-9"
                   />
                 </div>
@@ -510,32 +501,6 @@ export default function ProductRatePlansPage() {
                     className="h-9"
                   />
                 </div>
-              <div className="col-span-full border-t border-border/30 pt-3 mt-1">
-                <Label className="text-xs font-semibold mb-2 block">부가서비스 제어</Label>
-                <div className="flex flex-wrap gap-4">
-                  <label className="flex items-center gap-2 text-xs cursor-pointer">
-                    <Switch
-                      checked={firstRow?.vas_required ?? true}
-                      onCheckedChange={(v) => saveDefaults("vas_required", v)}
-                    />
-                    <span>부가서비스 입력 노출</span>
-                  </label>
-                  <label className="flex items-center gap-2 text-xs cursor-pointer">
-                    <Switch
-                      checked={firstRow?.vas1_locked ?? false}
-                      onCheckedChange={(v) => saveDefaults("vas1_locked", v)}
-                    />
-                    <span>VAS1 읽기 전용 (강제)</span>
-                  </label>
-                  <label className="flex items-center gap-2 text-xs cursor-pointer">
-                    <Switch
-                      checked={firstRow?.vas2_locked ?? false}
-                      onCheckedChange={(v) => saveDefaults("vas2_locked", v)}
-                    />
-                    <span>VAS2 읽기 전용 (강제)</span>
-                  </label>
-                </div>
-              </div>
               </div>
             </div>
           )}
