@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Plus, Link2, Package, Tag, Layers, Sparkles } from "lucide-react";
+import { Trash2, Plus, Link2, Package, Tag, Layers } from "lucide-react";
 import { SortableList, SortableItem } from "@/components/common/SortableList";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,7 +13,6 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
-import { isVasEligibleProduct } from "@/hooks/useProductRatePlans";
 
 interface Mapping {
   id: string;
@@ -140,16 +139,6 @@ export default function ProductRatePlansPage() {
     if (error) toast.error(error.message);
     else load();
   };
-
-  // ===== 부가서비스 풀: product가 '부가서비스' / 'VAS' 를 포함하는 매핑의 rate_plan 합집합 =====
-  // NOTE: hooks must run before any early return — keep this above the role guards below.
-  const vasPool = useMemo(() => {
-    return Array.from(new Set(
-      mappings
-        .filter((m) => m.active && (m.product.includes("부가서비스") || m.product.toUpperCase().includes("VAS")))
-        .map((m) => m.rate_plan),
-    ));
-  }, [mappings]);
 
   if (roleLoading) {
     return <div className="p-8 text-muted-foreground">권한 확인 중...</div>;
