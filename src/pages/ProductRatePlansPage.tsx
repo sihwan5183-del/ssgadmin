@@ -141,6 +141,16 @@ export default function ProductRatePlansPage() {
     else load();
   };
 
+  // ===== 부가서비스 풀: product가 '부가서비스' / 'VAS' 를 포함하는 매핑의 rate_plan 합집합 =====
+  // NOTE: hooks must run before any early return — keep this above the role guards below.
+  const vasPool = useMemo(() => {
+    return Array.from(new Set(
+      mappings
+        .filter((m) => m.active && (m.product.includes("부가서비스") || m.product.toUpperCase().includes("VAS")))
+        .map((m) => m.rate_plan),
+    ));
+  }, [mappings]);
+
   if (roleLoading) {
     return <div className="p-8 text-muted-foreground">권한 확인 중...</div>;
   }
@@ -248,16 +258,6 @@ export default function ProductRatePlansPage() {
   };
 
   const firstRow = filtered[0] as Mapping | undefined;
-
-  // ===== 부가서비스 풀: product가 '부가서비스' / 'VAS' 를 포함하는 매핑의 rate_plan 합집합 =====
-  const vasPool = useMemo(() => {
-    return Array.from(new Set(
-      mappings
-        .filter((m) => m.active && (m.product.includes("부가서비스") || m.product.toUpperCase().includes("VAS")))
-        .map((m) => m.rate_plan),
-    ));
-  }, [mappings]);
-
   const vasEnabled = isVasEligibleProduct(activeProduct);
 
   const toggleLinkedVas = async (mapping: Mapping, vas: string) => {
