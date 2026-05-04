@@ -36,7 +36,8 @@ import { useFinanceData } from "@/hooks/useFinanceData";
 import { RevenueComposition } from "@/components/finance/RevenueComposition";
 import { CategoryBreakdownChart } from "@/components/finance/CategoryBreakdownChart";
 import { usePeriod } from "@/contexts/PeriodContext";
-import { CalendarDays, Calendar as CalendarIcon } from "lucide-react";
+import { CalendarDays, Calendar as CalendarIcon, CalendarRange } from "lucide-react";
+import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 const isoToday = () => {
@@ -107,7 +108,46 @@ const Index = () => {
   const { widgets, isVisible, toggle, move, resetToDefault } = useDashboardLayout();
   const liveRoi = Math.round(finance.roi);
 
-  const { mode, year, month, startDate, label: periodLabel } = usePeriod();
+  const { mode, year, month, startDate, label: periodLabel, setMode, setYear, setMonth } = usePeriod();
+
+  // ── 대시보드는 기본 [이번 달] 강제. 다른 페이지에서 임의 기간을 설정한 채 들어와도
+  //    진입 즉시 현재 월로 리셋해서 모든 위젯이 동일 기준(이번 달)으로 집계되도록 한다.
+  useEffect(() => {
+    const now = new Date();
+    const curY = now.getFullYear();
+    const curM = now.getMonth() + 1;
+    if (mode !== "month" || year !== curY || month !== curM) {
+      setMode("month");
+      setYear(curY);
+      setMonth(curM);
+    }
+    // mount 시점 한 번만 강제 — 이후 사용자가 토글로 [전체 기간] 등 바꾸는 건 존중
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 이번 달인지 / 전체 기간(연 단위)인지 판정
+  const now = new Date();
+  const isThisMonth = mode === "month" && year === now.getFullYear() && month === now.getMonth() + 1;
+  const isAllYear = mode === "month" && month === 0;
+
+  const setThisMonth = () => {
+    setMode("month");
+    setYear(now.getFullYear());
+    setMonth(now.getMonth() + 1);
+  };
+  const setAllYear = () => {
+    setMode("month");
+    setYear(now.getFullYear());
+    setMonth(0);
+  };
+
+  // 헤더 부제: 현재 어떤 기간을 보고 있는지 명시
+  const headerSubtitle = isThisMonth
+    ? `${now.getFullYear()}년 ${now.getMonth() + 1}월 현황 · 1일 ~ 오늘까지 누적`
+    : isAllYear
+      ? `${year}년 전체 기간 · 누적 데이터`
+      : `${periodLabel} 기준 · 사용자 지정 기간`;
+
   // 카드 상단에 표시할 짧은 기준 시점 라벨
   const cardPeriodLabel = (() => {
     if (mode === "month") return `${month || year}월 누적`;
@@ -128,7 +168,7 @@ const Index = () => {
     <>
       <Header
         title="영업기획팀 전략 대시보드"
-        subtitle="2025년 11월 · 영업 성과 → 수익 분석 → 현장 활동 순으로 한눈에"
+        subtitle={headerSubtitle}
         rightSlot={isAdmin ? (
           <DashboardLayoutManager
             widgets={widgets}
@@ -138,6 +178,48 @@ const Index = () => {
           />
         ) : undefined}
       />
+
+      {/* 대시보드 기간 범위: 기본 [이번 달] · 필요 시 [전체 기간] 토글 */}
+      <div className="mb-2 flex items-center gap-2 flex-wrap">
+        <div className="inline-flex p-1 rounded-2xl bg-muted/40 border border-border/40">
+          <button
+            onClick={setThisMonth}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-300 whitespace-nowrap",
+              isThisMonth
+                ? "bg-gradient-primary text-primary-foreground shadow-glow"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            title={`${now.getFullYear()}년 ${now.getMonth() + 1}월 1일 ~ 오늘`}
+          >
+            <CalendarDays className="size-3.5" /> 이번 달 ({now.getMonth() + 1}월)
+          </button>
+          <button
+            onClick={setAllYear}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-300 whitespace-nowrap",
+              isAllYear
+                ? "bg-gradient-primary text-primary-foreground shadow-glow"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            title={`${year}년 전체 누적`}
+          >
+            <CalendarRange className="size-3.5" /> 전체 기간 ({year}년)
+          </button>
+        </div>
+        <span className="text-xs text-muted-foreground">
+          기준: <span className="font-semibold text-foreground">{periodLabel}</span>
+          {!isThisMonth && (
+            <button
+              onClick={setThisMonth}
+              className="ml-2 text-primary hover:underline"
+              title="이번 달로 되돌리기"
+            >
+              [이번 달로 초기화]
+            </button>
+          )}
+        </span>
+      </div>
 
       {/* 상단 [월간 현황 / 일간 현황] 큰 토글 — 모든 카드/차트의 기준 동기화 */}
       <ScopeBigToggle />
