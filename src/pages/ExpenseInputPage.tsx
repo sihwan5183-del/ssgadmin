@@ -270,11 +270,30 @@ export default function ExpenseInputPage() {
     byFixed: Record<string, number>;
   }>({ adTotal: 0, etcTotal: 0, fixedTotal: 0, total: 0, byMedia: {}, byType: {}, byFixed: {} });
 
+  // 일자별 합계 (누적 계산용) — 기간 내 모든 행을 일자별로 합산
+  const [dailySums, setDailySums] = useState<{ date: string; amount: number }[]>([]);
+  // 이번 달(현재 월) 총 지출 — 기간과 무관하게 이번 달 전체
+  const [thisMonthTotal, setThisMonthTotal] = useState(0);
+  const [latestSpendDate, setLatestSpendDate] = useState<string | null>(null);
+
+  // 특정 날짜까지의 누적 합계 계산
+  const cumulativeUpTo = (date: string) => {
+    return dailySums
+      .filter((d) => d.date <= date)
+      .reduce((s, d) => s + d.amount, 0);
+  };
+
+  // 기간 내 가장 최근 일자 기준 전체 누적
+  const periodCumulative = useMemo(
+    () => dailySums.reduce((s, d) => s + d.amount, 0),
+    [dailySums],
+  );
+
   const fetchPeriodTotals = async () => {
     // 페이지네이션과 무관하게 기간 내 전체 행을 합산
     const { data, error } = await supabase
       .from("ad_spend")
-      .select("category, media, expense_type, amount")
+      .select("category, media, expense_type, amount, spend_date")
       .gte("spend_date", startDate)
       .lte("spend_date", endDate);
     if (error) return;
@@ -287,9 +306,15 @@ export default function ExpenseInputPage() {
       byType: {} as Record<string, number>,
       byFixed: {} as Record<string, number>,
     };
+    const dailyMap = new Map<string, number>();
+    let latest: string | null = null;
     (data ?? []).forEach((r: any) => {
       const amt = Number(r.amount || 0);
       acc.total += amt;
+      if (r.spend_date) {
+        dailyMap.set(r.spend_date, (dailyMap.get(r.spend_date) ?? 0) + amt);
+        if (!latest || r.spend_date > latest) latest = r.spend_date;
+      }
       if (r.category === "광고비") {
         acc.adTotal += amt;
         const k = r.media ?? "기타";
@@ -305,10 +330,33 @@ export default function ExpenseInputPage() {
       }
     });
     setPeriodTotals(acc);
+    setDailySums(
+      Array.from(dailyMap.entries())
+        .map(([date, amount]) => ({ date, amount }))
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    );
+    setLatestSpendDate(latest);
+  };
+
+  // 이번 달 총 지출 (기간 필터와 무관)
+  const fetchThisMonthTotal = async () => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const start = `${y}-${m}-01`;
+    const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
+    const end = `${y}-${m}-${String(lastDay).padStart(2, "0")}`;
+    const { data } = await supabase
+      .from("ad_spend")
+      .select("amount")
+      .gte("spend_date", start)
+      .lte("spend_date", end);
+    setThisMonthTotal((data ?? []).reduce((s: number, r: any) => s + Number(r.amount || 0), 0));
   };
 
   useEffect(() => {
     fetchPeriodTotals();
+    fetchThisMonthTotal();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate]);
 
@@ -321,6 +369,7 @@ export default function ExpenseInputPage() {
         { event: "*", schema: "public", table: "ad_spend" },
         () => {
           fetchPeriodTotals();
+          fetchThisMonthTotal();
           fetchRows();
         },
       )
@@ -572,6 +621,40 @@ export default function ExpenseInputPage() {
         showScopeToggle={false}
         showPeriodFilter
       />
+
+      {/* 이번 달 총 지출 — 최상단 메가 카드 */}
+      <Card className="p-6 md:p-8 mb-4 glass border-expense/40 bg-gradient-to-br from-[hsl(var(--expense-soft))]/40 to-transparent">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+              <TrendingUp className="size-3.5 text-expense" /> 이번 달 총 지출
+            </div>
+            <div className="mt-2 text-4xl md:text-5xl font-extrabold text-expense tabular-nums leading-none">
+              {formatKRW(thisMonthTotal)}
+            </div>
+            <div className="mt-2 text-sm text-foreground/80">
+              <span className="font-semibold">{(latestSpendDate ?? todayISO()).replace(/-/g, ".")}</span>
+              까지 총{" "}
+              <span className="font-bold text-expense">{formatKRW(periodCumulative)}</span>
+              을 사용했습니다 <span className="text-muted-foreground text-xs">· {periodLabel} 누적</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3 text-right">
+            <div>
+              <div className="text-[11px] text-muted-foreground">광고비</div>
+              <div className="text-base font-semibold tabular-nums">{formatKRW(periodTotals.adTotal)}</div>
+            </div>
+            <div>
+              <div className="text-[11px] text-muted-foreground">기타지출</div>
+              <div className="text-base font-semibold tabular-nums">{formatKRW(periodTotals.etcTotal)}</div>
+            </div>
+            <div>
+              <div className="text-[11px] text-muted-foreground">고정지출</div>
+              <div className="text-base font-semibold tabular-nums">{formatKRW(periodTotals.fixedTotal)}</div>
+            </div>
+          </div>
+        </div>
+      </Card>
 
       {/* 핵심 KPI: 총지출 / 실질마진 / 오늘 현금시재 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -1128,6 +1211,17 @@ export default function ExpenseInputPage() {
             </span>
           </div>
         </div>
+        {/* 누적 사용 금액 요약 배너 */}
+        <div className="mb-3 rounded-lg border border-expense/30 bg-[hsl(var(--expense-soft))]/30 px-4 py-3 flex flex-wrap items-center gap-2 text-sm">
+          <TrendingUp className="size-4 text-expense" />
+          <span className="font-semibold">{(latestSpendDate ?? endDate).replace(/-/g, ".")}</span>
+          <span className="text-muted-foreground">까지 총</span>
+          <span className="font-bold text-expense tabular-nums text-base">{formatKRW(periodCumulative)}</span>
+          <span className="text-muted-foreground">을 사용했습니다</span>
+          <span className="ml-auto text-[11px] text-muted-foreground">
+            * 누적 합계는 [최종합산금액] 기준 · 실시간 갱신
+          </span>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-xs text-muted-foreground border-b border-border/50">
@@ -1142,6 +1236,7 @@ export default function ExpenseInputPage() {
                 <th className="text-left py-2 pr-3">캠페인/적요</th>
                 <th className="text-left py-2 pr-3 whitespace-nowrap">결제수단</th>
                 <th className="text-right py-2 pr-3">금액</th>
+                <th className="text-right py-2 pr-3 whitespace-nowrap">누적 사용액</th>
                 <th className="text-right py-2 pr-3"></th>
               </tr>
             </thead>
@@ -1161,6 +1256,7 @@ export default function ExpenseInputPage() {
                 <td className="py-2 pr-3 text-muted-foreground">-</td>
                 <td className="py-2 pr-3 text-right font-mono font-semibold">{formatKRW(salesAgg.distributor)}</td>
                 <td />
+                <td />
               </tr>
               <tr className="border-b border-border/40 bg-primary/[0.05]">
                 <td />
@@ -1175,6 +1271,7 @@ export default function ExpenseInputPage() {
                 <td className="py-2 pr-3 text-muted-foreground text-xs">cash_open=true 건의 cash_support_amount 합계</td>
                 <td className="py-2 pr-3 text-muted-foreground">-</td>
                 <td className="py-2 pr-3 text-right font-mono font-semibold">{formatKRW(salesAgg.cash)}</td>
+                <td />
                 <td />
               </tr>
               <tr className="border-b border-border/40 bg-primary/[0.05]">
@@ -1191,18 +1288,20 @@ export default function ExpenseInputPage() {
                 <td className="py-2 pr-3 text-muted-foreground">-</td>
                 <td className="py-2 pr-3 text-right font-mono font-semibold">{formatKRW(salesAgg.receivable)}</td>
                 <td />
+                <td />
               </tr>
 
               {loading ? (
-                <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">불러오는 중...</td></tr>
+                <tr><td colSpan={10} className="py-8 text-center text-muted-foreground">불러오는 중...</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">등록된 지출이 없습니다</td></tr>
+                <tr><td colSpan={10} className="py-8 text-center text-muted-foreground">등록된 지출이 없습니다</td></tr>
               ) : (
                 rows.map((r) => {
                   const sel = bulk.isSelected(r.id);
                   const cardLabel = r.card_name
                     ? `${r.card_name}${r.card_last4 ? `-${r.card_last4}` : ""}`
                     : (r.payment_method ?? "");
+                  const cumAmount = cumulativeUpTo(r.spend_date);
                   return (
                     <tr key={r.id} className={`border-b border-border/30 hover:bg-muted/30 ${sel ? "bg-primary/5" : ""}`} data-state={sel ? "selected" : undefined}>
                       <td className="py-2 pr-2"><Checkbox checked={sel} onCheckedChange={() => bulk.toggle(r.id)} /></td>
@@ -1232,6 +1331,14 @@ export default function ExpenseInputPage() {
                       </td>
                       <td className="py-2 pr-3 text-right font-mono font-semibold text-expense">
                         {formatKRW(Number(r.amount))}
+                      </td>
+                      <td className="py-2 pr-3 text-right whitespace-nowrap">
+                        <div className="font-mono font-semibold tabular-nums text-foreground">
+                          {formatKRW(cumAmount)}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {r.spend_date.replace(/-/g, ".")}까지 누적
+                        </div>
                       </td>
                       <td className="py-2 pr-3 text-right whitespace-nowrap">
                         {(user?.id === r.created_by || isAdmin) && (
