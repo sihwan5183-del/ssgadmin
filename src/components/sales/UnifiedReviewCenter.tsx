@@ -125,7 +125,7 @@ export function UnifiedReviewCenter() {
     }
     const list = ((data ?? []) as Row[]);
     const filtered = showAll
-      ? list // 전체 노출 (상태 필터 없음)
+      ? list.filter((r) => (r.status ?? "").trim() !== "취소") // 취소만 제외
       : list.filter((r) => {
           const s = (r.status ?? "").replace(/\s+/g, "").trim();
           return s !== "개통완료" && s !== "설치완료";
