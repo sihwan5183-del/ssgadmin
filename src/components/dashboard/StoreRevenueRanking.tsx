@@ -36,7 +36,7 @@ export const StoreRevenueRanking = () => {
           .select("created_by, manager, channel, unit_price, vas_fee, receivable_amount, receivable_paid, voucher, voucher_returned, trade_in_enabled, trade_in_confirmed, distributor_amount, cash_support_amount, cash_open, extra_subsidy, customer_support_amount, corp_card_amount, custom_fields, moyo_excluded")
           .gte("open_date", startDate)
           .lte("open_date", endDate)
-          .in("status", ["개통완료", "설치완료"])
+          .neq("status", "취소")
           .limit(10000),
         supabase
           .from("profiles")

@@ -136,7 +136,7 @@ export function useFinanceData(): FinanceData {
           )
           .gte("open_date", startDate)
           .lte("open_date", endDate)
-          .in("status", ["개통완료", "설치완료"])
+          .neq("status", "취소")
           .limit(10000),
         supabase
           .from("ad_spend")
@@ -151,7 +151,7 @@ export function useFinanceData(): FinanceData {
           )
           .gte("open_date", prevStartDate)
           .lte("open_date", prevEndDate)
-          .in("status", ["개통완료", "설치완료"])
+          .neq("status", "취소")
           .limit(10000),
         supabase
           .from("ad_spend")
