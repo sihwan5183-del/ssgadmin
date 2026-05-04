@@ -535,8 +535,8 @@ const SalesLedgerPage = () => {
     if (statusFilter.length > 0) {
       q = q.in("status", statusFilter);
     } else {
-      // 기본: 대시보드와 동일하게 [개통완료, 설치완료]만
-      q = q.in("status", ["개통완료", "설치완료"]);
+      // 정책: 저장된 모든 실적은 즉시 노출 — '취소'만 제외
+      q = q.neq("status", "취소");
     }
     if (managerFilter !== "all") q = q.eq("manager", managerFilter);
     if (storeFilter !== "all") q = q.eq("channel", storeFilter);
