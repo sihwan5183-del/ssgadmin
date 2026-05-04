@@ -14,7 +14,7 @@ import { Check, Upload, Pencil, X, Camera, Plus, Trash2, Tv, Sparkles, AlertTria
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
-import { useProductRatePlans, isVasEligibleProduct } from "@/hooks/useProductRatePlans";
+import { useProductRatePlans } from "@/hooks/useProductRatePlans";
 import { useEquipmentCatalog } from "@/hooks/useEquipmentCatalog";
 import { cn } from "@/lib/utils";
 import { useFieldDefinitions } from "@/hooks/useFieldDefinitions";
@@ -121,7 +121,7 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   const { options: OPEN_METHODS } = useFieldOptions("open_method");
   const { options: STATUSES } = useFieldOptions("status");
   const { options: RATE_PLANS } = useFieldOptions("rate_plan");
-  const { mappings, getPlansForProduct, getDefaultsForProduct, getAllowedSaleTypes, getLinkedVasForPlan, getAllLinkedVasForProduct } = useProductRatePlans();
+  const { mappings, getPlansForProduct, getDefaultsForProduct, getAllowedSaleTypes } = useProductRatePlans();
   const { getByCategory: getEquipmentByCategory } = useEquipmentCatalog();
   const { options: DELIVERY_TYPES } = useFieldOptions("delivery_type");
   const { options: BANKS } = useFieldOptions("bank");
