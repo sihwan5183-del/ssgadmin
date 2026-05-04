@@ -1211,6 +1211,17 @@ export default function ExpenseInputPage() {
             </span>
           </div>
         </div>
+        {/* 누적 사용 금액 요약 배너 */}
+        <div className="mb-3 rounded-lg border border-expense/30 bg-[hsl(var(--expense-soft))]/30 px-4 py-3 flex flex-wrap items-center gap-2 text-sm">
+          <TrendingUp className="size-4 text-expense" />
+          <span className="font-semibold">{(latestSpendDate ?? endDate).replace(/-/g, ".")}</span>
+          <span className="text-muted-foreground">까지 총</span>
+          <span className="font-bold text-expense tabular-nums text-base">{formatKRW(periodCumulative)}</span>
+          <span className="text-muted-foreground">을 사용했습니다</span>
+          <span className="ml-auto text-[11px] text-muted-foreground">
+            * 누적 합계는 [최종합산금액] 기준 · 실시간 갱신
+          </span>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-xs text-muted-foreground border-b border-border/50">
@@ -1225,6 +1236,7 @@ export default function ExpenseInputPage() {
                 <th className="text-left py-2 pr-3">캠페인/적요</th>
                 <th className="text-left py-2 pr-3 whitespace-nowrap">결제수단</th>
                 <th className="text-right py-2 pr-3">금액</th>
+                <th className="text-right py-2 pr-3 whitespace-nowrap">누적 사용액</th>
                 <th className="text-right py-2 pr-3"></th>
               </tr>
             </thead>
@@ -1244,6 +1256,7 @@ export default function ExpenseInputPage() {
                 <td className="py-2 pr-3 text-muted-foreground">-</td>
                 <td className="py-2 pr-3 text-right font-mono font-semibold">{formatKRW(salesAgg.distributor)}</td>
                 <td />
+                <td />
               </tr>
               <tr className="border-b border-border/40 bg-primary/[0.05]">
                 <td />
@@ -1258,6 +1271,7 @@ export default function ExpenseInputPage() {
                 <td className="py-2 pr-3 text-muted-foreground text-xs">cash_open=true 건의 cash_support_amount 합계</td>
                 <td className="py-2 pr-3 text-muted-foreground">-</td>
                 <td className="py-2 pr-3 text-right font-mono font-semibold">{formatKRW(salesAgg.cash)}</td>
+                <td />
                 <td />
               </tr>
               <tr className="border-b border-border/40 bg-primary/[0.05]">
@@ -1274,18 +1288,20 @@ export default function ExpenseInputPage() {
                 <td className="py-2 pr-3 text-muted-foreground">-</td>
                 <td className="py-2 pr-3 text-right font-mono font-semibold">{formatKRW(salesAgg.receivable)}</td>
                 <td />
+                <td />
               </tr>
 
               {loading ? (
-                <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">불러오는 중...</td></tr>
+                <tr><td colSpan={10} className="py-8 text-center text-muted-foreground">불러오는 중...</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">등록된 지출이 없습니다</td></tr>
+                <tr><td colSpan={10} className="py-8 text-center text-muted-foreground">등록된 지출이 없습니다</td></tr>
               ) : (
                 rows.map((r) => {
                   const sel = bulk.isSelected(r.id);
                   const cardLabel = r.card_name
                     ? `${r.card_name}${r.card_last4 ? `-${r.card_last4}` : ""}`
                     : (r.payment_method ?? "");
+                  const cumAmount = cumulativeUpTo(r.spend_date);
                   return (
                     <tr key={r.id} className={`border-b border-border/30 hover:bg-muted/30 ${sel ? "bg-primary/5" : ""}`} data-state={sel ? "selected" : undefined}>
                       <td className="py-2 pr-2"><Checkbox checked={sel} onCheckedChange={() => bulk.toggle(r.id)} /></td>
@@ -1315,6 +1331,14 @@ export default function ExpenseInputPage() {
                       </td>
                       <td className="py-2 pr-3 text-right font-mono font-semibold text-expense">
                         {formatKRW(Number(r.amount))}
+                      </td>
+                      <td className="py-2 pr-3 text-right whitespace-nowrap">
+                        <div className="font-mono font-semibold tabular-nums text-foreground">
+                          {formatKRW(cumAmount)}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {r.spend_date.replace(/-/g, ".")}까지 누적
+                        </div>
                       </td>
                       <td className="py-2 pr-3 text-right whitespace-nowrap">
                         {(user?.id === r.created_by || isAdmin) && (
