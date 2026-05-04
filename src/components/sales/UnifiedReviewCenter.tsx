@@ -108,7 +108,7 @@ export function UnifiedReviewCenter() {
       .select(SELECT_COLS)
       .order("open_date", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
-      .limit(1000);
+      .limit(10000);
     if (showAll) {
       // 개통일이 기간 내이거나, 개통일 미정이지만 등록일이 기간 내인 모든 건
       query = query.or(
