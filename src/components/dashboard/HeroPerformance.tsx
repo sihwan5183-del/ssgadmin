@@ -212,7 +212,7 @@ export const HeroPerformance = () => {
             "p-2.5 glass relative overflow-hidden cursor-pointer transition-all hover:shadow-glow",
             hasPending && "border-warning/40"
           )}
-          onClick={() => navigate("/activities?tab=incomplete")}
+          onClick={() => navigate("/activities?tab=incomplete&view=all")}
         >
           <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
             <Clock className={cn("size-3", hasPending ? "text-warning" : "text-muted-foreground")} />
