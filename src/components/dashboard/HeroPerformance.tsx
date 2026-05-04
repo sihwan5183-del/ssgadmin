@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Sun, TrendingUp, ArrowUpRight, ArrowDownRight, Clock, AlertTriangle, Smartphone, Monitor, Package, Wifi, Tv, Home, Star, CreditCard, Lightbulb } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -114,7 +114,7 @@ export const HeroPerformance = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const fetchAll = React.useCallback(async () => {
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     const todayISO = new Date().toISOString().slice(0, 10);
     const ydate = new Date();
