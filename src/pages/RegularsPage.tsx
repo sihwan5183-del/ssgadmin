@@ -40,6 +40,7 @@ interface Regular {
   manager: string | null;
   coupon_sent: boolean;
   converted: boolean;
+  activated?: boolean;
   registered_date: string;
   note: string | null;
   created_at: string;
@@ -106,6 +107,7 @@ const RegularsPage = () => {
     manager: "",
     coupon_sent: false,
     converted: false,
+    activated: false,
     registered_date: today(),
     note: "",
   });
@@ -122,6 +124,7 @@ const RegularsPage = () => {
       manager: r.manager ?? "",
       coupon_sent: !!r.coupon_sent,
       converted: !!r.converted,
+      activated: !!r.activated,
       registered_date: r.registered_date ?? today(),
       note: r.note ?? "",
     });
@@ -144,6 +147,7 @@ const RegularsPage = () => {
         manager: editForm.manager || null,
         coupon_sent: editForm.coupon_sent,
         converted: editForm.converted,
+        activated: editForm.activated,
         registered_date: editForm.registered_date,
         note: editForm.note || null,
       })
@@ -166,6 +170,7 @@ const RegularsPage = () => {
     manager: "",
     coupon_sent: false,
     converted: false,
+    activated: false,
     registered_date: today(),
     note: "",
   });
@@ -226,6 +231,7 @@ const RegularsPage = () => {
         manager: "",
         coupon_sent: false,
         converted: false,
+        activated: false,
         registered_date: today(),
         note: "",
       });
@@ -244,7 +250,7 @@ const RegularsPage = () => {
     }
   };
 
-  const toggleField = async (id: string, field: "coupon_sent" | "converted", value: boolean) => {
+  const toggleField = async (id: string, field: "coupon_sent" | "converted" | "activated", value: boolean) => {
     const update: Partial<Regular> = { [field]: value } as Partial<Regular>;
     const { error } = await supabase.from("regulars").update(update).eq("id", id);
     if (error) toast.error(error.message);
@@ -639,7 +645,7 @@ const RegularsPage = () => {
               placeholder="홍길동"
             />
           </div>
-          <div className="md:col-span-3">
+          <div className="md:col-span-2">
             <Label className="text-xs">연락처</Label>
             <Input
               className="mt-1.5"
@@ -649,12 +655,12 @@ const RegularsPage = () => {
               disabled={!form.carrier}
             />
           </div>
-          <div className="md:col-span-3">
+          <div className="md:col-span-2">
             <Label className="text-xs">자사 전환</Label>
             <div
               className={`mt-1.5 h-10 px-3 rounded-md border flex items-center gap-2 transition-colors ${
                 form.converted
-                  ? "bg-emerald-500/10 border-emerald-500/40"
+                  ? "bg-primary/10 border-primary/40"
                   : "bg-background/40 border-border/50"
               }`}
             >
@@ -663,7 +669,25 @@ const RegularsPage = () => {
                 onCheckedChange={(v) => setForm({ ...form, converted: v })}
               />
               <span className="text-xs text-muted-foreground">
-                {form.converted ? "전환 완료 ✓" : "타사 → 자사 가입 시 ON"}
+                {form.converted ? "자사전환 ✓" : "자사전환"}
+              </span>
+            </div>
+          </div>
+          <div className="md:col-span-2">
+            <Label className="text-xs">자사 개통</Label>
+            <div
+              className={`mt-1.5 h-10 px-3 rounded-md border flex items-center gap-2 transition-colors ${
+                form.activated
+                  ? "bg-primary/10 border-primary/40"
+                  : "bg-background/40 border-border/50"
+              }`}
+            >
+              <Switch
+                checked={form.activated}
+                onCheckedChange={(v) => setForm({ ...form, activated: v })}
+              />
+              <span className="text-xs text-muted-foreground">
+                {form.activated ? "자사개통 ✓" : "자사개통"}
               </span>
             </div>
           </div>
@@ -963,6 +987,14 @@ const RegularsPage = () => {
                             ✓ 전환완료
                           </span>
                         )}
+                        {r.activated && (
+                          <span
+                            className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/15 text-primary-glow border border-primary/30"
+                            title="자사개통 고객"
+                          >
+                            ⚡ 자사개통
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-3 py-2">
@@ -1083,7 +1115,7 @@ const RegularsPage = () => {
                 onChange={(e) => setEditForm({ ...editForm, customer_name: e.target.value })}
               />
             </div>
-            <div className="md:col-span-3">
+            <div className="md:col-span-2">
               <Label className="text-xs">연락처</Label>
               <Input
                 className="mt-1.5"
@@ -1093,12 +1125,12 @@ const RegularsPage = () => {
                 disabled={!editForm.carrier}
               />
             </div>
-            <div className="md:col-span-3">
+            <div className="md:col-span-2">
               <Label className="text-xs">자사 전환</Label>
               <div
                 className={`mt-1.5 h-10 px-3 rounded-md border flex items-center gap-2 transition-colors ${
                   editForm.converted
-                    ? "bg-emerald-500/10 border-emerald-500/40"
+                    ? "bg-primary/10 border-primary/40"
                     : "bg-background/40 border-border/50"
                 }`}
               >
@@ -1107,7 +1139,25 @@ const RegularsPage = () => {
                   onCheckedChange={(v) => setEditForm({ ...editForm, converted: v })}
                 />
                 <span className="text-xs text-muted-foreground">
-                  {editForm.converted ? "전환 완료 ✓" : "타사 → 자사 가입 시 ON"}
+                  {editForm.converted ? "자사전환 ✓" : "자사전환"}
+                </span>
+              </div>
+            </div>
+            <div className="md:col-span-2">
+              <Label className="text-xs">자사 개통</Label>
+              <div
+                className={`mt-1.5 h-10 px-3 rounded-md border flex items-center gap-2 transition-colors ${
+                  editForm.activated
+                    ? "bg-primary/10 border-primary/40"
+                    : "bg-background/40 border-border/50"
+                }`}
+              >
+                <Switch
+                  checked={editForm.activated}
+                  onCheckedChange={(v) => setEditForm({ ...editForm, activated: v })}
+                />
+                <span className="text-xs text-muted-foreground">
+                  {editForm.activated ? "자사개통 ✓" : "자사개통"}
                 </span>
               </div>
             </div>

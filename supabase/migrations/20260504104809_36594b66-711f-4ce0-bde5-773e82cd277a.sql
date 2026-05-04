@@ -1,0 +1,1 @@
+ALTER TABLE public.regulars ADD COLUMN IF NOT EXISTS activated BOOLEAN NOT NULL DEFAULT false;
