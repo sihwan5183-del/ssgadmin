@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
@@ -91,6 +92,8 @@ export function UnifiedReviewCenter() {
   const { user } = useAuth();
   const { isAdmin } = useRole();
   const { startDate, endDate, label } = usePeriod();
+  const [searchParams] = useSearchParams();
+  const showAll = searchParams.get("view") === "all";
   const [q, setQ] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,26 +101,37 @@ export function UnifiedReviewCenter() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    // 종결(개통완료/설치완료)은 제외 — 검수가 필요한 건들만
-    const { data, error } = await supabase
+    // showAll(=대시보드 [개통 대기] 클릭 진입) 시: 상태 무관 전체 실적 노출
+    // 기본: 종결(개통완료/설치완료) 제외 — 검수가 필요한 건들만
+    let query = supabase
       .from("sales")
       .select(SELECT_COLS)
-      .gte("open_date", startDate)
-      .lte("open_date", endDate)
       .order("open_date", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
-      .limit(500);
+      .limit(10000);
+    if (showAll) {
+      // 개통일이 기간 내이거나, 개통일 미정이지만 등록일이 기간 내인 모든 건
+      query = query.or(
+        `and(open_date.gte.${startDate},open_date.lte.${endDate}),and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
+      );
+    } else {
+      query = query.gte("open_date", startDate).lte("open_date", endDate);
+    }
+    const { data, error } = await query;
     setLoading(false);
     if (error) {
       toast.error(error.message);
       return;
     }
-    const filtered = ((data ?? []) as Row[]).filter((r) => {
-      const s = (r.status ?? "").replace(/\s+/g, "").trim();
-      return s !== "개통완료" && s !== "설치완료";
-    });
+    const list = ((data ?? []) as Row[]);
+    const filtered = showAll
+      ? list.filter((r) => (r.status ?? "").trim() !== "취소") // 취소만 제외
+      : list.filter((r) => {
+          const s = (r.status ?? "").replace(/\s+/g, "").trim();
+          return s !== "개통완료" && s !== "설치완료";
+        });
     setRows(filtered);
-  }, [startDate, endDate]);
+  }, [startDate, endDate, showAll]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -181,8 +195,15 @@ export function UnifiedReviewCenter() {
       {/* 헤더 */}
       <div className="px-4 py-3 border-b border-border/40 flex items-center gap-2 flex-wrap bg-muted/30">
         <ShieldCheck className="size-4 text-primary-glow" />
-        <h3 className="font-semibold text-sm">통합 검수함</h3>
+        <h3 className="font-semibold text-sm">
+          {showAll ? "전체 실적 입력 리스트" : "통합 검수함"}
+        </h3>
         <span className="text-xs text-muted-foreground">{label} · 총 {filtered.length}건</span>
+        {showAll && (
+          <Badge variant="outline" className="text-[10px] border-primary/40 text-primary bg-primary/10">
+            상태 필터 해제
+          </Badge>
+        )}
         <div className="ml-auto flex items-center gap-1.5 flex-wrap">
           <Badge variant="outline" className={BUCKET_BADGE.revised.cls}>
             <Sparkles className="size-3 mr-1" /> 수정완료 {counts.revised}
