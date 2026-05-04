@@ -189,7 +189,8 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
       }
       const s = data as any;
       setForm({
-        seq: s.seq, channel: s.channel, channel_company: s.channel_company ?? "", moyo_excluded: s.moyo_excluded ?? false,
+        seq: s.seq, channel: s.channel, moyo_excluded: s.moyo_excluded ?? false,
+        ...({ channel_company: s.channel_company ?? "" } as any),
         manager: s.manager, open_month: s.open_month, product: s.product,
         sale_type: s.sale_type, open_method: s.open_method, status: s.status,
         open_date: s.open_date, customer_name: s.customer_name, birth_date: s.birth_date,
