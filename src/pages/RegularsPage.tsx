@@ -1107,7 +1107,7 @@ const RegularsPage = () => {
                 onChange={(e) => setEditForm({ ...editForm, customer_name: e.target.value })}
               />
             </div>
-            <div className="md:col-span-3">
+            <div className="md:col-span-2">
               <Label className="text-xs">연락처</Label>
               <Input
                 className="mt-1.5"
@@ -1117,12 +1117,12 @@ const RegularsPage = () => {
                 disabled={!editForm.carrier}
               />
             </div>
-            <div className="md:col-span-3">
+            <div className="md:col-span-2">
               <Label className="text-xs">자사 전환</Label>
               <div
                 className={`mt-1.5 h-10 px-3 rounded-md border flex items-center gap-2 transition-colors ${
                   editForm.converted
-                    ? "bg-emerald-500/10 border-emerald-500/40"
+                    ? "bg-primary/10 border-primary/40"
                     : "bg-background/40 border-border/50"
                 }`}
               >
@@ -1131,7 +1131,25 @@ const RegularsPage = () => {
                   onCheckedChange={(v) => setEditForm({ ...editForm, converted: v })}
                 />
                 <span className="text-xs text-muted-foreground">
-                  {editForm.converted ? "전환 완료 ✓" : "타사 → 자사 가입 시 ON"}
+                  {editForm.converted ? "자사전환 ✓" : "자사전환"}
+                </span>
+              </div>
+            </div>
+            <div className="md:col-span-2">
+              <Label className="text-xs">자사 개통</Label>
+              <div
+                className={`mt-1.5 h-10 px-3 rounded-md border flex items-center gap-2 transition-colors ${
+                  editForm.activated
+                    ? "bg-primary/10 border-primary/40"
+                    : "bg-background/40 border-border/50"
+                }`}
+              >
+                <Switch
+                  checked={editForm.activated}
+                  onCheckedChange={(v) => setEditForm({ ...editForm, activated: v })}
+                />
+                <span className="text-xs text-muted-foreground">
+                  {editForm.activated ? "자사개통 ✓" : "자사개통"}
                 </span>
               </div>
             </div>
