@@ -804,12 +804,7 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                       </Select>
                     </Field>
                   </div>
-                </div>
-                   );
-                 })()}
-              </div>
-            );
-          })()}
+          </div>
 
           {/* TV 추가 (인터넷/유선결합 상품) */}
           {(() => {
