@@ -249,6 +249,34 @@ export default function ProductRatePlansPage() {
 
   const firstRow = filtered[0] as Mapping | undefined;
 
+  // ===== 부가서비스 풀: product가 '부가서비스' / 'VAS' 를 포함하는 매핑의 rate_plan 합집합 =====
+  const vasPool = useMemo(() => {
+    return Array.from(new Set(
+      mappings
+        .filter((m) => m.active && (m.product.includes("부가서비스") || m.product.toUpperCase().includes("VAS")))
+        .map((m) => m.rate_plan),
+    ));
+  }, [mappings]);
+
+  const vasEnabled = isVasEligibleProduct(activeProduct);
+
+  const toggleLinkedVas = async (mapping: Mapping, vas: string) => {
+    const current = Array.isArray(mapping.linked_vas) ? mapping.linked_vas : [];
+    const next = current.includes(vas)
+      ? current.filter((v) => v !== vas)
+      : [...current, vas];
+    // Optimistic UI
+    setMappings((prev) => prev.map((m) => (m.id === mapping.id ? { ...m, linked_vas: next } : m)));
+    const { error } = await supabase
+      .from("product_rate_plans")
+      .update({ linked_vas: next } as any)
+      .eq("id", mapping.id);
+    if (error) {
+      toast.error("부가서비스 저장 실패: " + error.message);
+      load();
+    }
+  };
+
   return (
     <div>
       <Header
