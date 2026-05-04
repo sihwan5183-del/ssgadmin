@@ -264,8 +264,8 @@ Deno.serve(async (req) => {
     if (body.action === "revoke_trusted_device") {
       if (!body.device_id) return json({ error: "device_id 필요" }, 400);
       const { data: isAdmin } = await admin.rpc("is_admin", { _user_id: callerId });
-      const q = admin.from("trusted_devices").delete().eq("id", body.device_id);
-      if (!isAdmin) q.eq("user_id", callerId);
+      let q = admin.from("trusted_devices").delete().eq("id", body.device_id);
+      if (!isAdmin) q = q.eq("user_id", callerId);
       const { error } = await q;
       if (error) return json({ error: error.message }, 400);
       return json({ ok: true });

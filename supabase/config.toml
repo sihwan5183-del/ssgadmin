@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.bulk-purge]
 verify_jwt = false
+
+[functions.generate-recurring-expenses]
+verify_jwt = false
