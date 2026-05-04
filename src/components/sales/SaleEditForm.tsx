@@ -403,7 +403,9 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
             .eq("id", linkedInquiryId);
           setLinkedInquiryId(null);
         }
-        toast.success("판매 실적 저장 완료", { description: "대시보드에 즉시 반영됩니다." });
+        toast.success("실적이 성공적으로 등록되었으며, 즉시 장표에 반영되었습니다", {
+          description: "검수/승인 여부와 무관하게 모든 합계·리스트에 즉시 노출됩니다.",
+        });
       }
       if (!embedded) reset();
       if (resultId) onSaved?.(resultId);
