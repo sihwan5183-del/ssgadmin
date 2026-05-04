@@ -230,12 +230,19 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
       const list = (data ?? []) as { user_id: string; display_name: string; store: string | null }[];
       setStaffOptions(list);
       setForm((f) => {
-        if (f.manager || !user || saleId) return f;
+        // 수정 모드(saleId prop OR editingId OR URL ?edit=)에서는
+        // 절대 본인 user.id로 manager를 덮어쓰지 않는다.
+        // 신규 입력 모드일 때만 본인을 기본 담당자로 자동 채움.
+        const isEditMode =
+          !!saleId ||
+          !!editingId ||
+          (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("edit"));
+        if (f.manager || !user || isEditMode) return f;
         const me = list.find((p) => p.user_id === user.id);
         return me ? { ...f, manager: me.user_id } : f;
       });
     })();
-  }, [user, saleId]);
+  }, [user, saleId, editingId]);
 
   // 외부 saleId가 바뀔 때 데이터 로드
   useEffect(() => {
