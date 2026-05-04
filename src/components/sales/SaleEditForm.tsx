@@ -14,7 +14,7 @@ import { Check, Upload, Pencil, X, Camera, Plus, Trash2, Tv, Sparkles, AlertTria
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
-import { useProductRatePlans, isVasEligibleProduct } from "@/hooks/useProductRatePlans";
+import { useProductRatePlans } from "@/hooks/useProductRatePlans";
 import { useEquipmentCatalog } from "@/hooks/useEquipmentCatalog";
 import { cn } from "@/lib/utils";
 import { useFieldDefinitions } from "@/hooks/useFieldDefinitions";
@@ -121,7 +121,7 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   const { options: OPEN_METHODS } = useFieldOptions("open_method");
   const { options: STATUSES } = useFieldOptions("status");
   const { options: RATE_PLANS } = useFieldOptions("rate_plan");
-  const { mappings, getPlansForProduct, getDefaultsForProduct, getAllowedSaleTypes, getLinkedVasForPlan, getAllLinkedVasForProduct } = useProductRatePlans();
+  const { mappings, getPlansForProduct, getDefaultsForProduct, getAllowedSaleTypes } = useProductRatePlans();
   const { getByCategory: getEquipmentByCategory } = useEquipmentCatalog();
   const { options: DELIVERY_TYPES } = useFieldOptions("delivery_type");
   const { options: BANKS } = useFieldOptions("bank");
@@ -501,14 +501,7 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                         updates.sale_type = defaults.default_sale_type;
                         filled.add("sale_type");
                       }
-                      if (defaults.default_vas1 && !f.vas1) {
-                        updates.vas1 = defaults.default_vas1;
-                        filled.add("vas1");
-                      }
-                      if (defaults.default_vas2 && !f.vas2) {
-                        updates.vas2 = defaults.default_vas2;
-                        filled.add("vas2");
-                      }
+                      // 부가서비스는 자유 입력 방식으로 전환됨 — 자동 채움 비활성화
                       return { ...f, ...updates };
                     });
                     setAutoFilledFields(filled);
@@ -767,78 +760,29 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
               </Field>
             </div>
           </div>
-          {/* 부가서비스 - 조건부 렌더링 */}
-          {(() => {
-            // 부가서비스 입력은 [모바일 / 2nd] 상품군에서만 노출 (요구사항)
-            if (!isVasEligibleProduct(form.product)) return null;
-            const defaults = getDefaultsForProduct(form.product);
-            // 1순위: 선택된 요금제에 매핑된 부가서비스. 없으면 해당 상품의 전체 매핑 합집합.
-            const linkedForPlan = getLinkedVasForPlan(form.product, form.rate_plan);
-            const vasPlans = linkedForPlan.length > 0
-              ? linkedForPlan
-              : getAllLinkedVasForProduct(form.product);
-            return (
-              <div className="transition-all duration-300 ease-out overflow-hidden max-h-[200px] opacity-100">
-                 {(() => {
-                   return (
-                 <div className="grid grid-cols-12 gap-2">
+          {/* 부가서비스 - 자유 텍스트 입력 (선택 사항) */}
+          <div className="grid grid-cols-12 gap-2">
                   <div className="col-span-12 md:col-span-4">
-                  <Field label="부가서비스 1">
-                    {(() => {
-                      const mismatch = defaults?.default_vas1 && form.vas1 && form.vas1 !== defaults.default_vas1 && !autoFilledFields.has("vas1");
-                      return (
-                        <div>
-                          <Select
-                            value={form.vas1 ?? ""}
-                            onValueChange={(v) => set("vas1", v)}
-                          >
-                            <SelectTrigger className="h-9 bg-input/60 text-xs">
-                              <SelectValue placeholder={vasPlans.length === 0 ? "연관 부가서비스 미설정 (상품매핑에서 지정)" : "선택"} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {vasPlans.map((p) => (
-                                <SelectItem key={`v1-${p}`} value={p}>{p}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {mismatch && (
-                            <p className="text-[10px] text-amber-500 mt-1 flex items-center gap-1">
-                              <AlertTriangle className="size-3" /> 기본 설정({defaults?.default_vas1})과 다릅니다
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </Field>
+                    <Field label="부가서비스 1 (선택)">
+                      <Input
+                        value={form.vas1 ?? ""}
+                        onChange={(e) => set("vas1", e.target.value || null)}
+                        placeholder="자유 입력 (예: 음악감상, 데이터팩 등)"
+                        className="h-9 bg-input/60 text-xs"
+                        maxLength={200}
+                      />
+                    </Field>
                   </div>
                   <div className="col-span-12 md:col-span-4">
-                  <Field label="부가서비스 2">
-                    {(() => {
-                      const mismatch = defaults?.default_vas2 && form.vas2 && form.vas2 !== defaults.default_vas2 && !autoFilledFields.has("vas2");
-                      return (
-                        <div>
-                          <Select
-                            value={form.vas2 ?? ""}
-                            onValueChange={(v) => set("vas2", v)}
-                          >
-                            <SelectTrigger className="h-9 bg-input/60 text-xs">
-                              <SelectValue placeholder={vasPlans.length === 0 ? "연관 부가서비스 미설정 (상품매핑에서 지정)" : "선택"} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {vasPlans.map((p) => (
-                                <SelectItem key={`v2-${p}`} value={p}>{p}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {mismatch && (
-                            <p className="text-[10px] text-amber-500 mt-1 flex items-center gap-1">
-                              <AlertTriangle className="size-3" /> 기본 설정({defaults?.default_vas2})과 다릅니다
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </Field>
+                    <Field label="부가서비스 2 (선택)">
+                      <Input
+                        value={form.vas2 ?? ""}
+                        onChange={(e) => set("vas2", e.target.value || null)}
+                        placeholder="여러 개는 쉼표(,)로 구분"
+                        className="h-9 bg-input/60 text-xs"
+                        maxLength={200}
+                      />
+                    </Field>
                   </div>
                   <div className="col-span-12 md:col-span-4">
                     <Field label="복지할인">
@@ -860,12 +804,7 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                       </Select>
                     </Field>
                   </div>
-                </div>
-                   );
-                 })()}
-              </div>
-            );
-          })()}
+          </div>
 
           {/* TV 추가 (인터넷/유선결합 상품) */}
           {(() => {
