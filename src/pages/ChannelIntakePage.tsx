@@ -835,6 +835,7 @@ const ChannelIntakePage = () => {
                   <th className="text-left px-3 py-2 w-[100px]">생년월일</th>
                   <th className="text-left px-3 py-2 w-[130px]">연락처</th>
                   <th className="text-left px-3 py-2 w-[180px]">상담모델</th>
+                  <th className="text-left px-3 py-2 w-[100px]">최종상태</th>
                   <th className="text-left px-3 py-2 w-[110px]">최종액션</th>
                   <th className="text-left px-3 py-2">
                     <button
@@ -855,9 +856,9 @@ const ChannelIntakePage = () => {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={11} className="text-center py-10 text-muted-foreground">불러오는 중…</td></tr>
+                  <tr><td colSpan={12} className="text-center py-10 text-muted-foreground">불러오는 중…</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={11} className="text-center py-10 text-muted-foreground">데이터 없음</td></tr>
+                  <tr><td colSpan={12} className="text-center py-10 text-muted-foreground">데이터 없음</td></tr>
                 ) : (
                   filtered.map((r) => {
                     const newLead = isNewLead(r);
@@ -879,6 +880,7 @@ const ChannelIntakePage = () => {
                           "border-t border-border/30 hover:bg-muted/40 transition-colors cursor-pointer",
                           newLead && "bg-orange-50 dark:bg-orange-950/20",
                           abandoned && !newLead && "bg-destructive/5",
+                          recentlyUpdatedId === r.id && "ring-2 ring-primary/60 ring-inset bg-primary/10 animate-pulse",
                         )}
                         onClick={(e) => {
                           // 컨트롤(체크박스/버튼/셀렉트/링크) 클릭 시 상세 열지 않음
