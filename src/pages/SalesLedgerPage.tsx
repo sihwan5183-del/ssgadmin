@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -119,6 +119,7 @@ const SalesLedgerPage = () => {
   const { isAdmin } = useRole();
   const { startDate, endDate, label: periodLabel } = usePeriod();
   const navigate = useNavigate();
+  const location = useLocation();
   const quickExport = useQuickExport();
   const resignedIds = useResignedUsers();
 
@@ -429,6 +430,16 @@ const SalesLedgerPage = () => {
   }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
 
   useEffect(() => { setPage(0); }, [startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
+
+  // 실적 입력 후 navigate로 진입 시 즉시 강제 리로드 (캐시 우회)
+  useEffect(() => {
+    const st = (location.state as { refresh?: number } | null) ?? null;
+    if (st?.refresh) {
+      load();
+      loadSummary();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   // 디바운스 (300ms) — 입력 중에는 스피너 표시
   useEffect(() => {
