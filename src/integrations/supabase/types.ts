@@ -1715,6 +1715,7 @@ export type Database = {
           cash_open: boolean | null
           cash_support_amount: number | null
           channel: string | null
+          channel_company: string | null
           corp_card_amount: number | null
           created_at: string
           created_by: string
@@ -1784,6 +1785,7 @@ export type Database = {
           cash_open?: boolean | null
           cash_support_amount?: number | null
           channel?: string | null
+          channel_company?: string | null
           corp_card_amount?: number | null
           created_at?: string
           created_by: string
@@ -1853,6 +1855,7 @@ export type Database = {
           cash_open?: boolean | null
           cash_support_amount?: number | null
           channel?: string | null
+          channel_company?: string | null
           corp_card_amount?: number | null
           created_at?: string
           created_by?: string
