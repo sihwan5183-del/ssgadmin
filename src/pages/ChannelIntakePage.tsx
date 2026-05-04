@@ -1079,7 +1079,9 @@ const ChannelIntakePage = () => {
         inquiry={detailRow as any}
         open={!!detailRow}
         onOpenChange={(v) => !v && setDetailRow(null)}
-        onChanged={refresh}
+        onChanged={() => {
+          if (detailRow) refreshOne(detailRow.id);
+        }}
       />
 
       {/* 일괄 삭제 확인 */}
