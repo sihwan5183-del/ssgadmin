@@ -622,6 +622,40 @@ export default function ExpenseInputPage() {
         showPeriodFilter
       />
 
+      {/* 이번 달 총 지출 — 최상단 메가 카드 */}
+      <Card className="p-6 md:p-8 mb-4 glass border-expense/40 bg-gradient-to-br from-[hsl(var(--expense-soft))]/40 to-transparent">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+              <TrendingUp className="size-3.5 text-expense" /> 이번 달 총 지출
+            </div>
+            <div className="mt-2 text-4xl md:text-5xl font-extrabold text-expense tabular-nums leading-none">
+              {formatKRW(thisMonthTotal)}
+            </div>
+            <div className="mt-2 text-sm text-foreground/80">
+              <span className="font-semibold">{(latestSpendDate ?? todayISO()).replace(/-/g, ".")}</span>
+              까지 총{" "}
+              <span className="font-bold text-expense">{formatKRW(periodCumulative)}</span>
+              을 사용했습니다 <span className="text-muted-foreground text-xs">· {periodLabel} 누적</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3 text-right">
+            <div>
+              <div className="text-[11px] text-muted-foreground">광고비</div>
+              <div className="text-base font-semibold tabular-nums">{formatKRW(periodTotals.adTotal)}</div>
+            </div>
+            <div>
+              <div className="text-[11px] text-muted-foreground">기타지출</div>
+              <div className="text-base font-semibold tabular-nums">{formatKRW(periodTotals.etcTotal)}</div>
+            </div>
+            <div>
+              <div className="text-[11px] text-muted-foreground">고정지출</div>
+              <div className="text-base font-semibold tabular-nums">{formatKRW(periodTotals.fixedTotal)}</div>
+            </div>
+          </div>
+        </div>
+      </Card>
+
       {/* 핵심 KPI: 총지출 / 실질마진 / 오늘 현금시재 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <Card className="p-5 glass border-expense/30 bg-[hsl(var(--expense-soft))]/30">
