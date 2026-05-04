@@ -8,12 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Trash2, Plus, Link2, Package, Tag, Layers } from "lucide-react";
 import { SortableList, SortableItem } from "@/components/common/SortableList";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
+import { isVasEligibleProduct } from "@/hooks/useProductRatePlans";
 
 interface Mapping {
   id: string;
@@ -30,6 +30,7 @@ interface Mapping {
   vas_required: boolean;
   vas1_locked: boolean;
   vas2_locked: boolean;
+  linked_vas: string[];
 }
 
 export default function ProductRatePlansPage() {
