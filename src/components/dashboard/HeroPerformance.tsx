@@ -128,17 +128,18 @@ export const HeroPerformance = () => {
         supabase.from("sales").select("product").gte("open_date", prevStartDate).lte("open_date", prevEndDate).neq("status", "취소").limit(10000),
         supabase.from("sales").select("product").eq("open_date", todayISO).neq("status", "취소").limit(5000),
         supabase.from("sales").select("product").eq("open_date", ydayISO).neq("status", "취소").limit(5000),
+        // [개통 대기] = 입력된 모든 실적 (취소 제외) — 통합 검수함 view=all 과 1:1 일치
         supabase.from("sales").select("product, created_at, open_date, status")
-          .or(PENDING_ACTIVATION_STATUS_OR)
+          .neq("status", "취소")
           .or(`and(open_date.gte.${startDate},open_date.lte.${endDate}),and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`)
-          .limit(5000),
+          .limit(10000),
       ]);
       if (!alive) return;
       setCurrentRows(a.data ?? []);
       setPrevRows(b.data ?? []);
       setTodayRows(c.data ?? []);
       setYdayRows(d.data ?? []);
-      setPendingRows((e.data ?? []).filter((row) => isPendingActivationStatus(row.status)));
+      setPendingRows(e.data ?? []);
       setLoading(false);
     })();
     return () => { alive = false; };
