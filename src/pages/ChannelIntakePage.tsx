@@ -370,8 +370,6 @@ const ChannelIntakePage = () => {
   const [sortMode, setSortMode] = useState<"default" | "recent_log">("default");
   // 최근 수정된 행 (하이라이트용)
   const [recentlyUpdatedId, setRecentlyUpdatedId] = useState<string | null>(null);
-  const recentTimerRef = (typeof window !== "undefined" ? (window as any).__intakeRecentTimer : null);
-
   const flashRow = useCallback((id: string) => {
     setRecentlyUpdatedId(id);
     if ((window as any).__intakeRecentTimer) {
