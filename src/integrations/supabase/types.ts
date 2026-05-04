@@ -1385,6 +1385,7 @@ export type Database = {
           default_vas1: string | null
           default_vas2: string | null
           id: string
+          linked_vas: string[]
           product: string
           rate_plan: string
           sort_order: number
@@ -1404,6 +1405,7 @@ export type Database = {
           default_vas1?: string | null
           default_vas2?: string | null
           id?: string
+          linked_vas?: string[]
           product: string
           rate_plan: string
           sort_order?: number
@@ -1423,6 +1425,7 @@ export type Database = {
           default_vas1?: string | null
           default_vas2?: string | null
           id?: string
+          linked_vas?: string[]
           product?: string
           rate_plan?: string
           sort_order?: number

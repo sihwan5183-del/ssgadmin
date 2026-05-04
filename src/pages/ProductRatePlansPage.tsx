@@ -5,15 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Plus, Link2, Package, Tag, Layers } from "lucide-react";
+import { Trash2, Plus, Link2, Package, Tag, Layers, Sparkles } from "lucide-react";
 import { SortableList, SortableItem } from "@/components/common/SortableList";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
+import { isVasEligibleProduct } from "@/hooks/useProductRatePlans";
 
 interface Mapping {
   id: string;
@@ -30,6 +30,7 @@ interface Mapping {
   vas_required: boolean;
   vas1_locked: boolean;
   vas2_locked: boolean;
+  linked_vas: string[];
 }
 
 export default function ProductRatePlansPage() {
@@ -248,6 +249,34 @@ export default function ProductRatePlansPage() {
 
   const firstRow = filtered[0] as Mapping | undefined;
 
+  // ===== 부가서비스 풀: product가 '부가서비스' / 'VAS' 를 포함하는 매핑의 rate_plan 합집합 =====
+  const vasPool = useMemo(() => {
+    return Array.from(new Set(
+      mappings
+        .filter((m) => m.active && (m.product.includes("부가서비스") || m.product.toUpperCase().includes("VAS")))
+        .map((m) => m.rate_plan),
+    ));
+  }, [mappings]);
+
+  const vasEnabled = isVasEligibleProduct(activeProduct);
+
+  const toggleLinkedVas = async (mapping: Mapping, vas: string) => {
+    const current = Array.isArray(mapping.linked_vas) ? mapping.linked_vas : [];
+    const next = current.includes(vas)
+      ? current.filter((v) => v !== vas)
+      : [...current, vas];
+    // Optimistic UI
+    setMappings((prev) => prev.map((m) => (m.id === mapping.id ? { ...m, linked_vas: next } : m)));
+    const { error } = await supabase
+      .from("product_rate_plans")
+      .update({ linked_vas: next } as any)
+      .eq("id", mapping.id);
+    if (error) {
+      toast.error("부가서비스 저장 실패: " + error.message);
+      load();
+    }
+  };
+
   return (
     <div>
       <Header
@@ -427,28 +456,19 @@ export default function ProductRatePlansPage() {
         {/* 오른쪽: 매핑 편집 */}
         <Card className="p-6 glass">
           {/* 상품 기본값 설정 */}
-          {activeProduct && filtered.length > 0 && (
+          {activeProduct && filtered.length > 0 && vasEnabled && (
             <div className="mb-6 p-4 rounded-xl border border-border/40 bg-muted/20">
-              <h4 className="text-sm font-semibold mb-3">📋 {activeProduct} 기본 설정</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <Label className="text-xs">기본 판매유형</Label>
-                  <Select
-                    value={firstRow?.default_sale_type ?? ""}
-                    onValueChange={(v) => saveDefaults("default_sale_type", v || null)}
-                  >
-                    <SelectTrigger className="h-9"><SelectValue placeholder="미설정" /></SelectTrigger>
-                    <SelectContent>
-                      {SALE_TYPES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <h4 className="text-sm font-semibold mb-3">📋 {activeProduct} 부가서비스 기본 설정 (선택)</h4>
+              <p className="text-[11px] text-muted-foreground mb-3">
+                요금제별 [연관 부가서비스]를 지정하지 않은 경우 사용되는 폴백 기본값입니다.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div>
                   <Label className="text-xs">기본 부가서비스 1</Label>
                   <Input
                     value={firstRow?.default_vas1 ?? ""}
                     onChange={(e) => saveDefaults("default_vas1", e.target.value || null)}
-                    placeholder="예: 주셋톱"
+                    placeholder="예: 음악감상서비스"
                     className="h-9"
                   />
                 </div>
@@ -457,7 +477,7 @@ export default function ProductRatePlansPage() {
                   <Input
                     value={firstRow?.default_vas2 ?? ""}
                     onChange={(e) => saveDefaults("default_vas2", e.target.value || null)}
-                    placeholder="예: 부셋톱"
+                    placeholder="예: 데이터팩"
                     className="h-9"
                   />
                 </div>
@@ -481,32 +501,6 @@ export default function ProductRatePlansPage() {
                     className="h-9"
                   />
                 </div>
-              <div className="col-span-full border-t border-border/30 pt-3 mt-1">
-                <Label className="text-xs font-semibold mb-2 block">부가서비스 제어</Label>
-                <div className="flex flex-wrap gap-4">
-                  <label className="flex items-center gap-2 text-xs cursor-pointer">
-                    <Switch
-                      checked={firstRow?.vas_required ?? true}
-                      onCheckedChange={(v) => saveDefaults("vas_required", v)}
-                    />
-                    <span>부가서비스 입력 노출</span>
-                  </label>
-                  <label className="flex items-center gap-2 text-xs cursor-pointer">
-                    <Switch
-                      checked={firstRow?.vas1_locked ?? false}
-                      onCheckedChange={(v) => saveDefaults("vas1_locked", v)}
-                    />
-                    <span>VAS1 읽기 전용 (강제)</span>
-                  </label>
-                  <label className="flex items-center gap-2 text-xs cursor-pointer">
-                    <Switch
-                      checked={firstRow?.vas2_locked ?? false}
-                      onCheckedChange={(v) => saveDefaults("vas2_locked", v)}
-                    />
-                    <span>VAS2 읽기 전용 (강제)</span>
-                  </label>
-                </div>
-              </div>
               </div>
             </div>
           )}
@@ -563,25 +557,67 @@ export default function ProductRatePlansPage() {
                   <SortableItem
                     key={m.id}
                     id={m.id}
-                    className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                    className={`p-3 rounded-lg border transition-colors ${
                       m.active
                         ? "border-border bg-card"
                         : "border-dashed border-border/50 bg-muted/30 opacity-60"
                     }`}
                   >
-                    <span className="text-xs text-muted-foreground w-6 text-right">{i + 1}</span>
-                    <span className="flex-1 font-medium text-sm">{m.rate_plan}</span>
-                    {!m.active && (
-                      <Badge variant="outline" className="text-[10px]">
-                        비활성
-                      </Badge>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-muted-foreground w-6 text-right">{i + 1}</span>
+                      <span className="flex-1 font-medium text-sm">{m.rate_plan}</span>
+                      {vasEnabled && (m.linked_vas?.length ?? 0) > 0 && (
+                        <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">
+                          VAS {m.linked_vas.length}
+                        </Badge>
+                      )}
+                      {!m.active && (
+                        <Badge variant="outline" className="text-[10px]">비활성</Badge>
+                      )}
+                      <Button variant="ghost" size="sm" onClick={() => toggle(m)} className="text-xs">
+                        {m.active ? "숨기기" : "사용"}
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => remove(m.id)} className="size-8">
+                        <Trash2 className="size-4 text-destructive" />
+                      </Button>
+                    </div>
+                    {vasEnabled && (
+                      <div className="mt-2 pl-9 border-t border-border/30 pt-2">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <Label className="text-[11px] text-muted-foreground flex items-center gap-1">
+                            <Sparkles className="size-3" /> 연관 부가서비스 매핑
+                          </Label>
+                          <span className="text-[10px] text-muted-foreground">
+                            클릭하여 선택/해제
+                          </span>
+                        </div>
+                        {vasPool.length === 0 ? (
+                          <p className="text-[11px] text-muted-foreground italic">
+                            먼저 가입상품 [부가서비스] 카테고리에 부가서비스 명을 매핑으로 등록해주세요.
+                          </p>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {vasPool.map((vas) => {
+                              const selected = (m.linked_vas ?? []).includes(vas);
+                              return (
+                                <button
+                                  key={vas}
+                                  type="button"
+                                  onClick={() => toggleLinkedVas(m, vas)}
+                                  className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
+                                    selected
+                                      ? "border-primary bg-primary text-primary-foreground"
+                                      : "border-border bg-background hover:bg-muted text-foreground"
+                                  }`}
+                                >
+                                  {vas}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     )}
-                    <Button variant="ghost" size="sm" onClick={() => toggle(m)} className="text-xs">
-                      {m.active ? "숨기기" : "사용"}
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => remove(m.id)} className="size-8">
-                      <Trash2 className="size-4 text-destructive" />
-                    </Button>
                   </SortableItem>
                 )}
               </SortableList>
