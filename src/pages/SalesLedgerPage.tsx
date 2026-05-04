@@ -1070,32 +1070,36 @@ const SalesLedgerPage = () => {
         <div className="overflow-x-auto -mx-2">
           <table className="w-full text-[13px] min-w-[1400px] font-sans [font-feature-settings:'tnum']">
             <thead>
-              <tr className="text-[12px] text-muted-foreground border-b border-border/40 bg-muted/30">
+              <tr className="text-[11.5px] uppercase tracking-wide text-foreground/70 border-b-2 border-border/60 bg-muted/60">
                 {isAdmin && (
-                  <th className="px-3 py-2 w-8">
+                  <th className="px-3 py-2.5 w-8">
                     <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="전체 선택" />
                   </th>
                 )}
-                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">개통일</th>
-                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">경로</th>
-                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">담당</th>
-                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">상품</th>
-                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">고객</th>
-                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">연락처</th>
-                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">단말</th>
-                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">요금제</th>
-                <th className="text-left px-3 py-2.5 font-medium whitespace-nowrap">약정</th>
-                <th className="text-center px-2 py-2.5 font-medium whitespace-nowrap">할부</th>
-                <th className="text-center px-2 py-2.5 font-medium whitespace-nowrap">동판</th>
-                <th className="text-center px-2 py-2.5 font-medium whitespace-nowrap">오퍼</th>
-                <th className="text-right px-3 py-2.5 font-semibold whitespace-nowrap text-foreground">리베이트 단가</th>
-                <th className="text-right px-3 py-2.5 font-semibold whitespace-nowrap text-destructive">오퍼(지원금)</th>
-                <th className="text-right px-3 py-2.5 font-semibold whitespace-nowrap text-foreground">최종 수익</th>
-                <th className="text-right px-3 py-2.5 font-semibold whitespace-nowrap text-foreground">미수금</th>
-                <th className="text-right px-3 py-2.5 font-semibold whitespace-nowrap text-destructive">고객지원</th>
-                <th className="text-right px-3 py-2.5 font-semibold whitespace-nowrap text-destructive">법인카드</th>
-                <th className="text-right px-3 py-2.5 font-semibold whitespace-nowrap text-foreground">중고폰</th>
-                <th className="text-right px-3 py-2.5 font-medium whitespace-nowrap">관리</th>
+                {/* 그룹 A: 기본정보 */}
+                <th className="text-left px-3 py-2.5 font-bold whitespace-nowrap">개통일</th>
+                <th className="text-left px-3 py-2.5 font-bold whitespace-nowrap">경로</th>
+                <th className="text-left px-3 py-2.5 font-bold whitespace-nowrap">담당</th>
+                <th className="text-left px-3 py-2.5 font-bold whitespace-nowrap">상품</th>
+                <th className="text-left px-3 py-2.5 font-bold whitespace-nowrap">고객</th>
+                <th className="text-left px-3 py-2.5 font-bold whitespace-nowrap border-r border-border/40">연락처</th>
+                {/* 그룹 B: 가입내용 */}
+                <th className="text-left px-3 py-2.5 font-bold whitespace-nowrap">단말</th>
+                <th className="text-left px-3 py-2.5 font-bold whitespace-nowrap">요금제</th>
+                <th className="text-left px-3 py-2.5 font-bold whitespace-nowrap">약정</th>
+                <th className="text-center px-2 py-2.5 font-bold whitespace-nowrap border-r border-border/40">할부</th>
+                {/* 그룹 C: 혜택/태그 */}
+                <th className="text-center px-2 py-2.5 font-bold whitespace-nowrap">동판</th>
+                <th className="text-center px-2 py-2.5 font-bold whitespace-nowrap border-r border-border/40">오퍼</th>
+                {/* 그룹 D: 정산/금액 */}
+                <th className="text-right px-3 py-2.5 font-bold whitespace-nowrap text-foreground">리베이트 단가</th>
+                <th className="text-right px-3 py-2.5 font-bold whitespace-nowrap text-rose-600 dark:text-rose-400 bg-rose-500/[0.04]">오퍼(지원금)</th>
+                <th className="text-right px-3 py-2.5 font-bold whitespace-nowrap text-foreground">최종 수익</th>
+                <th className="text-right px-3 py-2.5 font-bold whitespace-nowrap text-foreground">미수금</th>
+                <th className="text-right px-3 py-2.5 font-bold whitespace-nowrap text-rose-600 dark:text-rose-400 bg-rose-500/[0.04]">고객지원</th>
+                <th className="text-right px-3 py-2.5 font-bold whitespace-nowrap text-rose-600 dark:text-rose-400 bg-rose-500/[0.04]">법인카드</th>
+                <th className="text-right px-3 py-2.5 font-bold whitespace-nowrap text-foreground border-r border-border/40">중고폰</th>
+                <th className="text-right px-3 py-2.5 font-bold whitespace-nowrap">관리</th>
               </tr>
             </thead>
             <tbody>
@@ -1120,7 +1124,8 @@ const SalesLedgerPage = () => {
                 };
                 return (
                   <tr key={r.id} className={cn(
-                    "border-b border-border/20 hover:bg-muted/30 cursor-pointer transition-colors",
+                    "border-b border-border/20 hover:bg-primary/[0.06] cursor-pointer transition-colors group",
+                    "[&>td]:py-2 [&>td]:leading-tight",
                     isMoyoExcluded && "text-muted-foreground",
                     isManagerMissing(r) && "bg-amber-50/60 dark:bg-amber-500/10",
                     !isInspected && !isManagerMissing(r) && "bg-muted/20",
@@ -1136,8 +1141,8 @@ const SalesLedgerPage = () => {
                         />
                       </td>
                     )}
-                    <td className="px-3 py-2.5">{r.open_date ?? "-"}</td>
-                    <td className="px-3 py-3 align-middle whitespace-nowrap">
+                    <td className="px-3 tabular-nums">{r.open_date ?? "-"}</td>
+                    <td className="px-3 align-middle whitespace-nowrap">
                       <div className="flex items-center gap-1.5 leading-tight">
                         <span className="no-underline">
                           {r.channel ?? "-"}
@@ -1160,7 +1165,7 @@ const SalesLedgerPage = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-3 py-2.5 whitespace-nowrap font-medium">
+                    <td className="px-3 whitespace-nowrap font-medium">
                       {isManagerMissing(r) ? (
                         <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-300">
                           <AlertTriangle className="size-3.5" /> 미지정
@@ -1170,76 +1175,76 @@ const SalesLedgerPage = () => {
                       )}
                       <ResignedTag userId={r.created_by} ids={resignedIds} />
                     </td>
-                    <td className="px-3 py-2.5">{r.product ?? "-"}</td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span>{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
-                        {!isInspected && (
-                          <Badge variant="outline" className="text-[9px] gap-0.5 border-muted-foreground/40 text-muted-foreground bg-transparent px-1.5 py-0">
-                            검수 전
-                          </Badge>
-                        )}
-                        {(() => {
-                          const w = (r.custom_fields as any)?.welfare_discount;
-                          if (!w || w === "해당없음") return null;
-                          return (
-                            <Badge variant="outline" className="text-[9px] gap-0.5 border-blue-400 text-blue-700 bg-blue-50 px-1.5 py-0">
-                              ♿ {w}
+                    <td className="px-3">{r.product ?? "-"}</td>
+                    <td className="px-3">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-medium">{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {hasPending && (
+                            <Badge className="h-[18px] text-[10px] font-semibold gap-0.5 px-1.5 py-0 bg-amber-500 text-white border-0 hover:bg-amber-500">
+                              <AlertTriangle className="size-2.5" /> 미처리 {r.pending_items?.length}
                             </Badge>
-                          );
-                        })()}
-                        {isInspected && (
-                          <Badge variant="outline" className="text-[9px] gap-0.5 border-emerald-500/50 text-emerald-700 bg-emerald-50 px-1.5 py-0">
-                            <CheckCircle2 className="size-2.5" /> 검수 완료
-                          </Badge>
-                        )}
-                        {hasPending && (
-                          <Badge variant="outline" className="text-[9px] gap-0.5 border-amber-400 text-amber-700 bg-amber-50 px-1.5 py-0">
-                            <AlertTriangle className="size-2.5" /> 미처리 {r.pending_items?.length}
-                          </Badge>
-                        )}
-                        {(r.receivable_amount ?? 0) > 0 && r.receivable_paid !== "완료" && (
-                          <Badge variant="outline" className="text-[9px] gap-0.5 border-destructive/40 text-destructive bg-destructive/10 px-1.5 py-0">
-                            💰 미수급
-                          </Badge>
-                        )}
-                        {r.voucher && r.voucher.trim() !== "" && r.voucher_returned !== "유" && (
-                          <Badge variant="outline" className="text-[9px] gap-0.5 border-destructive/40 text-destructive bg-destructive/10 px-1.5 py-0">
-                            🎫 미반납
-                          </Badge>
-                        )}
+                          )}
+                          {!isInspected && (
+                            <Badge variant="outline" className="h-[18px] text-[10px] gap-0.5 border-muted-foreground/40 text-muted-foreground bg-transparent px-1.5 py-0">
+                              검수전
+                            </Badge>
+                          )}
+                          {isInspected && (
+                            <Badge variant="outline" className="h-[18px] text-[10px] gap-0.5 border-emerald-500/50 text-emerald-700 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0">
+                              <CheckCircle2 className="size-2.5" /> 검수완료
+                            </Badge>
+                          )}
+                          {(() => {
+                            const w = (r.custom_fields as any)?.welfare_discount;
+                            if (!w || w === "해당없음") return null;
+                            return (
+                              <Badge variant="outline" className="h-[18px] text-[10px] gap-0.5 border-blue-400 text-blue-700 bg-blue-50 dark:bg-blue-500/10 px-1.5 py-0">
+                                ♿ {w}
+                              </Badge>
+                            );
+                          })()}
+                          {(r.receivable_amount ?? 0) > 0 && r.receivable_paid !== "완료" && (
+                            <Badge className="h-[18px] text-[10px] font-semibold gap-0.5 px-1.5 py-0 bg-rose-600 text-white border-0 hover:bg-rose-600">
+                              💰 미수급
+                            </Badge>
+                          )}
+                          {r.voucher && r.voucher.trim() !== "" && r.voucher_returned !== "유" && (
+                            <Badge className="h-[18px] text-[10px] font-semibold gap-0.5 px-1.5 py-0 bg-rose-600 text-white border-0 hover:bg-rose-600">
+                              🎫 미반납
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </td>
-                    <td className="px-3 py-2.5 text-muted-foreground tabular-nums">{isAdmin ? (r.phone ?? "-") : maskPhone(r.phone) || "-"}</td>
-                    <td className="px-3 py-2.5 text-muted-foreground">{r.device_model ?? "-"}</td>
-                    <td className="px-3 py-2.5 text-muted-foreground">{r.rate_plan ?? "-"}</td>
-                    <td className="px-3 py-2.5 text-muted-foreground">
+                    <td className="px-3 text-muted-foreground tabular-nums border-r border-border/30">{isAdmin ? (r.phone ?? "-") : maskPhone(r.phone) || "-"}</td>
+                    <td className="px-3 text-muted-foreground">{r.device_model ?? "-"}</td>
+                    <td className="px-3 text-muted-foreground">{r.rate_plan ?? "-"}</td>
+                    <td className="px-3 text-muted-foreground">
                       {(r.custom_fields as any)?.contract_type ?? "-"}
                     </td>
-                    <td className="px-2 py-2.5 text-center text-muted-foreground tabular-nums">
+                    <td className="px-2 text-center text-muted-foreground tabular-nums border-r border-border/30">
                       {(r.custom_fields as any)?.installment_months
                         ? `${(r.custom_fields as any).installment_months}개월`
                         : "-"}
                     </td>
-                    <td className="px-2 py-2.5 text-center">
-                      {r.bundle === "Y" ? <Badge variant="outline" className="text-[9px] border-primary/40 text-primary px-1.5 py-0">동판</Badge> : <span className="text-muted-foreground text-[10px]">-</span>}
+                    <td className="px-2 text-center">
+                      {r.bundle === "Y" ? <Badge variant="outline" className="h-[18px] text-[10px] border-primary/40 text-primary px-1.5 py-0">동판</Badge> : <span className="text-muted-foreground text-[10px]">-</span>}
                     </td>
-                    <td className="px-2 py-2.5 text-center">
+                    <td className="px-2 text-center border-r border-border/30">
                       {(r.custom_fields as any)?.has_offer === false
-                        ? <Badge variant="secondary" className="text-[9px] px-1.5 py-0">무오퍼</Badge>
-                        : <Badge variant="outline" className="text-[9px] px-1.5 py-0">오퍼</Badge>}
+                        ? <Badge variant="secondary" className="h-[18px] text-[10px] px-1.5 py-0">무오퍼</Badge>
+                        : <Badge variant="outline" className="h-[18px] text-[10px] px-1.5 py-0">오퍼</Badge>}
                     </td>
-                    <td className="px-3 py-3 text-right tabular-nums font-bold text-foreground">
+                    <td className="px-3 text-right tabular-nums font-bold text-foreground">
                       {(r.unit_price ?? 0).toLocaleString("ko-KR")}
                     </td>
-                    <td className={cn(
-                      "px-3 py-3 text-right tabular-nums font-bold text-destructive"
-                    )}>
+                    <td className="px-3 text-right tabular-nums font-bold text-rose-600 dark:text-rose-400 bg-rose-500/[0.04]">
                       {offer.toLocaleString("ko-KR")}
                     </td>
                     <td className={cn(
-                      "px-3 py-3 text-right tabular-nums font-bold",
-                      negative ? "text-destructive" : "text-foreground"
+                      "px-3 text-right tabular-nums font-extrabold",
+                      negative ? "text-rose-600 dark:text-rose-400" : "text-blue-600 dark:text-blue-400"
                     )}>
                       <TooltipProvider delayDuration={200}>
                         <Tooltip>
@@ -1263,30 +1268,30 @@ const SalesLedgerPage = () => {
                         </Tooltip>
                       </TooltipProvider>
                     </td>
-                    <td className="px-3 py-3 text-right tabular-nums">
+                    <td className="px-3 text-right tabular-nums">
                       {(r.receivable_amount ?? 0) > 0 ? (
                         <span className={
                           r.receivable_paid === "완료"
                             ? "text-muted-foreground line-through"
                             : (r.receivable_amount ?? 0) < 0
-                              ? "text-destructive font-bold"
+                              ? "text-rose-600 dark:text-rose-400 font-bold"
                               : "text-foreground font-bold"
                         }>
                           {(r.receivable_amount ?? 0).toLocaleString("ko-KR")}
                         </span>
                       ) : <span className="text-muted-foreground">-</span>}
                     </td>
-                    <td className="px-3 py-3 text-right tabular-nums">
+                    <td className="px-3 text-right tabular-nums bg-rose-500/[0.04]">
                       {(r.customer_support_amount ?? 0) > 0
-                        ? <span className="font-bold text-destructive">{(r.customer_support_amount ?? 0).toLocaleString("ko-KR")}</span>
+                        ? <span className="font-bold text-rose-600 dark:text-rose-400">{(r.customer_support_amount ?? 0).toLocaleString("ko-KR")}</span>
                         : <span className="text-muted-foreground">-</span>}
                     </td>
-                    <td className="px-3 py-3 text-right tabular-nums">
+                    <td className="px-3 text-right tabular-nums bg-rose-500/[0.04]">
                       {(r.corp_card_amount ?? 0) > 0
-                        ? <span className="font-bold text-destructive">{(r.corp_card_amount ?? 0).toLocaleString("ko-KR")}</span>
+                        ? <span className="font-bold text-rose-600 dark:text-rose-400">{(r.corp_card_amount ?? 0).toLocaleString("ko-KR")}</span>
                         : <span className="text-muted-foreground">-</span>}
                     </td>
-                    <td className="px-3 py-3 text-right tabular-nums">
+                    <td className="px-3 text-right tabular-nums border-r border-border/30">
                       {r.trade_in_enabled ? (
                         <span className="text-foreground font-bold" title={r.trade_in_model ?? ""}>
                           {(r.trade_in_confirmed ?? 0) > 0
@@ -1297,7 +1302,7 @@ const SalesLedgerPage = () => {
                         <span className="text-muted-foreground">-</span>
                       )}
                     </td>
-                    <td className="px-3 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-3 text-right" onClick={(e) => e.stopPropagation()}>
                       {canEdit ? (
                         <div className="inline-flex flex-col items-end gap-0.5">
                           <div className="inline-flex gap-1">
