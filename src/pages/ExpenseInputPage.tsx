@@ -270,11 +270,30 @@ export default function ExpenseInputPage() {
     byFixed: Record<string, number>;
   }>({ adTotal: 0, etcTotal: 0, fixedTotal: 0, total: 0, byMedia: {}, byType: {}, byFixed: {} });
 
+  // 일자별 합계 (누적 계산용) — 기간 내 모든 행을 일자별로 합산
+  const [dailySums, setDailySums] = useState<{ date: string; amount: number }[]>([]);
+  // 이번 달(현재 월) 총 지출 — 기간과 무관하게 이번 달 전체
+  const [thisMonthTotal, setThisMonthTotal] = useState(0);
+  const [latestSpendDate, setLatestSpendDate] = useState<string | null>(null);
+
+  // 특정 날짜까지의 누적 합계 계산
+  const cumulativeUpTo = (date: string) => {
+    return dailySums
+      .filter((d) => d.date <= date)
+      .reduce((s, d) => s + d.amount, 0);
+  };
+
+  // 기간 내 가장 최근 일자 기준 전체 누적
+  const periodCumulative = useMemo(
+    () => dailySums.reduce((s, d) => s + d.amount, 0),
+    [dailySums],
+  );
+
   const fetchPeriodTotals = async () => {
     // 페이지네이션과 무관하게 기간 내 전체 행을 합산
     const { data, error } = await supabase
       .from("ad_spend")
-      .select("category, media, expense_type, amount")
+      .select("category, media, expense_type, amount, spend_date")
       .gte("spend_date", startDate)
       .lte("spend_date", endDate);
     if (error) return;
@@ -287,9 +306,15 @@ export default function ExpenseInputPage() {
       byType: {} as Record<string, number>,
       byFixed: {} as Record<string, number>,
     };
+    const dailyMap = new Map<string, number>();
+    let latest: string | null = null;
     (data ?? []).forEach((r: any) => {
       const amt = Number(r.amount || 0);
       acc.total += amt;
+      if (r.spend_date) {
+        dailyMap.set(r.spend_date, (dailyMap.get(r.spend_date) ?? 0) + amt);
+        if (!latest || r.spend_date > latest) latest = r.spend_date;
+      }
       if (r.category === "광고비") {
         acc.adTotal += amt;
         const k = r.media ?? "기타";
@@ -305,10 +330,33 @@ export default function ExpenseInputPage() {
       }
     });
     setPeriodTotals(acc);
+    setDailySums(
+      Array.from(dailyMap.entries())
+        .map(([date, amount]) => ({ date, amount }))
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    );
+    setLatestSpendDate(latest);
+  };
+
+  // 이번 달 총 지출 (기간 필터와 무관)
+  const fetchThisMonthTotal = async () => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const start = `${y}-${m}-01`;
+    const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
+    const end = `${y}-${m}-${String(lastDay).padStart(2, "0")}`;
+    const { data } = await supabase
+      .from("ad_spend")
+      .select("amount")
+      .gte("spend_date", start)
+      .lte("spend_date", end);
+    setThisMonthTotal((data ?? []).reduce((s: number, r: any) => s + Number(r.amount || 0), 0));
   };
 
   useEffect(() => {
     fetchPeriodTotals();
+    fetchThisMonthTotal();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate]);
 
@@ -321,6 +369,7 @@ export default function ExpenseInputPage() {
         { event: "*", schema: "public", table: "ad_spend" },
         () => {
           fetchPeriodTotals();
+          fetchThisMonthTotal();
           fetchRows();
         },
       )
