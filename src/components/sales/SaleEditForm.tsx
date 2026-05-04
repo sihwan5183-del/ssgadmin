@@ -769,41 +769,31 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
           </div>
           {/* 부가서비스 - 조건부 렌더링 */}
           {(() => {
+            // 부가서비스 입력은 [모바일 / 2nd] 상품군에서만 노출 (요구사항)
+            if (!isVasEligibleProduct(form.product)) return null;
             const defaults = getDefaultsForProduct(form.product);
-            const vasRequired = defaults?.vas_required ?? true;
-            if (!vasRequired && form.product) return (
-              <div className="text-[11px] text-muted-foreground italic px-1 py-1">
-                이 상품은 부가서비스 입력이 필요하지 않습니다
-              </div>
-            );
+            // 1순위: 선택된 요금제에 매핑된 부가서비스. 없으면 해당 상품의 전체 매핑 합집합.
+            const linkedForPlan = getLinkedVasForPlan(form.product, form.rate_plan);
+            const vasPlans = linkedForPlan.length > 0
+              ? linkedForPlan
+              : getAllLinkedVasForProduct(form.product);
             return (
-              <div className={cn(
-                "transition-all duration-300 ease-out overflow-hidden",
-                form.product && vasRequired ? "max-h-[200px] opacity-100" : !form.product ? "max-h-[200px] opacity-100" : "max-h-0 opacity-0"
-              )}>
+              <div className="transition-all duration-300 ease-out overflow-hidden max-h-[200px] opacity-100">
                  {(() => {
-                   const vasPlans = Array.from(new Set(
-                     (mappings ?? [])
-                       .filter((m: any) => m.active && typeof m.product === "string"
-                         && (m.product.includes("부가서비스") || m.product.toUpperCase().includes("VAS")))
-                       .map((m: any) => m.rate_plan as string),
-                   ));
                    return (
                  <div className="grid grid-cols-12 gap-2">
                   <div className="col-span-12 md:col-span-4">
                   <Field label="부가서비스 1">
                     {(() => {
                       const mismatch = defaults?.default_vas1 && form.vas1 && form.vas1 !== defaults.default_vas1 && !autoFilledFields.has("vas1");
-                      const locked = defaults?.vas1_locked && defaults?.default_vas1;
                       return (
                         <div>
                           <Select
                             value={form.vas1 ?? ""}
                             onValueChange={(v) => set("vas1", v)}
-                            disabled={!!locked}
                           >
-                            <SelectTrigger className={cn("h-9 bg-input/60 text-xs", locked && "opacity-70 cursor-not-allowed")}>
-                              <SelectValue placeholder={vasPlans.length === 0 ? "부가서비스 미등록 (어드민)" : "선택"} />
+                            <SelectTrigger className="h-9 bg-input/60 text-xs">
+                              <SelectValue placeholder={vasPlans.length === 0 ? "연관 부가서비스 미설정 (상품매핑에서 지정)" : "선택"} />
                             </SelectTrigger>
                             <SelectContent>
                               {vasPlans.map((p) => (
@@ -811,10 +801,7 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                               ))}
                             </SelectContent>
                           </Select>
-                          {locked && (
-                            <p className="text-[10px] text-muted-foreground mt-1">🔒 자동 설정됨 (수정 불가)</p>
-                          )}
-                          {!locked && mismatch && (
+                          {mismatch && (
                             <p className="text-[10px] text-amber-500 mt-1 flex items-center gap-1">
                               <AlertTriangle className="size-3" /> 기본 설정({defaults?.default_vas1})과 다릅니다
                             </p>
@@ -828,16 +815,14 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                   <Field label="부가서비스 2">
                     {(() => {
                       const mismatch = defaults?.default_vas2 && form.vas2 && form.vas2 !== defaults.default_vas2 && !autoFilledFields.has("vas2");
-                      const locked = defaults?.vas2_locked && defaults?.default_vas2;
                       return (
                         <div>
                           <Select
                             value={form.vas2 ?? ""}
                             onValueChange={(v) => set("vas2", v)}
-                            disabled={!!locked}
                           >
-                            <SelectTrigger className={cn("h-9 bg-input/60 text-xs", locked && "opacity-70 cursor-not-allowed")}>
-                              <SelectValue placeholder={vasPlans.length === 0 ? "부가서비스 미등록 (어드민)" : "선택"} />
+                            <SelectTrigger className="h-9 bg-input/60 text-xs">
+                              <SelectValue placeholder={vasPlans.length === 0 ? "연관 부가서비스 미설정 (상품매핑에서 지정)" : "선택"} />
                             </SelectTrigger>
                             <SelectContent>
                               {vasPlans.map((p) => (
@@ -845,10 +830,7 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                               ))}
                             </SelectContent>
                           </Select>
-                          {locked && (
-                            <p className="text-[10px] text-muted-foreground mt-1">🔒 자동 설정됨 (수정 불가)</p>
-                          )}
-                          {!locked && mismatch && (
+                          {mismatch && (
                             <p className="text-[10px] text-amber-500 mt-1 flex items-center gap-1">
                               <AlertTriangle className="size-3" /> 기본 설정({defaults?.default_vas2})과 다릅니다
                             </p>
