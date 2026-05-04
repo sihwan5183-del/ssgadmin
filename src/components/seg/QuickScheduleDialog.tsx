@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,10 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { useSegPartners } from "@/hooks/useSegPartners";
-import { Plus } from "lucide-react";
 
-const VISIT_PURPOSES = ["방문", "MOU", "상담", "제안", "계약", "사후관리", "이벤트", "기타"];
 const PRIORITIES = [
   { value: "high", label: "상", className: "text-rose-600" },
   { value: "mid", label: "중", className: "text-amber-600" },
@@ -27,47 +24,45 @@ interface Props {
 
 export function QuickScheduleDialog({ open, onOpenChange, defaultDate, onSaved }: Props) {
   const { user } = useAuth();
-  const { partners } = useSegPartners();
-  const [partnerId, setPartnerId] = useState<string>("");
-  const [newCompany, setNewCompany] = useState("");
-  const [creatingPartner, setCreatingPartner] = useState(false);
-  const [purpose, setPurpose] = useState("방문");
+  const [activityName, setActivityName] = useState("");
   const [assigneeName, setAssigneeName] = useState("");
-  const [time, setTime] = useState("");
   const [priority, setPriority] = useState("mid");
-  const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
+  const nameRef = useRef<HTMLInputElement>(null);
 
   const date = defaultDate ?? new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
     if (open) {
-      setPartnerId("");
-      setNewCompany("");
-      setCreatingPartner(false);
-      setPurpose("방문");
+      setActivityName("");
       setAssigneeName("");
-      setTime("");
       setPriority("mid");
-      setTitle("");
       setContent("");
+      // 활동명 칸 자동 포커스
+      setTimeout(() => nameRef.current?.focus(), 50);
     }
   }, [open]);
 
-  const sortedPartners = useMemo(
-    () => [...partners].sort((a, b) => a.company_name.localeCompare(b.company_name, "ko")),
-    [partners],
-  );
-
   const onSubmit = async () => {
     if (!user) return;
-    let pid = partnerId;
-    if (creatingPartner) {
-      const name = newCompany.trim();
-      if (!name) { toast.error("업체명을 입력하세요"); return; }
-      setSaving(true);
-      try {
+    const name = activityName.trim();
+    if (!name) { toast.error("활동명을 입력하세요"); nameRef.current?.focus(); return; }
+
+    // 활동명을 임시 파트너로 저장 (제약 없는 자유 입력 보장)
+    setSaving(true);
+    try {
+      // 동일한 자유 입력 활동명에 대해 partner 1건을 (자동) 보장 — 매번 새로 만들지 않도록 가벼운 재사용
+      let pid: string | null = null;
+      const { data: existing } = await (supabase as any)
+        .from("seg_partners")
+        .select("id")
+        .eq("company_name", name)
+        .eq("created_by", user.id)
+        .maybeSingle();
+      if (existing?.id) {
+        pid = existing.id;
+      } else {
         const { data, error } = await (supabase as any)
           .from("seg_partners")
           .insert({
@@ -81,26 +76,17 @@ export function QuickScheduleDialog({ open, onOpenChange, defaultDate, onSaved }
           .single();
         if (error) throw error;
         pid = data.id;
-      } catch (e: any) {
-        setSaving(false);
-        toast.error(e?.message ?? "업체 등록 실패");
-        return;
       }
-    }
-    if (!pid) { toast.error("업체를 선택하거나 신규 등록하세요"); return; }
 
-    setSaving(true);
-    try {
       const { error } = await (supabase as any).from("seg_activities").insert({
         partner_id: pid,
         activity_date: date,
-        activity_time: time || null,
-        activity_type: purpose,
-        title: title || null,
+        activity_type: "기타",
+        title: name,
         content: content || null,
         is_completed: false,
         assignee_name: assigneeName || null,
-        custom_fields: { priority },
+        custom_fields: { priority, activity_name: name },
         created_by: user.id,
       });
       if (error) throw error;
@@ -116,68 +102,52 @@ export function QuickScheduleDialog({ open, onOpenChange, defaultDate, onSaved }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>새 일정 등록 · {date}</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2 space-y-1.5">
-            <Label className="text-xs">업체명</Label>
-            {!creatingPartner ? (
-              <div className="flex gap-2">
-                <Select value={partnerId} onValueChange={setPartnerId}>
-                  <SelectTrigger className="flex-1"><SelectValue placeholder="업체 선택" /></SelectTrigger>
-                  <SelectContent>
-                    {sortedPartners.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.company_name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button type="button" variant="outline" size="icon" onClick={() => setCreatingPartner(true)} title="신규 업체">
-                  <Plus className="size-4" />
-                </Button>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <Input value={newCompany} onChange={(e) => setNewCompany(e.target.value)} placeholder="신규 업체명 입력" />
-                <Button type="button" variant="ghost" size="sm" onClick={() => setCreatingPartner(false)}>취소</Button>
-              </div>
-            )}
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">활동명</Label>
+            <Input
+              ref={nameRef}
+              value={activityName}
+              onChange={(e) => setActivityName(e.target.value)}
+              placeholder="자유롭게 입력 (예: 강남센터 방문)"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              list="no-autocomplete"
+              onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) onSubmit(); }}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">담당자</Label>
+              <Input
+                value={assigneeName}
+                onChange={(e) => setAssigneeName(e.target.value)}
+                placeholder="담당자명"
+                autoComplete="off"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">중요도</Label>
+              <Select value={priority} onValueChange={setPriority}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PRIORITIES.map((p) => (
+                    <SelectItem key={p.value} value={p.value}>
+                      <span className={p.className}>{p.label}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">방문 목적</Label>
-            <Select value={purpose} onValueChange={setPurpose}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{VISIT_PURPOSES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">시간</Label>
-            <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">담당자</Label>
-            <Input value={assigneeName} onChange={(e) => setAssigneeName(e.target.value)} placeholder="담당자명" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">중요도</Label>
-            <Select value={priority} onValueChange={setPriority}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {PRIORITIES.map((p) => (
-                  <SelectItem key={p.value} value={p.value}>
-                    <span className={p.className}>{p.label}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="col-span-2 space-y-1.5">
-            <Label className="text-xs">제목</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="예: 1차 미팅 - 제안서 전달" />
-          </div>
-          <div className="col-span-2 space-y-1.5">
-            <Label className="text-xs">메모</Label>
+            <Label className="text-xs">메모 (선택)</Label>
             <Textarea rows={3} value={content} onChange={(e) => setContent(e.target.value)} placeholder="활동 메모" />
           </div>
         </div>
