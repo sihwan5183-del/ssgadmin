@@ -987,6 +987,14 @@ const RegularsPage = () => {
                             ✓ 전환완료
                           </span>
                         )}
+                        {r.activated && (
+                          <span
+                            className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/15 text-primary-glow border border-primary/30"
+                            title="자사개통 고객"
+                          >
+                            ⚡ 자사개통
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-3 py-2">
