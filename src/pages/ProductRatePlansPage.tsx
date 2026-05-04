@@ -246,25 +246,7 @@ export default function ProductRatePlansPage() {
     else load();
   };
 
-  const firstRow = filtered[0] as Mapping | undefined;
-  const vasEnabled = isVasEligibleProduct(activeProduct);
-
-  const toggleLinkedVas = async (mapping: Mapping, vas: string) => {
-    const current = Array.isArray(mapping.linked_vas) ? mapping.linked_vas : [];
-    const next = current.includes(vas)
-      ? current.filter((v) => v !== vas)
-      : [...current, vas];
-    // Optimistic UI
-    setMappings((prev) => prev.map((m) => (m.id === mapping.id ? { ...m, linked_vas: next } : m)));
-    const { error } = await supabase
-      .from("product_rate_plans")
-      .update({ linked_vas: next } as any)
-      .eq("id", mapping.id);
-    if (error) {
-      toast.error("부가서비스 저장 실패: " + error.message);
-      load();
-    }
-  };
+  // 부가서비스 매핑 기능은 제거됨 — 실적 입력 화면에서 자유 텍스트 입력으로 대체.
 
   return (
     <div>
@@ -444,56 +426,6 @@ export default function ProductRatePlansPage() {
 
         {/* 오른쪽: 매핑 편집 */}
         <Card className="p-6 glass">
-          {/* 상품 기본값 설정 */}
-          {activeProduct && filtered.length > 0 && vasEnabled && (
-            <div className="mb-6 p-4 rounded-xl border border-border/40 bg-muted/20">
-              <h4 className="text-sm font-semibold mb-3">📋 {activeProduct} 부가서비스 기본 설정 (선택)</h4>
-              <p className="text-[11px] text-muted-foreground mb-3">
-                요금제별 [연관 부가서비스]를 지정하지 않은 경우 사용되는 폴백 기본값입니다.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div>
-                  <Label className="text-xs">기본 부가서비스 1</Label>
-                  <Input
-                    value={firstRow?.default_vas1 ?? ""}
-                    onChange={(e) => saveDefaults("default_vas1", e.target.value || null)}
-                    placeholder="예: 음악감상서비스"
-                    className="h-9"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">기본 부가서비스 2</Label>
-                  <Input
-                    value={firstRow?.default_vas2 ?? ""}
-                    onChange={(e) => saveDefaults("default_vas2", e.target.value || null)}
-                    placeholder="예: 데이터팩"
-                    className="h-9"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">VAS1 유지기간 (개월)</Label>
-                  <Input
-                    type="number"
-                    value={firstRow?.vas1_duration ?? ""}
-                    onChange={(e) => saveDefaults("vas1_duration", e.target.value ? Number(e.target.value) : null)}
-                    placeholder="예: 3"
-                    className="h-9"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">VAS2 유지기간 (개월)</Label>
-                  <Input
-                    type="number"
-                    value={firstRow?.vas2_duration ?? ""}
-                    onChange={(e) => saveDefaults("vas2_duration", e.target.value ? Number(e.target.value) : null)}
-                    placeholder="예: 3"
-                    className="h-9"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-semibold flex items-center gap-2">
@@ -555,11 +487,6 @@ export default function ProductRatePlansPage() {
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-muted-foreground w-6 text-right">{i + 1}</span>
                       <span className="flex-1 font-medium text-sm">{m.rate_plan}</span>
-                      {vasEnabled && (m.linked_vas?.length ?? 0) > 0 && (
-                        <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">
-                          VAS {m.linked_vas.length}
-                        </Badge>
-                      )}
                       {!m.active && (
                         <Badge variant="outline" className="text-[10px]">비활성</Badge>
                       )}
@@ -570,43 +497,6 @@ export default function ProductRatePlansPage() {
                         <Trash2 className="size-4 text-destructive" />
                       </Button>
                     </div>
-                    {vasEnabled && (
-                      <div className="mt-2 pl-9 border-t border-border/30 pt-2">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <Label className="text-[11px] text-muted-foreground flex items-center gap-1">
-                            <Sparkles className="size-3" /> 연관 부가서비스 매핑
-                          </Label>
-                          <span className="text-[10px] text-muted-foreground">
-                            클릭하여 선택/해제
-                          </span>
-                        </div>
-                        {vasPool.length === 0 ? (
-                          <p className="text-[11px] text-muted-foreground italic">
-                            먼저 가입상품 [부가서비스] 카테고리에 부가서비스 명을 매핑으로 등록해주세요.
-                          </p>
-                        ) : (
-                          <div className="flex flex-wrap gap-1.5">
-                            {vasPool.map((vas) => {
-                              const selected = (m.linked_vas ?? []).includes(vas);
-                              return (
-                                <button
-                                  key={vas}
-                                  type="button"
-                                  onClick={() => toggleLinkedVas(m, vas)}
-                                  className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
-                                    selected
-                                      ? "border-primary bg-primary text-primary-foreground"
-                                      : "border-border bg-background hover:bg-muted text-foreground"
-                                  }`}
-                                >
-                                  {vas}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </SortableItem>
                 )}
               </SortableList>
