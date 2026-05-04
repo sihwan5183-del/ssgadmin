@@ -543,8 +543,10 @@ const SalesLedgerPage = () => {
     let q = supabase
       .from("sales")
       .select("*")
-      .gte("open_date", startDate)
-      .lte("open_date", endDate);
+      .or(
+        `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
+        `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
+      );
     if (statusFilter.length > 0) {
       q = q.in("status", statusFilter);
     } else {
