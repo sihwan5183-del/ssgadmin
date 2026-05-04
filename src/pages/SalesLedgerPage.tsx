@@ -1139,7 +1139,12 @@ const SalesLedgerPage = () => {
                     <td className="px-3 py-2.5">{r.open_date ?? "-"}</td>
                     <td className="px-3 py-3 align-middle whitespace-nowrap">
                       <div className="flex items-center gap-1.5 leading-tight">
-                        <span className="no-underline">{r.channel ?? "-"}</span>
+                        <span className="no-underline">
+                          {r.channel ?? "-"}
+                          {(r as any).channel_company ? (
+                            <span className="text-muted-foreground"> - {(r as any).channel_company}</span>
+                          ) : null}
+                        </span>
                         {isMoyoExcluded && (
                           <Tooltip>
                             <TooltipTrigger asChild>
