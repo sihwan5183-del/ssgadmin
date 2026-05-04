@@ -787,14 +787,14 @@ const ChannelIntakePage = () => {
                       aria-label="전체 선택"
                     />
                   </th>
-                  <th className="text-left px-3 py-2">날짜</th>
-                  <th className="text-left px-3 py-2">채널</th>
-                  <th className="text-left px-3 py-2">고객</th>
-                  <th className="text-left px-3 py-2">생년월일</th>
-                  <th className="text-left px-3 py-2">연락처</th>
-                  <th className="text-left px-3 py-2">상태</th>
-                  <th className="text-left px-3 py-2">재연락</th>
-                  <th className="text-left px-3 py-2">최종액션</th>
+                  <th className="text-left px-3 py-2 w-[88px]">날짜</th>
+                  <th className="text-left px-3 py-2 w-[88px]">채널</th>
+                  <th className="text-left px-3 py-2 w-[80px]">통신사</th>
+                  <th className="text-left px-3 py-2 w-[110px]">고객명</th>
+                  <th className="text-left px-3 py-2 w-[100px]">생년월일</th>
+                  <th className="text-left px-3 py-2 w-[130px]">연락처</th>
+                  <th className="text-left px-3 py-2 w-[180px]">상담모델</th>
+                  <th className="text-left px-3 py-2 w-[110px]">최종액션</th>
                   <th className="text-left px-3 py-2">
                     <button
                       type="button"
@@ -809,15 +809,14 @@ const ChannelIntakePage = () => {
                       <ChevronRight className={cn("size-3 rotate-90 transition-transform", sortMode === "recent_log" && "text-primary")} />
                     </button>
                   </th>
-                  <th className="text-left px-3 py-2">담당</th>
-                  <th className="text-right px-3 py-2">관리</th>
+                  <th className="text-left px-3 py-2 w-[90px]">담당자</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={12} className="text-center py-10 text-muted-foreground">불러오는 중…</td></tr>
+                  <tr><td colSpan={11} className="text-center py-10 text-muted-foreground">불러오는 중…</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={12} className="text-center py-10 text-muted-foreground">데이터 없음</td></tr>
+                  <tr><td colSpan={11} className="text-center py-10 text-muted-foreground">데이터 없음</td></tr>
                 ) : (
                   filtered.map((r) => {
                     const newLead = isNewLead(r);
@@ -831,11 +830,12 @@ const ChannelIntakePage = () => {
                     const consultDevice = [icf.consult_device_model, icf.consult_device_capacity, icf.consult_device_color]
                       .filter((v) => typeof v === "string" && v.trim().length > 0)
                       .join(" · ");
+                    const carrier = (icf.carrier ?? icf.telecom ?? icf.통신사 ?? "") as string;
                     return (
                       <tr
                         key={r.id}
                         className={cn(
-                          "border-t border-border/30 hover:bg-muted/30 cursor-pointer",
+                          "border-t border-border/30 hover:bg-muted/40 transition-colors cursor-pointer",
                           newLead && "bg-orange-50 dark:bg-orange-950/20",
                           abandoned && !newLead && "bg-destructive/5",
                         )}
@@ -846,82 +846,75 @@ const ChannelIntakePage = () => {
                           openDetailEditor(r);
                         }}
                       >
-                        <td className="px-3 py-2 align-middle">
+                        <td className="px-3 py-3 align-middle">
                           <Checkbox
                             checked={selectedIds.has(r.id)}
                             onCheckedChange={() => toggleOne(r.id)}
                             aria-label="선택"
                           />
                         </td>
-                        <td className="px-3 py-2 text-xs tabular-nums align-middle">{r.inquiry_date}</td>
-                        <td className="px-3 py-2 align-middle">
+                        <td className="px-3 py-3 text-xs tabular-nums align-middle">{r.inquiry_date}</td>
+                        <td className="px-3 py-3 align-middle">
                           <Badge variant="outline" className="text-[10px]">{r.channel}</Badge>
                         </td>
-                        <td className="px-3 py-2 text-xs font-medium align-middle">{r.customer_name ?? "-"}</td>
-                        <td className="px-3 py-2 text-xs tabular-nums text-muted-foreground align-middle">{r.birth_date ?? "-"}</td>
-                        <td className="px-3 py-2 text-xs align-middle">
+                        <td className="px-3 py-3 align-middle">
+                          {carrier ? (
+                            <Badge variant="secondary" className="text-[10px]">{carrier}</Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-xs font-medium align-middle">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span>{r.customer_name ?? "-"}</span>
+                            {newLead && (
+                              <Badge variant="outline" className={cn("text-[9px] h-4 px-1", inquiryStatusClass("미처리"))}>
+                                미처리
+                              </Badge>
+                            )}
+                            {abandoned && !newLead && (
+                              <Badge variant="destructive" className="text-[9px] h-4 px-1 animate-pulse">방치</Badge>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 text-xs tabular-nums text-muted-foreground align-middle">{r.birth_date ?? "-"}</td>
+                        <td className="px-3 py-3 text-xs align-middle">
                           {r.phone ? (
                             <a href={`tel:${r.phone}`} className="flex items-center gap-1 text-foreground/80 hover:text-foreground">
                               <Phone className="size-3" /> {formatPhone(r.phone)}
                             </a>
                           ) : "-"}
                         </td>
-                        <td className="px-3 py-2 align-middle">
-                          <div className="flex items-center gap-1.5">
-                            <Badge
-                              className={cn(
-                                "text-[10px]",
-                                inquiryStatusClass(displayStatus),
-                                newLead && "font-bold",
-                              )}
-                              variant="outline"
-                            >
-                              {displayStatus}
-                            </Badge>
-                            {newLead && (
-                              <AlertTriangle className="size-3.5 text-orange-600 dark:text-orange-400 animate-pulse" />
-                            )}
-                            {abandoned && (
-                              <Badge variant="destructive" className="text-[9px] h-4 px-1 animate-pulse">
-                                방치
-                              </Badge>
-                            )}
-                          </div>
-                          {r.fail_reason && (
-                            <span className="text-[10px] text-muted-foreground block mt-0.5">
-                              사유: {r.fail_reason}
-                            </span>
+                        <td className="px-3 py-3 align-middle">
+                          {consultDevice ? (
+                            <div className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary text-[10px] px-2 py-0.5 max-w-full overflow-hidden">
+                              <Smartphone className="size-2.5 shrink-0" />
+                              <span className="truncate" title={consultDevice}>{consultDevice}</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-[10px] tabular-nums text-muted-foreground align-middle">
-                          {r.retry_at ? (
-                            <span className="flex items-center gap-1">
-                              <Clock className="size-3" /> {formatTime(r.retry_at)}
-                            </span>
-                          ) : "-"}
+                        <td className="px-3 py-3 text-[11px] tabular-nums text-muted-foreground align-middle">
+                          {lastLog?.created_at
+                            ? formatTime(lastLog.created_at)
+                            : formatTime(r.last_action_at)}
                         </td>
-                        <td className="px-3 py-2 text-[10px] tabular-nums text-muted-foreground align-middle">
-                          {formatTime(r.last_action_at)}
-                        </td>
-                        <td className="px-3 py-2 text-xs align-middle max-w-[260px]">
+                        <td className="px-3 py-3 text-xs align-middle max-w-[280px]">
                           {(lastSummary || consultDevice) ? (
                             <TooltipProvider delayDuration={150}>
                               <UITooltip>
                                 <TooltipTrigger asChild>
                                   <div className="cursor-help">
-                                    {consultDevice && (
-                                      <div className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 mb-0.5 max-w-full overflow-hidden">
-                                        <Smartphone className="size-2.5 shrink-0" />
-                                        <span className="truncate">{consultDevice}</span>
-                                      </div>
-                                    )}
                                     {lastSummary && (
                                       <span
-                                        className="block text-foreground/80 overflow-hidden text-ellipsis"
-                                        style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}
+                                        className="block text-foreground/80 truncate"
                                       >
                                         {lastSummary}
                                       </span>
+                                    )}
+                                    {!lastSummary && consultDevice && (
+                                      <span className="text-muted-foreground">-</span>
                                     )}
                                   </div>
                                 </TooltipTrigger>
@@ -945,45 +938,7 @@ const ChannelIntakePage = () => {
                             <span className="text-muted-foreground">-</span>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-xs align-middle">{r.manager ?? "-"}</td>
-                        <td className="px-3 py-2 align-middle">
-                          <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
-                            <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setSelectedInquiry(r)}>
-                              <MessageSquare className="size-3 mr-1" /> 기록
-                            </Button>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button size="sm" variant="outline" className="h-8 text-xs">
-                                  상태변경
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent align="end" className="w-auto p-2">
-                                <div className="text-[10px] text-muted-foreground mb-1.5 px-1">
-                                  클릭 한 번으로 상태 변경
-                                </div>
-                                <div className="flex flex-wrap gap-1 max-w-[260px]">
-                                  {CRM_STATUSES.map((s) => {
-                                    const active = (isNewLead(r) ? "미처리" : r.status) === s;
-                                    return (
-                                      <Button
-                                        key={s}
-                                        size="sm"
-                                        variant={active ? "default" : "outline"}
-                                        className="h-7 text-[11px] px-2"
-                                        onClick={() => quickChangeStatus(r, s)}
-                                      >
-                                        {s}
-                                      </Button>
-                                    );
-                                  })}
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                            <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={() => openDetailEditor(r)}>
-                              <Pencil className="size-3" /> 수정
-                            </Button>
-                          </div>
-                        </td>
+                        <td className="px-3 py-3 text-xs align-middle">{r.manager ?? "-"}</td>
                       </tr>
                     );
                   })
