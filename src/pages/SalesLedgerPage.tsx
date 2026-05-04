@@ -286,8 +286,13 @@ const SalesLedgerPage = () => {
     let query = supabase
       .from("sales")
       .select("*", { count: "exact" })
-      .gte("open_date", startDate)
-      .lte("open_date", endDate);
+      .neq("status", "취소")
+      // 대시보드 [개통 대기] 와 동일 기준:
+      // open_date 가 기간 내 OR (open_date NULL 이면서 created_at 이 기간 내)
+      .or(
+        `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
+        `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
+      );
     if (statusFilter.length > 0) {
       query = query.in("status", statusFilter);
     }
