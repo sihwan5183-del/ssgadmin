@@ -454,6 +454,19 @@ const SalesLedgerPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
 
+  // 실시간 동기화: sales 변경 시 즉시 리스트/요약 재조회 (대시보드와 1:1 일치 유지)
+  useEffect(() => {
+    const ch = supabase
+      .channel("sales-ledger-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, () => {
+        load();
+        loadSummary();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load, loadSummary]);
+
   // 디바운스 (300ms) — 입력 중에는 스피너 표시
   useEffect(() => {
     if (searchQ !== debouncedSearchQ) setSearching(true);
