@@ -198,8 +198,7 @@ export default function SegCalendarPage() {
                 </div>
                 <div className="space-y-0.5">
                   {items.slice(0, 3).map((it, i) => {
-                    const company = partnerById.get(it.act.partner_id)?.company_name ?? "-";
-                    const time = it.act.activity_time ? it.act.activity_time.slice(0,5) : "";
+                    const name = it.act.title || partnerById.get(it.act.partner_id)?.company_name || "-";
                     return (
                       <div key={i} className={cn(
                         "text-[10px] flex items-center gap-1 px-1 py-0.5 rounded truncate",
@@ -208,8 +207,7 @@ export default function SegCalendarPage() {
                           : "bg-slate-100 dark:bg-slate-800",
                       )}>
                         <span className={`size-1.5 rounded-full shrink-0 ${TYPE_DOT[it.act.activity_type] ?? "bg-muted-foreground"} ${it.kind === "next" ? "ring-1 ring-amber-500" : ""}`} />
-                        {time && <span className="font-mono tabular-nums text-muted-foreground">{time}</span>}
-                        <span className="truncate font-medium">{company}</span>
+                        <span className="truncate font-medium">{name}</span>
                       </div>
                     );
                   })}
@@ -264,10 +262,10 @@ export default function SegCalendarPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-xs text-muted-foreground border-b border-border">
-                  <th className="text-left font-medium py-2 px-2 w-[140px]">날짜 / 시간</th>
-                  <th className="text-left font-medium py-2 px-2">업체명</th>
+                  <th className="text-left font-medium py-2 px-2 w-[110px]">날짜</th>
+                  <th className="text-left font-medium py-2 px-2">활동명</th>
                   <th className="text-left font-medium py-2 px-2 w-[100px]">담당자</th>
-                  <th className="text-left font-medium py-2 px-2">활동 내용</th>
+                  <th className="text-left font-medium py-2 px-2">메모</th>
                   <th className="text-left font-medium py-2 px-2 w-[80px]">중요도</th>
                   <th className="text-left font-medium py-2 px-2 w-[80px]">상태</th>
                   <th className="text-right font-medium py-2 px-2 w-[160px]">액션</th>
@@ -279,6 +277,7 @@ export default function SegCalendarPage() {
                   const done = a.is_completed;
                   const pri = (a.custom_fields as any)?.priority as string | undefined;
                   const priInfo = pri ? PRIORITY_BADGE[pri] : undefined;
+                  const name = a.title || p?.company_name || "-";
                   return (
                     <tr key={a.id} className={cn(
                       "border-b border-border/40 hover:bg-muted/40 transition-colors",
@@ -286,25 +285,21 @@ export default function SegCalendarPage() {
                     )}>
                       <td className="py-2 px-2 align-top">
                         <div className="font-mono tabular-nums text-xs">{a.activity_date}</div>
-                        {a.activity_time && <div className="text-[11px] text-muted-foreground font-mono">{a.activity_time.slice(0,5)}</div>}
+                        <div className="text-[10px] text-muted-foreground">등록 {a.created_at?.slice(0,10)}</div>
                       </td>
                       <td className="py-2 px-2 align-top">
                         <button
-                          onClick={() => { setDrawerPartner(p); setDrawerOpen(true); }}
-                          className="font-medium hover:underline text-left"
+                          onClick={() => { if (p) { setDrawerPartner(p); setDrawerOpen(true); } }}
+                          className="font-semibold hover:underline text-left text-sm"
                         >
-                          {p?.company_name ?? "-"}
+                          {name}
                         </button>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <span className={`size-1.5 rounded-full ${TYPE_DOT[a.activity_type] ?? "bg-muted-foreground"}`} />
-                          <span className="text-[11px] text-muted-foreground">{a.activity_type}</span>
-                        </div>
                       </td>
                       <td className="py-2 px-2 align-top text-xs">{a.assignee_name ?? "-"}</td>
                       <td className="py-2 px-2 align-top">
-                        {a.title && <div className="text-xs font-medium truncate max-w-[280px]">{a.title}</div>}
-                        {a.content && <div className="text-[11px] text-muted-foreground truncate max-w-[280px]">{a.content}</div>}
-                        {!a.title && !a.content && <span className="text-xs text-muted-foreground">-</span>}
+                        {a.content
+                          ? <div className="text-[11px] text-muted-foreground truncate max-w-[280px]">{a.content}</div>
+                          : <span className="text-xs text-muted-foreground">-</span>}
                       </td>
                       <td className="py-2 px-2 align-top">
                         {priInfo ? (
