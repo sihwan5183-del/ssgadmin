@@ -114,36 +114,51 @@ export const HeroPerformance = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  const fetchAll = React.useCallback(async () => {
+    setLoading(true);
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const ydate = new Date();
+    ydate.setDate(ydate.getDate() - 1);
+    const ydayISO = ydate.toISOString().slice(0, 10);
+    // [현재기간/전기간/오늘/어제] 도 [개통 대기] 와 동일 기준으로 통일
+    // → open_date 기간 내 OR (open_date NULL & created_at 기간 내), 취소 제외
+    const periodOr = (s: string, e: string) =>
+      `and(open_date.gte.${s},open_date.lte.${e}),` +
+      `and(open_date.is.null,created_at.gte.${s}T00:00:00,created_at.lte.${e}T23:59:59.999)`;
+    const [a, b, c, d, e] = await Promise.all([
+      supabase.from("sales").select("product").neq("status", "취소").or(periodOr(startDate, endDate)).limit(10000),
+      supabase.from("sales").select("product").neq("status", "취소").or(periodOr(prevStartDate, prevEndDate)).limit(10000),
+      supabase.from("sales").select("product").neq("status", "취소").or(periodOr(todayISO, todayISO)).limit(5000),
+      supabase.from("sales").select("product").neq("status", "취소").or(periodOr(ydayISO, ydayISO)).limit(5000),
+      supabase.from("sales").select("product, created_at, open_date, status")
+        .neq("status", "취소")
+        .or(periodOr(startDate, endDate))
+        .limit(10000),
+    ]);
+    setCurrentRows(a.data ?? []);
+    setPrevRows(b.data ?? []);
+    setTodayRows(c.data ?? []);
+    setYdayRows(d.data ?? []);
+    setPendingRows(e.data ?? []);
+    setLoading(false);
+  }, [startDate, endDate, prevStartDate, prevEndDate]);
+
   useEffect(() => {
     let alive = true;
-    (async () => {
-      setLoading(true);
-      const todayISO = new Date().toISOString().slice(0, 10);
-      const ydate = new Date();
-      ydate.setDate(ydate.getDate() - 1);
-      const ydayISO = ydate.toISOString().slice(0, 10);
-
-      const [a, b, c, d, e] = await Promise.all([
-        supabase.from("sales").select("product").gte("open_date", startDate).lte("open_date", endDate).neq("status", "취소").limit(10000),
-        supabase.from("sales").select("product").gte("open_date", prevStartDate).lte("open_date", prevEndDate).neq("status", "취소").limit(10000),
-        supabase.from("sales").select("product").eq("open_date", todayISO).neq("status", "취소").limit(5000),
-        supabase.from("sales").select("product").eq("open_date", ydayISO).neq("status", "취소").limit(5000),
-        // [개통 대기] = 입력된 모든 실적 (취소 제외) — 통합 검수함 view=all 과 1:1 일치
-        supabase.from("sales").select("product, created_at, open_date, status")
-          .neq("status", "취소")
-          .or(`and(open_date.gte.${startDate},open_date.lte.${endDate}),and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`)
-          .limit(10000),
-      ]);
-      if (!alive) return;
-      setCurrentRows(a.data ?? []);
-      setPrevRows(b.data ?? []);
-      setTodayRows(c.data ?? []);
-      setYdayRows(d.data ?? []);
-      setPendingRows(e.data ?? []);
-      setLoading(false);
-    })();
+    fetchAll().catch(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [startDate, endDate, prevStartDate, prevEndDate]);
+  }, [fetchAll]);
+
+  // 실시간 동기화: sales 변경 시 즉시 재조회 (장표와 1:1 일치 유지)
+  useEffect(() => {
+    const ch = supabase
+      .channel("dashboard-hero-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, () => {
+        fetchAll();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [fetchAll]);
 
   const filtered = useMemo(() => {
     const cur = currentRows.filter((r) => matchSegment(r.product, segment));
