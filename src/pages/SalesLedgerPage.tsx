@@ -1123,6 +1123,7 @@ const SalesLedgerPage = () => {
                     "border-b border-border/20 hover:bg-muted/30 cursor-pointer transition-colors",
                     isMoyoExcluded && "text-muted-foreground",
                     isManagerMissing(r) && "bg-amber-50/60 dark:bg-amber-500/10",
+                    !isInspected && !isManagerMissing(r) && "bg-muted/20",
                   )}
                   onClick={handleRowClick}
                   >
@@ -1168,6 +1169,11 @@ const SalesLedgerPage = () => {
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span>{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
+                        {!isInspected && (
+                          <Badge variant="outline" className="text-[9px] gap-0.5 border-muted-foreground/40 text-muted-foreground bg-transparent px-1.5 py-0">
+                            검수 전
+                          </Badge>
+                        )}
                         {(() => {
                           const w = (r.custom_fields as any)?.welfare_discount;
                           if (!w || w === "해당없음") return null;
