@@ -428,7 +428,7 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
     <>
       <form onSubmit={onSubmit} className="space-y-3 pb-8">
         <FormSection title="기본 정보" icon={<Zap className="size-3" />}>
-          <Grid cols={4}>
+          <Grid cols={5}>
             <Field label="인입경로 *">
               <Select value={form.channel ?? ""} onValueChange={(v) => set("channel", v)}>
                 <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
@@ -437,6 +437,20 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                 </SelectContent>
               </Select>
             </Field>
+            {(() => {
+              const ch = form.channel ?? "";
+              const isSeg = /SEG|법인/i.test(ch);
+              return (
+                <Field label={isSeg ? "업체명 (필수권장)" : "업체명"}>
+                  <Input
+                    value={(form as any).channel_company ?? ""}
+                    onChange={(e) => set("channel_company" as any, e.target.value)}
+                    placeholder={isSeg ? "업체명을 입력하세요" : "예: 삼성전자 (선택)"}
+                    className={`h-9 bg-input/60 text-xs ${isSeg ? "border-primary/60 ring-1 ring-primary/30 focus-visible:ring-primary/50" : ""}`}
+                  />
+                </Field>
+              );
+            })()}
             <Field label="담당자 *">
               <Select
                 value={form.manager ?? ""}
