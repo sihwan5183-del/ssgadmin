@@ -645,7 +645,7 @@ const RegularsPage = () => {
               placeholder="홍길동"
             />
           </div>
-          <div className="md:col-span-3">
+          <div className="md:col-span-2">
             <Label className="text-xs">연락처</Label>
             <Input
               className="mt-1.5"
@@ -655,12 +655,12 @@ const RegularsPage = () => {
               disabled={!form.carrier}
             />
           </div>
-          <div className="md:col-span-3">
+          <div className="md:col-span-2">
             <Label className="text-xs">자사 전환</Label>
             <div
               className={`mt-1.5 h-10 px-3 rounded-md border flex items-center gap-2 transition-colors ${
                 form.converted
-                  ? "bg-emerald-500/10 border-emerald-500/40"
+                  ? "bg-primary/10 border-primary/40"
                   : "bg-background/40 border-border/50"
               }`}
             >
@@ -669,7 +669,25 @@ const RegularsPage = () => {
                 onCheckedChange={(v) => setForm({ ...form, converted: v })}
               />
               <span className="text-xs text-muted-foreground">
-                {form.converted ? "전환 완료 ✓" : "타사 → 자사 가입 시 ON"}
+                {form.converted ? "자사전환 ✓" : "자사전환"}
+              </span>
+            </div>
+          </div>
+          <div className="md:col-span-2">
+            <Label className="text-xs">자사 개통</Label>
+            <div
+              className={`mt-1.5 h-10 px-3 rounded-md border flex items-center gap-2 transition-colors ${
+                form.activated
+                  ? "bg-primary/10 border-primary/40"
+                  : "bg-background/40 border-border/50"
+              }`}
+            >
+              <Switch
+                checked={form.activated}
+                onCheckedChange={(v) => setForm({ ...form, activated: v })}
+              />
+              <span className="text-xs text-muted-foreground">
+                {form.activated ? "자사개통 ✓" : "자사개통"}
               </span>
             </div>
           </div>
