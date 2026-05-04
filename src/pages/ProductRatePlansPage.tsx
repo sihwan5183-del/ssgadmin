@@ -557,25 +557,67 @@ export default function ProductRatePlansPage() {
                   <SortableItem
                     key={m.id}
                     id={m.id}
-                    className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                    className={`p-3 rounded-lg border transition-colors ${
                       m.active
                         ? "border-border bg-card"
                         : "border-dashed border-border/50 bg-muted/30 opacity-60"
                     }`}
                   >
-                    <span className="text-xs text-muted-foreground w-6 text-right">{i + 1}</span>
-                    <span className="flex-1 font-medium text-sm">{m.rate_plan}</span>
-                    {!m.active && (
-                      <Badge variant="outline" className="text-[10px]">
-                        비활성
-                      </Badge>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-muted-foreground w-6 text-right">{i + 1}</span>
+                      <span className="flex-1 font-medium text-sm">{m.rate_plan}</span>
+                      {vasEnabled && (m.linked_vas?.length ?? 0) > 0 && (
+                        <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">
+                          VAS {m.linked_vas.length}
+                        </Badge>
+                      )}
+                      {!m.active && (
+                        <Badge variant="outline" className="text-[10px]">비활성</Badge>
+                      )}
+                      <Button variant="ghost" size="sm" onClick={() => toggle(m)} className="text-xs">
+                        {m.active ? "숨기기" : "사용"}
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => remove(m.id)} className="size-8">
+                        <Trash2 className="size-4 text-destructive" />
+                      </Button>
+                    </div>
+                    {vasEnabled && (
+                      <div className="mt-2 pl-9 border-t border-border/30 pt-2">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <Label className="text-[11px] text-muted-foreground flex items-center gap-1">
+                            <Sparkles className="size-3" /> 연관 부가서비스 매핑
+                          </Label>
+                          <span className="text-[10px] text-muted-foreground">
+                            클릭하여 선택/해제
+                          </span>
+                        </div>
+                        {vasPool.length === 0 ? (
+                          <p className="text-[11px] text-muted-foreground italic">
+                            먼저 가입상품 [부가서비스] 카테고리에 부가서비스 명을 매핑으로 등록해주세요.
+                          </p>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {vasPool.map((vas) => {
+                              const selected = (m.linked_vas ?? []).includes(vas);
+                              return (
+                                <button
+                                  key={vas}
+                                  type="button"
+                                  onClick={() => toggleLinkedVas(m, vas)}
+                                  className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
+                                    selected
+                                      ? "border-primary bg-primary text-primary-foreground"
+                                      : "border-border bg-background hover:bg-muted text-foreground"
+                                  }`}
+                                >
+                                  {vas}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     )}
-                    <Button variant="ghost" size="sm" onClick={() => toggle(m)} className="text-xs">
-                      {m.active ? "숨기기" : "사용"}
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => remove(m.id)} className="size-8">
-                      <Trash2 className="size-4 text-destructive" />
-                    </Button>
                   </SortableItem>
                 )}
               </SortableList>
