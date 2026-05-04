@@ -355,9 +355,11 @@ const SalesLedgerPage = () => {
     let q = supabase
       .from("sales")
       .select("unit_price, vas_fee, distributor_amount, extra_subsidy, cash_support_amount, receivable_amount, trade_in_enabled, trade_in_confirmed, voucher, voucher_returned, customer_support_amount, corp_card_amount, custom_fields, channel, moyo_excluded, manager, product, approval_status, status")
-      .gte("open_date", startDate)
-      .lte("open_date", endDate)
-      .neq("status", "취소");
+      .neq("status", "취소")
+      .or(
+        `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
+        `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
+      );
     if (managerFilter === "__none__") q = q.or("manager.is.null,manager.eq.");
     else if (managerFilter !== "all") q = q.eq("manager", managerFilter);
     if (storeFilter !== "all") q = q.eq("channel", storeFilter);
@@ -412,16 +414,22 @@ const SalesLedgerPage = () => {
     const { count: uc } = await supabase
       .from("sales")
       .select("id", { count: "exact", head: true })
-      .gte("open_date", startDate)
-      .lte("open_date", endDate)
+      .neq("status", "취소")
+      .or(
+        `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
+        `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
+      )
       .gt("receivable_amount", 0)
       .neq("receivable_paid", "완료");
     setUnpaidCount(uc ?? 0);
     const { count: urc } = await supabase
       .from("sales")
       .select("id", { count: "exact", head: true })
-      .gte("open_date", startDate)
-      .lte("open_date", endDate)
+      .neq("status", "취소")
+      .or(
+        `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
+        `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
+      )
       .neq("voucher", "")
       .not("voucher", "is", null)
       .neq("voucher_returned", "유");
