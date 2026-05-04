@@ -368,6 +368,43 @@ const ChannelIntakePage = () => {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   // 정렬 모드: 기본(미처리 우선) | 최신 상담 순
   const [sortMode, setSortMode] = useState<"default" | "recent_log">("default");
+  // 최근 수정된 행 (하이라이트용)
+  const [recentlyUpdatedId, setRecentlyUpdatedId] = useState<string | null>(null);
+  const flashRow = useCallback((id: string) => {
+    setRecentlyUpdatedId(id);
+    if ((window as any).__intakeRecentTimer) {
+      clearTimeout((window as any).__intakeRecentTimer);
+    }
+    (window as any).__intakeRecentTimer = setTimeout(() => {
+      setRecentlyUpdatedId((cur) => (cur === id ? null : cur));
+    }, 2500);
+  }, []);
+
+  // 단일 행 부분 갱신 — 전체 새로고침 없이 해당 인입 행만 다시 가져와 교체 (스크롤 유지)
+  const refreshOne = useCallback(async (id: string) => {
+    const { data } = await supabase
+      .from("inquiries")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (!data) return;
+    setRows((prev) => prev.map((r) => (r.id === id ? (data as InquiryRow) : r)));
+    // 마지막 상담 기록도 갱신
+    const { data: logs } = await supabase
+      .from("inquiry_logs")
+      .select("inquiry_id,action,content,created_at")
+      .eq("inquiry_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const last = (logs ?? [])[0];
+    if (last) {
+      setLastLogs((prev) => ({
+        ...prev,
+        [id]: { action: last.action, content: last.content, created_at: last.created_at },
+      }));
+    }
+    flashRow(id);
+  }, [flashRow]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -491,8 +528,9 @@ const ChannelIntakePage = () => {
       });
     }
     toast.success("상태 변경 완료");
+    const id = editingRow.id;
     setEditingRow(null);
-    refresh();
+    refreshOne(id);
   };
 
   // ── 상세 수정 ──
@@ -550,8 +588,9 @@ const ChannelIntakePage = () => {
     }
     setSavingDetail(false);
     toast.success("고객 정보가 저장되었습니다");
+    const id = detailRow.id;
     setDetailRow(null);
-    refresh();
+    refreshOne(id);
   };
 
   // ── 일괄 선택/삭제 ──
@@ -614,7 +653,7 @@ const ChannelIntakePage = () => {
       });
     }
     toast.success(`상태 변경: ${next}`);
-    refresh();
+    refreshOne(row.id);
   };
 
   // ── CSV 다운로드 (현재 필터링된 결과만) ──
@@ -794,6 +833,7 @@ const ChannelIntakePage = () => {
                   <th className="text-left px-3 py-2 w-[100px]">생년월일</th>
                   <th className="text-left px-3 py-2 w-[130px]">연락처</th>
                   <th className="text-left px-3 py-2 w-[180px]">상담모델</th>
+                  <th className="text-left px-3 py-2 w-[100px]">최종상태</th>
                   <th className="text-left px-3 py-2 w-[110px]">최종액션</th>
                   <th className="text-left px-3 py-2">
                     <button
@@ -814,9 +854,9 @@ const ChannelIntakePage = () => {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={11} className="text-center py-10 text-muted-foreground">불러오는 중…</td></tr>
+                  <tr><td colSpan={12} className="text-center py-10 text-muted-foreground">불러오는 중…</td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={11} className="text-center py-10 text-muted-foreground">데이터 없음</td></tr>
+                  <tr><td colSpan={12} className="text-center py-10 text-muted-foreground">데이터 없음</td></tr>
                 ) : (
                   filtered.map((r) => {
                     const newLead = isNewLead(r);
@@ -838,6 +878,7 @@ const ChannelIntakePage = () => {
                           "border-t border-border/30 hover:bg-muted/40 transition-colors cursor-pointer",
                           newLead && "bg-orange-50 dark:bg-orange-950/20",
                           abandoned && !newLead && "bg-destructive/5",
+                          recentlyUpdatedId === r.id && "ring-2 ring-primary/60 ring-inset bg-primary/10 animate-pulse",
                         )}
                         onClick={(e) => {
                           // 컨트롤(체크박스/버튼/셀렉트/링크) 클릭 시 상세 열지 않음
@@ -894,6 +935,14 @@ const ChannelIntakePage = () => {
                           ) : (
                             <span className="text-xs text-muted-foreground">-</span>
                           )}
+                        </td>
+                        <td className="px-3 py-3 align-middle">
+                          <Badge
+                            variant="outline"
+                            className={cn("text-[10px] h-5 px-2", inquiryStatusClass(displayStatus))}
+                          >
+                            {displayStatus || "-"}
+                          </Badge>
                         </td>
                         <td className="px-3 py-3 text-[11px] tabular-nums text-muted-foreground align-middle">
                           {lastLog?.created_at
@@ -1028,7 +1077,9 @@ const ChannelIntakePage = () => {
         inquiry={detailRow as any}
         open={!!detailRow}
         onOpenChange={(v) => !v && setDetailRow(null)}
-        onChanged={refresh}
+        onChanged={() => {
+          if (detailRow) refreshOne(detailRow.id);
+        }}
       />
 
       {/* 일괄 삭제 확인 */}
