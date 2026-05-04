@@ -938,6 +938,14 @@ const ChannelIntakePage = () => {
                             <span className="text-xs text-muted-foreground">-</span>
                           )}
                         </td>
+                        <td className="px-3 py-3 align-middle">
+                          <Badge
+                            variant="outline"
+                            className={cn("text-[10px] h-5 px-2", inquiryStatusClass(displayStatus))}
+                          >
+                            {displayStatus || "-"}
+                          </Badge>
+                        </td>
                         <td className="px-3 py-3 text-[11px] tabular-nums text-muted-foreground align-middle">
                           {lastLog?.created_at
                             ? formatTime(lastLog.created_at)
