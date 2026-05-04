@@ -245,7 +245,7 @@ const InputPage = () => {
 
       {/* 실적 폼 — 단일 진입점 (검수창과 동일 컴포넌트 사용) */}
       <SaleEditForm
-        onSaved={() => navigate("/sales-ledger")}
+        onSaved={() => navigate("/sales-ledger", { state: { refresh: Date.now() } })}
         onCancel={() => { setEditingId(null); navigate("/sales-ledger"); }}
       />
 
