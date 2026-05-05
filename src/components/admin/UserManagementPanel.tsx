@@ -34,6 +34,7 @@ import {
 import { toast } from "sonner";
 import { KeyRound, UserX, UserCheck, Pencil, Search, Smartphone, Copy, UserMinus, UserCog, CheckCircle2, Sparkles, Filter, ShieldPlus } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { BulkActionBar } from "@/components/common/BulkActionBar";
 import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
@@ -48,6 +49,7 @@ interface UserRow {
   team: string | null;
   status: string;
   role: AppRole | null;
+  show_in_dashboard?: boolean;
   isClean?: boolean;
 }
 
@@ -102,7 +104,7 @@ export function UserManagementPanel() {
   const fetchAll = async () => {
     setLoading(true);
     const [{ data: profiles }, { data: roles }] = await Promise.all([
-      supabase.from("profiles").select("user_id, display_name, phone, store, position, team, status").order("display_name"),
+      supabase.from("profiles").select("user_id, display_name, phone, store, position, team, status, show_in_dashboard").order("display_name"),
       supabase.from("user_roles").select("user_id, role"),
     ]);
     const roleMap = new Map<string, AppRole>();
@@ -213,6 +215,7 @@ export function UserManagementPanel() {
         team: editing.team,
         position: editing.position,
         status: editing.status,
+        show_in_dashboard: editing.show_in_dashboard ?? false,
       })
       .eq("user_id", editing.user_id);
     if (pErr) {
@@ -334,6 +337,10 @@ export function UserManagementPanel() {
         </Select>
       </div>
 
+      <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-[12px] text-foreground">
+        💡 이곳에서 <span className="font-semibold text-primary">'실적 대시보드 노출'</span>이 켜진 직원만 대시보드 실적 현황판에 나타납니다.
+      </div>
+
       <div className="overflow-x-auto -mx-2">
         <table className="w-full text-sm">
           <thead className="text-xs text-muted-foreground border-b border-border/50">
@@ -350,16 +357,17 @@ export function UserManagementPanel() {
               <th className="text-left py-2 px-2">직책</th>
               <th className="text-left py-2 px-2">권한</th>
               <th className="text-left py-2 px-2">상태</th>
+              <th className="text-left py-2 px-2">대시보드</th>
               <th className="text-left py-2 px-2">클린</th>
               <th className="text-right py-2 px-2">액션</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={8} className="py-6 text-center text-muted-foreground">불러오는 중…</td></tr>
+              <tr><td colSpan={9} className="py-6 text-center text-muted-foreground">불러오는 중…</td></tr>
             )}
             {!loading && filtered.length === 0 && (
-              <tr><td colSpan={8} className="py-6 text-center text-muted-foreground">결과 없음</td></tr>
+              <tr><td colSpan={9} className="py-6 text-center text-muted-foreground">결과 없음</td></tr>
             )}
             {filtered.map((u) => (
               <tr key={u.user_id} className="border-b border-border/30 hover:bg-background/30" data-state={bulk.isSelected(u.user_id) ? "selected" : undefined}>
@@ -396,6 +404,23 @@ export function UserManagementPanel() {
                   <span className={`text-[10px] px-2 py-0.5 rounded-md border ${STATUS_BADGE[u.status] ?? ""}`}>
                     {STATUS_LABELS[u.status] ?? u.status}
                   </span>
+                </td>
+                <td className="py-3 px-2">
+                  <Switch
+                    checked={!!u.show_in_dashboard}
+                    onCheckedChange={async (v) => {
+                      const { error } = await supabase
+                        .from("profiles")
+                        .update({ show_in_dashboard: v })
+                        .eq("user_id", u.user_id);
+                      if (error) {
+                        toast.error("변경 실패: " + error.message);
+                        return;
+                      }
+                      setRows((prev) => prev.map((r) => r.user_id === u.user_id ? { ...r, show_in_dashboard: v } : r));
+                      toast.success(`${u.display_name} · 대시보드 ${v ? "노출" : "숨김"}`);
+                    }}
+                  />
                 </td>
                 <td className="py-3 px-2">
                   {cleanSet.has(u.user_id) ? (
@@ -479,6 +504,17 @@ export function UserManagementPanel() {
                     <SelectItem value="none">권한 없음</SelectItem>
                   </SelectContent>
                 </Select>
+              </Field>
+              <Field label="실적 대시보드 노출" className="col-span-2">
+                <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2">
+                  <span className="text-xs text-muted-foreground">
+                    켜면 대시보드 [개인별 실적 현황]에 표시됩니다.
+                  </span>
+                  <Switch
+                    checked={!!editing.show_in_dashboard}
+                    onCheckedChange={(v) => setEditing({ ...editing, show_in_dashboard: v })}
+                  />
+                </div>
               </Field>
             </div>
           )}

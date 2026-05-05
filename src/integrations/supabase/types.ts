@@ -1449,6 +1449,7 @@ export type Database = {
           id: string
           phone: string | null
           position: string | null
+          show_in_dashboard: boolean
           status: string
           store: string | null
           team: string | null
@@ -1465,6 +1466,7 @@ export type Database = {
           id?: string
           phone?: string | null
           position?: string | null
+          show_in_dashboard?: boolean
           status?: string
           store?: string | null
           team?: string | null
@@ -1481,6 +1483,7 @@ export type Database = {
           id?: string
           phone?: string | null
           position?: string | null
+          show_in_dashboard?: boolean
           status?: string
           store?: string | null
           team?: string | null
