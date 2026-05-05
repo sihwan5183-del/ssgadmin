@@ -110,7 +110,7 @@ export const HeroPerformance = () => {
   const [ydayRows, setYdayRows] = useState<{ product: string | null }[]>([]);
   const [currentRows, setCurrentRows] = useState<{ product: string | null }[]>([]);
   const [prevRows, setPrevRows] = useState<{ product: string | null }[]>([]);
-  const [pendingRows, setPendingRows] = useState<{ product: string | null; created_at: string; open_date: string | null; status: string | null }[]>([]);
+  const [pendingRows, setPendingRows] = useState<{ product: string | null; created_at: string; open_date: string | null; status: string | null; sale_type: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -130,7 +130,7 @@ export const HeroPerformance = () => {
       supabase.from("sales").select("product").neq("status", "취소").or(periodOr(prevStartDate, prevEndDate)).limit(10000),
       supabase.from("sales").select("product").neq("status", "취소").or(periodOr(todayISO, todayISO)).limit(5000),
       supabase.from("sales").select("product").neq("status", "취소").or(periodOr(ydayISO, ydayISO)).limit(5000),
-      supabase.from("sales").select("product, created_at, open_date, status")
+      supabase.from("sales").select("product, created_at, open_date, status, sale_type")
         .neq("status", "취소")
         .or(periodOr(startDate, endDate))
         .limit(10000),
@@ -180,6 +180,20 @@ export const HeroPerformance = () => {
     [pendingRows],
   );
   const curSeg = useMemo(() => countAll(currentRows), [currentRows]);
+
+  // 개통 대기 모바일 - 판매유형별 세부 합계 (신규/MNP/기변)
+  const mobilePendingTypes = useMemo(() => {
+    const out = { 신규: 0, MNP: 0, 기변: 0 };
+    pendingRows
+      .filter((r) => isPendingActivationStatus(r.status) && classifyProduct(r.product) === "모바일")
+      .forEach((r) => {
+        const t = (r.sale_type ?? "").trim();
+        if (t === "신규") out["신규"]++;
+        else if (t === "MNP" || t === "USIM MNP") out["MNP"]++;
+        else if (t === "기변") out["기변"]++;
+      });
+    return out;
+  }, [pendingRows]);
 
   const periodDelta = filtered.prev === 0 ? (filtered.cur > 0 ? 100 : 0) : ((filtered.cur - filtered.prev) / filtered.prev) * 100;
   const todayDelta = filtered.yd === 0 ? (filtered.tod > 0 ? 100 : 0) : ((filtered.tod - filtered.yd) / filtered.yd) * 100;
@@ -257,6 +271,16 @@ export const HeroPerformance = () => {
               <span className="text-[10px] text-muted-foreground">긴급 대기 없음</span>
             )}
           </div>
+          {(mobilePendingTypes.신규 + mobilePendingTypes.MNP + mobilePendingTypes.기변) > 0 && (
+            <div className="mt-1 flex flex-wrap items-center gap-1 text-[10px]">
+              <span className="inline-flex items-center gap-0.5 font-semibold text-muted-foreground">
+                <Smartphone className="size-2.5 text-primary" />M
+              </span>
+              <span className="px-1 py-0.5 rounded bg-primary/10 text-primary font-semibold">신규 {mobilePendingTypes.신규}</span>
+              <span className="px-1 py-0.5 rounded bg-chart-1/10 text-chart-1 font-semibold">MNP {mobilePendingTypes.MNP}</span>
+              <span className="px-1 py-0.5 rounded bg-chart-2/10 text-chart-2 font-semibold">기변 {mobilePendingTypes.기변}</span>
+            </div>
+          )}
         </Card>
 
         {/* 누적 개통 */}
