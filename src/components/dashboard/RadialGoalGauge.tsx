@@ -2,17 +2,25 @@ import { useEffect, useState, useMemo } from "react";
 import { Target } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
-import { useAppSettings } from "@/hooks/useAppSettings";
 
 /**
  * 반원형 목표 달성률 게이지
  * - 0~50%: 빨강 / 51~80%: 노랑 / 81~100%: 초록
  */
 export const RadialGoalGauge = () => {
-  const { startDate, endDate, label } = usePeriod();
-  const { monthlyTarget } = useAppSettings();
+  const { startDate, endDate, label, year, month } = usePeriod();
   const [current, setCurrent] = useState(0);
+  const [monthlyTarget, setMonthlyTarget] = useState(0);
 
+  // 기간 기준 연-월 (월모드면 해당 월, 아니면 startDate 기준)
+  const yearMonth = useMemo(() => {
+    if (month && month >= 1 && month <= 12) {
+      return `${year}-${String(month).padStart(2, "0")}`;
+    }
+    return startDate.slice(0, 7);
+  }, [year, month, startDate]);
+
+  // 모바일 개통 건수 (취소 제외)
   useEffect(() => {
     let alive = true;
     supabase
@@ -20,16 +28,39 @@ export const RadialGoalGauge = () => {
       .select("id", { count: "exact", head: true })
       .gte("open_date", startDate)
       .lte("open_date", endDate)
+      .eq("product", "모바일")
       .neq("status", "취소")
       .then(({ count }) => {
         if (alive) setCurrent(count ?? 0);
       });
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [startDate, endDate]);
 
-  const pct = Math.min(100, Math.round((current / Math.max(1, monthlyTarget)) * 100));
+  // 팀 통합 모바일 목표 (전체 팀 합산)
+  const loadTarget = async () => {
+    const { data } = await supabase
+      .from("team_product_goals")
+      .select("goal_count")
+      .eq("year_month", yearMonth)
+      .eq("product", "mobile")
+      .eq("goal_type", "count");
+    const sum = (data ?? []).reduce((a: number, r: any) => a + Number(r.goal_count ?? 0), 0);
+    setMonthlyTarget(sum);
+  };
+
+  useEffect(() => {
+    loadTarget();
+    const ch = supabase
+      .channel("team_product_goals_dashboard")
+      .on("postgres_changes", { event: "*", schema: "public", table: "team_product_goals" }, () => loadTarget())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [yearMonth]);
+
+  const pct = monthlyTarget > 0
+    ? Math.min(100, Math.round((current / monthlyTarget) * 1000) / 10)
+    : 0;
 
   const { color, glow, status } = useMemo(() => {
     if (pct <= 50) return { color: "hsl(0 75% 55%)", glow: "hsl(0 75% 55% / 0.4)", status: "주의" };
