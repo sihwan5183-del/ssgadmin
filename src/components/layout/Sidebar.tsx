@@ -16,16 +16,8 @@ export const Sidebar = () => {
 
   const currentRole: MenuRole = isAdmin ? "admin" : isManager ? "manager" : "user";
 
-  // 사원에게는 노출하지 않을 경로 (팀장 이상 전용)
-  // - 매출 정산, 업체 관리(SEG), 관리자 설정, 직원/계정 관리, 인센티브/제품 마스터, 다운로드
-  // 지출 비용 관리(/ad-spend, /expense-input)는 모든 직원 접근 허용 (본인 작성 건만 수정 가능)
-  const STAFF_BLOCKED_PREFIXES = [
-    "/seg", "/admin", "/account",
-    "/menu-manager", "/incentive", "/product-rate", "/equipment",
-    "/budget", "/device-models", "/field-options", "/downloads", "/expenses",
-    "/staff-status", "/team",
-  ];
-
+  // 권한 단순화: 일반 영업 메뉴는 모두 동일하게 접근.
+  // 사이드바의 '관리자 전용(is_admin_only)' 항목만 [관리자/대표]에게만 노출.
   const visibleGroups = useMemo(() => {
     return groups
       .filter((g) => g.active && g.visible_roles.includes(currentRole))
@@ -37,9 +29,7 @@ export const Sidebar = () => {
               i.active &&
               i.group_id === g.id &&
               i.visible_roles.includes(currentRole) &&
-              (!i.is_admin_only || isAdmin) &&
-              // 사원이면 위 prefix 경로 차단
-              (currentRole !== "user" || !STAFF_BLOCKED_PREFIXES.some((p) => i.path.startsWith(p)))
+              (!i.is_admin_only || isAdmin)
           )
           .sort((a, b) => a.sort_order - b.sort_order),
       }))
