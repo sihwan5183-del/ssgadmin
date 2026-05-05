@@ -921,6 +921,10 @@ const RegularsPage = () => {
                       <Switch checked={r.converted} onCheckedChange={(v) => toggleField(r.id, "converted", v)} />
                       전환
                     </label>
+                    <label className="flex items-center gap-1.5 text-xs">
+                      <Switch checked={!!r.activated} onCheckedChange={(v) => toggleField(r.id, "activated", v)} />
+                      자사개통
+                    </label>
                     <Button size="sm" variant="ghost" onClick={() => remove(r.id)} className="h-10 ml-auto">
                       <Trash2 className="size-4 text-destructive" />
                     </Button>
@@ -953,6 +957,7 @@ const RegularsPage = () => {
                   <th className="text-left px-3 py-2">등록자</th>
                   <th className="text-center px-3 py-2">쿠폰</th>
                   <th className="text-center px-3 py-2">전환</th>
+                  <th className="text-center px-3 py-2">자사개통</th>
                   <th className="text-right px-3 py-2"> </th>
                 </tr>
               </thead>
@@ -1025,6 +1030,9 @@ const RegularsPage = () => {
                     </td>
                     <td className="px-3 py-2 text-center">
                       <Switch checked={r.converted} onCheckedChange={(v) => toggleField(r.id, "converted", v)} />
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      <Switch checked={!!r.activated} onCheckedChange={(v) => toggleField(r.id, "activated", v)} />
                     </td>
                     <td className="px-3 py-2 text-right">
                       <div className="inline-flex items-center gap-1 justify-end">
