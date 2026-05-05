@@ -1238,7 +1238,7 @@ const SalesLedgerPage = () => {
                       {offer.toLocaleString("ko-KR")}
                     </td>
                     <td className={cn(
-                      "px-3 text-right tabular-nums font-extrabold",
+                      "px-3 text-right tabular-nums font-extrabold border-r border-border/30",
                       negative ? "text-rose-600 dark:text-rose-400" : "text-blue-600 dark:text-blue-400"
                     )}>
                       <TooltipProvider delayDuration={200}>
@@ -1262,40 +1262,6 @@ const SalesLedgerPage = () => {
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                    </td>
-                    <td className="px-3 text-right tabular-nums">
-                      {(r.receivable_amount ?? 0) > 0 ? (
-                        <span className={
-                          r.receivable_paid === "완료"
-                            ? "text-muted-foreground line-through"
-                            : (r.receivable_amount ?? 0) < 0
-                              ? "text-rose-600 dark:text-rose-400 font-bold"
-                              : "text-foreground font-bold"
-                        }>
-                          {(r.receivable_amount ?? 0).toLocaleString("ko-KR")}
-                        </span>
-                      ) : <span className="text-muted-foreground">-</span>}
-                    </td>
-                    <td className="px-3 text-right tabular-nums bg-rose-500/[0.04]">
-                      {(r.customer_support_amount ?? 0) > 0
-                        ? <span className="font-bold text-rose-600 dark:text-rose-400">{(r.customer_support_amount ?? 0).toLocaleString("ko-KR")}</span>
-                        : <span className="text-muted-foreground">-</span>}
-                    </td>
-                    <td className="px-3 text-right tabular-nums bg-rose-500/[0.04]">
-                      {(r.corp_card_amount ?? 0) > 0
-                        ? <span className="font-bold text-rose-600 dark:text-rose-400">{(r.corp_card_amount ?? 0).toLocaleString("ko-KR")}</span>
-                        : <span className="text-muted-foreground">-</span>}
-                    </td>
-                    <td className="px-3 text-right tabular-nums border-r border-border/30">
-                      {r.trade_in_enabled ? (
-                        <span className="text-foreground font-bold" title={r.trade_in_model ?? ""}>
-                          {(r.trade_in_confirmed ?? 0) > 0
-                            ? `₩${(r.trade_in_confirmed ?? 0).toLocaleString("ko-KR")}`
-                            : "대기"}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
                     </td>
                     <td className="px-3 text-right" onClick={(e) => e.stopPropagation()}>
                       {canEdit ? (
