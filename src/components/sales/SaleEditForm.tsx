@@ -178,6 +178,7 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   useEffect(() => {
     if (saleId) return; // saleId effect가 처리
     if (!editingId) return;
+    setLoadingSale(true);
     (async () => {
       const { data, error } = await supabase
         .from("sales")
@@ -186,10 +187,12 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
         .maybeSingle();
       if (error || !data) {
         toast.error("실적 데이터를 불러올 수 없습니다");
+        setLoadingSale(false);
         return;
       }
       const s = data as any;
-      setForm({
+      setForm((prev) => ({
+        ...prev,
         seq: s.seq, channel: s.channel, moyo_excluded: s.moyo_excluded ?? false,
         ...({ channel_company: s.channel_company ?? "" } as any),
         manager: s.manager, open_month: s.open_month, product: s.product,
@@ -214,11 +217,12 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
         trade_in_confirmed: s.trade_in_confirmed ?? 0,
         customer_support_amount: (s as any).customer_support_amount ?? 0,
         corp_card_amount: (s as any).corp_card_amount ?? 0,
-      });
+      }));
       setCustomFields(s.custom_fields ?? {});
       setPendingItems(Array.isArray(s.pending_items) ? s.pending_items : []);
       setPendingNote(s.pending_note ?? "");
       setPendingResolved(s.pending_resolved ?? true);
+      setLoadingSale(false);
     })();
   }, [editingId, saleId]);
 
