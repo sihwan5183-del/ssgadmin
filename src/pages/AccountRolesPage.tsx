@@ -4,23 +4,17 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Trash2, Building2, ShieldCheck, Settings } from "lucide-react";
-import { ASSIGNABLE_ROLES } from "@/hooks/useRole";
-import { PositionPermissionDialog } from "@/components/admin/accounts/PositionPermissionDialog";
-import { usePositionPermissionsAll, type PositionRow } from "@/hooks/usePositionPermissions";
+import { Plus, Trash2, Building2, ShieldCheck, Lock } from "lucide-react";
+import { usePositions } from "@/hooks/usePositions";
 
 interface Store { id: string; name: string; code: string | null; region: string | null; active: boolean; }
 
-const SCOPE_LABEL: Record<string, string> = { self: "본인", store: "매장", all: "전체" };
-
 export default function AccountRolesPage() {
-  const { positions, matrix, loading, refresh } = usePositionPermissionsAll();
+  const { positions, refresh } = usePositions();
   const [stores, setStores] = useState<Store[]>([]);
   const [newPos, setNewPos] = useState("");
   const [newStore, setNewStore] = useState("");
-  const [editPos, setEditPos] = useState<PositionRow | null>(null);
 
   const refreshStores = useCallback(async () => {
     const { data } = await supabase.from("stores").select("*").order("name");
@@ -34,11 +28,11 @@ export default function AccountRolesPage() {
     if (error) return toast.error("실패", { description: error.message });
     setNewPos(""); refresh();
   };
-  const togglePos = async (p: PositionRow) => {
+  const togglePos = async (p: { id: string; active: boolean }) => {
     await supabase.from("positions").update({ active: !p.active }).eq("id", p.id);
     refresh();
   };
-  const delPos = async (p: PositionRow) => {
+  const delPos = async (p: { id: string; name: string }) => {
     if (!confirm(`'${p.name}' 직급을 삭제할까요?`)) return;
     await supabase.from("positions").delete().eq("id", p.id);
     refresh();
@@ -61,61 +55,39 @@ export default function AccountRolesPage() {
     refreshStores();
   };
 
-  // 활성 직급별 권한 카운트 (요약 표시)
-  const countAccess = (positionId: string) => {
-    let read = 0, write = 0;
-    Object.entries(matrix).forEach(([k, v]) => {
-      if (!k.startsWith(`${positionId}::`)) return;
-      if (v === "read") read++;
-      else if (v === "write") write++;
-    });
-    return { read, write };
-  };
-
-  const activePositions = positions.filter((p) => p.active);
-
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      {/* 좌: 권한 그룹별 접근 정책 (직급 마스터와 실시간 동기화) */}
+      {/* 좌: 권한 정책 안내 (단순화) */}
       <Card className="p-4">
         <div className="flex items-center gap-2 mb-3">
           <ShieldCheck className="size-4 text-primary" />
-          <h2 className="font-semibold">권한 그룹별 접근 정책</h2>
-          <Badge variant="outline" className="ml-auto text-[10px]">직급 마스터와 실시간 동기화</Badge>
+          <h2 className="font-semibold">권한 정책 (단순화)</h2>
         </div>
-        {loading ? (
-          <div className="text-sm text-muted-foreground">불러오는 중…</div>
-        ) : activePositions.length === 0 ? (
-          <div className="text-sm text-muted-foreground p-4 text-center bg-muted/30 rounded-lg">
-            우측 [직급 마스터]에서 직급을 먼저 추가해주세요.
+        <div className="space-y-3 text-sm">
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/40">
+            <Lock className="size-4 text-primary mt-0.5" />
+            <div>
+              <div className="font-medium">관리자 전용 메뉴</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                사이드바의 [관리자] 표시 메뉴는 <b>대표 / 관리자</b> 권한만 접근·수정할 수 있습니다.
+                일반 사원·팀장은 메뉴에서 숨김 처리되며, URL 직접 접속 시도 시 대시보드로 자동 이동됩니다.
+              </div>
+            </div>
           </div>
-        ) : (
-          <div className="space-y-1.5">
-            {activePositions.map((p) => {
-              const c = countAccess(p.id);
-              const baseLabel = ASSIGNABLE_ROLES.find((r) => r.value === p.base_role)?.label ?? "사원";
-              return (
-                <div key={p.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/40 text-sm">
-                  <Badge variant="outline" className="font-medium">{p.name}</Badge>
-                  <div className="flex-1 flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>기본 {baseLabel}</span>
-                    <span>·</span>
-                    <span>범위 {SCOPE_LABEL[p.data_scope] ?? p.data_scope}</span>
-                    <span>·</span>
-                    <span className="text-blue-600">읽기 {c.read}</span>
-                    <span className="text-emerald-600">수정 {c.write}</span>
-                  </div>
-                  <Button size="sm" variant="ghost" onClick={() => setEditPos(p)}>
-                    <Settings className="size-3.5 mr-1" /> 설정
-                  </Button>
-                </div>
-              );
-            })}
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/40">
+            <ShieldCheck className="size-4 text-primary mt-0.5" />
+            <div>
+              <div className="font-medium">일반 영업 메뉴</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                판매실적장표·인입 관리·실적 입력 등 일반 영업 메뉴는 <b>사원·팀장·관리자 모두 동일 권한</b>으로
+                자유롭게 입력·조회·수정할 수 있습니다.
+              </div>
+            </div>
           </div>
-        )}
-        <p className="text-[11px] text-muted-foreground mt-3">
-          ※ 변경은 [일괄 저장] 시 즉시 모든 해당 직급 사용자에게 반영됩니다.
-        </p>
+          <p className="text-[11px] text-muted-foreground">
+            ※ 별도의 읽기/수정 세부 토글 없이 시스템이 [대표/관리자] 여부만 판단합니다.
+          </p>
+        </div>
       </Card>
 
       {/* 우: 직급 마스터 */}
@@ -158,15 +130,6 @@ export default function AccountRolesPage() {
           ))}
         </div>
       </Card>
-
-      {editPos && (
-        <PositionPermissionDialog
-          open={!!editPos}
-          onOpenChange={(v) => { if (!v) setEditPos(null); }}
-          position={editPos}
-          onSaved={refresh}
-        />
-      )}
     </div>
   );
 }
