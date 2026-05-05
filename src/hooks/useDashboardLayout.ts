@@ -35,72 +35,98 @@ export const WIDGET_REGISTRY: { id: string; label: string }[] = [
   { id: "my_incentive", label: "나의 예상 인센티브" },
 ];
 
+// 깔끔한 첫 진입을 위해 기본값을 OFF 로 두는 헤비 위젯
+const DEFAULT_OFF: ReadonlySet<string> = new Set([
+  "performance_ledger",
+  "overall_model",
+  "channel_model",
+  "ranking_panel",
+]);
+
 const SETTINGS_KEY = "dashboard.layout";
 
+const buildDefault = (): WidgetConfig[] =>
+  WIDGET_REGISTRY.map((w, i) => ({ ...w, visible: !DEFAULT_OFF.has(w.id), order: i }));
+
+// ── 모듈 레벨 싱글톤 스토어 (모든 useDashboardLayout 인스턴스가 공유)
+let _state: WidgetConfig[] = buildDefault();
+let _loaded = false;
+let _loading: Promise<void> | null = null;
+const _subs = new Set<() => void>();
+const _emit = () => _subs.forEach((fn) => fn());
+
+const mergeRegistry = (saved: WidgetConfig[]): WidgetConfig[] => {
+  const map = new Map(saved.map((w) => [w.id, w]));
+  return WIDGET_REGISTRY.map((reg, i) => {
+    const s = map.get(reg.id);
+    return s
+      ? { ...reg, visible: s.visible, order: s.order ?? i }
+      : { ...reg, visible: !DEFAULT_OFF.has(reg.id), order: i + saved.length };
+  }).sort((a, b) => a.order - b.order);
+};
+
+const loadOnce = () => {
+  if (_loading) return _loading;
+  _loading = (async () => {
+    const { data } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", SETTINGS_KEY)
+      .maybeSingle();
+    if (data?.value && Array.isArray(data.value)) {
+      _state = mergeRegistry(data.value as WidgetConfig[]);
+    }
+    _loaded = true;
+    _emit();
+  })();
+  return _loading;
+};
+
+const persist = async (cfg: WidgetConfig[]) => {
+  _state = cfg;
+  _emit();
+  await supabase
+    .from("app_settings")
+    .upsert({ key: SETTINGS_KEY, value: cfg as any }, { onConflict: "key" });
+};
+
 export function useDashboardLayout() {
-  const [widgets, setWidgets] = useState<WidgetConfig[]>(
-    WIDGET_REGISTRY.map((w, i) => ({ ...w, visible: true, order: i }))
-  );
-  const [loaded, setLoaded] = useState(false);
+  const [widgets, setWidgets] = useState<WidgetConfig[]>(_state);
+  const [loaded, setLoadedLocal] = useState<boolean>(_loaded);
 
   useEffect(() => {
-    (async () => {
-      const { data } = await supabase
-        .from("app_settings")
-        .select("value")
-        .eq("key", SETTINGS_KEY)
-        .maybeSingle();
-      if (data?.value && Array.isArray(data.value)) {
-        const saved = data.value as WidgetConfig[];
-        // Merge: keep saved config, add any new widgets from registry
-        const savedMap = new Map(saved.map((w) => [w.id, w]));
-        const merged = WIDGET_REGISTRY.map((reg, i) => {
-          const s = savedMap.get(reg.id);
-          return s ? { ...reg, ...s } : { ...reg, visible: true, order: i + saved.length };
-        }).sort((a, b) => a.order - b.order);
-        setWidgets(merged);
-      }
-      setLoaded(true);
-    })();
-  }, []);
-
-  const save = useCallback(async (cfg: WidgetConfig[]) => {
-    setWidgets(cfg);
-    await supabase.from("app_settings").upsert(
-      { key: SETTINGS_KEY, value: cfg as any },
-      { onConflict: "key" }
-    );
+    const sync = () => {
+      setWidgets([..._state]);
+      setLoadedLocal(_loaded);
+    };
+    _subs.add(sync);
+    loadOnce().then(sync);
+    return () => {
+      _subs.delete(sync);
+    };
   }, []);
 
   const isVisible = useCallback(
-    (id: string) => widgets.find((w) => w.id === id)?.visible ?? true,
-    [widgets]
+    (id: string) => widgets.find((w) => w.id === id)?.visible ?? !DEFAULT_OFF.has(id),
+    [widgets],
   );
 
-  const toggle = useCallback(
-    (id: string) => {
-      const next = widgets.map((w) => (w.id === id ? { ...w, visible: !w.visible } : w));
-      save(next);
-    },
-    [widgets, save]
-  );
+  const toggle = useCallback((id: string) => {
+    persist(_state.map((w) => (w.id === id ? { ...w, visible: !w.visible } : w)));
+  }, []);
 
-  const move = useCallback(
-    (id: string, dir: -1 | 1) => {
-      const arr = [...widgets];
-      const idx = arr.findIndex((w) => w.id === id);
-      const target = idx + dir;
-      if (idx < 0 || target < 0 || target >= arr.length) return;
-      [arr[idx], arr[target]] = [arr[target], arr[idx]];
-      save(arr.map((w, i) => ({ ...w, order: i })));
-    },
-    [widgets, save]
-  );
+  const move = useCallback((id: string, dir: -1 | 1) => {
+    const arr = [..._state];
+    const idx = arr.findIndex((w) => w.id === id);
+    const target = idx + dir;
+    if (idx < 0 || target < 0 || target >= arr.length) return;
+    [arr[idx], arr[target]] = [arr[target], arr[idx]];
+    persist(arr.map((w, i) => ({ ...w, order: i })));
+  }, []);
 
-  const resetToDefault = useCallback(() => {
-    const def = WIDGET_REGISTRY.map((w, i) => ({ ...w, visible: true, order: i }));
-    save(def);
-  }, [save]);
+  const save = useCallback((cfg: WidgetConfig[]) => persist(cfg), []);
+
+  const resetToDefault = useCallback(() => persist(buildDefault()), []);
 
   return { widgets, loaded, isVisible, toggle, move, save, resetToDefault };
 }
