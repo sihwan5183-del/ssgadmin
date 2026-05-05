@@ -337,6 +337,10 @@ export function UserManagementPanel() {
         </Select>
       </div>
 
+      <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-[12px] text-foreground">
+        💡 이곳에서 <span className="font-semibold text-primary">'실적 대시보드 노출'</span>이 켜진 직원만 대시보드 실적 현황판에 나타납니다.
+      </div>
+
       <div className="overflow-x-auto -mx-2">
         <table className="w-full text-sm">
           <thead className="text-xs text-muted-foreground border-b border-border/50">
@@ -353,16 +357,17 @@ export function UserManagementPanel() {
               <th className="text-left py-2 px-2">직책</th>
               <th className="text-left py-2 px-2">권한</th>
               <th className="text-left py-2 px-2">상태</th>
+              <th className="text-left py-2 px-2">대시보드</th>
               <th className="text-left py-2 px-2">클린</th>
               <th className="text-right py-2 px-2">액션</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={8} className="py-6 text-center text-muted-foreground">불러오는 중…</td></tr>
+              <tr><td colSpan={9} className="py-6 text-center text-muted-foreground">불러오는 중…</td></tr>
             )}
             {!loading && filtered.length === 0 && (
-              <tr><td colSpan={8} className="py-6 text-center text-muted-foreground">결과 없음</td></tr>
+              <tr><td colSpan={9} className="py-6 text-center text-muted-foreground">결과 없음</td></tr>
             )}
             {filtered.map((u) => (
               <tr key={u.user_id} className="border-b border-border/30 hover:bg-background/30" data-state={bulk.isSelected(u.user_id) ? "selected" : undefined}>
