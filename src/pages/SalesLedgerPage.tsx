@@ -432,7 +432,6 @@ const SalesLedgerPage = () => {
     const { count: urc } = await supabase
       .from("sales")
       .select("id", { count: "exact", head: true })
-      .neq("status", "취소")
       .or(
         `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
         `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
@@ -569,9 +568,6 @@ const SalesLedgerPage = () => {
       );
     if (statusFilter.length > 0) {
       q = q.in("status", statusFilter);
-    } else {
-      // 정책: 저장된 모든 실적은 즉시 노출 — '취소'만 제외
-      q = q.neq("status", "취소");
     }
     if (managerFilter !== "all") q = q.eq("manager", managerFilter);
     if (storeFilter !== "all") q = q.eq("channel", storeFilter);
