@@ -1085,37 +1085,37 @@ const SalesLedgerPage = () => {
       </div>
 
       {/* 테이블 */}
-      <section className="glass-strong rounded-2xl p-5 md:p-6 shadow-card-elevated">
-        <div className="overflow-x-auto -mx-2">
-          <table className="w-full text-[13px] min-w-[1720px] font-sans [font-feature-settings:'tnum'] border-collapse">
+      <section className="glass-strong rounded-2xl p-2 md:p-3 shadow-card-elevated">
+        <div className="overflow-x-auto">
+          <table className="w-full text-[11.5px] min-w-[1280px] font-sans [font-feature-settings:'tnum'] border-collapse">
             <thead>
-              <tr className="text-[11.5px] uppercase tracking-wide text-foreground/70 border-b-2 border-border/60 bg-muted/60 [&>th]:whitespace-nowrap [&>th]:align-middle">
+              <tr className="text-[10.5px] uppercase tracking-wide text-foreground/70 border-b-2 border-border/60 bg-muted/60 [&>th]:whitespace-nowrap [&>th]:align-middle [&>th]:px-1.5 [&>th]:py-2">
                 {isAdmin && (
-                  <th className="px-3 py-2.5 w-8">
+                  <th className="w-7">
                     <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="전체 선택" />
                   </th>
                 )}
                 {/* 그룹 A: 기본정보 */}
-                <th className="text-left px-3 py-2.5 font-bold w-[96px]">개통일</th>
-                <th className="text-left px-3 py-2.5 font-bold w-[110px]">경로</th>
-                <th className="text-left px-3 py-2.5 font-bold w-[104px]">최종상태</th>
-                <th className="text-left px-3 py-2.5 font-bold w-[80px]">담당</th>
-                <th className="text-left px-3 py-2.5 font-bold w-[72px]">상품</th>
-                <th className="text-left px-3 py-2.5 font-bold min-w-[180px]">고객</th>
-                <th className="text-left px-3 py-2.5 font-bold w-[160px] border-r border-border/40">연락처</th>
+                <th className="text-center font-bold w-[52px]">개통일</th>
+                <th className="text-center font-bold w-[88px]">경로</th>
+                <th className="text-center font-bold w-[78px]">최종상태</th>
+                <th className="text-center font-bold w-[64px]">담당</th>
+                <th className="text-center font-bold w-[56px]">상품</th>
+                <th className="text-left font-bold min-w-[120px]">고객</th>
+                <th className="text-center font-bold w-[110px] border-r border-border/40">연락처</th>
                 {/* 그룹 B: 가입내용 */}
-                <th className="text-left px-3 py-2.5 font-bold min-w-[160px]">단말</th>
-                <th className="text-left px-3 py-2.5 font-bold min-w-[200px]">요금제</th>
-                <th className="text-left px-3 py-2.5 font-bold w-[88px]">약정</th>
-                <th className="text-center px-2 py-2.5 font-bold w-[72px] border-r border-border/40">할부</th>
+                <th className="text-left font-bold min-w-[110px] max-w-[160px]">단말</th>
+                <th className="text-left font-bold min-w-[120px] max-w-[180px]">요금제</th>
+                <th className="text-center font-bold w-[68px]">약정</th>
+                <th className="text-right font-bold w-[60px] border-r border-border/40">할부</th>
                 {/* 그룹 C: 혜택/태그 */}
-                <th className="text-center px-2 py-2.5 font-bold w-[64px]">동판</th>
-                <th className="text-center px-2 py-2.5 font-bold w-[72px] border-r border-border/40">오퍼</th>
+                <th className="text-center font-bold w-[52px]">동판</th>
+                <th className="text-center font-bold w-[58px] border-r border-border/40">오퍼</th>
                 {/* 그룹 D: 정산/금액 */}
-                <th className="text-right px-3 py-2.5 font-bold w-[130px] text-foreground">총수익</th>
-                <th className="text-right px-3 py-2.5 font-bold w-[130px] text-rose-600 dark:text-rose-400 bg-rose-500/[0.03]">총오퍼</th>
-                <th className="text-right px-3 py-2.5 font-bold w-[140px] text-foreground border-r border-border/40">최종수익금액</th>
-                <th className="text-right px-3 py-2.5 font-bold w-[96px]">관리</th>
+                <th className="text-right font-bold w-[92px] text-foreground">총수익</th>
+                <th className="text-right font-bold w-[92px] text-rose-600 dark:text-rose-400 bg-rose-500/[0.03]">총오퍼</th>
+                <th className="text-right font-bold w-[100px] text-foreground border-r border-border/40">최종수익금액</th>
+                <th className="text-center font-bold w-[68px]">관리</th>
               </tr>
             </thead>
             <tbody>
@@ -1137,14 +1137,14 @@ const SalesLedgerPage = () => {
                 return (
                   <tr key={r.id} className={cn(
                     "border-b border-border/40 hover:bg-primary/[0.05] cursor-pointer transition-colors group bg-background",
-                    "[&>td]:py-3 [&>td]:leading-tight [&>td]:whitespace-nowrap [&>td]:align-middle",
+                    "[&>td]:py-2 [&>td]:px-1.5 [&>td]:leading-tight [&>td]:whitespace-nowrap [&>td]:align-middle",
                     isMoyoExcluded && "text-muted-foreground",
                     isManagerMissing(r) && "bg-amber-50/40 dark:bg-amber-500/[0.06]",
                   )}
                   onClick={handleRowClick}
                   >
                     {isAdmin && (
-                      <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                      <td onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selected.has(r.id)}
                           onCheckedChange={() => toggleOne(r.id)}
@@ -1152,9 +1152,9 @@ const SalesLedgerPage = () => {
                         />
                       </td>
                     )}
-                    <td className="px-3 tabular-nums">{r.open_date ?? "-"}</td>
-                    <td className="px-3 align-middle whitespace-nowrap">
-                      <div className="flex items-center gap-1.5 leading-tight">
+                    <td className="tabular-nums text-center">{r.open_date ? r.open_date.slice(5) : "-"}</td>
+                    <td className="align-middle whitespace-nowrap text-center">
+                      <div className="flex items-center justify-center gap-1 leading-tight">
                         <span className="no-underline">
                           {r.channel ?? "-"}
                           {(r as any).channel_company ? (
@@ -1168,7 +1168,7 @@ const SalesLedgerPage = () => {
                                 className="inline-flex items-center justify-center rounded-full bg-destructive/10 text-destructive p-0.5"
                                 aria-label="모요 미적용"
                               >
-                                <Ban className="size-3.5" strokeWidth={2.5} />
+                                <Ban className="size-3" strokeWidth={2.5} />
                               </span>
                             </TooltipTrigger>
                             <TooltipContent>모요 미적용</TooltipContent>
@@ -1176,7 +1176,7 @@ const SalesLedgerPage = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-3 whitespace-nowrap">
+                    <td className="whitespace-nowrap text-center">
                       {(() => {
                         const s = (r.status ?? "").trim();
                         if (!s) return <span className="text-muted-foreground/50">-</span>;
@@ -1188,76 +1188,88 @@ const SalesLedgerPage = () => {
                           s.includes("접수") ? "bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30" :
                           "bg-muted text-foreground/80 border-border";
                         return (
-                          <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap", cls)}>
+                          <span className={cn("inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap", cls)}>
                             {s}
                           </span>
                         );
                       })()}
                     </td>
-                    <td className="px-3 whitespace-nowrap font-medium">
+                    <td className="whitespace-nowrap font-medium text-center">
                       {isManagerMissing(r) ? (
-                        <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-300">
-                          <AlertTriangle className="size-3.5" /> 미지정
+                        <span className="inline-flex items-center gap-0.5 text-amber-700 dark:text-amber-300 text-[10px]">
+                          <AlertTriangle className="size-3" /> 미지정
                         </span>
                       ) : (
                         resolveManager(r.manager, (r as any).created_by)
                       )}
                       <ResignedTag userId={r.created_by} ids={resignedIds} />
                     </td>
-                    <td className="px-3">{r.product ?? "-"}</td>
-                    <td className="px-3">
-                      <div className="flex items-center gap-1.5 min-w-0">
+                    <td className="text-center">{r.product ?? "-"}</td>
+                    <td className="text-left">
+                      <div className="flex items-center gap-1 min-w-0">
                         <span className="font-medium truncate">{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
-                        <div className="inline-flex items-center gap-1 shrink-0">
+                        <div className="inline-flex items-center gap-0.5 shrink-0">
                           {(() => {
                             const w = (r.custom_fields as any)?.welfare_discount;
                             if (!w || w === "해당없음") return null;
                             return (
-                              <Badge variant="outline" className="h-[18px] text-[10px] gap-0.5 border-blue-400 text-blue-700 bg-blue-50 dark:bg-blue-500/10 px-1.5 py-0">
+                              <Badge variant="outline" className="h-[16px] text-[9px] gap-0.5 border-blue-400 text-blue-700 bg-blue-50 dark:bg-blue-500/10 px-1 py-0">
                                 ♿ {w}
                               </Badge>
                             );
                           })()}
                           {(r.receivable_amount ?? 0) > 0 && r.receivable_paid !== "완료" && (
-                            <Badge className="h-[18px] text-[10px] font-semibold gap-0.5 px-1.5 py-0 bg-rose-600 text-white border-0 hover:bg-rose-600">
+                            <Badge className="h-[16px] text-[9px] font-semibold gap-0.5 px-1 py-0 bg-rose-600 text-white border-0 hover:bg-rose-600">
                               💰 미수급
                             </Badge>
                           )}
                           {r.voucher && r.voucher.trim() !== "" && r.voucher_returned !== "유" && (
-                            <Badge className="h-[18px] text-[10px] font-semibold gap-0.5 px-1.5 py-0 bg-rose-600 text-white border-0 hover:bg-rose-600">
+                            <Badge className="h-[16px] text-[9px] font-semibold gap-0.5 px-1 py-0 bg-rose-600 text-white border-0 hover:bg-rose-600">
                               🎫 미반납
                             </Badge>
                           )}
                         </div>
                       </div>
                     </td>
-                    <td className="px-3 text-muted-foreground tabular-nums border-r border-border/30">{isAdmin ? (r.phone ?? "-") : maskPhone(r.phone) || "-"}</td>
-                    <td className="px-3 text-muted-foreground">{r.device_model ?? "-"}</td>
-                    <td className="px-3 text-muted-foreground">{r.rate_plan ?? "-"}</td>
-                    <td className="px-3 text-muted-foreground">
-                      {(r.custom_fields as any)?.contract_type ?? "-"}
+                    <td className="text-muted-foreground tabular-nums text-center text-[10.5px] border-r border-border/30">
+                      {(() => {
+                        const p = isAdmin ? (r.phone ?? "-") : (maskPhone(r.phone) || "-");
+                        return p.replace(/-/g, "");
+                      })()}
                     </td>
-                    <td className="px-2 text-center text-muted-foreground tabular-nums border-r border-border/30">
+                    <td className="text-muted-foreground text-left max-w-[160px] truncate" title={r.device_model ?? ""}>{r.device_model ?? "-"}</td>
+                    <td className="text-muted-foreground text-left max-w-[180px] truncate" title={r.rate_plan ?? ""}>{r.rate_plan ?? "-"}</td>
+                    <td className="text-muted-foreground text-center">
+                      {(() => {
+                        const ct = (r.custom_fields as any)?.contract_type;
+                        if (!ct) return "-";
+                        return String(ct)
+                          .replace("이동사지원금", "이동사")
+                          .replace("공시지원금", "공시")
+                          .replace("선택약정", "선택");
+                      })()}
+                    </td>
+                    <td className="text-right text-muted-foreground tabular-nums border-r border-border/30 pr-2">
                       {(r.custom_fields as any)?.installment_months
-                        ? `${(r.custom_fields as any).installment_months}개월`
+                        ? `${(r.custom_fields as any).installment_months}`
                         : "-"}
                     </td>
-                    <td className="px-2 text-center">
-                      {r.bundle === "Y" ? <Badge variant="outline" className="h-[18px] text-[10px] border-primary/40 text-primary px-1.5 py-0">동판</Badge> : <span className="text-muted-foreground text-[10px]">-</span>}
+                    <td className="text-center">
+                      {r.bundle === "Y" ? <Badge variant="outline" className="h-[16px] text-[9px] border-primary/40 text-primary px-1 py-0">동판</Badge> : <span className="text-muted-foreground text-[10px]">-</span>}
                     </td>
-                    <td className="px-2 text-center border-r border-border/30">
+                    <td className="text-center border-r border-border/30">
                       {(r.custom_fields as any)?.has_offer === false
-                        ? <Badge variant="secondary" className="h-[18px] text-[10px] px-1.5 py-0">무오퍼</Badge>
-                        : <Badge variant="outline" className="h-[18px] text-[10px] px-1.5 py-0">오퍼</Badge>}
+                        ? <Badge variant="secondary" className="h-[16px] text-[9px] px-1 py-0">무오퍼</Badge>
+                        : <Badge variant="outline" className="h-[16px] text-[9px] px-1 py-0">오퍼</Badge>}
                     </td>
-                    <td className="px-3 text-right tabular-nums font-bold text-foreground">
+                    <td className="text-right tabular-nums font-bold text-foreground pr-2">
                       {(r.unit_price ?? 0).toLocaleString("ko-KR")}
                     </td>
-                    <td className="px-3 text-right tabular-nums font-bold text-rose-600 dark:text-rose-400 bg-rose-500/[0.04]">
+                    <td className="text-right tabular-nums font-bold text-rose-600 dark:text-rose-400 bg-rose-500/[0.04] pr-2">
                       {offer.toLocaleString("ko-KR")}
                     </td>
                     <td className={cn(
-                      "px-3 text-right tabular-nums font-extrabold border-r border-border/30",
+                      "text-right tabular-nums font-extrabold border-r border-border/30 pr-2",
                       negative ? "text-rose-600 dark:text-rose-400" : "text-blue-600 dark:text-blue-400"
                     )}>
                       <TooltipProvider delayDuration={200}>
@@ -1282,20 +1294,20 @@ const SalesLedgerPage = () => {
                         </Tooltip>
                       </TooltipProvider>
                     </td>
-                    <td className="px-3 text-right" onClick={(e) => e.stopPropagation()}>
+                    <td className="text-center" onClick={(e) => e.stopPropagation()}>
                       {canEdit ? (
-                        <div className="inline-flex items-center gap-1">
-                            <button onClick={() => navigate(`/input?edit=${r.id}`)} className="size-7 rounded-lg grid place-items-center text-primary-glow hover:bg-primary/10">
-                              <Pencil className="size-3.5" />
+                        <div className="inline-flex items-center justify-center gap-0.5">
+                            <button onClick={() => navigate(`/input?edit=${r.id}`)} className="size-6 rounded-md grid place-items-center text-primary-glow hover:bg-primary/10">
+                              <Pencil className="size-3" />
                             </button>
                             {(mine || isAdmin) && (
-                              <button onClick={() => onDelete(r.id)} className="size-7 rounded-lg grid place-items-center text-destructive hover:bg-destructive/10">
-                                <Trash2 className="size-3.5" />
+                              <button onClick={() => onDelete(r.id)} className="size-6 rounded-md grid place-items-center text-destructive hover:bg-destructive/10">
+                                <Trash2 className="size-3" />
                               </button>
                             )}
                         </div>
                       ) : (
-                        <span className="text-[10px] text-muted-foreground">읽기전용</span>
+                        <span className="text-[9px] text-muted-foreground">읽기</span>
                       )}
                     </td>
                   </tr>
