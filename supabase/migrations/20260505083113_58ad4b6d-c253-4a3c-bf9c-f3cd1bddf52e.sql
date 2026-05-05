@@ -1,0 +1,6 @@
+ALTER TABLE public.sales_audit_log
+  DROP CONSTRAINT IF EXISTS sales_audit_log_sale_id_fkey;
+
+ALTER TABLE public.sales_audit_log
+  ADD CONSTRAINT sales_audit_log_sale_id_fkey
+  FOREIGN KEY (sale_id) REFERENCES public.sales(id) ON DELETE CASCADE;
