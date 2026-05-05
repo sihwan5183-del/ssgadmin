@@ -836,18 +836,6 @@ const SalesLedgerPage = () => {
                 </SelectContent>
               </Select>
 
-              {/* 검수 필터 */}
-              <Select value={inspectionFilter} onValueChange={(v) => setInspectionFilter(v as any)}>
-                <SelectTrigger className="h-9 md:w-[140px]">
-                  <SelectValue placeholder="검수 전체" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">검수 전체</SelectItem>
-                  <SelectItem value="inspected">검수완료(확정)</SelectItem>
-                  <SelectItem value="uninspected">미검수</SelectItem>
-                </SelectContent>
-              </Select>
-
               {/* 모요 적용 구분 필터 */}
               <Select value={moyoFilter} onValueChange={(v) => setMoyoFilter(v as any)}>
                 <SelectTrigger className="h-9 md:w-[150px]">
@@ -1138,10 +1126,6 @@ const SalesLedgerPage = () => {
                 const mine = r.created_by === user?.id;
                 // ※ 잠금 정책 폐지 — 본인 또는 관리자는 언제든 수정 가능 (히스토리는 sales_audit_log 자동 기록)
                 const canEdit = mine || isAdmin;
-                // 검수 완료 = 관리자가 검수에서 확정 처리한 상태
-                const isInspected =
-                  r.approval_status === "확정" || r.approval_status === "검수완료";
-                const hasPending = (r.pending_items?.length ?? 0) > 0 && r.pending_resolved === false;
                 const offer = offerOf(r);
                 const profit = profitOf(r);
                 const negative = profit < 0;
@@ -1207,24 +1191,9 @@ const SalesLedgerPage = () => {
                     </td>
                     <td className="px-3">{r.product ?? "-"}</td>
                     <td className="px-3">
-                      <div className="flex flex-col gap-1 min-w-0">
+                      <div className="flex items-center gap-1.5 min-w-0">
                         <span className="font-medium truncate">{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
-                        <div className="flex items-center gap-1 flex-wrap">
-                          {hasPending && (
-                            <Badge className="h-[18px] text-[10px] font-semibold gap-0.5 px-1.5 py-0 bg-amber-500 text-white border-0 hover:bg-amber-500">
-                              <AlertTriangle className="size-2.5" /> 미처리 {r.pending_items?.length}
-                            </Badge>
-                          )}
-                          {!isInspected && (
-                            <Badge variant="outline" className="h-[18px] text-[10px] gap-0.5 border-muted-foreground/40 text-muted-foreground bg-transparent px-1.5 py-0">
-                              검수전
-                            </Badge>
-                          )}
-                          {isInspected && (
-                            <Badge variant="outline" className="h-[18px] text-[10px] gap-0.5 border-emerald-500/50 text-emerald-700 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0">
-                              <CheckCircle2 className="size-2.5" /> 검수완료
-                            </Badge>
-                          )}
+                        <div className="inline-flex items-center gap-1 shrink-0">
                           {(() => {
                             const w = (r.custom_fields as any)?.welfare_discount;
                             if (!w || w === "해당없음") return null;
@@ -1334,8 +1303,7 @@ const SalesLedgerPage = () => {
                     </td>
                     <td className="px-3 text-right" onClick={(e) => e.stopPropagation()}>
                       {canEdit ? (
-                        <div className="inline-flex flex-col items-end gap-0.5">
-                          <div className="inline-flex gap-1">
+                        <div className="inline-flex items-center gap-1">
                             <button onClick={() => navigate(`/input?edit=${r.id}`)} className="size-7 rounded-lg grid place-items-center text-primary-glow hover:bg-primary/10">
                               <Pencil className="size-3.5" />
                             </button>
@@ -1344,12 +1312,6 @@ const SalesLedgerPage = () => {
                                 <Trash2 className="size-3.5" />
                               </button>
                             )}
-                          </div>
-                          {isInspected && (
-                            <span className="text-[9px] text-emerald-700 flex items-center gap-0.5 leading-tight">
-                              <CheckCircle2 className="size-2.5 shrink-0" /> 검수 완료
-                            </span>
-                          )}
                         </div>
                       ) : (
                         <span className="text-[10px] text-muted-foreground">읽기전용</span>
