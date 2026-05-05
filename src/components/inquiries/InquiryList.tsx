@@ -159,23 +159,23 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
         </div>
       ) : (
         <Card className="p-0 overflow-hidden">
-          <Table>
+          <Table className="table-fixed">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-10">
+                <TableHead className="w-10 align-middle">
                   <Checkbox
                     checked={bulk.allOnPageSelected}
                     onCheckedChange={(v) => bulk.togglePage(!!v)}
                   />
                 </TableHead>
-                <TableHead className="w-24">날짜</TableHead>
-                <TableHead className="w-28">채널</TableHead>
-                <TableHead>고객명</TableHead>
-                <TableHead className="w-32">연락처</TableHead>
-                <TableHead>문의내용</TableHead>
-                <TableHead className="w-24">담당자</TableHead>
-                <TableHead className="w-32">상태</TableHead>
-                <TableHead className="w-32 text-right">액션</TableHead>
+                <TableHead className="w-[88px] align-middle">날짜</TableHead>
+                <TableHead className="w-[72px] align-middle">채널</TableHead>
+                <TableHead className="w-[200px] align-middle">고객명</TableHead>
+                <TableHead className="w-[136px] align-middle whitespace-nowrap">연락처</TableHead>
+                <TableHead className="align-middle">문의내용</TableHead>
+                <TableHead className="w-[88px] align-middle">담당자</TableHead>
+                <TableHead className="w-[120px] align-middle">상태</TableHead>
+                <TableHead className="w-[120px] text-right align-middle">액션</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -185,20 +185,35 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
                 <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">인입 데이터가 없습니다</TableCell></TableRow>
               ) : rows.map((r) => (
                 <TableRow key={r.id} data-state={bulk.isSelected(r.id) ? "selected" : undefined}>
-                  <TableCell>
+                  <TableCell className="align-middle">
                     <Checkbox checked={bulk.isSelected(r.id)} onCheckedChange={() => bulk.toggle(r.id)} />
                   </TableCell>
-                  <TableCell className="text-xs">{r.inquiry_date}</TableCell>
-                  <TableCell><Badge variant="outline">{r.channel}</Badge></TableCell>
-                  <TableCell className="text-sm">{r.customer_name ?? "-"}</TableCell>
-                  <TableCell className="text-xs">{r.phone ?? "-"}</TableCell>
-                  <TableCell className="text-xs max-w-xs truncate" title={r.content ?? ""}>{r.content ?? "-"}</TableCell>
-                  <TableCell className="text-xs">{r.manager ?? "-"}</TableCell>
-                  <TableCell>
+                  <TableCell className="text-xs tabular-nums whitespace-nowrap align-middle">{r.inquiry_date}</TableCell>
+                  <TableCell className="align-middle">
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] leading-none px-1.5 py-0.5 font-medium rounded-full"
+                    >
+                      {r.channel}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm align-middle">
+                    <span className="truncate">{r.customer_name ?? <span className="text-muted-foreground/50">-</span>}</span>
+                  </TableCell>
+                  <TableCell className="text-xs tabular-nums whitespace-nowrap align-middle">
+                    {r.phone ?? <span className="text-muted-foreground/50">-</span>}
+                  </TableCell>
+                  <TableCell className="text-xs max-w-xs truncate align-middle" title={r.content ?? ""}>
+                    {r.content ?? <span className="text-muted-foreground/50">-</span>}
+                  </TableCell>
+                  <TableCell className="text-xs whitespace-nowrap align-middle">
+                    {r.manager ?? <span className="text-muted-foreground/50">-</span>}
+                  </TableCell>
+                  <TableCell className="align-middle">
                     <Select value={r.status} onValueChange={(v) => updateStatus(r, v)} disabled={busyId === r.id || !!r.converted_sale_id}>
                       <SelectTrigger
                         className={cn(
-                          "h-9 text-xs border border-border/40 rounded-md px-2.5 font-medium",
+                          "h-8 text-xs border border-border/40 rounded-md px-2 font-medium",
                           "transition-colors hover:border-border hover:brightness-[0.97]",
                           inquiryStatusSoftClass(r.status),
                         )}
@@ -216,7 +231,7 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
                       </SelectContent>
                     </Select>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right whitespace-nowrap align-middle">
                     {r.status !== "개통완료" && (
                       <Button size="sm" variant="ghost" onClick={() => updateStatus(r, "개통완료")} className="h-7 text-xs gap-1">
                         실적등록 <ArrowRight className="size-3" />
