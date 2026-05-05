@@ -27,6 +27,7 @@ import { PaginationBar } from "@/components/ui/pagination-bar";
 import { exportToExcel, SALES_COLUMNS, OFFER_COLUMNS, exportSalesFullExcel } from "@/lib/excelExport";
 import { useQuickExport, useLastUpdated } from "@/hooks/useQuickExport";
 import { maskPhone, maskName } from "@/lib/maskPii";
+import { formatPhone } from "@/lib/phoneFormat";
 import { useResignedUsers, ResignedTag } from "@/hooks/useResignedUsers";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -1241,14 +1242,15 @@ const SalesLedgerPage = () => {
                         const s = (r.status ?? "").trim();
                         if (!s) return <span className="text-muted-foreground/50">-</span>;
                         const cls =
-                          s.includes("개통") && s.includes("완료") ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30" :
-                          s.includes("진행") ? "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30" :
-                          s.includes("반려") || s.includes("취소") ? "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30" :
-                          s.includes("보류") || s.includes("대기") ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30" :
-                          s.includes("접수") ? "bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30" :
-                          "bg-muted text-foreground/80 border-border";
+                          s.includes("개통") && s.includes("완료") ? "bg-emerald-600 text-white border-emerald-700" :
+                          s.includes("택배") ? "bg-sky-600 text-white border-sky-700" :
+                          s.includes("진행") ? "bg-blue-600 text-white border-blue-700" :
+                          s.includes("반려") || s.includes("취소") ? "bg-rose-600 text-white border-rose-700" :
+                          s.includes("보류") || s.includes("대기") ? "bg-amber-500 text-white border-amber-600" :
+                          s.includes("접수") ? "bg-slate-600 text-white border-slate-700" :
+                          "bg-zinc-600 text-white border-zinc-700";
                         return (
-                          <span className={cn("inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap", cls)}>
+                          <span className={cn("inline-flex items-center rounded-md border px-2 py-0.5 text-[10.5px] font-bold tracking-tight whitespace-nowrap shadow-sm", cls)}>
                             {s}
                           </span>
                         );
@@ -1266,33 +1268,33 @@ const SalesLedgerPage = () => {
                     </td>
                     <td className="text-center">{r.product ?? "-"}</td>
                     <td className="text-left">
-                      <div className="min-w-0">
-                        <span className="font-medium truncate block">{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
+                      <div className="min-w-0 flex items-center gap-1.5">
+                        <span className="font-semibold truncate">{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
+                        {(() => {
+                          const st = (r.sale_type ?? "").trim();
+                          if (!st) return null;
+                          const stCls = st === "신규"
+                            ? "bg-blue-600 text-white border-blue-700"
+                            : st.includes("MNP") || st === "번호이동"
+                              ? "bg-emerald-600 text-white border-emerald-700"
+                              : st === "기변" || st.includes("기기변경")
+                                ? "bg-orange-600 text-white border-orange-700"
+                                : "bg-zinc-600 text-white border-zinc-700";
+                          const stShort = st.replace("USIM ", "").replace("기기변경", "기변").replace("번호이동", "MNP");
+                          return (
+                            <span className={cn("inline-flex items-center rounded-md border px-1.5 py-0.5 text-[9.5px] font-bold tracking-tight shadow-sm shrink-0", stCls)}>
+                              {stShort}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </td>
-                    <td className="text-muted-foreground tabular-nums text-center text-[10.5px] border-r border-border/30">
+                    <td className="text-foreground/90 tabular-nums text-center text-[11px] font-mono tracking-tight border-r border-border/30">
                       {(() => {
-                        const p = isAdmin ? (r.phone ?? "-") : (maskPhone(r.phone) || "-");
-                        const phoneText = p.replace(/-/g, "");
-                        const st = (r.sale_type ?? "").trim();
-                        const stCls = st === "신규"
-                          ? "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30"
-                          : st.includes("MNP") || st === "번호이동"
-                            ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
-                            : st === "기변" || st.includes("기기변경")
-                              ? "bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30"
-                              : "bg-muted text-foreground/70 border-border";
-                        const stShort = st.replace("USIM ", "").replace("기기변경", "기변").replace("번호이동", "MNP");
-                        return (
-                          <div className="inline-flex items-center gap-1 whitespace-nowrap">
-                            {st && (
-                              <span className={cn("inline-flex items-center rounded-full border px-1 py-0 text-[9px] font-semibold", stCls)}>
-                                {stShort}
-                              </span>
-                            )}
-                            <span>{phoneText}</span>
-                          </div>
-                        );
+                        const raw = isAdmin ? (r.phone ?? "") : (maskPhone(r.phone) || "");
+                        if (!raw) return <span className="text-muted-foreground/50">-</span>;
+                        const formatted = isAdmin ? formatPhone(raw) : raw;
+                        return <span>{formatted}</span>;
                       })()}
                     </td>
                     <td className="text-muted-foreground text-left max-w-[160px] truncate" title={r.device_model ?? ""}>{r.device_model ?? "-"}</td>
