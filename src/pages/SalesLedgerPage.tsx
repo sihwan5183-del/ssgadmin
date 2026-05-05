@@ -1087,7 +1087,7 @@ const SalesLedgerPage = () => {
       {/* 테이블 */}
       <section className="glass-strong rounded-2xl p-5 md:p-6 shadow-card-elevated">
         <div className="overflow-x-auto -mx-2">
-          <table className="w-full text-[13px] min-w-[1900px] font-sans [font-feature-settings:'tnum'] border-collapse">
+          <table className="w-full text-[13px] min-w-[1600px] font-sans [font-feature-settings:'tnum'] border-collapse">
             <thead>
               <tr className="text-[11.5px] uppercase tracking-wide text-foreground/70 border-b-2 border-border/60 bg-muted/60 [&>th]:whitespace-nowrap [&>th]:align-middle">
                 {isAdmin && (
@@ -1101,23 +1101,19 @@ const SalesLedgerPage = () => {
                 <th className="text-left px-3 py-2.5 font-bold w-[80px]">담당</th>
                 <th className="text-left px-3 py-2.5 font-bold w-[72px]">상품</th>
                 <th className="text-left px-3 py-2.5 font-bold min-w-[180px]">고객</th>
-                <th className="text-left px-3 py-2.5 font-bold w-[140px] border-r border-border/40">연락처</th>
+                <th className="text-left px-3 py-2.5 font-bold w-[160px] border-r border-border/40">연락처</th>
                 {/* 그룹 B: 가입내용 */}
-                <th className="text-left px-3 py-2.5 font-bold min-w-[120px]">단말</th>
-                <th className="text-left px-3 py-2.5 font-bold min-w-[150px]">요금제</th>
+                <th className="text-left px-3 py-2.5 font-bold min-w-[160px]">단말</th>
+                <th className="text-left px-3 py-2.5 font-bold min-w-[200px]">요금제</th>
                 <th className="text-left px-3 py-2.5 font-bold w-[88px]">약정</th>
                 <th className="text-center px-2 py-2.5 font-bold w-[72px] border-r border-border/40">할부</th>
                 {/* 그룹 C: 혜택/태그 */}
                 <th className="text-center px-2 py-2.5 font-bold w-[64px]">동판</th>
                 <th className="text-center px-2 py-2.5 font-bold w-[72px] border-r border-border/40">오퍼</th>
                 {/* 그룹 D: 정산/금액 */}
-                <th className="text-right px-3 py-2.5 font-bold w-[120px] text-foreground">리베이트 단가</th>
-                <th className="text-right px-3 py-2.5 font-bold w-[120px] text-rose-600 dark:text-rose-400 bg-rose-500/[0.03]">오퍼(지원금)</th>
-                <th className="text-right px-3 py-2.5 font-bold w-[120px] text-foreground">최종 수익</th>
-                <th className="text-right px-3 py-2.5 font-bold w-[100px] text-foreground">미수금</th>
-                <th className="text-right px-3 py-2.5 font-bold w-[100px] text-rose-600 dark:text-rose-400 bg-rose-500/[0.03]">고객지원</th>
-                <th className="text-right px-3 py-2.5 font-bold w-[100px] text-rose-600 dark:text-rose-400 bg-rose-500/[0.03]">법인카드</th>
-                <th className="text-right px-3 py-2.5 font-bold w-[100px] text-foreground border-r border-border/40">중고폰</th>
+                <th className="text-right px-3 py-2.5 font-bold w-[130px] text-foreground">총수익</th>
+                <th className="text-right px-3 py-2.5 font-bold w-[130px] text-rose-600 dark:text-rose-400 bg-rose-500/[0.03]">총오퍼</th>
+                <th className="text-right px-3 py-2.5 font-bold w-[140px] text-foreground border-r border-border/40">최종수익금액</th>
                 <th className="text-right px-3 py-2.5 font-bold w-[96px]">관리</th>
               </tr>
             </thead>
@@ -1242,7 +1238,7 @@ const SalesLedgerPage = () => {
                       {offer.toLocaleString("ko-KR")}
                     </td>
                     <td className={cn(
-                      "px-3 text-right tabular-nums font-extrabold",
+                      "px-3 text-right tabular-nums font-extrabold border-r border-border/30",
                       negative ? "text-rose-600 dark:text-rose-400" : "text-blue-600 dark:text-blue-400"
                     )}>
                       <TooltipProvider delayDuration={200}>
@@ -1267,40 +1263,6 @@ const SalesLedgerPage = () => {
                         </Tooltip>
                       </TooltipProvider>
                     </td>
-                    <td className="px-3 text-right tabular-nums">
-                      {(r.receivable_amount ?? 0) > 0 ? (
-                        <span className={
-                          r.receivable_paid === "완료"
-                            ? "text-muted-foreground line-through"
-                            : (r.receivable_amount ?? 0) < 0
-                              ? "text-rose-600 dark:text-rose-400 font-bold"
-                              : "text-foreground font-bold"
-                        }>
-                          {(r.receivable_amount ?? 0).toLocaleString("ko-KR")}
-                        </span>
-                      ) : <span className="text-muted-foreground">-</span>}
-                    </td>
-                    <td className="px-3 text-right tabular-nums bg-rose-500/[0.04]">
-                      {(r.customer_support_amount ?? 0) > 0
-                        ? <span className="font-bold text-rose-600 dark:text-rose-400">{(r.customer_support_amount ?? 0).toLocaleString("ko-KR")}</span>
-                        : <span className="text-muted-foreground">-</span>}
-                    </td>
-                    <td className="px-3 text-right tabular-nums bg-rose-500/[0.04]">
-                      {(r.corp_card_amount ?? 0) > 0
-                        ? <span className="font-bold text-rose-600 dark:text-rose-400">{(r.corp_card_amount ?? 0).toLocaleString("ko-KR")}</span>
-                        : <span className="text-muted-foreground">-</span>}
-                    </td>
-                    <td className="px-3 text-right tabular-nums border-r border-border/30">
-                      {r.trade_in_enabled ? (
-                        <span className="text-foreground font-bold" title={r.trade_in_model ?? ""}>
-                          {(r.trade_in_confirmed ?? 0) > 0
-                            ? `₩${(r.trade_in_confirmed ?? 0).toLocaleString("ko-KR")}`
-                            : "대기"}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </td>
                     <td className="px-3 text-right" onClick={(e) => e.stopPropagation()}>
                       {canEdit ? (
                         <div className="inline-flex items-center gap-1">
@@ -1321,7 +1283,7 @@ const SalesLedgerPage = () => {
                 );
               })}
               {filteredRows.length === 0 && (
-                <tr><td colSpan={isAdmin ? 21 : 20} className="text-center py-10 text-muted-foreground">
+                <tr><td colSpan={isAdmin ? 16 : 15} className="text-center py-10 text-muted-foreground">
                   {searchQ ? "검색 결과가 없습니다." : "선택한 기간에 데이터가 없습니다."}
                 </td></tr>
               )}
