@@ -114,6 +114,11 @@ const isContractProduct = (product: string | null | undefined): boolean => {
   return false;
 };
 
+/** 최종상태가 완료 계열일 때만 개통일 입력을 허용한다. */
+const COMPLETED_STATUSES = ["개통완료", "설치완료"] as const;
+const isOpenDateAllowed = (status: string | null | undefined): boolean =>
+  !!status && (COMPLETED_STATUSES as readonly string[]).includes(status);
+
 const SALE_FORM_KEYS = [
   "seq", "channel", "channel_company", "moyo_excluded", "manager", "open_month", "product",
   "sale_type", "open_method", "status", "open_date", "customer_name", "birth_date", "phone",
