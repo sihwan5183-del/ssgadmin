@@ -33,11 +33,19 @@ serve(async (req) => {
     }
 
     const { imageBase64 } = await req.json();
-    if (!imageBase64) {
+    if (!imageBase64 || typeof imageBase64 !== "string") {
       return new Response(JSON.stringify({ error: "imageBase64 is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+    // 크기 제한: 약 ~3.75MB 디코딩 분량 (base64 ~5M chars)
+    const MAX_B64_CHARS = 5_000_000;
+    if (imageBase64.length > MAX_B64_CHARS) {
+      return new Response(
+        JSON.stringify({ error: "이미지 크기 초과 (최대 ~3.75MB)" }),
+        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
