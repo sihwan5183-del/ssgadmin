@@ -117,7 +117,7 @@ type SaleRow = {
 const SalesLedgerPage = () => {
   const { user } = useAuth();
   const { isAdmin } = useRole();
-  const { startDate, endDate, label: periodLabel } = usePeriod();
+  const { startDate, endDate, label: periodLabel, setMode, setYear, setMonth } = usePeriod();
   const navigate = useNavigate();
   const location = useLocation();
   const quickExport = useQuickExport();
@@ -157,6 +157,11 @@ const SalesLedgerPage = () => {
     if (st) {
       const list = st.split(",").map((s) => s.trim()).filter(Boolean);
       if (list.length > 0) setStatusFilter(list);
+      // 대시보드 [개통 대기]에서 진입 시: 항상 이번 달 기준으로 강제
+      const now = new Date();
+      setMode("month");
+      setYear(now.getFullYear());
+      setMonth(now.getMonth() + 1);
     }
     // vas=1 인 경우 별도 필터 컬럼이 없어서 검색어로 표시
     if (sp.get("vas") === "1") setSearchQ("부가서비스");
