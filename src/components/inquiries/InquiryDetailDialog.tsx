@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import {
   User, Smartphone, Wallet, UserCog, Tag, MessageSquare, Send,
-  Clock, Sparkles, UserPlus, X,
+  Clock, Sparkles, UserPlus, X, Loader2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,6 +36,7 @@ interface InquiryRow {
   converted_sale_id: string | null;
   inquiry_date: string;
   created_at: string;
+  custom_fields?: Record<string, any> | null;
 }
 interface LogEntry {
   id: string;
@@ -129,43 +130,68 @@ export function InquiryDetailDialog({
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [sale, setSale] = useState<any | null>(null);
   const [savingHeader, setSavingHeader] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [fullInquiry, setFullInquiry] = useState<InquiryRow | null>(null);
 
   /* Load on open */
   useEffect(() => {
     if (!open || !inquiry) return;
+    let cancelled = false;
+    setLoading(true);
+    // Pre-fill from list snapshot to avoid blank flash
     setName(inquiry.customer_name ?? "");
     setBirth(inquiry.birth_date ?? "");
     setPhone(inquiry.phone ?? "");
     setManager(inquiry.manager ?? "");
     setStatus(inquiry.status ?? "");
-    setOpenMethod(((): string => {
-      const v = (inquiry as any).custom_fields?.open_method;
-      return typeof v === "string" ? v : "";
-    })());
     setMemo("");
+    setLogs([]);
+    setSale(null);
 
     (async () => {
-      const { data: logRows } = await supabase
-        .from("inquiry_logs")
+      // Always fetch fresh full record by id so all stored fields are bound
+      const { data: fresh } = await supabase
+        .from("inquiries")
         .select("*")
-        .eq("inquiry_id", inquiry.id)
-        .order("created_at", { ascending: false })
-        .limit(100);
-      setLogs((logRows as LogEntry[]) ?? []);
+        .eq("id", inquiry.id)
+        .maybeSingle();
+      const src = (fresh ?? inquiry) as InquiryRow;
+      if (cancelled) return;
+      setFullInquiry(src);
+      setName(src.customer_name ?? "");
+      setBirth(src.birth_date ?? "");
+      setPhone(src.phone ?? "");
+      setManager(src.manager ?? "");
+      setStatus(src.status ?? "");
+      const om = (src.custom_fields as any)?.open_method;
+      setOpenMethod(typeof om === "string" ? om : "");
 
-      if (inquiry.converted_sale_id) {
-        const { data: s } = await supabase
-          .from("sales")
-          .select(
-            "id,product,sale_type,bundle,carrier,open_method,open_date,device_model,device_serial,usim_model,usim_serial,rate_plan,vas1,vas2,unit_price,vas_fee,distributor_amount,extra_subsidy,cash_support_amount,customer_support_amount,corp_card_amount,receivable_amount,custom_fields",
-          )
-          .eq("id", inquiry.converted_sale_id)
-          .maybeSingle();
-        setSale(s ?? null);
-      } else {
-        setSale(null);
-      }
+      const [{ data: logRows }, saleRes] = await Promise.all([
+        supabase
+          .from("inquiry_logs")
+          .select("*")
+          .eq("inquiry_id", src.id)
+          .order("created_at", { ascending: false })
+          .limit(200),
+        src.converted_sale_id
+          ? supabase
+              .from("sales")
+              .select(
+                "id,product,sale_type,bundle,carrier,open_method,open_date,device_model,device_serial,usim_model,usim_serial,rate_plan,vas1,vas2,unit_price,vas_fee,distributor_amount,extra_subsidy,cash_support_amount,customer_support_amount,corp_card_amount,receivable_amount,custom_fields",
+              )
+              .eq("id", src.converted_sale_id)
+              .maybeSingle()
+          : Promise.resolve({ data: null } as any),
+      ]);
+      if (cancelled) return;
+      setLogs((logRows as LogEntry[]) ?? []);
+      setSale((saleRes as any)?.data ?? null);
+      setLoading(false);
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [open, inquiry]);
 
   /* Realtime: new logs appended */
@@ -322,6 +348,7 @@ export function InquiryDetailDialog({
   };
 
   const cf = (sale?.custom_fields as Record<string, any>) ?? {};
+  const inq = fullInquiry ?? inquiry;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -337,11 +364,16 @@ export function InquiryDetailDialog({
               {status || "-"}
             </Badge>
             <Badge variant="outline" className="text-[10px]">
-              {inquiry.channel}
+              {inq.channel}
             </Badge>
             <span className="ml-auto text-[11px] text-muted-foreground mr-2">
-              인입일 {inquiry.inquiry_date}
+              인입일 {inq.inquiry_date}
             </span>
+            {loading && (
+              <span className="ml-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                <Loader2 className="size-3 animate-spin" /> 불러오는 중…
+              </span>
+            )}
             <Button
               size="sm"
               variant="outline"
@@ -398,18 +430,18 @@ export function InquiryDetailDialog({
               </div>
               <div className="grid grid-cols-2 gap-3 mt-3 text-xs">
                 <Row label="채널">
-                  <Badge variant="outline" className="text-[10px]">{inquiry.channel}</Badge>
+                  <Badge variant="outline" className="text-[10px]">{inq.channel}</Badge>
                 </Row>
                 <Row label="생년월일(표시)">{formatBirth(birth)}</Row>
-                <Row label="문의 내용">{inquiry.content || "-"}</Row>
-                <Row label="등록일">{new Date(inquiry.created_at).toLocaleString("ko-KR")}</Row>
+                <Row label="문의 내용">{inq.content || "-"}</Row>
+                <Row label="등록일">{new Date(inq.created_at).toLocaleString("ko-KR")}</Row>
               </div>
             </Section>
 
             {/* 상담 기기 정보 (인입 단계 입력) + 개통된 경우 기기 정보 */}
             <Section icon={Smartphone} title="상담 기기 정보">
               {(() => {
-                const icf = ((inquiry as any).custom_fields ?? {}) as Record<string, any>;
+                const icf = ((inq as any).custom_fields ?? {}) as Record<string, any>;
                 const cm = icf.consult_device_model || "";
                 const cc = icf.consult_device_capacity || "";
                 const cl = icf.consult_device_color || "";
