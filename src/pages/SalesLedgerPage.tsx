@@ -317,6 +317,14 @@ const SalesLedgerPage = () => {
     if (productFilter !== "all") {
       query = query.eq("product", productFilter);
     }
+    if (saleTypeFilter !== "all") {
+      const list = saleTypeFilter === "MNP"
+        ? ["MNP", "USIM MNP"]
+        : saleTypeFilter === "기변"
+          ? ["기변", "기변(재가입)"]
+          : ["신규"];
+      query = query.in("sale_type", list);
+    }
     if (returnFilter === "returned") {
       query = query.eq("voucher_returned", "유");
     } else if (returnFilter === "unreturned") {
@@ -357,7 +365,7 @@ const SalesLedgerPage = () => {
     setRows((data ?? []) as SaleRow[]);
     setTotal(count ?? 0);
     setSearching(false);
-  }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
+  }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, saleTypeFilter, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
 
   const loadSummary = useCallback(async () => {
     // 정책: 저장된 모든 실적은 즉시 합계에 반영. (status·approval_status·검수상태와 무관)
