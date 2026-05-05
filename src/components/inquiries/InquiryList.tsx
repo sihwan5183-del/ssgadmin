@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +34,35 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
   const bulk = useBulkSelection<string>(ids);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [latestMemos, setLatestMemos] = useState<Record<string, { content: string; created_at: string }>>({});
+
+  // Fetch the latest memo per inquiry for the visible rows
+  useEffect(() => {
+    if (ids.length === 0) {
+      setLatestMemos({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("inquiry_logs")
+        .select("inquiry_id, content, created_at, action")
+        .in("inquiry_id", ids)
+        .order("created_at", { ascending: false });
+      if (cancelled) return;
+      const map: Record<string, { content: string; created_at: string }> = {};
+      (data ?? []).forEach((l: any) => {
+        if (map[l.inquiry_id]) return;
+        if (l.action !== "메모") return;
+        if (!l.content) return;
+        map[l.inquiry_id] = { content: l.content, created_at: l.created_at };
+      });
+      setLatestMemos(map);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [ids.join(",")]);
 
   const updateStatus = async (row: Inquiry, status: string) => {
     setBusyId(row.id);
@@ -172,7 +201,7 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
                 <TableHead className="w-[72px] align-middle">채널</TableHead>
                 <TableHead className="w-[200px] align-middle">고객명</TableHead>
                 <TableHead className="w-[136px] align-middle whitespace-nowrap">연락처</TableHead>
-                <TableHead className="align-middle">문의내용</TableHead>
+                <TableHead className="align-middle">상담 히스토리</TableHead>
                 <TableHead className="w-[88px] align-middle">담당자</TableHead>
                 <TableHead className="w-[120px] align-middle">상태</TableHead>
                 <TableHead className="w-[120px] text-right align-middle">액션</TableHead>
@@ -204,7 +233,17 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
                     {r.phone ?? <span className="text-muted-foreground/50">-</span>}
                   </TableCell>
                   <TableCell className="text-xs max-w-xs truncate align-middle" title={r.content ?? ""}>
-                    {r.content ?? <span className="text-muted-foreground/50">-</span>}
+                    {latestMemos[r.id] ? (
+                      <span title={latestMemos[r.id].content} className="block truncate text-foreground/90">
+                        {latestMemos[r.id].content}
+                      </span>
+                    ) : r.content ? (
+                      <span title={r.content} className="block truncate text-muted-foreground/70">
+                        {r.content}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground/50">-</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-xs whitespace-nowrap align-middle">
                     {r.manager ?? <span className="text-muted-foreground/50">-</span>}
