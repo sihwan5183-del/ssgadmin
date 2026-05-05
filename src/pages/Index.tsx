@@ -1,40 +1,14 @@
 import { Header } from "@/components/layout/Header";
-import { StatCard } from "@/components/dashboard/StatCard";
 import { HeroPerformance } from "@/components/dashboard/HeroPerformance";
 import { RadialGoalGauge } from "@/components/dashboard/RadialGoalGauge";
 import { StoreRevenueRanking } from "@/components/dashboard/StoreRevenueRanking";
 import { StoreEfficiencyBubble } from "@/components/dashboard/StoreEfficiencyBubble";
-import { LiveActivityFeed } from "@/components/dashboard/LiveActivityFeed";
-import { PlannerFeed } from "@/components/dashboard/PlannerFeed";
-import { ActivationBreakdown } from "@/components/dashboard/ActivationBreakdown";
 import { ChannelActivationBreakdown } from "@/components/dashboard/ChannelActivationBreakdown";
-import { PerformanceChart } from "@/components/dashboard/PerformanceChart";
-import { ChannelDonut } from "@/components/dashboard/ChannelDonut";
-import { RankingPanel } from "@/components/dashboard/RankingPanel";
-import { PerformanceLedger } from "@/components/dashboard/PerformanceLedger";
-import { ChannelModelAnalysis } from "@/components/dashboard/ChannelModelAnalysis";
-import { OverallModelAnalysis } from "@/components/dashboard/OverallModelAnalysis";
-import { AdScheduleWidget } from "@/components/dashboard/AdScheduleWidget";
-import { QuickLinksWidget } from "@/components/dashboard/QuickLinksWidget";
-import { InventoryWidget } from "@/components/dashboard/InventoryWidget";
-import { StrategyModelGauges } from "@/components/dashboard/StrategyModelGauges";
-import { PendingItemsCard } from "@/components/dashboard/PendingItemsCard";
-import { CashTodayCard } from "@/components/dashboard/CashTodayCard";
 import { MyReviewAlerts } from "@/components/dashboard/MyReviewAlerts";
-import { UntreatedLeadsCard } from "@/components/dashboard/UntreatedLeadsCard";
-import { MyIncentiveWidget } from "@/components/dashboard/MyIncentiveWidget";
-import { formatShortKRW } from "@/data/mockData";
-import { TrendingUp, TrendingDown, Sparkles, Target } from "lucide-react";
-import { useBudgetCategories } from "@/hooks/useBudgetCategories";
-import { EyeOff } from "lucide-react";
-import { Link } from "react-router-dom";
 import { useDashboardLayout } from "@/hooks/useDashboardLayout";
 import { DashboardLayoutManager } from "@/components/dashboard/DashboardLayoutManager";
 import { useRole } from "@/hooks/useRole";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
-import { useFinanceData } from "@/hooks/useFinanceData";
-import { RevenueComposition } from "@/components/finance/RevenueComposition";
-import { CategoryBreakdownChart } from "@/components/finance/CategoryBreakdownChart";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { CalendarDays, Calendar as CalendarIcon, CalendarRange } from "lucide-react";
 import { useEffect } from "react";
@@ -100,15 +74,12 @@ const ScopeBigToggle = () => {
 };
 
 const Index = () => {
-  const finance = useFinanceData();
-  const { excludedLabels } = useBudgetCategories();
   const { isAdmin } = useRole();
   const { isSuperAdmin } = useSuperAdmin();
   const canSeeAdminWidgets = isAdmin || isSuperAdmin;
   const { widgets, isVisible, toggle, move, resetToDefault } = useDashboardLayout();
-  const liveRoi = Math.round(finance.roi);
 
-  const { mode, year, month, startDate, label: periodLabel, setMode, setYear, setMonth } = usePeriod();
+  const { mode, year, month, label: periodLabel, setMode, setYear, setMonth } = usePeriod();
 
   // ── 대시보드는 기본 [이번 달] 강제. 다른 페이지에서 임의 기간을 설정한 채 들어와도
   //    진입 즉시 현재 월로 리셋해서 모든 위젯이 동일 기준(이번 달)으로 집계되도록 한다.
@@ -147,22 +118,6 @@ const Index = () => {
     : isAllYear
       ? `${year}년 전체 기간 · 누적 데이터`
       : `${periodLabel} 기준 · 사용자 지정 기간`;
-
-  // 카드 상단에 표시할 짧은 기준 시점 라벨
-  const cardPeriodLabel = (() => {
-    if (mode === "month") return `${month || year}월 누적`;
-    if (mode === "day") {
-      const d = new Date(startDate + "T00:00:00");
-      const weekday = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
-      return `${d.getMonth() + 1}.${String(d.getDate()).padStart(2, "0")} (${weekday}) 당일`;
-    }
-    return periodLabel;
-  })();
-
-  const dRevenue = pctChange(finance.totalRevenue, finance.prev.totalRevenue);
-  const dExpense = pctChange(finance.totalExpense, finance.prev.totalExpense);
-  const dNet = pctChange(finance.netMargin, finance.prev.netMargin);
-  const dRoi = pctChange(finance.roi, finance.prev.roi);
 
   return (
     <>
