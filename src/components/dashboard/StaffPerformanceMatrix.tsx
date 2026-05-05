@@ -81,20 +81,12 @@ export const StaffPerformanceMatrix = () => {
     });
 
     const map = new Map<string, Row>();
-    // seed all active staff so 0건 직원도 노출
-    profiles.forEach((p) => {
-      map.set(p.user_id, {
-        uid: p.user_id,
-        name: p.display_name ?? "미지정",
-        store: p.store ?? "-",
-        counts: empty(),
-        total: 0,
-      });
-    });
-
+    // 실적이 있는 직원만 추가 (0건 직원 제외)
     (salesRes.data ?? []).forEach((s: any) => {
       const uid = ownerOf(s);
       if (!uid) return;
+      // 대시보드 노출 토글 OFF 직원 제외
+      if (!byId.has(uid)) return;
       const cur = map.get(uid) ?? {
         uid,
         name: byId.get(uid)?.display_name ?? (s.manager || "미지정"),
@@ -116,7 +108,9 @@ export const StaffPerformanceMatrix = () => {
       map.set(uid, cur);
     });
 
-    const arr = Array.from(map.values()).sort((a, b) => b.total - a.total);
+    const arr = Array.from(map.values())
+      .filter((r) => r.total > 0)
+      .sort((a, b) => b.total - a.total);
     setRows(arr);
     setLoading(false);
   };
@@ -126,6 +120,7 @@ export const StaffPerformanceMatrix = () => {
     const ch = supabase
       .channel("staff_performance_matrix")
       .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => load())
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
@@ -155,7 +150,7 @@ export const StaffPerformanceMatrix = () => {
       {loading ? (
         <div className="text-sm text-muted-foreground py-10 text-center">불러오는 중…</div>
       ) : rows.length === 0 ? (
-        <div className="text-sm text-muted-foreground py-10 text-center">데이터가 없습니다</div>
+        <div className="text-sm text-muted-foreground py-10 text-center">이번 달 실적이 있는 직원이 없습니다</div>
       ) : (
         <div className="overflow-auto -mx-1">
           <table className="w-full text-xs md:text-[13px] whitespace-nowrap">
