@@ -133,6 +133,8 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   const [pendingResolved, setPendingResolved] = useState<boolean>(true);
   const [editingId, setEditingId] = useState<string | null>(saleId ?? null);
   const [busy, setBusy] = useState(false);
+  // 원본 스냅샷 — 수정 모드에서 누락 필드(특히 담당자/인입경로)가 null로 덮어씌워지는 것을 방지
+  const originalRef = useRef<any>(null);
   const { fields: dynamicFields } = useFieldDefinitions("sales");
   const { calc: calcNetFee, formula: netFeeFormula } = useNetFeeFormula();
   const { models: deviceModels } = useDeviceModels(true);
@@ -191,6 +193,7 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
         return;
       }
       const s = data as any;
+      originalRef.current = s;
       setForm((prev) => ({
         ...prev,
         seq: s.seq, channel: s.channel, moyo_excluded: s.moyo_excluded ?? false,
@@ -267,6 +270,7 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
       }
       const s = data as any;
       setEditingId(s.id);
+      originalRef.current = s;
       // 함수형 업데이트 + 기존 값 병합으로, 비동기 효과(staffOptions 등)가
       // 먼저 끼어들어 manager/channel 같은 값을 덮어쓰지 못하도록 보호한다.
       setForm((prev) => ({
