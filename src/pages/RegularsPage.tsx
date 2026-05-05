@@ -915,11 +915,11 @@ const RegularsPage = () => {
                   <>
                     <label className="flex items-center gap-1.5 text-xs">
                       <Switch checked={r.coupon_sent} onCheckedChange={(v) => toggleField(r.id, "coupon_sent", v)} />
-                      쿠폰
+                      쿠폰발송
                     </label>
                     <label className="flex items-center gap-1.5 text-xs">
                       <Switch checked={r.converted} onCheckedChange={(v) => toggleField(r.id, "converted", v)} />
-                      전환
+                      자사전환
                     </label>
                     <label className="flex items-center gap-1.5 text-xs">
                       <Switch checked={!!r.activated} onCheckedChange={(v) => toggleField(r.id, "activated", v)} />
@@ -955,8 +955,8 @@ const RegularsPage = () => {
                   <th className="text-left px-3 py-2">연락처</th>
                   <th className="text-left px-3 py-2">담당자</th>
                   <th className="text-left px-3 py-2">등록자</th>
-                  <th className="text-center px-3 py-2">쿠폰</th>
-                  <th className="text-center px-3 py-2">전환</th>
+                  <th className="text-center px-3 py-2">쿠폰발송</th>
+                  <th className="text-center px-3 py-2">자사전환</th>
                   <th className="text-center px-3 py-2">자사개통</th>
                   <th className="text-right px-3 py-2"> </th>
                 </tr>
