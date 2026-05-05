@@ -126,7 +126,7 @@ export const ChannelActivationBreakdown = () => {
 
   useEffect(() => {
     let alive = true;
-    (async () => {
+    const fetchData = async () => {
       setLoading(true);
       let q: any = supabase
         .from("sales")
@@ -138,8 +138,13 @@ export const ChannelActivationBreakdown = () => {
       if (!alive) return;
       setRaw((data ?? []) as any);
       setLoading(false);
-    })();
-    return () => { alive = false; };
+    };
+    fetchData();
+    const ch = supabase
+      .channel("dashboard-channel-breakdown-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, () => fetchData())
+      .subscribe();
+    return () => { alive = false; supabase.removeChannel(ch); };
   }, [startDate, endDate]);
 
   // Merge config with actual data channels
