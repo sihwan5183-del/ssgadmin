@@ -114,6 +114,11 @@ const isContractProduct = (product: string | null | undefined): boolean => {
   return false;
 };
 
+/** 최종상태가 완료 계열일 때만 개통일 입력을 허용한다. */
+const COMPLETED_STATUSES = ["개통완료", "설치완료"] as const;
+const isOpenDateAllowed = (status: string | null | undefined): boolean =>
+  !!status && (COMPLETED_STATUSES as readonly string[]).includes(status);
+
 const SALE_FORM_KEYS = [
   "seq", "channel", "channel_company", "moyo_excluded", "manager", "open_month", "product",
   "sale_type", "open_method", "status", "open_date", "customer_name", "birth_date", "phone",
@@ -319,7 +324,12 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
       if (autoFilledFields.has(k as string)) {
         setAutoFilledFields((prev) => { const n = new Set(prev); n.delete(k as string); return n; });
       }
-      return { ...f, [k]: v };
+      const next: any = { ...f, [k]: v };
+      // 최종상태 변경 시: 완료가 아니면 개통일 자동 초기화
+      if (k === "status" && !isOpenDateAllowed(v as any)) {
+        next.open_date = null;
+      }
+      return next;
     });
 
   const num = (v: unknown) => {
@@ -412,13 +422,18 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
       trade_in_model: form.trade_in_enabled ? (form.trade_in_model || null) : null,
       open_month: form.open_date ? String(form.open_date).slice(0, 7) : null,
     };
+    // 미완료 상태이면 개통일/개통월을 강제로 비운다 (DB 트리거와도 일치)
+    if (!isOpenDateAllowed(form.status)) {
+      payload.open_date = null;
+      payload.open_month = null;
+    }
     // 저장 시점 강제 갱신: 동일값 저장이라도 변경 인식되도록 updated_at 을 갱신한다.
     (payload as any).updated_at = new Date().toISOString();
     // 수정 모드: undefined/빈 값 필드는 원본 값을 사용해 의도치 않은 초기화 방지
     if (editingId && orig) {
       const PROTECT_KEYS = [
         "manager", "channel", "channel_company", "product", "sale_type",
-        "open_method", "status", "open_date", "customer_name", "phone",
+        "open_method", "status", "customer_name", "phone",
         "device_model", "rate_plan",
       ];
       for (const k of PROTECT_KEYS) {
@@ -642,7 +657,17 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
               </Select>
             </Field>
             <Field label="개통일자">
-              <Input type="date" value={form.open_date ?? ""} onChange={(e) => set("open_date", e.target.value)} className="h-9 bg-input/60 text-xs" />
+              <Input
+                type="date"
+                value={isOpenDateAllowed(form.status) ? (form.open_date ?? "") : ""}
+                onChange={(e) => set("open_date", e.target.value)}
+                disabled={!isOpenDateAllowed(form.status)}
+                title={!isOpenDateAllowed(form.status) ? "최종상태가 '개통완료' 또는 '설치완료'일 때만 입력할 수 있습니다" : undefined}
+                className="h-9 bg-input/60 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              {!isOpenDateAllowed(form.status) && (
+                <p className="text-[10px] text-muted-foreground mt-1">완료 상태에서만 입력 가능합니다.</p>
+              )}
             </Field>
           </Grid>
           <Grid cols={5}>
