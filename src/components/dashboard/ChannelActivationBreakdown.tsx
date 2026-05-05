@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRole } from "@/hooks/useRole";
 import { Badge } from "@/components/ui/badge";
+import { EXCLUDED_ACTIVATION_STATUSES } from "@/lib/salesFilter";
 
 /* ── 가입상품 카테고리 설정 ── */
 type ProductCategoryConfig = {
@@ -127,12 +128,13 @@ export const ChannelActivationBreakdown = () => {
     let alive = true;
     (async () => {
       setLoading(true);
-      const { data } = await supabase
+      let q: any = supabase
         .from("sales")
         .select("channel, product, open_date")
         .gte("open_date", startDate)
-        .lte("open_date", endDate)
-        .limit(10000);
+        .lte("open_date", endDate);
+      for (const s of EXCLUDED_ACTIVATION_STATUSES) q = q.neq("status", s);
+      const { data } = await q.limit(10000);
       if (!alive) return;
       setRaw((data ?? []) as any);
       setLoading(false);
