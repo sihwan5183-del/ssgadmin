@@ -17,7 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useStaffNames } from "@/hooks/useStaffNames";
 import { useInquiryStatuses } from "@/hooks/useInquiryStatuses";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
-import { inquiryStatusClass, inquiryStatusSoftClass } from "@/lib/inquiryStatus";
+import { inquiryStatusClass, inquiryStatusSoftClass, inquiryStatusSolidClass } from "@/lib/inquiryStatus";
 import { formatPhone } from "@/lib/phoneFormat";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -499,27 +499,70 @@ export function InquiryDetailDialog({
             )}
 
             {/* Timeline — wide, left column */}
-            <Section
-              icon={Clock}
-              title="상담 히스토리"
-              right={
-                <span className="text-[10px] text-muted-foreground tabular-nums">
-                  총 {logs.length}건
-                </span>
+            {(() => {
+              // 인입 시 자동 등록된 [문의 내용] 과 인입 메모(note) 를 히스토리 첫 항목으로 합성
+              type Item = {
+                id: string;
+                action: string;
+                content: string | null;
+                created_at: string;
+                created_by: string | null;
+                synthetic?: "inquiry" | "note";
+              };
+              const seed: Item[] = [];
+              if ((inq.content ?? "").trim()) {
+                seed.push({
+                  id: `inq-${inq.id}`,
+                  action: "문의 내용",
+                  content: inq.content,
+                  created_at: inq.created_at,
+                  created_by: null,
+                  synthetic: "inquiry",
+                });
               }
-            >
-              {logs.length === 0 ? (
-                <div className="text-xs text-muted-foreground py-6 text-center">
-                  기록이 없습니다
-                </div>
-              ) : (
-                <ol className="relative pl-4">
+              if ((inq.note ?? "").trim()) {
+                seed.push({
+                  id: `note-${inq.id}`,
+                  action: "인입 메모",
+                  content: inq.note,
+                  created_at: inq.created_at,
+                  created_by: null,
+                  synthetic: "note",
+                });
+              }
+              const merged: Item[] = [
+                ...seed,
+                ...logs.map((l) => ({
+                  id: l.id,
+                  action: l.action,
+                  content: l.content,
+                  created_at: l.created_at,
+                  created_by: l.created_by,
+                })),
+              ].sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at));
+
+              return (
+                <Section
+                  icon={Clock}
+                  title="상담 히스토리"
+                  right={
+                    <span className="text-[10px] text-muted-foreground tabular-nums">
+                      총 {merged.length}건
+                    </span>
+                  }
+                >
+                  {merged.length === 0 ? (
+                    <div className="text-xs text-muted-foreground py-6 text-center">
+                      기록이 없습니다
+                    </div>
+                  ) : (
+                    <ol className="relative pl-4">
                   {/* vertical guide line */}
                   <span
                     aria-hidden
                     className="absolute left-[5px] top-1 bottom-1 w-px bg-border/60"
                   />
-                  {logs.map((log, idx) => (
+                  {merged.map((log, idx) => (
                     <li key={log.id} className="relative pb-3 last:pb-0">
                       <span
                         aria-hidden
@@ -535,7 +578,7 @@ export function InquiryDetailDialog({
                           </Badge>
                         )}
                         <span className="text-[11px] text-foreground/80 font-medium">
-                          {resolveStaff(log.created_by, "직원")}
+                          {log.created_by ? resolveStaff(log.created_by, "직원") : "시스템"}
                         </span>
                         <span className="text-[10px] text-muted-foreground tabular-nums ml-auto">
                           {formatTime(log.created_at)}
@@ -548,9 +591,11 @@ export function InquiryDetailDialog({
                       )}
                     </li>
                   ))}
-                </ol>
-              )}
-            </Section>
+                    </ol>
+                  )}
+                </Section>
+              );
+            })()}
           </div>
 
           {/* ===== RIGHT SIDEBAR ===== */}
@@ -586,21 +631,29 @@ export function InquiryDetailDialog({
 
             {/* Status / open method */}
             <Section icon={Tag} title="고객 상태 관리">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-3">
                 <div>
-                  <label className="text-[10px] text-muted-foreground mb-1 block">상태값</label>
-                  <Select value={status} onValueChange={changeStatus}>
-                    <SelectTrigger className={cn("h-9 text-xs font-medium", inquiryStatusSoftClass(status))}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {statuses.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          <Badge variant="outline" className={cn("text-[10px]", inquiryStatusClass(s))}>{s}</Badge>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <label className="text-[10px] text-muted-foreground mb-1.5 block">상태값 (클릭하여 변경)</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {statuses.map((s) => {
+                      const active = s === status;
+                      return (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => changeStatus(s)}
+                          className={cn(
+                            "px-2.5 py-1 rounded-md text-[11px] font-bold border transition-all",
+                            active
+                              ? cn(inquiryStatusSolidClass(s), "ring-2 ring-offset-1 ring-primary/40 shadow-sm")
+                              : "bg-muted/50 text-foreground/70 border-border/50 hover:bg-muted",
+                          )}
+                        >
+                          {s}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div>
                   <label className="text-[10px] text-muted-foreground mb-1 block">개통 방식</label>

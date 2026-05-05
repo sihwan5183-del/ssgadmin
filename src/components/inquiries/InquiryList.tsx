@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { Inquiry } from "@/hooks/useInquiries";
 import { useInquiryStatuses } from "@/hooks/useInquiryStatuses";
-import { inquiryStatusClass, inquiryStatusSoftClass } from "@/lib/inquiryStatus";
+import { inquiryStatusClass, inquiryStatusSolidClass } from "@/lib/inquiryStatus";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ArrowRight, Trash2, CheckCircle2, Phone } from "lucide-react";
@@ -249,26 +249,15 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
                     {r.manager ?? <span className="text-muted-foreground/50">-</span>}
                   </TableCell>
                   <TableCell className="align-middle">
-                    <Select value={r.status} onValueChange={(v) => updateStatus(r, v)} disabled={busyId === r.id || !!r.converted_sale_id}>
-                      <SelectTrigger
-                        className={cn(
-                          "h-8 text-xs border border-border/40 rounded-md px-2 font-medium",
-                          "transition-colors hover:border-border hover:brightness-[0.97]",
-                          inquiryStatusSoftClass(r.status),
-                        )}
-                      >
-                        <SelectValue>{r.status}</SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {statuses.map((s) => (
-                          <SelectItem key={s} value={s}>
-                            <Badge variant="outline" className={cn("text-xs", inquiryStatusClass(s))}>
-                              {s}
-                            </Badge>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <span
+                      className={cn(
+                        "inline-flex items-center justify-center px-2.5 py-1 rounded-md border text-[11px] font-bold whitespace-nowrap select-none",
+                        inquiryStatusSolidClass(r.status),
+                      )}
+                      title="상태 변경은 상세 보기에서 수행"
+                    >
+                      {r.status}
+                    </span>
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap align-middle">
                     {r.status !== "개통완료" && (

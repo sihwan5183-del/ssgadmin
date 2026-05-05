@@ -68,3 +68,24 @@ export const inquiryStatusSoftClass = (status: string | null | undefined): strin
   const key = STYLE_ALIASES[status] ?? status;
   return SOFT_STYLES[key] ?? SOFT_FALLBACK;
 };
+
+// 시인성 강화용 솔리드 배지: 진한 배경 + 흰색 글자.
+// 리스트의 [최종상태] 컬럼처럼 한눈에 구분이 필요한 곳에서 사용.
+const SOLID_STYLES: Record<string, string> = {
+  상담전: "bg-orange-500 text-white border-orange-600",
+  상담중: "bg-sky-600 text-white border-sky-700",
+  부재: "bg-amber-500 text-white border-amber-600",
+  재케어: "bg-blue-600 text-white border-blue-700",
+  방문예약: "bg-violet-600 text-white border-violet-700",
+  택배발송: "bg-indigo-600 text-white border-indigo-700",
+  실패: "bg-red-600 text-white border-red-700",
+  개통완료: "bg-emerald-600 text-white border-emerald-700",
+};
+
+const SOLID_FALLBACK = "bg-slate-500 text-white border-slate-600";
+
+export const inquiryStatusSolidClass = (status: string | null | undefined): string => {
+  if (!status) return SOLID_FALLBACK;
+  const key = STYLE_ALIASES[status] ?? status;
+  return SOLID_STYLES[key] ?? SOLID_FALLBACK;
+};
