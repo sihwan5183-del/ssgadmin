@@ -1,7 +1,9 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Target } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
+import { useAppSettings } from "@/hooks/useAppSettings";
+import { applyActivationFilter } from "@/lib/salesFilter";
 
 /**
  * 반원형 목표 달성률 게이지
@@ -9,8 +11,9 @@ import { usePeriod } from "@/contexts/PeriodContext";
  */
 export const RadialGoalGauge = () => {
   const { startDate, endDate, label, year, month } = usePeriod();
+  const { monthlyTarget: globalTarget } = useAppSettings();
   const [current, setCurrent] = useState(0);
-  const [monthlyTarget, setMonthlyTarget] = useState(0);
+  const [teamTarget, setTeamTarget] = useState(0);
 
   // 기간 기준 연-월 (월모드면 해당 월, 아니면 startDate 기준)
   const yearMonth = useMemo(() => {
@@ -20,32 +23,35 @@ export const RadialGoalGauge = () => {
     return startDate.slice(0, 7);
   }, [year, month, startDate]);
 
-  // 모바일 개통 건수 (취소 제외)
-  useEffect(() => {
-    let alive = true;
-    supabase
-      .from("sales")
-      .select("id", { count: "exact", head: true })
-      .gte("open_date", startDate)
-      .lte("open_date", endDate)
-      .eq("product", "모바일")
-      .neq("status", "취소")
-      .then(({ count }) => {
-        if (alive) setCurrent(count ?? 0);
-      });
-    return () => { alive = false; };
+  // 누적 개통 건수 (Source of Truth: open_date 기간 내, 취소/개통취소/반려 제외)
+  const fetchCurrent = useCallback(async () => {
+    const q = applyActivationFilter(
+      supabase.from("sales").select("id", { count: "exact", head: true }),
+      startDate,
+      endDate,
+    );
+    const { count } = await q;
+    setCurrent(count ?? 0);
   }, [startDate, endDate]);
 
-  // 팀 통합 모바일 목표 (전체 팀 합산)
+  useEffect(() => {
+    fetchCurrent();
+    const ch = supabase
+      .channel("dashboard-gauge-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, () => fetchCurrent())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [fetchCurrent]);
+
+  // 팀 통합 목표 (전체 상품 합산), 없으면 글로벌 monthlyTarget 사용
   const loadTarget = async () => {
     const { data } = await supabase
       .from("team_product_goals")
       .select("goal_count")
       .eq("year_month", yearMonth)
-      .eq("product", "mobile")
       .eq("goal_type", "count");
     const sum = (data ?? []).reduce((a: number, r: any) => a + Number(r.goal_count ?? 0), 0);
-    setMonthlyTarget(sum);
+    setTeamTarget(sum);
   };
 
   useEffect(() => {
@@ -57,6 +63,8 @@ export const RadialGoalGauge = () => {
     return () => { supabase.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [yearMonth]);
+
+  const monthlyTarget = teamTarget > 0 ? teamTarget : globalTarget;
 
   const pct = monthlyTarget > 0
     ? Math.min(100, Math.round((current / monthlyTarget) * 1000) / 10)

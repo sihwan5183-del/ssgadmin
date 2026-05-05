@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRole } from "@/hooks/useRole";
 import { Badge } from "@/components/ui/badge";
+import { EXCLUDED_ACTIVATION_STATUSES } from "@/lib/salesFilter";
 
 /* ── 가입상품 카테고리 설정 ── */
 type ProductCategoryConfig = {
@@ -125,19 +126,25 @@ export const ChannelActivationBreakdown = () => {
 
   useEffect(() => {
     let alive = true;
-    (async () => {
+    const fetchData = async () => {
       setLoading(true);
-      const { data } = await supabase
+      let q: any = supabase
         .from("sales")
         .select("channel, product, open_date")
         .gte("open_date", startDate)
-        .lte("open_date", endDate)
-        .limit(10000);
+        .lte("open_date", endDate);
+      for (const s of EXCLUDED_ACTIVATION_STATUSES) q = q.neq("status", s);
+      const { data } = await q.limit(10000);
       if (!alive) return;
       setRaw((data ?? []) as any);
       setLoading(false);
-    })();
-    return () => { alive = false; };
+    };
+    fetchData();
+    const ch = supabase
+      .channel("dashboard-channel-breakdown-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, () => fetchData())
+      .subscribe();
+    return () => { alive = false; supabase.removeChannel(ch); };
   }, [startDate, endDate]);
 
   // Merge config with actual data channels
