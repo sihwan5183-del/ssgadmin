@@ -1302,7 +1302,7 @@ const SalesLedgerPage = () => {
                 );
               })}
               {filteredRows.length === 0 && (
-                <tr><td colSpan={isAdmin ? 16 : 15} className="text-center py-10 text-muted-foreground">
+                <tr><td colSpan={isAdmin ? 17 : 16} className="text-center py-10 text-muted-foreground">
                   {searchQ ? "검색 결과가 없습니다." : "선택한 기간에 데이터가 없습니다."}
                 </td></tr>
               )}
