@@ -817,7 +817,32 @@ const SalesLedgerPage = () => {
 
         {showFilterBody && (
           <>
-            <div className="grid grid-cols-2 md:flex md:flex-wrap md:items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* 판매유형 세그먼트 — 시인성 강한 버튼형 */}
+              <div className="inline-flex rounded-lg border border-border/60 bg-muted/40 p-0.5 shadow-sm">
+                {([
+                  { v: "all", label: "전체", cls: "bg-foreground text-background" },
+                  { v: "신규", label: "신규", cls: "bg-blue-600 text-white" },
+                  { v: "MNP", label: "MNP", cls: "bg-emerald-600 text-white" },
+                  { v: "기변", label: "기변", cls: "bg-orange-600 text-white" },
+                ] as const).map((opt) => {
+                  const active = saleTypeFilter === opt.v;
+                  return (
+                    <button
+                      key={opt.v}
+                      type="button"
+                      onClick={() => setSaleTypeFilter(opt.v as any)}
+                      className={cn(
+                        "px-3 h-8 rounded-md text-xs font-semibold transition-all",
+                        active ? `${opt.cls} shadow` : "text-foreground/70 hover:text-foreground hover:bg-background/60",
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+
               {/* 매장(채널) 필터 */}
               <Select value={storeFilter} onValueChange={setStoreFilter}>
                 <SelectTrigger className="h-9 md:w-[150px]">
