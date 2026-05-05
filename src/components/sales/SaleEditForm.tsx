@@ -290,6 +290,11 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
       const s = data as any;
       setEditingId(s.id);
       originalRef.current = s;
+      const v2 = verifyLoadedSale(s);
+      if (!v2.ok) {
+        console.warn("[SaleEditForm] loaded sale missing critical fields", v2.missing, s);
+        toast.error("실적 데이터가 비정상입니다", { description: `누락 필드: ${v2.missing.join(", ")}` });
+      }
       // 함수형 업데이트 + 기존 값 병합으로, 비동기 효과(staffOptions 등)가
       // 먼저 끼어들어 manager/channel 같은 값을 덮어쓰지 못하도록 보호한다.
       setForm((prev) => ({
@@ -345,6 +350,16 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
       setPendingNote(s.pending_note ?? "");
       setPendingResolved(s.pending_resolved ?? true);
       setLoadingSale(false);
+      setTimeout(() => {
+        setForm((curr) => {
+          const missing = findMissingBoundKeys(s, curr as any);
+          if (missing.length > 0) {
+            console.warn("[SaleEditForm] bound form lost fields after load", missing);
+            toast.warning("일부 항목이 비어있습니다", { description: missing.join(", ") });
+          }
+          return curr;
+        });
+      }, 50);
     })();
   }, [saleId]);
 
