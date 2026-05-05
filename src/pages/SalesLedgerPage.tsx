@@ -1019,17 +1019,17 @@ const SalesLedgerPage = () => {
         />
       </div>
       {/* 모요 정산 정보 (별도 라인) */}
-      <div className="-mt-2 mb-5 rounded-xl border border-primary/20 bg-primary/10 dark:bg-primary/5 px-4 py-2.5 flex flex-wrap items-center gap-x-6 gap-y-1.5">
+      <div className="-mt-2 mb-5 rounded-xl border border-primary bg-primary px-4 py-2.5 flex flex-wrap items-center gap-x-6 gap-y-1.5 shadow-sm">
         <div className="flex items-center gap-2 text-xs font-semibold text-primary-foreground">
           <Filter className="size-3.5" /> 모요 정산 정보 (별도 지출 관리)
         </div>
-        <div className="text-xs text-muted-foreground">
-          모요 정산 대상: <span className="font-bold tabular-nums text-foreground">{dbSummary.moyoCount.toLocaleString()}건</span>
+        <div className="text-xs text-primary-foreground/90">
+          모요 정산 대상: <span className="font-bold tabular-nums text-primary-foreground">{dbSummary.moyoCount.toLocaleString()}건</span>
         </div>
-        <div className="text-xs text-muted-foreground">
+        <div className="text-xs text-primary-foreground/90">
           모요 수수료 합계: <span className="font-bold tabular-nums text-primary-foreground">{dbSummary.moyoFeeTotal.toLocaleString("ko-KR")}원</span>
         </div>
-        <div className="text-[10px] text-muted-foreground/80 ml-auto">
+        <div className="text-[10px] text-primary-foreground/80 ml-auto">
           ※ 모바일 상품 한정 · 토글 OFF 건만 합산 · 최종 수익에서만 차감
         </div>
       </div>
