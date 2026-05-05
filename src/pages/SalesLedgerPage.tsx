@@ -153,6 +153,11 @@ const SalesLedgerPage = () => {
     const m = sp.get("manager");
     if (p) setProductFilter(p);
     if (m) setManagerFilter(m);
+    const st = sp.get("status");
+    if (st) {
+      const list = st.split(",").map((s) => s.trim()).filter(Boolean);
+      if (list.length > 0) setStatusFilter(list);
+    }
     // vas=1 인 경우 별도 필터 컬럼이 없어서 검색어로 표시
     if (sp.get("vas") === "1") setSearchQ("부가서비스");
     // eslint-disable-next-line react-hooks/exhaustive-deps
