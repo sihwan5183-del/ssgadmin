@@ -1770,6 +1770,22 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
           </div>
         )}
       </form>
+
+      {/* === 우측 실시간 미리보기 (PC) === */}
+      <aside className="hidden lg:block lg:col-span-1">
+        <div className="sticky top-4 space-y-3">
+          <SalePreviewPanel
+            form={form}
+            customFields={customFields}
+            staffOptions={staffOptions}
+            netFeeFormula={netFeeFormula}
+          />
+        </div>
+      </aside>
+      </div>
+
+      {/* === 모바일 플로팅 요약 바 === */}
+      <MobileSummaryBar form={form} customFields={customFields} />
     </>
   );
 }
