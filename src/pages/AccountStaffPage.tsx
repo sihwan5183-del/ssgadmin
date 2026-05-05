@@ -13,7 +13,8 @@ import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useRole } from "@/hooks/useRole";
 import { formatStaffName } from "@/lib/staffName";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Trash2, Info } from "lucide-react";
 import { toast } from "sonner";
 import { formatPhone } from "@/lib/phoneFormat";
 import {
@@ -31,6 +32,7 @@ interface Row {
   status: string;
   hire_date: string | null;
   created_at: string;
+  show_in_dashboard?: boolean;
 }
 
 const STATUS_BADGE: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -68,7 +70,7 @@ export default function AccountStaffPage() {
     const [{ data: profs }, { data: roleRows }, { data: salesRows }] = await Promise.all([
       supabase
         .from("profiles")
-        .select("user_id, display_name, phone, team, store, position, status, hire_date, created_at")
+        .select("user_id, display_name, phone, team, store, position, status, hire_date, created_at, show_in_dashboard")
         .order("created_at", { ascending: false }),
       supabase.from("user_roles").select("user_id, role"),
       supabase.from("sales")
@@ -143,6 +145,12 @@ export default function AccountStaffPage() {
 
   return (
     <div className="space-y-3">
+      <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-[12px] text-foreground flex items-center gap-2">
+        <Info className="size-3.5 text-primary shrink-0" />
+        <span>
+          이곳에서 <span className="font-semibold text-primary">'대시보드 노출'</span>이 켜진 직원만 메인 대시보드의 [개인별 실적 현황]에 나타납니다. (기본값 OFF)
+        </span>
+      </div>
       <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
         <div className="relative flex-1">
           <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -203,6 +211,7 @@ export default function AccountStaffPage() {
                   <th className="text-left px-3 py-2">입사일</th>
                   <th className="text-left px-3 py-2">상태</th>
                   <th className="text-right px-3 py-2">개통</th>
+                  <th className="text-center px-3 py-2">대시보드</th>
                   <th className="text-right px-3 py-2"></th>
                 </tr>
               </thead>
@@ -236,6 +245,23 @@ export default function AccountStaffPage() {
                       <td className="px-3 py-2 text-muted-foreground">{r.hire_date ?? "-"}</td>
                       <td className="px-3 py-2"><Badge variant={s.variant}>{s.label}</Badge></td>
                       <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{success}</td>
+                      <td className="px-3 py-2 text-center">
+                        <Switch
+                          checked={!!r.show_in_dashboard}
+                          onCheckedChange={async (v) => {
+                            const { error } = await supabase
+                              .from("profiles")
+                              .update({ show_in_dashboard: v })
+                              .eq("user_id", r.user_id);
+                            if (error) {
+                              toast.error("변경 실패: " + error.message);
+                              return;
+                            }
+                            setRows((prev) => prev.map((x) => x.user_id === r.user_id ? { ...x, show_in_dashboard: v } : x));
+                            toast.success(`${r.display_name} · 대시보드 ${v ? "노출" : "숨김"}`);
+                          }}
+                        />
+                      </td>
                       <td className="px-3 py-2 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button size="sm" variant="ghost" onClick={() => setSelected({ id: r.user_id, email: emails[r.user_id] ?? null })}>상세</Button>
@@ -256,7 +282,7 @@ export default function AccountStaffPage() {
                   );
                 })}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={11} className="text-center py-10 text-muted-foreground text-sm">결과 없음</td></tr>
+                  <tr><td colSpan={12} className="text-center py-10 text-muted-foreground text-sm">결과 없음</td></tr>
                 )}
               </tbody>
             </table>
