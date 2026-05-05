@@ -477,7 +477,7 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   };
 
 
-  const isEditModeLoading = !!editingId && (authLoading || loadingSale || !originalRef.current);
+  const isEditModeLoading = !!editingId && (authLoading || loadingSale || originalRef.current?.id !== editingId);
 
   if (isEditModeLoading || loadError) {
     return (
