@@ -6,6 +6,7 @@ import { usePeriod } from "@/contexts/PeriodContext";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { applyActivationFilter, EXCLUDED_ACTIVATION_STATUSES } from "@/lib/salesFilter";
 
 type Segment = "all" | "모바일" | "USIM MNP" | "2nd" | "홈" | "TV프리" | "스마트홈" | "대명" | "맞춤제안" | "기타";
 
@@ -119,20 +120,22 @@ export const HeroPerformance = () => {
     const ydate = new Date();
     ydate.setDate(ydate.getDate() - 1);
     const ydayISO = ydate.toISOString().slice(0, 10);
-    // [현재기간/전기간/오늘/어제] 도 [개통 대기] 와 동일 기준으로 통일
-    // → open_date 기간 내 OR (open_date NULL & created_at 기간 내), 취소 제외
-    const periodOr = (s: string, e: string) =>
-      `and(open_date.gte.${s},open_date.lte.${e}),` +
-      `and(open_date.is.null,created_at.gte.${s}T00:00:00,created_at.lte.${e}T23:59:59.999)`;
+    // 개통 집계 (Source of Truth): open_date 기준 + 취소/개통취소/반려 제외
+    const activated = (s: string, e: string) =>
+      applyActivationFilter(supabase.from("sales").select("product"), s, e).limit(10000);
+    // 개통 대기는 open_date가 없을 수 있으므로 별도 (이번 기간 내 created_at 기준)
+    let pendingQuery: any = supabase
+      .from("sales")
+      .select("product, created_at, open_date, status, sale_type")
+      .gte("created_at", `${startDate}T00:00:00`)
+      .lte("created_at", `${endDate}T23:59:59.999`);
+    for (const s of EXCLUDED_ACTIVATION_STATUSES) pendingQuery = pendingQuery.neq("status", s);
     const [a, b, c, d, e] = await Promise.all([
-      supabase.from("sales").select("product").neq("status", "취소").or(periodOr(startDate, endDate)).limit(10000),
-      supabase.from("sales").select("product").neq("status", "취소").or(periodOr(prevStartDate, prevEndDate)).limit(10000),
-      supabase.from("sales").select("product").neq("status", "취소").or(periodOr(todayISO, todayISO)).limit(5000),
-      supabase.from("sales").select("product").neq("status", "취소").or(periodOr(ydayISO, ydayISO)).limit(5000),
-      supabase.from("sales").select("product, created_at, open_date, status, sale_type")
-        .neq("status", "취소")
-        .or(periodOr(startDate, endDate))
-        .limit(10000),
+      activated(startDate, endDate),
+      activated(prevStartDate, prevEndDate),
+      activated(todayISO, todayISO),
+      activated(ydayISO, ydayISO),
+      pendingQuery.limit(10000),
     ]);
     setCurrentRows(a.data ?? []);
     setPrevRows(b.data ?? []);
