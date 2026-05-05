@@ -127,6 +127,7 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   const { options: BANKS } = useFieldOptions("bank");
   const [form, setForm] = useState<Partial<SaleRow>>(emptyForm);
   const [customFields, setCustomFields] = useState<Record<string, any>>({});
+  const [loadingSale, setLoadingSale] = useState<boolean>(!!saleId);
   const [pendingItems, setPendingItems] = useState<string[]>([]);
   const [pendingNote, setPendingNote] = useState<string>("");
   const [pendingResolved, setPendingResolved] = useState<boolean>(true);
@@ -177,6 +178,7 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   useEffect(() => {
     if (saleId) return; // saleId effect가 처리
     if (!editingId) return;
+    setLoadingSale(true);
     (async () => {
       const { data, error } = await supabase
         .from("sales")
@@ -185,10 +187,12 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
         .maybeSingle();
       if (error || !data) {
         toast.error("실적 데이터를 불러올 수 없습니다");
+        setLoadingSale(false);
         return;
       }
       const s = data as any;
-      setForm({
+      setForm((prev) => ({
+        ...prev,
         seq: s.seq, channel: s.channel, moyo_excluded: s.moyo_excluded ?? false,
         ...({ channel_company: s.channel_company ?? "" } as any),
         manager: s.manager, open_month: s.open_month, product: s.product,
@@ -213,11 +217,12 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
         trade_in_confirmed: s.trade_in_confirmed ?? 0,
         customer_support_amount: (s as any).customer_support_amount ?? 0,
         corp_card_amount: (s as any).corp_card_amount ?? 0,
-      });
+      }));
       setCustomFields(s.custom_fields ?? {});
       setPendingItems(Array.isArray(s.pending_items) ? s.pending_items : []);
       setPendingNote(s.pending_note ?? "");
       setPendingResolved(s.pending_resolved ?? true);
+      setLoadingSale(false);
     })();
   }, [editingId, saleId]);
 
@@ -238,16 +243,17 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
           !!saleId ||
           !!editingId ||
           (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("edit"));
-        if (f.manager || !user || isEditMode) return f;
+        if (f.manager || !user || isEditMode || loadingSale) return f;
         const me = list.find((p) => p.user_id === user.id);
         return me ? { ...f, manager: me.user_id } : f;
       });
     })();
-  }, [user, saleId, editingId]);
+  }, [user, saleId, editingId, loadingSale]);
 
   // 외부 saleId가 바뀔 때 데이터 로드
   useEffect(() => {
     if (!saleId) return;
+    setLoadingSale(true);
     (async () => {
       const { data, error } = await supabase
         .from("sales")
@@ -256,13 +262,18 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
         .maybeSingle();
       if (error || !data) {
         toast.error("실적 데이터를 불러올 수 없습니다");
+        setLoadingSale(false);
         return;
       }
       const s = data as any;
       setEditingId(s.id);
-      setForm({
+      // 함수형 업데이트 + 기존 값 병합으로, 비동기 효과(staffOptions 등)가
+      // 먼저 끼어들어 manager/channel 같은 값을 덮어쓰지 못하도록 보호한다.
+      setForm((prev) => ({
+        ...prev,
         seq: s.seq,
         channel: s.channel,
+        ...({ channel_company: s.channel_company ?? "" } as any),
         moyo_excluded: s.moyo_excluded ?? false,
         manager: s.manager,
         open_month: s.open_month,
@@ -305,11 +316,12 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
         trade_in_confirmed: s.trade_in_confirmed ?? 0,
         customer_support_amount: (s as any).customer_support_amount ?? 0,
         corp_card_amount: (s as any).corp_card_amount ?? 0,
-      });
+      }));
       setCustomFields(s.custom_fields ?? {});
       setPendingItems(Array.isArray(s.pending_items) ? s.pending_items : []);
       setPendingNote(s.pending_note ?? "");
       setPendingResolved(s.pending_resolved ?? true);
+      setLoadingSale(false);
     })();
   }, [saleId]);
 

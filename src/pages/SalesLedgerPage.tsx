@@ -296,7 +296,6 @@ const SalesLedgerPage = () => {
     let query = supabase
       .from("sales")
       .select("*", { count: "exact" })
-      .neq("status", "취소")
       // 대시보드 [개통 대기] 와 동일 기준:
       // open_date 가 기간 내 OR (open_date NULL 이면서 created_at 이 기간 내)
       .or(
@@ -365,7 +364,6 @@ const SalesLedgerPage = () => {
     let q = supabase
       .from("sales")
       .select("unit_price, vas_fee, distributor_amount, extra_subsidy, cash_support_amount, receivable_amount, trade_in_enabled, trade_in_confirmed, voucher, voucher_returned, customer_support_amount, corp_card_amount, custom_fields, channel, moyo_excluded, manager, product, approval_status, status")
-      .neq("status", "취소")
       .or(
         `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
         `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
@@ -424,7 +422,6 @@ const SalesLedgerPage = () => {
     const { count: uc } = await supabase
       .from("sales")
       .select("id", { count: "exact", head: true })
-      .neq("status", "취소")
       .or(
         `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
         `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
@@ -435,7 +432,6 @@ const SalesLedgerPage = () => {
     const { count: urc } = await supabase
       .from("sales")
       .select("id", { count: "exact", head: true })
-      .neq("status", "취소")
       .or(
         `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
         `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
@@ -572,9 +568,6 @@ const SalesLedgerPage = () => {
       );
     if (statusFilter.length > 0) {
       q = q.in("status", statusFilter);
-    } else {
-      // 정책: 저장된 모든 실적은 즉시 노출 — '취소'만 제외
-      q = q.neq("status", "취소");
     }
     if (managerFilter !== "all") q = q.eq("manager", managerFilter);
     if (storeFilter !== "all") q = q.eq("channel", storeFilter);
