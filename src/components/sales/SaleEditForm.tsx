@@ -472,6 +472,26 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   };
 
 
+  const isEditModeLoading = !!editingId && (authLoading || loadingSale || !originalRef.current);
+
+  if (isEditModeLoading || loadError) {
+    return (
+      <div className="glass rounded-2xl p-6 text-center space-y-3 shadow-card-elevated">
+        <div className="text-sm font-semibold">
+          {loadError ? "실적 데이터를 불러올 수 없습니다" : "실적 데이터를 불러오는 중…"}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {loadError ?? "기존 행 데이터가 준비된 뒤 수정 폼을 표시합니다."}
+        </div>
+        {loadError && (
+          <Button type="button" variant="outline" onClick={onCancel ?? (() => setEditingId(null))}>
+            <X className="size-4 mr-2" /> 닫기
+          </Button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <>
       <form onSubmit={onSubmit} className="space-y-3 pb-8">
