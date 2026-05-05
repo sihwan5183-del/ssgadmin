@@ -514,8 +514,7 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
 
   return (
     <>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 pb-24 lg:pb-8">
-      <form onSubmit={onSubmit} className="space-y-3 lg:col-span-2 min-w-0">
+      <form onSubmit={onSubmit} className="space-y-3 pb-8">
         <FormSection title="기본 정보" icon={<Zap className="size-3" />}>
           <Grid cols={5}>
             <Field label="인입경로 *">
@@ -1770,22 +1769,6 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
           </div>
         )}
       </form>
-
-      {/* === 우측 실시간 미리보기 (PC) === */}
-      <aside className="hidden lg:block lg:col-span-1">
-        <div className="sticky top-4 space-y-3">
-          <SalePreviewPanel
-            form={form}
-            customFields={customFields}
-            staffOptions={staffOptions}
-            netFeeFormula={netFeeFormula}
-          />
-        </div>
-      </aside>
-      </div>
-
-      {/* === 모바일 플로팅 요약 바 === */}
-      <MobileSummaryBar form={form} customFields={customFields} />
     </>
   );
 }
@@ -1822,110 +1805,5 @@ const Field = React.forwardRef<HTMLDivElement, { label: string; children: React.
   </div>
 ));
 Field.displayName = "Field";
-
-// === 실시간 미리보기 패널 ===
-function fmtKRW(n: number): string {
-  if (!Number.isFinite(n)) return "₩0";
-  return (n < 0 ? "-" : "") + "₩" + Math.abs(Math.round(n)).toLocaleString("ko-KR");
-}
-
-function SalePreviewPanel({
-  form, customFields, staffOptions, netFeeFormula,
-}: {
-  form: Partial<SaleRow>;
-  customFields: Record<string, any>;
-  staffOptions: { user_id: string; display_name: string; store: string | null }[];
-  netFeeFormula: string;
-}) {
-  const row = { ...form, ...customFields, custom_fields: customFields } as Record<string, any>;
-  const revenue = sumRevenue(row);
-  const offer = sumOffer(row);
-  const net = revenue - offer;
-  const managerName =
-    staffOptions.find((s) => s.user_id === form.manager)?.display_name ?? form.manager ?? "—";
-  return (
-    <div className="rounded-xl border border-border/50 bg-card/95 backdrop-blur shadow-card-elevated overflow-hidden">
-      <div className="px-4 py-2.5 border-b border-border/40 bg-muted/30 flex items-center justify-between">
-        <h3 className="text-xs font-bold tracking-tight">실시간 미리보기</h3>
-        <span className="text-[10px] text-muted-foreground">검수용 요약</span>
-      </div>
-      <div className="p-4 space-y-4">
-        <div>
-          <div className="text-[10px] uppercase text-muted-foreground tracking-wider">고객</div>
-          <div className="text-xl font-extrabold leading-tight">{form.customer_name || "—"}</div>
-          <div className="text-sm font-mono tabular-nums text-foreground/80">{form.phone || "연락처 미입력"}</div>
-        </div>
-        <div className="grid grid-cols-2 gap-3 text-xs">
-          <PreviewItem label="인입경로" value={form.channel} />
-          <PreviewItem label="담당자" value={managerName} />
-          <PreviewItem label="가입상품" value={form.product} />
-          <PreviewItem label="판매유형" value={form.sale_type} />
-          <PreviewItem label="최종상태" value={form.status} highlight={form.status === "개통완료" || form.status === "설치완료"} />
-          <PreviewItem label="개통일자" value={form.open_date} />
-        </div>
-        <div className="rounded-lg bg-muted/40 p-3 space-y-1">
-          <div className="text-[10px] uppercase text-muted-foreground tracking-wider">단말기 / 요금제</div>
-          <div className="text-base font-bold leading-tight">{form.device_model || "단말기 미선택"}</div>
-          <div className="text-xs text-muted-foreground">S/N: {form.device_serial || "—"}</div>
-          <div className="text-sm font-semibold mt-1.5">{form.rate_plan || "요금제 미선택"}</div>
-          {(form.vas1 || form.vas2) && (
-            <div className="text-[11px] text-muted-foreground">
-              부가: {[form.vas1, form.vas2].filter(Boolean).join(" · ")}
-            </div>
-          )}
-        </div>
-        <div className="space-y-1.5 border-t border-border/40 pt-3">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">수익 합계</span>
-            <span className="font-mono tabular-nums font-semibold text-emerald-600 dark:text-emerald-400">+{fmtKRW(revenue)}</span>
-          </div>
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">오퍼 합계</span>
-            <span className="font-mono tabular-nums font-semibold text-destructive">-{fmtKRW(offer)}</span>
-          </div>
-          <div className="flex items-center justify-between pt-2 border-t border-border/30">
-            <span className="text-sm font-bold">최종 순수익</span>
-            <span className={cn("font-mono tabular-nums text-2xl font-extrabold", net < 0 ? "text-destructive" : "text-primary")}>
-              {fmtKRW(net)}
-            </span>
-          </div>
-          <div className="text-[10px] text-muted-foreground text-right">
-            식: <code className="font-mono">{netFeeFormula}</code>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PreviewItem({ label, value, highlight }: { label: string; value: any; highlight?: boolean }) {
-  return (
-    <div>
-      <div className="text-[10px] text-muted-foreground">{label}</div>
-      <div className={cn("text-xs font-semibold truncate", highlight && "text-primary")}>
-        {value || <span className="text-muted-foreground/60 font-normal">미입력</span>}
-      </div>
-    </div>
-  );
-}
-
-function MobileSummaryBar({ form, customFields }: { form: Partial<SaleRow>; customFields: Record<string, any> }) {
-  const row = { ...form, ...customFields, custom_fields: customFields } as Record<string, any>;
-  const net = sumRevenue(row) - sumOffer(row);
-  return (
-    <div className="lg:hidden fixed bottom-16 left-2 right-2 z-40 rounded-xl border border-border/60 bg-card/95 backdrop-blur shadow-card-elevated px-3 py-2 flex items-center justify-between">
-      <div className="min-w-0">
-        <div className="text-[10px] text-muted-foreground">{form.customer_name || "고객 미입력"} · {form.device_model || "기기 미선택"}</div>
-        <div className="text-xs font-semibold truncate">{form.rate_plan || "요금제 미선택"}</div>
-      </div>
-      <div className="text-right pl-3 shrink-0">
-        <div className="text-[10px] text-muted-foreground">순수익</div>
-        <div className={cn("font-mono tabular-nums font-extrabold text-base", net < 0 ? "text-destructive" : "text-primary")}>
-          {fmtKRW(net)}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default SaleEditForm;
