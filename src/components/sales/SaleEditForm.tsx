@@ -360,6 +360,16 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    // 데이터 로딩 중 저장 차단 — 빈 값이 전송되어 기존 데이터가 유실되는 것을 방지
+    if (loadingSale) {
+      toast.warning("데이터 로딩 중입니다. 잠시만 기다려주세요.");
+      return;
+    }
+    // 수정 모드인데 원본을 아직 못 받은 경우(네트워크 지연 등) 안전 차단
+    if (editingId && !originalRef.current) {
+      toast.warning("기존 데이터를 불러오는 중입니다. 다시 시도해주세요.");
+      return;
+    }
     // 약정 정보(선택약정/이통사지원금)는 [모바일/2nd/USIM] 상품에서만 필수
     const contractRequired = isContractProduct(form.product);
     if (contractRequired && !customFields.contract_type) {
@@ -390,15 +400,22 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
       corp_card_amount: num(form.corp_card_amount),
     };
     const selectedStaff = staffOptions.find((s) => s.user_id === form.manager || s.display_name === form.manager);
-    const payload = {
+    const orig = originalRef.current ?? {};
+    // 핵심 필드 보존: 폼이 비어있으면 원본 값을 유지 (담당자/인입경로 유실 방지)
+    const preservedManager =
+      (selectedStaff?.user_id ?? form.manager) || orig.manager || null;
+    const preservedChannel = form.channel || orig.channel || null;
+    const payload: any = {
       ...form,
-      created_by: user.id,
-      manager: selectedStaff?.user_id ?? form.manager,
+      created_by: editingId ? (orig.created_by ?? user.id) : user.id,
+      manager: preservedManager,
+      channel: preservedChannel,
       ...baseNumeric,
       net_fee: form.net_fee != null && form.net_fee !== 0
         ? num(form.net_fee)
         : calcNetFee(baseNumeric),
       custom_fields: {
+        ...(orig.custom_fields ?? {}),
         ...customFields,
         // 약정 정보: 활성 상품(모바일/2nd/USIM)이 아니면 비활성 필드이므로 null 로 안전 저장
         contract_type: isContractProduct(form.product) ? (customFields.contract_type || null) : null,
@@ -410,6 +427,22 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
       trade_in_model: form.trade_in_enabled ? (form.trade_in_model || null) : null,
       open_month: form.open_date ? String(form.open_date).slice(0, 7) : null,
     };
+    // 수정 모드: undefined/빈 값 필드는 원본 값을 사용해 의도치 않은 초기화 방지
+    if (editingId && orig) {
+      const PROTECT_KEYS = [
+        "manager", "channel", "channel_company", "product", "sale_type",
+        "open_method", "status", "open_date", "customer_name", "phone",
+        "device_model", "rate_plan",
+      ];
+      for (const k of PROTECT_KEYS) {
+        const v = (payload as any)[k];
+        if (v === undefined || v === null || v === "") {
+          if (orig[k] !== undefined && orig[k] !== null && orig[k] !== "") {
+            (payload as any)[k] = orig[k];
+          }
+        }
+      }
+    }
     try {
       let resultId = editingId;
       if (editingId) {
