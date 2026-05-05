@@ -10,8 +10,7 @@ import { useAppSettings } from "@/hooks/useAppSettings";
  */
 export const RadialGoalGauge = () => {
   const { startDate, endDate, label } = usePeriod();
-  const { settings } = useAppSettings();
-  const monthlyTarget = Number(settings?.monthly_target ?? 100);
+  const { monthlyTarget } = useAppSettings();
   const [current, setCurrent] = useState(0);
 
   useEffect(() => {
