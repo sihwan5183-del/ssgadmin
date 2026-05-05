@@ -20,15 +20,6 @@ const isoToday = () => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
-const pctChange = (cur: number, prev: number): number | undefined => {
-  if (!isFinite(cur) || !isFinite(prev)) return undefined;
-  if (prev === 0) {
-    if (cur === 0) return 0;
-    return undefined; // 직전이 0이면 비교 의미 없음 — 표시 생략
-  }
-  return ((cur - prev) / Math.abs(prev)) * 100;
-};
-
 /** 대시보드 상단의 [월간 현황 / 일간 현황] 큰 전환 토글 */
 const ScopeBigToggle = () => {
   const { mode, setMode, setSingleDay, customStart, label } = usePeriod();
