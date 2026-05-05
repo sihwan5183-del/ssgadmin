@@ -652,7 +652,17 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
               </Select>
             </Field>
             <Field label="개통일자">
-              <Input type="date" value={form.open_date ?? ""} onChange={(e) => set("open_date", e.target.value)} className="h-9 bg-input/60 text-xs" />
+              <Input
+                type="date"
+                value={isOpenDateAllowed(form.status) ? (form.open_date ?? "") : ""}
+                onChange={(e) => set("open_date", e.target.value)}
+                disabled={!isOpenDateAllowed(form.status)}
+                title={!isOpenDateAllowed(form.status) ? "최종상태가 '개통완료' 또는 '설치완료'일 때만 입력할 수 있습니다" : undefined}
+                className="h-9 bg-input/60 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              {!isOpenDateAllowed(form.status) && (
+                <p className="text-[10px] text-muted-foreground mt-1">완료 상태에서만 입력 가능합니다.</p>
+              )}
             </Field>
           </Grid>
           <Grid cols={5}>
