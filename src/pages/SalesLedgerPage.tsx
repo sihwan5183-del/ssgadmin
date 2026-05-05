@@ -666,10 +666,7 @@ const SalesLedgerPage = () => {
     if (!confirm("정말 삭제하시겠어요?")) return;
     const { error } = await supabase.from("sales").delete().eq("id", id);
     if (error) {
-      const friendly = /foreign key|violates/i.test(error.message)
-        ? "연결된 로그 데이터가 있어 삭제할 수 없습니다"
-        : error.message;
-      return toast.error("삭제 실패", { description: friendly });
+      return toast.error("삭제 실패", { description: error.message });
     }
     toast.success("삭제되었습니다");
     load();
@@ -681,10 +678,7 @@ const SalesLedgerPage = () => {
     const ids = Array.from(selected);
     const { error } = await supabase.from("sales").delete().in("id", ids);
     if (error) {
-      const friendly = /foreign key|violates/i.test(error.message)
-        ? "연결된 로그 데이터가 있어 삭제할 수 없습니다"
-        : error.message;
-      return toast.error("선택 삭제 실패", { description: friendly });
+      return toast.error("선택 삭제 실패", { description: error.message });
     }
     toast.success(`${ids.length}건이 삭제되었습니다`);
     setSelected(new Set());
@@ -699,10 +693,7 @@ const SalesLedgerPage = () => {
       .gte("open_date", startDate)
       .lte("open_date", endDate);
     if (error) {
-      const friendly = /foreign key|violates/i.test(error.message)
-        ? "연결된 로그 데이터가 있어 삭제할 수 없습니다"
-        : error.message;
-      return toast.error("전체 삭제 실패", { description: friendly });
+      return toast.error("전체 삭제 실패", { description: error.message });
     }
     toast.success(`${count ?? 0}건이 삭제되었습니다`);
     setSelected(new Set());
