@@ -120,6 +120,7 @@ export const StaffPerformanceMatrix = () => {
     const ch = supabase
       .channel("staff_performance_matrix")
       .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => load())
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
