@@ -1111,13 +1111,9 @@ const SalesLedgerPage = () => {
                 <th className="text-center px-2 py-2.5 font-bold w-[64px]">동판</th>
                 <th className="text-center px-2 py-2.5 font-bold w-[72px] border-r border-border/40">오퍼</th>
                 {/* 그룹 D: 정산/금액 */}
-                <th className="text-right px-3 py-2.5 font-bold w-[120px] text-foreground">리베이트 단가</th>
-                <th className="text-right px-3 py-2.5 font-bold w-[120px] text-rose-600 dark:text-rose-400 bg-rose-500/[0.03]">오퍼(지원금)</th>
-                <th className="text-right px-3 py-2.5 font-bold w-[120px] text-foreground">최종 수익</th>
-                <th className="text-right px-3 py-2.5 font-bold w-[100px] text-foreground">미수금</th>
-                <th className="text-right px-3 py-2.5 font-bold w-[100px] text-rose-600 dark:text-rose-400 bg-rose-500/[0.03]">고객지원</th>
-                <th className="text-right px-3 py-2.5 font-bold w-[100px] text-rose-600 dark:text-rose-400 bg-rose-500/[0.03]">법인카드</th>
-                <th className="text-right px-3 py-2.5 font-bold w-[100px] text-foreground border-r border-border/40">중고폰</th>
+                <th className="text-right px-3 py-2.5 font-bold w-[130px] text-foreground">총수익</th>
+                <th className="text-right px-3 py-2.5 font-bold w-[130px] text-rose-600 dark:text-rose-400 bg-rose-500/[0.03]">총오퍼</th>
+                <th className="text-right px-3 py-2.5 font-bold w-[140px] text-foreground border-r border-border/40">최종수익금액</th>
                 <th className="text-right px-3 py-2.5 font-bold w-[96px]">관리</th>
               </tr>
             </thead>
