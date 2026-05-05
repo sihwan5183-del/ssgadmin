@@ -149,7 +149,7 @@ export const StaffPerformanceMatrix = () => {
       {loading ? (
         <div className="text-sm text-muted-foreground py-10 text-center">불러오는 중…</div>
       ) : rows.length === 0 ? (
-        <div className="text-sm text-muted-foreground py-10 text-center">데이터가 없습니다</div>
+        <div className="text-sm text-muted-foreground py-10 text-center">이번 달 실적이 있는 직원이 없습니다</div>
       ) : (
         <div className="overflow-auto -mx-1">
           <table className="w-full text-xs md:text-[13px] whitespace-nowrap">
