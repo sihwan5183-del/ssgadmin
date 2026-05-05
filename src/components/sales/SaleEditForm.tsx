@@ -427,6 +427,8 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
       trade_in_model: form.trade_in_enabled ? (form.trade_in_model || null) : null,
       open_month: form.open_date ? String(form.open_date).slice(0, 7) : null,
     };
+    // 저장 시점 강제 갱신: 동일값 저장이라도 변경 인식되도록 updated_at 을 갱신한다.
+    (payload as any).updated_at = new Date().toISOString();
     // 수정 모드: undefined/빈 값 필드는 원본 값을 사용해 의도치 않은 초기화 방지
     if (editingId && orig) {
       const PROTECT_KEYS = [
