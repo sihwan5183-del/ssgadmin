@@ -1222,35 +1222,33 @@ const SalesLedgerPage = () => {
                     </td>
                     <td className="text-center">{r.product ?? "-"}</td>
                     <td className="text-left">
-                      <div className="flex items-center gap-1 min-w-0">
-                        <span className="font-medium truncate">{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
-                        <div className="inline-flex items-center gap-0.5 shrink-0">
-                          {(() => {
-                            const w = (r.custom_fields as any)?.welfare_discount;
-                            if (!w || w === "해당없음") return null;
-                            return (
-                              <Badge variant="outline" className="h-[16px] text-[9px] gap-0.5 border-blue-400 text-blue-700 bg-blue-50 dark:bg-blue-500/10 px-1 py-0">
-                                ♿ {w}
-                              </Badge>
-                            );
-                          })()}
-                          {(r.receivable_amount ?? 0) > 0 && r.receivable_paid !== "완료" && (
-                            <Badge className="h-[16px] text-[9px] font-semibold gap-0.5 px-1 py-0 bg-rose-600 text-white border-0 hover:bg-rose-600">
-                              💰 미수급
-                            </Badge>
-                          )}
-                          {r.voucher && r.voucher.trim() !== "" && r.voucher_returned !== "유" && (
-                            <Badge className="h-[16px] text-[9px] font-semibold gap-0.5 px-1 py-0 bg-rose-600 text-white border-0 hover:bg-rose-600">
-                              🎫 미반납
-                            </Badge>
-                          )}
-                        </div>
+                      <div className="min-w-0">
+                        <span className="font-medium truncate block">{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
                       </div>
                     </td>
                     <td className="text-muted-foreground tabular-nums text-center text-[10.5px] border-r border-border/30">
                       {(() => {
                         const p = isAdmin ? (r.phone ?? "-") : (maskPhone(r.phone) || "-");
-                        return p.replace(/-/g, "");
+                        const phoneText = p.replace(/-/g, "");
+                        const st = (r.sale_type ?? "").trim();
+                        const stCls = st === "신규"
+                          ? "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30"
+                          : st.includes("MNP") || st === "번호이동"
+                            ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
+                            : st === "기변" || st.includes("기기변경")
+                              ? "bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30"
+                              : "bg-muted text-foreground/70 border-border";
+                        const stShort = st.replace("USIM ", "").replace("기기변경", "기변").replace("번호이동", "MNP");
+                        return (
+                          <div className="inline-flex items-center gap-1 whitespace-nowrap">
+                            {st && (
+                              <span className={cn("inline-flex items-center rounded-full border px-1 py-0 text-[9px] font-semibold", stCls)}>
+                                {stShort}
+                              </span>
+                            )}
+                            <span>{phoneText}</span>
+                          </div>
+                        );
                       })()}
                     </td>
                     <td className="text-muted-foreground text-left max-w-[160px] truncate" title={r.device_model ?? ""}>{r.device_model ?? "-"}</td>
