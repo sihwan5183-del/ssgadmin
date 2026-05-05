@@ -1099,38 +1099,38 @@ const SalesLedgerPage = () => {
       {/* 테이블 */}
       <section className="glass-strong rounded-2xl p-5 md:p-6 shadow-card-elevated">
         <div className="overflow-x-auto -mx-2">
-          <table className="w-full text-[13px] min-w-[1400px] font-sans [font-feature-settings:'tnum']">
+          <table className="w-full text-[13px] min-w-[1900px] font-sans [font-feature-settings:'tnum'] border-collapse">
             <thead>
-              <tr className="text-[11.5px] uppercase tracking-wide text-foreground/70 border-b-2 border-border/60 bg-muted/60">
+              <tr className="text-[11.5px] uppercase tracking-wide text-foreground/70 border-b-2 border-border/60 bg-muted/60 [&>th]:whitespace-nowrap [&>th]:align-middle">
                 {isAdmin && (
                   <th className="px-3 py-2.5 w-8">
                     <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="전체 선택" />
                   </th>
                 )}
                 {/* 그룹 A: 기본정보 */}
-                <th className="text-left px-3 py-2.5 font-bold whitespace-nowrap">개통일</th>
-                <th className="text-left px-3 py-2.5 font-bold whitespace-nowrap">경로</th>
-                <th className="text-left px-3 py-2.5 font-bold whitespace-nowrap">담당</th>
-                <th className="text-left px-3 py-2.5 font-bold whitespace-nowrap">상품</th>
-                <th className="text-left px-3 py-2.5 font-bold whitespace-nowrap">고객</th>
-                <th className="text-left px-3 py-2.5 font-bold whitespace-nowrap border-r border-border/40">연락처</th>
+                <th className="text-left px-3 py-2.5 font-bold w-[96px]">개통일</th>
+                <th className="text-left px-3 py-2.5 font-bold w-[110px]">경로</th>
+                <th className="text-left px-3 py-2.5 font-bold w-[80px]">담당</th>
+                <th className="text-left px-3 py-2.5 font-bold w-[72px]">상품</th>
+                <th className="text-left px-3 py-2.5 font-bold min-w-[180px]">고객</th>
+                <th className="text-left px-3 py-2.5 font-bold w-[140px] border-r border-border/40">연락처</th>
                 {/* 그룹 B: 가입내용 */}
-                <th className="text-left px-3 py-2.5 font-bold whitespace-nowrap">단말</th>
-                <th className="text-left px-3 py-2.5 font-bold whitespace-nowrap">요금제</th>
-                <th className="text-left px-3 py-2.5 font-bold whitespace-nowrap">약정</th>
-                <th className="text-center px-2 py-2.5 font-bold whitespace-nowrap border-r border-border/40">할부</th>
+                <th className="text-left px-3 py-2.5 font-bold min-w-[120px]">단말</th>
+                <th className="text-left px-3 py-2.5 font-bold min-w-[150px]">요금제</th>
+                <th className="text-left px-3 py-2.5 font-bold w-[88px]">약정</th>
+                <th className="text-center px-2 py-2.5 font-bold w-[72px] border-r border-border/40">할부</th>
                 {/* 그룹 C: 혜택/태그 */}
-                <th className="text-center px-2 py-2.5 font-bold whitespace-nowrap">동판</th>
-                <th className="text-center px-2 py-2.5 font-bold whitespace-nowrap border-r border-border/40">오퍼</th>
+                <th className="text-center px-2 py-2.5 font-bold w-[64px]">동판</th>
+                <th className="text-center px-2 py-2.5 font-bold w-[72px] border-r border-border/40">오퍼</th>
                 {/* 그룹 D: 정산/금액 */}
-                <th className="text-right px-3 py-2.5 font-bold whitespace-nowrap text-foreground">리베이트 단가</th>
-                <th className="text-right px-3 py-2.5 font-bold whitespace-nowrap text-rose-600 dark:text-rose-400 bg-rose-500/[0.04]">오퍼(지원금)</th>
-                <th className="text-right px-3 py-2.5 font-bold whitespace-nowrap text-foreground">최종 수익</th>
-                <th className="text-right px-3 py-2.5 font-bold whitespace-nowrap text-foreground">미수금</th>
-                <th className="text-right px-3 py-2.5 font-bold whitespace-nowrap text-rose-600 dark:text-rose-400 bg-rose-500/[0.04]">고객지원</th>
-                <th className="text-right px-3 py-2.5 font-bold whitespace-nowrap text-rose-600 dark:text-rose-400 bg-rose-500/[0.04]">법인카드</th>
-                <th className="text-right px-3 py-2.5 font-bold whitespace-nowrap text-foreground border-r border-border/40">중고폰</th>
-                <th className="text-right px-3 py-2.5 font-bold whitespace-nowrap">관리</th>
+                <th className="text-right px-3 py-2.5 font-bold w-[120px] text-foreground">리베이트 단가</th>
+                <th className="text-right px-3 py-2.5 font-bold w-[120px] text-rose-600 dark:text-rose-400 bg-rose-500/[0.03]">오퍼(지원금)</th>
+                <th className="text-right px-3 py-2.5 font-bold w-[120px] text-foreground">최종 수익</th>
+                <th className="text-right px-3 py-2.5 font-bold w-[100px] text-foreground">미수금</th>
+                <th className="text-right px-3 py-2.5 font-bold w-[100px] text-rose-600 dark:text-rose-400 bg-rose-500/[0.03]">고객지원</th>
+                <th className="text-right px-3 py-2.5 font-bold w-[100px] text-rose-600 dark:text-rose-400 bg-rose-500/[0.03]">법인카드</th>
+                <th className="text-right px-3 py-2.5 font-bold w-[100px] text-foreground border-r border-border/40">중고폰</th>
+                <th className="text-right px-3 py-2.5 font-bold w-[96px]">관리</th>
               </tr>
             </thead>
             <tbody>
@@ -1155,11 +1155,10 @@ const SalesLedgerPage = () => {
                 };
                 return (
                   <tr key={r.id} className={cn(
-                    "border-b border-border/20 hover:bg-primary/[0.06] cursor-pointer transition-colors group",
-                    "[&>td]:py-2 [&>td]:leading-tight",
+                    "border-b border-border/40 hover:bg-primary/[0.05] cursor-pointer transition-colors group bg-background",
+                    "[&>td]:py-3 [&>td]:leading-tight [&>td]:whitespace-nowrap [&>td]:align-middle",
                     isMoyoExcluded && "text-muted-foreground",
-                    isManagerMissing(r) && "bg-amber-50/60 dark:bg-amber-500/10",
-                    !isInspected && !isManagerMissing(r) && "bg-muted/20",
+                    isManagerMissing(r) && "bg-amber-50/40 dark:bg-amber-500/[0.06]",
                   )}
                   onClick={handleRowClick}
                   >
@@ -1208,8 +1207,8 @@ const SalesLedgerPage = () => {
                     </td>
                     <td className="px-3">{r.product ?? "-"}</td>
                     <td className="px-3">
-                      <div className="flex flex-col gap-1">
-                        <span className="font-medium">{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
+                      <div className="flex flex-col gap-1 min-w-0">
+                        <span className="font-medium truncate">{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
                         <div className="flex items-center gap-1 flex-wrap">
                           {hasPending && (
                             <Badge className="h-[18px] text-[10px] font-semibold gap-0.5 px-1.5 py-0 bg-amber-500 text-white border-0 hover:bg-amber-500">
