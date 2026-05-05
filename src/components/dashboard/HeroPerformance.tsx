@@ -165,14 +165,20 @@ export const HeroPerformance = () => {
     const prev = prevRows.filter((r) => matchSegment(r.product, segment));
     const tod = todayRows.filter((r) => matchSegment(r.product, segment));
     const yd = ydayRows.filter((r) => matchSegment(r.product, segment));
-    const pend = pendingRows.filter((r) => matchSegment(r.product, segment));
+    // [개통 대기] = 이번 달, 상태가 [택배발송] 또는 [청약완료] 인 건만
+    const pend = pendingRows.filter(
+      (r) => matchSegment(r.product, segment) && isPendingActivationStatus(r.status),
+    );
     const threeHoursAgo = Date.now() - 3 * 60 * 60 * 1000;
     const urgent = pend.filter((r) => new Date(r.created_at).getTime() <= threeHoursAgo);
     return { cur: cur.length, prev: prev.length, tod: tod.length, yd: yd.length, pend: pend.length, urgent: urgent.length };
   }, [segment, currentRows, prevRows, todayRows, ydayRows, pendingRows]);
 
   const todaySeg = useMemo(() => countAll(todayRows), [todayRows]);
-  const pendSeg = useMemo(() => countAll(pendingRows), [pendingRows]);
+  const pendSeg = useMemo(
+    () => countAll(pendingRows.filter((r) => isPendingActivationStatus(r.status))),
+    [pendingRows],
+  );
   const curSeg = useMemo(() => countAll(currentRows), [currentRows]);
 
   const periodDelta = filtered.prev === 0 ? (filtered.cur > 0 ? 100 : 0) : ((filtered.cur - filtered.prev) / filtered.prev) * 100;
@@ -228,7 +234,7 @@ export const HeroPerformance = () => {
             "p-2.5 glass relative overflow-hidden cursor-pointer transition-all hover:shadow-glow",
             hasPending && "border-warning/40"
           )}
-          onClick={() => navigate("/activities?tab=incomplete&view=all")}
+          onClick={() => navigate("/sales-ledger?status=" + encodeURIComponent("택배발송,청약완료"))}
         >
           <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
             <Clock className={cn("size-3", hasPending ? "text-warning" : "text-muted-foreground")} />
