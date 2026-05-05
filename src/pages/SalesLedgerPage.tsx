@@ -137,6 +137,7 @@ const SalesLedgerPage = () => {
   const [managerFilter, setManagerFilter] = useState<string>("all");
   const [storeFilter, setStoreFilter] = useState<string>("all");
   const [productFilter, setProductFilter] = useState<string>("all");
+  const [saleTypeFilter, setSaleTypeFilter] = useState<"all" | "신규" | "MNP" | "기변">("all");
   // 반납/검수 필터
   // returnFilter: all | returned(반납완료) | unreturned(미반납)
   // inspectionFilter: all | inspected(검수완료=확정) | uninspected(미검수)
@@ -316,6 +317,14 @@ const SalesLedgerPage = () => {
     if (productFilter !== "all") {
       query = query.eq("product", productFilter);
     }
+    if (saleTypeFilter !== "all") {
+      const list = saleTypeFilter === "MNP"
+        ? ["MNP", "USIM MNP"]
+        : saleTypeFilter === "기변"
+          ? ["기변", "기변(재가입)"]
+          : ["신규"];
+      query = query.in("sale_type", list);
+    }
     if (returnFilter === "returned") {
       query = query.eq("voucher_returned", "유");
     } else if (returnFilter === "unreturned") {
@@ -356,7 +365,7 @@ const SalesLedgerPage = () => {
     setRows((data ?? []) as SaleRow[]);
     setTotal(count ?? 0);
     setSearching(false);
-  }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
+  }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, saleTypeFilter, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
 
   const loadSummary = useCallback(async () => {
     // 정책: 저장된 모든 실적은 즉시 합계에 반영. (status·approval_status·검수상태와 무관)
@@ -372,6 +381,14 @@ const SalesLedgerPage = () => {
     else if (managerFilter !== "all") q = q.eq("manager", managerFilter);
     if (storeFilter !== "all") q = q.eq("channel", storeFilter);
     if (productFilter !== "all") q = q.eq("product", productFilter);
+    if (saleTypeFilter !== "all") {
+      const list = saleTypeFilter === "MNP"
+        ? ["MNP", "USIM MNP"]
+        : saleTypeFilter === "기변"
+          ? ["기변", "기변(재가입)"]
+          : ["신규"];
+      q = q.in("sale_type", list);
+    }
     if (moyoFilter === "applied") {
       q = q.eq("channel", "모요").eq("product", "모바일").or("moyo_excluded.is.null,moyo_excluded.eq.false");
     } else if (moyoFilter === "excluded") {
@@ -440,7 +457,7 @@ const SalesLedgerPage = () => {
       .not("voucher", "is", null)
       .neq("voucher_returned", "유");
     setUnreturnedCount(urc ?? 0);
-  }, [startDate, endDate, managerFilter, storeFilter, productFilter, moyoFilter]);
+  }, [startDate, endDate, managerFilter, storeFilter, productFilter, saleTypeFilter, moyoFilter]);
 
   useEffect(() => {
     load();
@@ -448,7 +465,7 @@ const SalesLedgerPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
 
-  useEffect(() => { setPage(0); }, [startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
+  useEffect(() => { setPage(0); }, [startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, saleTypeFilter, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
 
   // 실적 입력 후 navigate로 진입 시 즉시 강제 리로드 (캐시 우회)
   useEffect(() => {
@@ -703,6 +720,7 @@ const SalesLedgerPage = () => {
     managerFilter !== "all" ||
     storeFilter !== "all" ||
     productFilter !== "all" ||
+    saleTypeFilter !== "all" ||
     returnFilter !== "all" ||
     inspectionFilter !== "all" ||
     moyoFilter !== "all" ||
@@ -715,6 +733,7 @@ const SalesLedgerPage = () => {
     setManagerFilter("all");
     setStoreFilter("all");
     setProductFilter("all");
+    setSaleTypeFilter("all");
     setReturnFilter("all");
     setInspectionFilter("all");
     setMoyoFilter("all");
@@ -798,7 +817,32 @@ const SalesLedgerPage = () => {
 
         {showFilterBody && (
           <>
-            <div className="grid grid-cols-2 md:flex md:flex-wrap md:items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* 판매유형 세그먼트 — 시인성 강한 버튼형 */}
+              <div className="inline-flex rounded-lg border border-border/60 bg-muted/40 p-0.5 shadow-sm">
+                {([
+                  { v: "all", label: "전체", cls: "bg-foreground text-background" },
+                  { v: "신규", label: "신규", cls: "bg-blue-600 text-white" },
+                  { v: "MNP", label: "MNP", cls: "bg-emerald-600 text-white" },
+                  { v: "기변", label: "기변", cls: "bg-orange-600 text-white" },
+                ] as const).map((opt) => {
+                  const active = saleTypeFilter === opt.v;
+                  return (
+                    <button
+                      key={opt.v}
+                      type="button"
+                      onClick={() => setSaleTypeFilter(opt.v as any)}
+                      className={cn(
+                        "px-3 h-8 rounded-md text-xs font-semibold transition-all",
+                        active ? `${opt.cls} shadow` : "text-foreground/70 hover:text-foreground hover:bg-background/60",
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+
               {/* 매장(채널) 필터 */}
               <Select value={storeFilter} onValueChange={setStoreFilter}>
                 <SelectTrigger className="h-9 md:w-[150px]">
