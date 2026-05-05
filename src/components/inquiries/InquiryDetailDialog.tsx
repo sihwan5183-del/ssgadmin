@@ -519,7 +519,7 @@ export function InquiryDetailDialog({
                     aria-hidden
                     className="absolute left-[5px] top-1 bottom-1 w-px bg-border/60"
                   />
-                  {logs.map((log) => (
+                  {logs.map((log, idx) => (
                     <li key={log.id} className="relative pb-3 last:pb-0">
                       <span
                         aria-hidden
@@ -529,6 +529,11 @@ export function InquiryDetailDialog({
                         <Badge variant="outline" className="text-[10px] h-4">
                           {log.action}
                         </Badge>
+                        {idx === 0 && (
+                          <Badge className="text-[10px] h-4 bg-primary/15 text-primary border-primary/30 border" variant="outline">
+                            최초 상담
+                          </Badge>
+                        )}
                         <span className="text-[11px] text-foreground/80 font-medium">
                           {resolveStaff(log.created_by, "직원")}
                         </span>
