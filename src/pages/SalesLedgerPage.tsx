@@ -381,6 +381,14 @@ const SalesLedgerPage = () => {
     else if (managerFilter !== "all") q = q.eq("manager", managerFilter);
     if (storeFilter !== "all") q = q.eq("channel", storeFilter);
     if (productFilter !== "all") q = q.eq("product", productFilter);
+    if (saleTypeFilter !== "all") {
+      const list = saleTypeFilter === "MNP"
+        ? ["MNP", "USIM MNP"]
+        : saleTypeFilter === "기변"
+          ? ["기변", "기변(재가입)"]
+          : ["신규"];
+      q = q.in("sale_type", list);
+    }
     if (moyoFilter === "applied") {
       q = q.eq("channel", "모요").eq("product", "모바일").or("moyo_excluded.is.null,moyo_excluded.eq.false");
     } else if (moyoFilter === "excluded") {
@@ -449,7 +457,7 @@ const SalesLedgerPage = () => {
       .not("voucher", "is", null)
       .neq("voucher_returned", "유");
     setUnreturnedCount(urc ?? 0);
-  }, [startDate, endDate, managerFilter, storeFilter, productFilter, moyoFilter]);
+  }, [startDate, endDate, managerFilter, storeFilter, productFilter, saleTypeFilter, moyoFilter]);
 
   useEffect(() => {
     load();
@@ -457,7 +465,7 @@ const SalesLedgerPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
 
-  useEffect(() => { setPage(0); }, [startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
+  useEffect(() => { setPage(0); }, [startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, saleTypeFilter, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
 
   // 실적 입력 후 navigate로 진입 시 즉시 강제 리로드 (캐시 우회)
   useEffect(() => {
@@ -712,6 +720,7 @@ const SalesLedgerPage = () => {
     managerFilter !== "all" ||
     storeFilter !== "all" ||
     productFilter !== "all" ||
+    saleTypeFilter !== "all" ||
     returnFilter !== "all" ||
     inspectionFilter !== "all" ||
     moyoFilter !== "all" ||
@@ -724,6 +733,7 @@ const SalesLedgerPage = () => {
     setManagerFilter("all");
     setStoreFilter("all");
     setProductFilter("all");
+    setSaleTypeFilter("all");
     setReturnFilter("all");
     setInspectionFilter("all");
     setMoyoFilter("all");
