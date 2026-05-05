@@ -324,7 +324,12 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
       if (autoFilledFields.has(k as string)) {
         setAutoFilledFields((prev) => { const n = new Set(prev); n.delete(k as string); return n; });
       }
-      return { ...f, [k]: v };
+      const next: any = { ...f, [k]: v };
+      // 최종상태 변경 시: 완료가 아니면 개통일 자동 초기화
+      if (k === "status" && !isOpenDateAllowed(v as any)) {
+        next.open_date = null;
+      }
+      return next;
     });
 
   const num = (v: unknown) => {
