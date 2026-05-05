@@ -227,31 +227,8 @@ const Index = () => {
       {/* === 본인 검수 피드백 (반려/수정요청) === */}
       {isVisible("review_alerts") && <MyReviewAlerts />}
 
-      {/* 업무 바로가기 */}
-      {canSeeAdminWidgets && isVisible("quick_links") && (
-        <section className="mb-1.5">
-          <QuickLinksWidget />
-        </section>
-      )}
-
-      {excludedLabels.length > 0 && (
-        <div className="mb-1.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 flex items-center gap-2 text-xs">
-          <EyeOff className="size-4 text-destructive shrink-0" />
-          <span className="text-muted-foreground">
-            합산 제외 항목:{" "}
-            <span className="font-semibold text-foreground">
-              {excludedLabels.slice(0, 3).join(", ")}
-              {excludedLabels.length > 3 && ` 외 ${excludedLabels.length - 3}건`}
-            </span>
-          </span>
-          <Link to="/budget-categories" className="ml-auto text-xs text-primary hover:underline shrink-0">
-            항목 관리 →
-          </Link>
-        </div>
-      )}
-
       {/* ========================================================
-          [1] 최상단 — 핵심 요약 (목표 달성률 + 오늘/실적 KPI)
+          [1] 최상단 — 목표 달성률 + 오늘/누적 개통
          ======================================================== */}
       {(isVisible("goal_gauge") || isVisible("hero_performance")) && (
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4 mb-4">
@@ -264,131 +241,20 @@ const Index = () => {
         </section>
       )}
 
-      {/* 핵심 KPI (PC 4열 / 태블릿 2열 / 모바일 1열) */}
-      {isVisible("stat_cards") && (
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3 md:gap-4 mb-4">
-        <StatCard
-          label="총 수익"
-          value={finance.loading ? "…" : formatShortKRW(finance.totalRevenue)}
-          periodLabel={cardPeriodLabel}
-          delta={dRevenue}
-          icon={TrendingUp}
-          accent="primary"
-          hint="단가표 수수료 + 부가서비스 + 수급완료 미수금 + 반납완료 상품권 + 확정 중고폰"
-        />
-        <StatCard
-          label="총 지출"
-          value={finance.loading ? "…" : formatShortKRW(finance.totalExpense)}
-          periodLabel={cardPeriodLabel}
-          delta={dExpense}
-          icon={TrendingDown}
-          accent="warning"
-          hint="지원금 + 5번 법인카드 + 광고비/기타지출 + 모요 수수료"
-        />
-        <StatCard
-          label="순수익"
-          value={finance.loading ? "…" : formatShortKRW(finance.netMargin)}
-          periodLabel={cardPeriodLabel}
-          delta={dNet}
-          icon={Sparkles}
-          accent="success"
-          hint="총 수익 − 총 지출"
-        />
-        <StatCard
-          label="정산 ROI"
-          value={`${liveRoi}%`}
-          periodLabel={cardPeriodLabel}
-          delta={dRoi}
-          icon={Target}
-          accent="secondary"
-          hint="순수익 ÷ 총 지출"
-        />
-        <CashTodayCard />
-        <PendingItemsCard />
-        {isVisible("untreated_leads") && <UntreatedLeadsCard />}
-      </section>
-      )}
-
+      {/* ========================================================
+          [2] 채널별 효율 — 채널/유형별 개통 현황
+         ======================================================== */}
       {canSeeAdminWidgets && isVisible("channel_activation") && (
         <section className="mb-4"><ChannelActivationBreakdown /></section>
       )}
-      {isVisible("activation_breakdown") && (
-        <section className="mb-4"><ActivationBreakdown /></section>
-      )}
 
       {/* ========================================================
-          [2] 중단 — 추세 / 정산 차트
-         ======================================================== */}
-      {(isVisible("performance_chart") || isVisible("channel_donut")) && (
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4 mb-4">
-          {isVisible("performance_chart") && (
-            <div className={isVisible("channel_donut") ? "lg:col-span-2" : "lg:col-span-3"}>
-              <PerformanceChart />
-            </div>
-          )}
-          {isVisible("channel_donut") && <ChannelDonut />}
-        </section>
-      )}
-
-      {isVisible("settlement_charts") && (
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4 mb-4">
-          <RevenueComposition />
-          <CategoryBreakdownChart type="지출" />
-        </section>
-      )}
-
-      {isVisible("my_incentive") && (
-        <section className="mb-4">
-          <MyIncentiveWidget />
-        </section>
-      )}
-
-      {/* ========================================================
-          [3] 하단 — 팀 랭킹 / 상세 매트릭스
+          [3] 하단 — 팀별 랭킹 / 채널별 효율 분석
          ======================================================== */}
       {(isVisible("store_ranking") || isVisible("store_efficiency")) && (
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4 mb-4">
           {isVisible("store_ranking") && <StoreRevenueRanking />}
           {isVisible("store_efficiency") && <StoreEfficiencyBubble />}
-        </section>
-      )}
-
-      {isVisible("performance_ledger") && (
-        <section className="mb-4">
-          <PerformanceLedger />
-        </section>
-      )}
-
-      {isVisible("overall_model") && (
-        <section className="mb-4">
-          <OverallModelAnalysis />
-        </section>
-      )}
-
-      {isVisible("channel_model") && (
-        <section className="mb-4">
-          <ChannelModelAnalysis />
-        </section>
-      )}
-
-      {(isVisible("live_feed") || isVisible("planner_feed")) && (
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4 mb-4">
-          {isVisible("live_feed") && <LiveActivityFeed />}
-          {isVisible("planner_feed") && <PlannerFeed />}
-        </section>
-      )}
-
-      {(isVisible("inventory_widget") || isVisible("strategy_gauges")) && (
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4 mb-4">
-          {isVisible("inventory_widget") && <InventoryWidget />}
-          {isVisible("strategy_gauges") && <StrategyModelGauges />}
-        </section>
-      )}
-
-      {(isVisible("ad_schedule") || isVisible("ranking_panel")) && (
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
-          {isVisible("ad_schedule") && <AdScheduleWidget />}
-          {isVisible("ranking_panel") && <RankingPanel />}
         </section>
       )}
     </>
