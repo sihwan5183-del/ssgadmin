@@ -48,6 +48,7 @@ interface UserRow {
   team: string | null;
   status: string;
   role: AppRole | null;
+  show_in_dashboard?: boolean;
   isClean?: boolean;
 }
 
@@ -102,7 +103,7 @@ export function UserManagementPanel() {
   const fetchAll = async () => {
     setLoading(true);
     const [{ data: profiles }, { data: roles }] = await Promise.all([
-      supabase.from("profiles").select("user_id, display_name, phone, store, position, team, status").order("display_name"),
+      supabase.from("profiles").select("user_id, display_name, phone, store, position, team, status, show_in_dashboard").order("display_name"),
       supabase.from("user_roles").select("user_id, role"),
     ]);
     const roleMap = new Map<string, AppRole>();
@@ -213,6 +214,7 @@ export function UserManagementPanel() {
         team: editing.team,
         position: editing.position,
         status: editing.status,
+        show_in_dashboard: editing.show_in_dashboard ?? false,
       })
       .eq("user_id", editing.user_id);
     if (pErr) {
