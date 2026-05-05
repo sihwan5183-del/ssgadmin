@@ -1087,7 +1087,7 @@ const SalesLedgerPage = () => {
       {/* 테이블 */}
       <section className="glass-strong rounded-2xl p-5 md:p-6 shadow-card-elevated">
         <div className="overflow-x-auto -mx-2">
-          <table className="w-full text-[13px] min-w-[1600px] font-sans [font-feature-settings:'tnum'] border-collapse">
+          <table className="w-full text-[13px] min-w-[1720px] font-sans [font-feature-settings:'tnum'] border-collapse">
             <thead>
               <tr className="text-[11.5px] uppercase tracking-wide text-foreground/70 border-b-2 border-border/60 bg-muted/60 [&>th]:whitespace-nowrap [&>th]:align-middle">
                 {isAdmin && (
@@ -1098,6 +1098,7 @@ const SalesLedgerPage = () => {
                 {/* 그룹 A: 기본정보 */}
                 <th className="text-left px-3 py-2.5 font-bold w-[96px]">개통일</th>
                 <th className="text-left px-3 py-2.5 font-bold w-[110px]">경로</th>
+                <th className="text-left px-3 py-2.5 font-bold w-[104px]">최종상태</th>
                 <th className="text-left px-3 py-2.5 font-bold w-[80px]">담당</th>
                 <th className="text-left px-3 py-2.5 font-bold w-[72px]">상품</th>
                 <th className="text-left px-3 py-2.5 font-bold min-w-[180px]">고객</th>
@@ -1174,6 +1175,24 @@ const SalesLedgerPage = () => {
                           </Tooltip>
                         )}
                       </div>
+                    </td>
+                    <td className="px-3 whitespace-nowrap">
+                      {(() => {
+                        const s = (r.status ?? "").trim();
+                        if (!s) return <span className="text-muted-foreground/50">-</span>;
+                        const cls =
+                          s.includes("개통") && s.includes("완료") ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30" :
+                          s.includes("진행") ? "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30" :
+                          s.includes("반려") || s.includes("취소") ? "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30" :
+                          s.includes("보류") || s.includes("대기") ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30" :
+                          s.includes("접수") ? "bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30" :
+                          "bg-muted text-foreground/80 border-border";
+                        return (
+                          <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap", cls)}>
+                            {s}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-3 whitespace-nowrap font-medium">
                       {isManagerMissing(r) ? (
@@ -1283,7 +1302,7 @@ const SalesLedgerPage = () => {
                 );
               })}
               {filteredRows.length === 0 && (
-                <tr><td colSpan={isAdmin ? 16 : 15} className="text-center py-10 text-muted-foreground">
+                <tr><td colSpan={isAdmin ? 17 : 16} className="text-center py-10 text-muted-foreground">
                   {searchQ ? "검색 결과가 없습니다." : "선택한 기간에 데이터가 없습니다."}
                 </td></tr>
               )}
