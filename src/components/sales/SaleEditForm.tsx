@@ -26,6 +26,7 @@ import { MoneyInput } from "@/components/ui/money-input";
 import { ModelAutocomplete } from "@/components/ui/model-autocomplete";
 import { useDeviceModels } from "@/hooks/useDeviceModels";
 import { formatPhone } from "@/lib/phoneFormat";
+import { verifyLoadedSale, findMissingBoundKeys } from "@/components/sales/saleFormLoader";
 
 export type SaleRow = {
   id: string;
