@@ -348,6 +348,7 @@ export function InquiryDetailDialog({
   };
 
   const cf = (sale?.custom_fields as Record<string, any>) ?? {};
+  const inq = fullInquiry ?? inquiry;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -363,11 +364,16 @@ export function InquiryDetailDialog({
               {status || "-"}
             </Badge>
             <Badge variant="outline" className="text-[10px]">
-              {inquiry.channel}
+              {inq.channel}
             </Badge>
             <span className="ml-auto text-[11px] text-muted-foreground mr-2">
-              인입일 {inquiry.inquiry_date}
+              인입일 {inq.inquiry_date}
             </span>
+            {loading && (
+              <span className="ml-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                <Loader2 className="size-3 animate-spin" /> 불러오는 중…
+              </span>
+            )}
             <Button
               size="sm"
               variant="outline"
@@ -424,18 +430,18 @@ export function InquiryDetailDialog({
               </div>
               <div className="grid grid-cols-2 gap-3 mt-3 text-xs">
                 <Row label="채널">
-                  <Badge variant="outline" className="text-[10px]">{inquiry.channel}</Badge>
+                  <Badge variant="outline" className="text-[10px]">{inq.channel}</Badge>
                 </Row>
                 <Row label="생년월일(표시)">{formatBirth(birth)}</Row>
-                <Row label="문의 내용">{inquiry.content || "-"}</Row>
-                <Row label="등록일">{new Date(inquiry.created_at).toLocaleString("ko-KR")}</Row>
+                <Row label="문의 내용">{inq.content || "-"}</Row>
+                <Row label="등록일">{new Date(inq.created_at).toLocaleString("ko-KR")}</Row>
               </div>
             </Section>
 
             {/* 상담 기기 정보 (인입 단계 입력) + 개통된 경우 기기 정보 */}
             <Section icon={Smartphone} title="상담 기기 정보">
               {(() => {
-                const icf = ((inquiry as any).custom_fields ?? {}) as Record<string, any>;
+                const icf = ((inq as any).custom_fields ?? {}) as Record<string, any>;
                 const cm = icf.consult_device_model || "";
                 const cc = icf.consult_device_capacity || "";
                 const cl = icf.consult_device_color || "";
