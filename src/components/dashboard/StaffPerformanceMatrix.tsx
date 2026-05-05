@@ -56,8 +56,9 @@ export const StaffPerformanceMatrix = () => {
         .limit(20000),
       supabase
         .from("profiles")
-        .select("user_id, display_name, store, status")
-        .eq("status", "active"),
+        .select("user_id, display_name, store, status, show_in_dashboard")
+        .eq("status", "active")
+        .eq("show_in_dashboard", true),
     ]);
 
     const profiles = profilesRes.data ?? [];
