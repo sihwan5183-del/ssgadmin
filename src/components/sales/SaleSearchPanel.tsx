@@ -522,16 +522,35 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
       payload.custom_fields = (selected as any).custom_fields ?? {};
     }
     setSaving(true);
-    const { error } = await supabase.from("sales").update(payload as never).eq("id", selected.id);
+    // .select()로 영향받은 행 수를 받아와 RLS로 0행만 갱신된 경우를 잡아낸다.
+    const { data: updated, error } = await supabase
+      .from("sales")
+      .update(payload as never)
+      .eq("id", selected.id)
+      .select("id");
     setSaving(false);
     if (error) {
       console.error("[saveEdit] update error", error, { saleId: selected.id, payload });
-      return toast.error(error.message);
+      return toast.error("저장 실패", { description: error.message });
     }
-    console.log("[saveEdit] 저장 완료", { saleId: selected.id, fields: Object.keys(payload) });
-    toast.success("저장되었습니다");
-    const { data } = await supabase.from("sales").select(SELECT_COLS).eq("id", selected.id).maybeSingle();
+    if (!updated || updated.length === 0) {
+      console.error("[saveEdit] 0 rows updated", { saleId: selected.id });
+      return toast.error("저장 실패", {
+        description: "수정 권한이 없거나 대상 데이터가 변경되지 않았습니다. 새로고침 후 다시 시도해주세요.",
+      });
+    }
+    console.log("[saveEdit] 저장 완료", { saleId: selected.id, fields: Object.keys(payload), rows: updated.length });
+    // 저장 직후 DB에서 최신 행을 재조회해 화면을 갱신
+    const { data, error: fetchErr } = await supabase
+      .from("sales")
+      .select(SELECT_COLS)
+      .eq("id", selected.id)
+      .maybeSingle();
+    if (fetchErr) {
+      console.warn("[saveEdit] post-save fetch failed", fetchErr);
+    }
     if (data) openDetail(data as SaleHit);
+    toast.success("저장되었습니다");
     refreshCounts();
     search();
   };
