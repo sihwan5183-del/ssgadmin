@@ -232,7 +232,7 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
     setLoadingSale(false);
     setTimeout(() => {
       setForm((curr) => {
-        const missing = findMissingBoundKeys(sale, curr as any);
+        const missing = findMissingBoundKeys(sale, curr as any, BOUND_SALE_REQUIRED_KEYS);
         if (missing.length === 0) return curr;
         console.warn("[SaleEditForm] bound form lost fields after load", missing);
         toast.warning("일부 항목이 비어있어 원본값으로 복구했습니다", { description: missing.join(", ") });
