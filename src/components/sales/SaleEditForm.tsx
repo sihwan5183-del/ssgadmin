@@ -289,7 +289,9 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   // 외부 saleId가 바뀔 때 데이터 로드
   useEffect(() => {
     if (!saleId) return;
+    if (authLoading || !user) return;
     setLoadingSale(true);
+    setLoadError(null);
     (async () => {
       const { data, error } = await supabase
         .from("sales")
@@ -297,85 +299,15 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
         .eq("id", saleId)
         .maybeSingle();
       if (error || !data) {
-        toast.error("실적 데이터를 불러올 수 없습니다");
+        const message = error?.message ?? "대상 실적을 찾을 수 없습니다";
+        toast.error("실적 데이터를 불러올 수 없습니다", { description: message });
+        setLoadError(message);
         setLoadingSale(false);
         return;
       }
-      const s = data as any;
-      setEditingId(s.id);
-      originalRef.current = s;
-      const v2 = verifyLoadedSale(s);
-      if (!v2.ok) {
-        console.warn("[SaleEditForm] loaded sale missing critical fields", v2.missing, s);
-        toast.error("실적 데이터가 비정상입니다", { description: `누락 필드: ${v2.missing.join(", ")}` });
-      }
-      // 함수형 업데이트 + 기존 값 병합으로, 비동기 효과(staffOptions 등)가
-      // 먼저 끼어들어 manager/channel 같은 값을 덮어쓰지 못하도록 보호한다.
-      setForm((prev) => ({
-        ...prev,
-        seq: s.seq,
-        channel: s.channel,
-        ...({ channel_company: s.channel_company ?? "" } as any),
-        moyo_excluded: s.moyo_excluded ?? false,
-        manager: s.manager,
-        open_month: s.open_month,
-        product: s.product,
-        sale_type: s.sale_type,
-        open_method: s.open_method,
-        status: s.status,
-        open_date: s.open_date,
-        customer_name: s.customer_name,
-        birth_date: s.birth_date,
-        phone: s.phone,
-        device_model: s.device_model,
-        device_serial: s.device_serial,
-        usim_model: s.usim_model,
-        usim_serial: s.usim_serial,
-        rate_plan: s.rate_plan,
-        vas1: s.vas1,
-        vas2: s.vas2,
-        unit_price: s.unit_price ?? 0,
-        vas_fee: s.vas_fee ?? 0,
-        voucher: s.voucher,
-        voucher_returned: s.voucher_returned,
-        receivable_amount: s.receivable_amount ?? 0,
-        receivable_paid: s.receivable_paid,
-        cash_open: s.cash_open ?? false,
-        distributor_amount: s.distributor_amount ?? 0,
-        extra_subsidy: s.extra_subsidy ?? 0,
-        cash_support_amount: s.cash_support_amount ?? 0,
-        cash_bank: s.cash_bank,
-        cash_account: s.cash_account,
-        cash_holder: s.cash_holder,
-        net_fee: s.net_fee ?? 0,
-        delivery_type: s.delivery_type,
-        tracking_no: s.tracking_no,
-        note: s.note,
-        bundle: s.bundle,
-        trade_in_enabled: s.trade_in_enabled ?? false,
-        trade_in_model: s.trade_in_model,
-        trade_in_estimate: s.trade_in_estimate ?? 0,
-        trade_in_confirmed: s.trade_in_confirmed ?? 0,
-        customer_support_amount: (s as any).customer_support_amount ?? 0,
-        corp_card_amount: (s as any).corp_card_amount ?? 0,
-      }));
-      setCustomFields(s.custom_fields ?? {});
-      setPendingItems(Array.isArray(s.pending_items) ? s.pending_items : []);
-      setPendingNote(s.pending_note ?? "");
-      setPendingResolved(s.pending_resolved ?? true);
-      setLoadingSale(false);
-      setTimeout(() => {
-        setForm((curr) => {
-          const missing = findMissingBoundKeys(s, curr as any);
-          if (missing.length > 0) {
-            console.warn("[SaleEditForm] bound form lost fields after load", missing);
-            toast.warning("일부 항목이 비어있습니다", { description: missing.join(", ") });
-          }
-          return curr;
-        });
-      }, 50);
+      applyLoadedSale(data as any);
     })();
-  }, [saleId]);
+  }, [saleId, authLoading, user?.id]);
 
   const set = <K extends keyof SaleRow>(k: K, v: SaleRow[K] | undefined) =>
     setForm((f) => {
