@@ -143,6 +143,11 @@ const bindSaleToForm = (sale: Record<string, any>): Partial<SaleRow> => {
   return bound as Partial<SaleRow>;
 };
 
+const BOUND_SALE_REQUIRED_KEYS = [
+  "channel", "manager", "customer_name", "open_date", "phone",
+  "product", "status", "device_model", "rate_plan",
+] as const;
+
 export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hideSubmit = false }: SaleEditFormProps) {
   const { user, loading: authLoading } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
