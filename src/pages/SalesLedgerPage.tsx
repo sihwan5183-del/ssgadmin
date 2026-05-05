@@ -1121,8 +1121,9 @@ const SalesLedgerPage = () => {
             <tbody>
               {filteredRows.map((r) => {
                 const mine = r.created_by === user?.id;
-                // ※ 잠금 정책 폐지 — 본인 또는 관리자는 언제든 수정 가능 (히스토리는 sales_audit_log 자동 기록)
-                const canEdit = mine || isAdmin;
+                // 권한 정책 통일: 조회 가능한 모든 사용자(같은 팀 포함)는 수정도 가능
+                // 서버 RLS(`Sales update by scope`)가 최종 권한을 강제함
+                const canEdit = true;
                 const offer = offerOf(r);
                 const profit = profitOf(r);
                 const negative = profit < 0;
