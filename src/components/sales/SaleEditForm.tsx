@@ -446,9 +446,25 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
     try {
       let resultId = editingId;
       if (editingId) {
-        const { error } = await supabase.from("sales").update(payload).eq("id", editingId);
+        // .select()로 실제 업데이트된 행을 받아와 DB 반영 여부를 검증한다.
+        // RLS 등으로 0행만 영향을 받았는데도 error 없이 통과하던 현상을 막는다.
+        const { data: updated, error } = await supabase
+          .from("sales")
+          .update(payload)
+          .eq("id", editingId)
+          .select("id");
         if (error) throw error;
-        toast.success("수정 완료");
+        if (!updated || updated.length === 0) {
+          throw new Error("저장 권한이 없거나 대상 데이터가 변경되지 않았습니다. 새로고침 후 다시 시도해주세요.");
+        }
+        // 저장된 최신 값으로 originalRef 갱신 (다음 저장에 반영)
+        const { data: fresh } = await supabase
+          .from("sales")
+          .select("*")
+          .eq("id", editingId)
+          .maybeSingle();
+        if (fresh) originalRef.current = fresh;
+        toast.success("저장되었습니다");
       } else {
         const { data: inserted, error } = await supabase.from("sales").insert(payload).select("id").single();
         if (error) throw error;
