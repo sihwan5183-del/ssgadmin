@@ -335,9 +335,8 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
     !!selected && (selected.approval_status === "확정" || selected.approval_status === "검수완료");
   const canEdit = useMemo(() => {
     if (!selected || !user) return false;
-    if (isAdmin) return true;
-    return selected.created_by === user.id;
-  }, [selected, user, isAdmin]);
+    return true;
+  }, [selected, user]);
 
   // 미승인 / 미처리 카운트
   const refreshCounts = async () => {
@@ -521,6 +520,7 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
     if ((selected as any).custom_fields !== undefined) {
       payload.custom_fields = (selected as any).custom_fields ?? {};
     }
+    payload.updated_at = new Date().toISOString();
     setSaving(true);
     // .select()로 영향받은 행 수를 받아와 RLS로 0행만 갱신된 경우를 잡아낸다.
     const { data: updated, error } = await supabase

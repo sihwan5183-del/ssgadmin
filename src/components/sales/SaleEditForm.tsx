@@ -114,8 +114,44 @@ const isContractProduct = (product: string | null | undefined): boolean => {
   return false;
 };
 
+const SALE_FORM_KEYS = [
+  "seq", "channel", "channel_company", "moyo_excluded", "manager", "open_month", "product",
+  "sale_type", "open_method", "status", "open_date", "customer_name", "birth_date", "phone",
+  "device_model", "device_serial", "usim_model", "usim_serial", "rate_plan", "vas1", "vas2",
+  "unit_price", "vas_fee", "voucher", "voucher_returned", "receivable_amount", "receivable_paid",
+  "cash_open", "distributor_amount", "extra_subsidy", "cash_support_amount", "cash_bank",
+  "cash_account", "cash_holder", "net_fee", "delivery_type", "tracking_no", "note", "bundle",
+  "trade_in_enabled", "trade_in_model", "trade_in_estimate", "trade_in_confirmed",
+  "customer_support_amount", "corp_card_amount",
+] as const;
+
+const NUMERIC_FORM_KEYS = new Set<string>([
+  "unit_price", "vas_fee", "receivable_amount", "distributor_amount", "extra_subsidy",
+  "cash_support_amount", "net_fee", "trade_in_estimate", "trade_in_confirmed",
+  "customer_support_amount", "corp_card_amount",
+]);
+
+const BOOLEAN_FORM_KEYS = new Set<string>(["moyo_excluded", "cash_open", "trade_in_enabled"]);
+
+const bindSaleToForm = (sale: Record<string, any>): Partial<SaleRow> => {
+  const bound: Record<string, any> = {};
+  for (const key of SALE_FORM_KEYS) {
+    if (BOOLEAN_FORM_KEYS.has(key)) bound[key] = sale[key] ?? false;
+    else if (NUMERIC_FORM_KEYS.has(key)) bound[key] = sale[key] ?? 0;
+    else bound[key] = sale[key] ?? null;
+  }
+  return bound as Partial<SaleRow>;
+};
+
+const BOUND_SALE_REQUIRED_KEYS = [
+  "channel", "manager", "customer_name", "open_date", "phone",
+  "product", "status", "device_model", "rate_plan",
+] as const;
+
 export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hideSubmit = false }: SaleEditFormProps) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialEditId = !embedded ? searchParams.get("edit") : null;
   const { options: CHANNELS } = useFieldOptions("channel");
   const { options: PRODUCTS } = useFieldOptions("product");
   const { options: SALE_TYPES } = useFieldOptions("sale_type");
@@ -128,11 +164,12 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   const { options: BANKS } = useFieldOptions("bank");
   const [form, setForm] = useState<Partial<SaleRow>>(emptyForm);
   const [customFields, setCustomFields] = useState<Record<string, any>>({});
-  const [loadingSale, setLoadingSale] = useState<boolean>(!!saleId);
+  const [loadingSale, setLoadingSale] = useState<boolean>(!!saleId || !!initialEditId);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [pendingItems, setPendingItems] = useState<string[]>([]);
   const [pendingNote, setPendingNote] = useState<string>("");
   const [pendingResolved, setPendingResolved] = useState<boolean>(true);
-  const [editingId, setEditingId] = useState<string | null>(saleId ?? null);
+  const [editingId, setEditingId] = useState<string | null>(saleId ?? initialEditId);
   const [busy, setBusy] = useState(false);
   // 원본 스냅샷 — 수정 모드에서 누락 필드(특히 담당자/인입경로)가 null로 덮어씌워지는 것을 방지
   const originalRef = useRef<any>(null);
@@ -142,7 +179,6 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   const [staffOptions, setStaffOptions] = useState<{ user_id: string; display_name: string; store: string | null }[]>([]);
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
   const [linkedInquiryId, setLinkedInquiryId] = useState<string | null>(null);
-  const [searchParams, setSearchParams] = useSearchParams();
 
   // 인입 → 실적 자동 채움 (URL 파라미터) — embedded 모드에서는 비활성
   useEffect(() => {
@@ -173,15 +209,47 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
     const editId = searchParams.get("edit");
     if (!editId) return;
     setEditingId(editId);
+    setLoadingSale(true);
     setSearchParams({}, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const applyLoadedSale = (sale: any) => {
+    originalRef.current = sale;
+    const v = verifyLoadedSale(sale);
+    if (!v.ok) {
+      console.warn("[SaleEditForm] loaded sale missing critical fields", v.missing, sale);
+      toast.error("실적 데이터가 비정상입니다", { description: `누락 필드: ${v.missing.join(", ")}` });
+    }
+    const bound = bindSaleToForm(sale);
+    setEditingId(sale.id);
+    setForm(bound);
+    setCustomFields(sale.custom_fields ?? {});
+    setPendingItems(Array.isArray(sale.pending_items) ? sale.pending_items : []);
+    setPendingNote(sale.pending_note ?? "");
+    setPendingResolved(sale.pending_resolved ?? true);
+    setLoadError(null);
+    setLoadingSale(false);
+    setTimeout(() => {
+      setForm((curr) => {
+        const missing = findMissingBoundKeys(sale, curr as any, BOUND_SALE_REQUIRED_KEYS);
+        if (missing.length === 0) return curr;
+        console.warn("[SaleEditForm] bound form lost fields after load", missing);
+        toast.warning("일부 항목이 비어있어 원본값으로 복구했습니다", { description: missing.join(", ") });
+        const restored = { ...curr } as Record<string, any>;
+        for (const key of missing) restored[key] = (bound as Record<string, any>)[key] ?? sale[key] ?? null;
+        return restored;
+      });
+    }, 50);
+  };
 
   // editingId가 잡히면(수정모드 진입) 데이터 로드 — saleId prop과 동일한 로직
   useEffect(() => {
     if (saleId) return; // saleId effect가 처리
     if (!editingId) return;
+    if (authLoading || !user) return;
     setLoadingSale(true);
+    setLoadError(null);
     (async () => {
       const { data, error } = await supabase
         .from("sales")
@@ -189,64 +257,15 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
         .eq("id", editingId)
         .maybeSingle();
       if (error || !data) {
-        toast.error("실적 데이터를 불러올 수 없습니다");
+        const message = error?.message ?? "대상 실적을 찾을 수 없습니다";
+        toast.error("실적 데이터를 불러올 수 없습니다", { description: message });
+        setLoadError(message);
         setLoadingSale(false);
         return;
       }
-      const s = data as any;
-      originalRef.current = s;
-      const v = verifyLoadedSale(s);
-      if (!v.ok) {
-        console.warn("[SaleEditForm] loaded sale missing critical fields", v.missing, s);
-        toast.error("실적 데이터가 비정상입니다", { description: `누락 필드: ${v.missing.join(", ")}` });
-      }
-      setForm((prev) => ({
-        ...prev,
-        seq: s.seq, channel: s.channel, moyo_excluded: s.moyo_excluded ?? false,
-        ...({ channel_company: s.channel_company ?? "" } as any),
-        manager: s.manager, open_month: s.open_month, product: s.product,
-        sale_type: s.sale_type, open_method: s.open_method, status: s.status,
-        open_date: s.open_date, customer_name: s.customer_name, birth_date: s.birth_date,
-        phone: s.phone, device_model: s.device_model, device_serial: s.device_serial,
-        usim_model: s.usim_model, usim_serial: s.usim_serial, rate_plan: s.rate_plan,
-        vas1: s.vas1, vas2: s.vas2,
-        unit_price: s.unit_price ?? 0, vas_fee: s.vas_fee ?? 0,
-        voucher: s.voucher, voucher_returned: s.voucher_returned,
-        receivable_amount: s.receivable_amount ?? 0, receivable_paid: s.receivable_paid,
-        cash_open: s.cash_open ?? false,
-        distributor_amount: s.distributor_amount ?? 0,
-        extra_subsidy: s.extra_subsidy ?? 0,
-        cash_support_amount: s.cash_support_amount ?? 0,
-        cash_bank: s.cash_bank, cash_account: s.cash_account, cash_holder: s.cash_holder,
-        net_fee: s.net_fee ?? 0, delivery_type: s.delivery_type,
-        tracking_no: s.tracking_no, note: s.note, bundle: s.bundle,
-        trade_in_enabled: s.trade_in_enabled ?? false,
-        trade_in_model: s.trade_in_model,
-        trade_in_estimate: s.trade_in_estimate ?? 0,
-        trade_in_confirmed: s.trade_in_confirmed ?? 0,
-        customer_support_amount: (s as any).customer_support_amount ?? 0,
-        corp_card_amount: (s as any).corp_card_amount ?? 0,
-      }));
-      setCustomFields(s.custom_fields ?? {});
-      setPendingItems(Array.isArray(s.pending_items) ? s.pending_items : []);
-      setPendingNote(s.pending_note ?? "");
-      setPendingResolved(s.pending_resolved ?? true);
-      setLoadingSale(false);
-      // 다음 tick 에서 폼 바인딩 결과 검증 — 비동기 effect 가 핵심 필드를 덮어쓰지 않았는지 확인
-      setTimeout(() => {
-        setForm((curr) => {
-          const missing = findMissingBoundKeys(s, curr as any);
-          if (missing.length > 0) {
-            console.warn("[SaleEditForm] bound form lost fields after load", missing);
-            toast.warning("일부 항목이 비어있습니다. 다시 불러옵니다.", {
-              description: missing.join(", "),
-            });
-          }
-          return curr;
-        });
-      }, 50);
+      applyLoadedSale(data as any);
     })();
-  }, [editingId, saleId]);
+  }, [editingId, saleId, authLoading, user?.id]);
 
   useEffect(() => {
     (async () => {
@@ -275,7 +294,9 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   // 외부 saleId가 바뀔 때 데이터 로드
   useEffect(() => {
     if (!saleId) return;
+    if (authLoading || !user) return;
     setLoadingSale(true);
+    setLoadError(null);
     (async () => {
       const { data, error } = await supabase
         .from("sales")
@@ -283,85 +304,15 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
         .eq("id", saleId)
         .maybeSingle();
       if (error || !data) {
-        toast.error("실적 데이터를 불러올 수 없습니다");
+        const message = error?.message ?? "대상 실적을 찾을 수 없습니다";
+        toast.error("실적 데이터를 불러올 수 없습니다", { description: message });
+        setLoadError(message);
         setLoadingSale(false);
         return;
       }
-      const s = data as any;
-      setEditingId(s.id);
-      originalRef.current = s;
-      const v2 = verifyLoadedSale(s);
-      if (!v2.ok) {
-        console.warn("[SaleEditForm] loaded sale missing critical fields", v2.missing, s);
-        toast.error("실적 데이터가 비정상입니다", { description: `누락 필드: ${v2.missing.join(", ")}` });
-      }
-      // 함수형 업데이트 + 기존 값 병합으로, 비동기 효과(staffOptions 등)가
-      // 먼저 끼어들어 manager/channel 같은 값을 덮어쓰지 못하도록 보호한다.
-      setForm((prev) => ({
-        ...prev,
-        seq: s.seq,
-        channel: s.channel,
-        ...({ channel_company: s.channel_company ?? "" } as any),
-        moyo_excluded: s.moyo_excluded ?? false,
-        manager: s.manager,
-        open_month: s.open_month,
-        product: s.product,
-        sale_type: s.sale_type,
-        open_method: s.open_method,
-        status: s.status,
-        open_date: s.open_date,
-        customer_name: s.customer_name,
-        birth_date: s.birth_date,
-        phone: s.phone,
-        device_model: s.device_model,
-        device_serial: s.device_serial,
-        usim_model: s.usim_model,
-        usim_serial: s.usim_serial,
-        rate_plan: s.rate_plan,
-        vas1: s.vas1,
-        vas2: s.vas2,
-        unit_price: s.unit_price ?? 0,
-        vas_fee: s.vas_fee ?? 0,
-        voucher: s.voucher,
-        voucher_returned: s.voucher_returned,
-        receivable_amount: s.receivable_amount ?? 0,
-        receivable_paid: s.receivable_paid,
-        cash_open: s.cash_open ?? false,
-        distributor_amount: s.distributor_amount ?? 0,
-        extra_subsidy: s.extra_subsidy ?? 0,
-        cash_support_amount: s.cash_support_amount ?? 0,
-        cash_bank: s.cash_bank,
-        cash_account: s.cash_account,
-        cash_holder: s.cash_holder,
-        net_fee: s.net_fee ?? 0,
-        delivery_type: s.delivery_type,
-        tracking_no: s.tracking_no,
-        note: s.note,
-        bundle: s.bundle,
-        trade_in_enabled: s.trade_in_enabled ?? false,
-        trade_in_model: s.trade_in_model,
-        trade_in_estimate: s.trade_in_estimate ?? 0,
-        trade_in_confirmed: s.trade_in_confirmed ?? 0,
-        customer_support_amount: (s as any).customer_support_amount ?? 0,
-        corp_card_amount: (s as any).corp_card_amount ?? 0,
-      }));
-      setCustomFields(s.custom_fields ?? {});
-      setPendingItems(Array.isArray(s.pending_items) ? s.pending_items : []);
-      setPendingNote(s.pending_note ?? "");
-      setPendingResolved(s.pending_resolved ?? true);
-      setLoadingSale(false);
-      setTimeout(() => {
-        setForm((curr) => {
-          const missing = findMissingBoundKeys(s, curr as any);
-          if (missing.length > 0) {
-            console.warn("[SaleEditForm] bound form lost fields after load", missing);
-            toast.warning("일부 항목이 비어있습니다", { description: missing.join(", ") });
-          }
-          return curr;
-        });
-      }, 50);
+      applyLoadedSale(data as any);
     })();
-  }, [saleId]);
+  }, [saleId, authLoading, user?.id]);
 
   const set = <K extends keyof SaleRow>(k: K, v: SaleRow[K] | undefined) =>
     setForm((f) => {
@@ -525,6 +476,26 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
     }
   };
 
+
+  const isEditModeLoading = !!editingId && (authLoading || loadingSale || originalRef.current?.id !== editingId);
+
+  if (isEditModeLoading || loadError) {
+    return (
+      <div className="glass rounded-2xl p-6 text-center space-y-3 shadow-card-elevated">
+        <div className="text-sm font-semibold">
+          {loadError ? "실적 데이터를 불러올 수 없습니다" : "실적 데이터를 불러오는 중…"}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {loadError ?? "기존 행 데이터가 준비된 뒤 수정 폼을 표시합니다."}
+        </div>
+        {loadError && (
+          <Button type="button" variant="outline" onClick={onCancel ?? (() => setEditingId(null))}>
+            <X className="size-4 mr-2" /> 닫기
+          </Button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <>
