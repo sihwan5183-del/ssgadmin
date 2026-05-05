@@ -1087,7 +1087,7 @@ const SalesLedgerPage = () => {
       {/* 테이블 */}
       <section className="glass-strong rounded-2xl p-5 md:p-6 shadow-card-elevated">
         <div className="overflow-x-auto -mx-2">
-          <table className="w-full text-[13px] min-w-[1900px] font-sans [font-feature-settings:'tnum'] border-collapse">
+          <table className="w-full text-[13px] min-w-[1600px] font-sans [font-feature-settings:'tnum'] border-collapse">
             <thead>
               <tr className="text-[11.5px] uppercase tracking-wide text-foreground/70 border-b-2 border-border/60 bg-muted/60 [&>th]:whitespace-nowrap [&>th]:align-middle">
                 {isAdmin && (
@@ -1101,10 +1101,10 @@ const SalesLedgerPage = () => {
                 <th className="text-left px-3 py-2.5 font-bold w-[80px]">담당</th>
                 <th className="text-left px-3 py-2.5 font-bold w-[72px]">상품</th>
                 <th className="text-left px-3 py-2.5 font-bold min-w-[180px]">고객</th>
-                <th className="text-left px-3 py-2.5 font-bold w-[140px] border-r border-border/40">연락처</th>
+                <th className="text-left px-3 py-2.5 font-bold w-[160px] border-r border-border/40">연락처</th>
                 {/* 그룹 B: 가입내용 */}
-                <th className="text-left px-3 py-2.5 font-bold min-w-[120px]">단말</th>
-                <th className="text-left px-3 py-2.5 font-bold min-w-[150px]">요금제</th>
+                <th className="text-left px-3 py-2.5 font-bold min-w-[160px]">단말</th>
+                <th className="text-left px-3 py-2.5 font-bold min-w-[200px]">요금제</th>
                 <th className="text-left px-3 py-2.5 font-bold w-[88px]">약정</th>
                 <th className="text-center px-2 py-2.5 font-bold w-[72px] border-r border-border/40">할부</th>
                 {/* 그룹 C: 혜택/태그 */}
@@ -1283,7 +1283,7 @@ const SalesLedgerPage = () => {
                 );
               })}
               {filteredRows.length === 0 && (
-                <tr><td colSpan={isAdmin ? 21 : 20} className="text-center py-10 text-muted-foreground">
+                <tr><td colSpan={isAdmin ? 16 : 15} className="text-center py-10 text-muted-foreground">
                   {searchQ ? "검색 결과가 없습니다." : "선택한 기간에 데이터가 없습니다."}
                 </td></tr>
               )}
