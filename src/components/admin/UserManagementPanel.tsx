@@ -505,6 +505,17 @@ export function UserManagementPanel() {
                   </SelectContent>
                 </Select>
               </Field>
+              <Field label="실적 대시보드 노출" className="col-span-2">
+                <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2">
+                  <span className="text-xs text-muted-foreground">
+                    켜면 대시보드 [개인별 실적 현황]에 표시됩니다.
+                  </span>
+                  <Switch
+                    checked={!!editing.show_in_dashboard}
+                    onCheckedChange={(v) => setEditing({ ...editing, show_in_dashboard: v })}
+                  />
+                </div>
+              </Field>
             </div>
           )}
           <DialogFooter>
