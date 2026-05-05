@@ -1087,7 +1087,7 @@ const SalesLedgerPage = () => {
       {/* 테이블 */}
       <section className="glass-strong rounded-2xl p-5 md:p-6 shadow-card-elevated">
         <div className="overflow-x-auto -mx-2">
-          <table className="w-full text-[13px] min-w-[1600px] font-sans [font-feature-settings:'tnum'] border-collapse">
+          <table className="w-full text-[13px] min-w-[1720px] font-sans [font-feature-settings:'tnum'] border-collapse">
             <thead>
               <tr className="text-[11.5px] uppercase tracking-wide text-foreground/70 border-b-2 border-border/60 bg-muted/60 [&>th]:whitespace-nowrap [&>th]:align-middle">
                 {isAdmin && (
