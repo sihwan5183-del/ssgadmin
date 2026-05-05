@@ -406,6 +406,23 @@ export function UserManagementPanel() {
                   </span>
                 </td>
                 <td className="py-3 px-2">
+                  <Switch
+                    checked={!!u.show_in_dashboard}
+                    onCheckedChange={async (v) => {
+                      const { error } = await supabase
+                        .from("profiles")
+                        .update({ show_in_dashboard: v })
+                        .eq("user_id", u.user_id);
+                      if (error) {
+                        toast.error("변경 실패: " + error.message);
+                        return;
+                      }
+                      setRows((prev) => prev.map((r) => r.user_id === u.user_id ? { ...r, show_in_dashboard: v } : r));
+                      toast.success(`${u.display_name} · 대시보드 ${v ? "노출" : "숨김"}`);
+                    }}
+                  />
+                </td>
+                <td className="py-3 px-2">
                   {cleanSet.has(u.user_id) ? (
                     <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full border bg-gradient-to-r from-amber-100 to-emerald-400/15 text-amber-700 border-amber-400 font-semibold animate-[pulse_3s_ease-in-out_infinite]">
                       <CheckCircle2 className="size-2.5" />
