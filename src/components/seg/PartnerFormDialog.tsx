@@ -111,7 +111,7 @@ export function PartnerFormDialog({ open, onOpenChange, partner, onSaved }: Prop
   const uploadFiles = async (partnerId: string) => {
     for (const f of pendingFiles) {
       const safeName = f.name.replace(/[^\w.\-가-힣]/g, "_");
-      const path = `partners/${partnerId}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${safeName}`;
+      const path = `${user.id}/partners/${partnerId}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${safeName}`;
       const { error: upErr } = await (supabase as any).storage
         .from("seg-files").upload(path, f, { contentType: f.type, upsert: false });
       if (upErr) { toast.error(`${f.name} 업로드 실패: ${upErr.message}`); continue; }
