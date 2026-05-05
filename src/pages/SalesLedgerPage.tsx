@@ -1161,8 +1161,8 @@ const SalesLedgerPage = () => {
                 <th className="text-center font-bold w-[78px]">최종상태</th>
                 <th className="text-center font-bold w-[64px]">담당</th>
                 <th className="text-center font-bold w-[56px]">상품</th>
-                <th className="text-left font-bold min-w-[120px]">고객</th>
-                <th className="text-center font-bold w-[60px]">판매유형</th>
+                <th className="text-left font-bold w-[88px] whitespace-nowrap">고객</th>
+                <th className="text-left font-bold w-[56px] whitespace-nowrap">판매유형</th>
                 <th className="text-center font-bold w-[110px] border-r border-border/40">연락처</th>
                 {/* 그룹 B: 가입내용 */}
                 <th className="text-left font-bold min-w-[110px] max-w-[160px]">단말</th>
@@ -1270,9 +1270,9 @@ const SalesLedgerPage = () => {
                     </td>
                     <td className="text-center">{r.product ?? "-"}</td>
                     <td className="text-left">
-                      <span className="font-medium truncate block">{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
+                      <span className="font-medium truncate block max-w-[88px]">{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
                     </td>
-                    <td className="text-center text-foreground">
+                    <td className="text-left text-foreground whitespace-nowrap">
                       {(() => {
                         const st = (r.sale_type ?? "").trim();
                         if (!st) return <span className="text-muted-foreground/50">-</span>;
