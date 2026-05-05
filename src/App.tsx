@@ -104,12 +104,12 @@ const App = () => {
                         <Route path="/expenses" element={<ExpensesPage />} />
                         <Route path="/ad-spend" element={<ExpenseInputPage />} />
                         <Route path="/expense-input" element={<ExpenseInputPage />} />
-                        <Route path="/field-options" element={<FieldOptionsPage />} />
+                        <Route path="/field-options" element={<AdminOnlyRoute><FieldOptionsPage /></AdminOnlyRoute>} />
                         <Route path="/ranking" element={<RankingPage />} />
                         <Route path="/team" element={<TeamPage />} />
                         <Route path="/staff-status" element={<StaffStatusPage />} />
-                        <Route path="/admin" element={<AdminPage />} />
-                        <Route path="/admin/menu" element={<MenuManagerPage />} />
+                        <Route path="/admin" element={<AdminOnlyRoute><AdminPage /></AdminOnlyRoute>} />
+                        <Route path="/admin/menu" element={<AdminOnlyRoute><MenuManagerPage /></AdminOnlyRoute>} />
                         <Route
                           path="/admin/staff-goals"
                           element={
@@ -118,7 +118,7 @@ const App = () => {
                             </AdminOnlyRoute>
                           }
                         />
-                        <Route path="/admin/pending-items" element={<PendingItemsAdminPage />} />
+                        <Route path="/admin/pending-items" element={<AdminOnlyRoute><PendingItemsAdminPage /></AdminOnlyRoute>} />
                         <Route
                           path="/admin/plan-retention"
                           element={
@@ -128,20 +128,20 @@ const App = () => {
                           }
                         />
                         <Route path="/plan-change-calendar" element={<PlanChangeCalendarPage />} />
-                        <Route path="/admin/accounts" element={<AccountManagementPage />}>
+                        <Route path="/admin/accounts" element={<AdminOnlyRoute><AccountManagementPage /></AdminOnlyRoute>}>
                           <Route path="pending" element={<AccountPendingPage />} />
                           <Route path="staff" element={<AccountStaffPage />} />
                           <Route path="roles" element={<AccountRolesPage />} />
                         </Route>
-                        <Route path="/product-rate-plans" element={<ProductRatePlansPage />} />
-                        <Route path="/equipment-catalog" element={<EquipmentCatalogPage />} />
+                        <Route path="/product-rate-plans" element={<AdminOnlyRoute><ProductRatePlansPage /></AdminOnlyRoute>} />
+                        <Route path="/equipment-catalog" element={<AdminOnlyRoute><EquipmentCatalogPage /></AdminOnlyRoute>} />
                         <Route path="/device-inventory" element={<DeviceInventoryPage />} />
                         <Route path="/ad-calendar" element={<AdCalendarPage />} />
-                        <Route path="/device-models" element={<DeviceModelsPage />} />
-                        <Route path="/incentive-rates" element={<IncentiveRatesPage />} />
-                        <Route path="/downloads" element={<DownloadsPage />} />
+                        <Route path="/device-models" element={<AdminOnlyRoute><DeviceModelsPage /></AdminOnlyRoute>} />
+                        <Route path="/incentive-rates" element={<AdminOnlyRoute><IncentiveRatesPage /></AdminOnlyRoute>} />
+                        <Route path="/downloads" element={<AdminOnlyRoute><DownloadsPage /></AdminOnlyRoute>} />
                         <Route path="/channel-intake" element={<ChannelIntakePage />} />
-                        <Route path="/budget-categories" element={<BudgetCategoriesPage />} />
+                        <Route path="/budget-categories" element={<AdminOnlyRoute><BudgetCategoriesPage /></AdminOnlyRoute>} />
                         <Route path="/my" element={<MyPage />} />
                         <Route path="/sales-ledger" element={<SalesLedgerPage />} />
                         <Route path="/seg-partners" element={<SegPartnersPage />} />
