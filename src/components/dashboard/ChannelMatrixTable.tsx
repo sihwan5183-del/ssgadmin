@@ -1,16 +1,82 @@
-import { channelMatrix } from "@/data/performanceData";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { usePeriod } from "@/contexts/PeriodContext";
+
+type Row = { channel: string; inflow: number; success: number; mobile: number; strategy: number };
 
 export const ChannelMatrixTable = () => {
-  const totals = channelMatrix.reduce(
+  const { startDate, endDate } = usePeriod();
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    setLoading(true);
+    const [inqRes, salesRes, modelsRes] = await Promise.all([
+      supabase
+        .from("inquiries")
+        .select("channel, status")
+        .gte("inquiry_date", startDate)
+        .lte("inquiry_date", endDate),
+      supabase
+        .from("sales")
+        .select("channel, product, device_model, status")
+        .gte("open_date", startDate)
+        .lte("open_date", endDate)
+        .neq("status", "취소"),
+      supabase.from("device_models").select("model_name, is_strategy").eq("is_strategy", true),
+    ]);
+
+    const strategySet = new Set<string>(
+      (modelsRes.data ?? []).map((m: any) => String(m.model_name).toLowerCase()),
+    );
+
+    const map = new Map<string, Row>();
+    const get = (ch: string) => {
+      const key = ch || "(미지정)";
+      if (!map.has(key)) map.set(key, { channel: key, inflow: 0, success: 0, mobile: 0, strategy: 0 });
+      return map.get(key)!;
+    };
+
+    (inqRes.data ?? []).forEach((r: any) => {
+      const row = get(r.channel ?? "");
+      row.inflow += 1;
+      const s = (r.status ?? "").trim();
+      if (s === "성공" || s === "개통완료" || s === "개통 완료") row.success += 1;
+    });
+
+    (salesRes.data ?? []).forEach((r: any) => {
+      const row = get(r.channel ?? "");
+      if ((r.product ?? "") === "모바일") row.mobile += 1;
+      const dm = String(r.device_model ?? "").toLowerCase();
+      if (dm && strategySet.has(dm)) row.strategy += 1;
+    });
+
+    const arr = Array.from(map.values()).sort((a, b) => b.inflow - a.inflow || b.success - a.success);
+    setRows(arr);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    load();
+    const ch = supabase
+      .channel("channel_matrix_live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "inquiries" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, () => load())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate]);
+
+  const totals = useMemo(() => rows.reduce(
     (acc, r) => ({
       inflow: acc.inflow + r.inflow,
       success: acc.success + r.success,
       mobile: acc.mobile + r.mobile,
       strategy: acc.strategy + r.strategy,
     }),
-    { inflow: 0, success: 0, mobile: 0, strategy: 0 }
-  );
-  const totalRate = totals.inflow > 0 ? Math.round((totals.success / totals.inflow) * 100) : 0;
+    { inflow: 0, success: 0, mobile: 0, strategy: 0 },
+  ), [rows]);
+  const totalRate = totals.inflow > 0 ? Math.round((totals.success / totals.inflow) * 1000) / 10 : 0;
 
   return (
     <div className="glass rounded-2xl p-5 overflow-hidden">
@@ -37,8 +103,8 @@ export const ChannelMatrixTable = () => {
             </tr>
           </thead>
           <tbody>
-            {channelMatrix.map((r) => {
-              const rate = r.inflow > 0 ? Math.round((r.success / r.inflow) * 100) : 0;
+            {rows.map((r) => {
+              const rate = r.inflow > 0 ? Math.round((r.success / r.inflow) * 1000) / 10 : 0;
               const rateColor = rate >= 60 ? "text-success" : rate >= 45 ? "text-warning" : "text-destructive";
               return (
                 <tr key={r.channel} className="border-b border-border/20 hover:bg-white/[0.03] transition-colors">
@@ -52,7 +118,7 @@ export const ChannelMatrixTable = () => {
                       <div className="w-16 h-1.5 rounded-full bg-muted/60 overflow-hidden">
                         <div
                           className="h-full bg-gradient-primary rounded-full"
-                          style={{ width: `${rate}%` }}
+                          style={{ width: `${Math.min(100, rate)}%` }}
                         />
                       </div>
                       <span className={`tabular-nums font-semibold ${rateColor}`}>{rate}%</span>
@@ -67,6 +133,9 @@ export const ChannelMatrixTable = () => {
                 </tr>
               );
             })}
+            {!loading && rows.length === 0 && (
+              <tr><td colSpan={6} className="px-3 py-6 text-center text-xs text-muted-foreground">선택한 기간에 인입/실적 데이터가 없습니다.</td></tr>
+            )}
           </tbody>
           <tfoot>
             <tr className="text-sm">
