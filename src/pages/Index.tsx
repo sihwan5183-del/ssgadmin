@@ -4,6 +4,7 @@ import { HeroPerformance } from "@/components/dashboard/HeroPerformance";
 import { RadialGoalGauge } from "@/components/dashboard/RadialGoalGauge";
 import { StoreRevenueRanking } from "@/components/dashboard/StoreRevenueRanking";
 import { StoreEfficiencyBubble } from "@/components/dashboard/StoreEfficiencyBubble";
+import { StaffPerformanceMatrix } from "@/components/dashboard/StaffPerformanceMatrix";
 import { LiveActivityFeed } from "@/components/dashboard/LiveActivityFeed";
 import { PlannerFeed } from "@/components/dashboard/PlannerFeed";
 import { ActivationBreakdown } from "@/components/dashboard/ActivationBreakdown";
@@ -350,6 +351,12 @@ const Index = () => {
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4 mb-4">
           {isVisible("store_ranking") && <StoreRevenueRanking />}
           {isVisible("store_efficiency") && <StoreEfficiencyBubble />}
+        </section>
+      )}
+
+      {isVisible("staff_matrix") && (
+        <section className="mb-4">
+          <StaffPerformanceMatrix />
         </section>
       )}
 
