@@ -43,13 +43,15 @@ export const RadialGoalGauge = () => {
     return () => { supabase.removeChannel(ch); };
   }, [fetchCurrent]);
 
-  // 팀 통합 목표 (전체 상품 합산), 없으면 글로벌 monthlyTarget 사용
+  // 팀 통합 목표 — 모바일 개통(mobile) 목표만 분모로 사용
+  // (인터넷·TV·스마트홈·세컨드는 별도 위젯에서 다루므로 합산 시 분모가 과대평가됨)
   const loadTarget = async () => {
     const { data } = await supabase
       .from("team_product_goals")
       .select("goal_count")
       .eq("year_month", yearMonth)
-      .eq("goal_type", "count");
+      .eq("goal_type", "count")
+      .eq("product", "mobile");
     const sum = (data ?? []).reduce((a: number, r: any) => a + Number(r.goal_count ?? 0), 0);
     setTeamTarget(sum);
   };
