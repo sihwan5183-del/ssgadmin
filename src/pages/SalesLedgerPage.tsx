@@ -1162,6 +1162,7 @@ const SalesLedgerPage = () => {
                 <th className="text-center font-bold w-[64px]">담당</th>
                 <th className="text-center font-bold w-[56px]">상품</th>
                 <th className="text-left font-bold min-w-[120px]">고객</th>
+                <th className="text-center font-bold w-[60px]">판매유형</th>
                 <th className="text-center font-bold w-[110px] border-r border-border/40">연락처</th>
                 {/* 그룹 B: 가입내용 */}
                 <th className="text-left font-bold min-w-[110px] max-w-[160px]">단말</th>
@@ -1241,16 +1242,17 @@ const SalesLedgerPage = () => {
                       {(() => {
                         const s = (r.status ?? "").trim();
                         if (!s) return <span className="text-muted-foreground/50">-</span>;
-                        const cls =
-                          s.includes("개통") && s.includes("완료") ? "bg-emerald-600 text-white border-emerald-700" :
-                          s.includes("택배") ? "bg-sky-600 text-white border-sky-700" :
-                          s.includes("진행") ? "bg-blue-600 text-white border-blue-700" :
-                          s.includes("반려") || s.includes("취소") ? "bg-rose-600 text-white border-rose-700" :
-                          s.includes("보류") || s.includes("대기") ? "bg-amber-500 text-white border-amber-600" :
-                          s.includes("접수") ? "bg-slate-600 text-white border-slate-700" :
-                          "bg-zinc-600 text-white border-zinc-700";
+                        const dotCls =
+                          s.includes("개통") && s.includes("완료") ? "bg-emerald-600" :
+                          s.includes("택배") ? "bg-sky-600" :
+                          s.includes("진행") ? "bg-blue-600" :
+                          s.includes("반려") || s.includes("취소") ? "bg-rose-600" :
+                          s.includes("보류") || s.includes("대기") ? "bg-amber-500" :
+                          s.includes("접수") ? "bg-slate-500" :
+                          "bg-zinc-500";
                         return (
-                          <span className={cn("inline-flex items-center rounded-md border px-2 py-0.5 text-[10.5px] font-bold tracking-tight whitespace-nowrap shadow-sm", cls)}>
+                          <span className="inline-flex items-center gap-1 text-foreground text-[11px] font-bold whitespace-nowrap">
+                            <span className={cn("inline-block size-1.5 rounded-full", dotCls)} />
                             {s}
                           </span>
                         );
@@ -1268,26 +1270,15 @@ const SalesLedgerPage = () => {
                     </td>
                     <td className="text-center">{r.product ?? "-"}</td>
                     <td className="text-left">
-                      <div className="min-w-0 flex items-center gap-1.5">
-                        <span className="font-semibold truncate">{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
-                        {(() => {
-                          const st = (r.sale_type ?? "").trim();
-                          if (!st) return null;
-                          const stCls = st === "신규"
-                            ? "bg-blue-600 text-white border-blue-700"
-                            : st.includes("MNP") || st === "번호이동"
-                              ? "bg-emerald-600 text-white border-emerald-700"
-                              : st === "기변" || st.includes("기기변경")
-                                ? "bg-orange-600 text-white border-orange-700"
-                                : "bg-zinc-600 text-white border-zinc-700";
-                          const stShort = st.replace("USIM ", "").replace("기기변경", "기변").replace("번호이동", "MNP");
-                          return (
-                            <span className={cn("inline-flex items-center rounded-md border px-1.5 py-0.5 text-[9.5px] font-bold tracking-tight shadow-sm shrink-0", stCls)}>
-                              {stShort}
-                            </span>
-                          );
-                        })()}
-                      </div>
+                      <span className="font-medium truncate block">{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
+                    </td>
+                    <td className="text-center text-foreground">
+                      {(() => {
+                        const st = (r.sale_type ?? "").trim();
+                        if (!st) return <span className="text-muted-foreground/50">-</span>;
+                        const stShort = st.replace("USIM ", "").replace("기기변경", "기변").replace("번호이동", "MNP");
+                        return <span>{stShort}</span>;
+                      })()}
                     </td>
                     <td className="text-foreground/90 tabular-nums text-center text-[11px] font-mono tracking-tight border-r border-border/30">
                       {(() => {
