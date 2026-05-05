@@ -836,18 +836,6 @@ const SalesLedgerPage = () => {
                 </SelectContent>
               </Select>
 
-              {/* 검수 필터 */}
-              <Select value={inspectionFilter} onValueChange={(v) => setInspectionFilter(v as any)}>
-                <SelectTrigger className="h-9 md:w-[140px]">
-                  <SelectValue placeholder="검수 전체" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">검수 전체</SelectItem>
-                  <SelectItem value="inspected">검수완료(확정)</SelectItem>
-                  <SelectItem value="uninspected">미검수</SelectItem>
-                </SelectContent>
-              </Select>
-
               {/* 모요 적용 구분 필터 */}
               <Select value={moyoFilter} onValueChange={(v) => setMoyoFilter(v as any)}>
                 <SelectTrigger className="h-9 md:w-[150px]">
