@@ -102,8 +102,7 @@ const Delta = ({ value, label }: { value: number; label: string }) => {
 
 export const HeroPerformance = () => {
   const { startDate, endDate, prevStartDate, prevEndDate, label, month } = usePeriod();
-  const { settings } = useAppSettings();
-  const monthlyTarget = Number(settings?.monthly_target ?? 100);
+  const { monthlyTarget } = useAppSettings();
 
   const [segment, setSegment] = useState<Segment>("all");
   const [todayRows, setTodayRows] = useState<{ product: string | null }[]>([]);
