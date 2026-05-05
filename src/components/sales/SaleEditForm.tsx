@@ -514,7 +514,8 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
 
   return (
     <>
-      <form onSubmit={onSubmit} className="space-y-3 pb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 pb-24 lg:pb-8">
+      <form onSubmit={onSubmit} className="space-y-3 lg:col-span-2 min-w-0">
         <FormSection title="기본 정보" icon={<Zap className="size-3" />}>
           <Grid cols={5}>
             <Field label="인입경로 *">
