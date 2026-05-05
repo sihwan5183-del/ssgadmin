@@ -114,6 +114,35 @@ const isContractProduct = (product: string | null | undefined): boolean => {
   return false;
 };
 
+const SALE_FORM_KEYS = [
+  "seq", "channel", "channel_company", "moyo_excluded", "manager", "open_month", "product",
+  "sale_type", "open_method", "status", "open_date", "customer_name", "birth_date", "phone",
+  "device_model", "device_serial", "usim_model", "usim_serial", "rate_plan", "vas1", "vas2",
+  "unit_price", "vas_fee", "voucher", "voucher_returned", "receivable_amount", "receivable_paid",
+  "cash_open", "distributor_amount", "extra_subsidy", "cash_support_amount", "cash_bank",
+  "cash_account", "cash_holder", "net_fee", "delivery_type", "tracking_no", "note", "bundle",
+  "trade_in_enabled", "trade_in_model", "trade_in_estimate", "trade_in_confirmed",
+  "customer_support_amount", "corp_card_amount",
+] as const;
+
+const NUMERIC_FORM_KEYS = new Set<string>([
+  "unit_price", "vas_fee", "receivable_amount", "distributor_amount", "extra_subsidy",
+  "cash_support_amount", "net_fee", "trade_in_estimate", "trade_in_confirmed",
+  "customer_support_amount", "corp_card_amount",
+]);
+
+const BOOLEAN_FORM_KEYS = new Set<string>(["moyo_excluded", "cash_open", "trade_in_enabled"]);
+
+const bindSaleToForm = (sale: Record<string, any>): Partial<SaleRow> => {
+  const bound: Record<string, any> = {};
+  for (const key of SALE_FORM_KEYS) {
+    if (BOOLEAN_FORM_KEYS.has(key)) bound[key] = sale[key] ?? false;
+    else if (NUMERIC_FORM_KEYS.has(key)) bound[key] = sale[key] ?? 0;
+    else bound[key] = sale[key] ?? null;
+  }
+  return bound as Partial<SaleRow>;
+};
+
 export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hideSubmit = false }: SaleEditFormProps) {
   const { user, loading: authLoading } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
