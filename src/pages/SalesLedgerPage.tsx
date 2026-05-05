@@ -137,6 +137,7 @@ const SalesLedgerPage = () => {
   const [managerFilter, setManagerFilter] = useState<string>("all");
   const [storeFilter, setStoreFilter] = useState<string>("all");
   const [productFilter, setProductFilter] = useState<string>("all");
+  const [saleTypeFilter, setSaleTypeFilter] = useState<"all" | "신규" | "MNP" | "기변">("all");
   // 반납/검수 필터
   // returnFilter: all | returned(반납완료) | unreturned(미반납)
   // inspectionFilter: all | inspected(검수완료=확정) | uninspected(미검수)
