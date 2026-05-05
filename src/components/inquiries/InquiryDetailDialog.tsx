@@ -171,8 +171,7 @@ export function InquiryDetailDialog({
           .from("inquiry_logs")
           .select("*")
           .eq("inquiry_id", src.id)
-          .order("created_at", { ascending: false })
-          .limit(200),
+          .order("created_at", { ascending: true }),
         src.converted_sale_id
           ? supabase
               .from("sales")
@@ -209,7 +208,7 @@ export function InquiryDetailDialog({
         },
         (p) => {
           const l = p.new as LogEntry;
-          setLogs((prev) => (prev.find((x) => x.id === l.id) ? prev : [l, ...prev]));
+          setLogs((prev) => (prev.find((x) => x.id === l.id) ? prev : [...prev, l]));
         },
       )
       .subscribe();
