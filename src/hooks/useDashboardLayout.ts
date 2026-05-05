@@ -22,6 +22,7 @@ export const WIDGET_REGISTRY: { id: string; label: string }[] = [
   { id: "channel_donut", label: "인입 경로별 비중 (도넛)" },
   { id: "store_ranking", label: "개인별 순수익 랭킹" },
   { id: "store_efficiency", label: "채널별 효율 분석" },
+  { id: "staff_matrix", label: "개인별 실적 현황 (상품 매트릭스)" },
   { id: "performance_ledger", label: "실적 원장" },
   { id: "overall_model", label: "전체 기종 분석" },
   { id: "channel_model", label: "채널별 기종 분석" },
