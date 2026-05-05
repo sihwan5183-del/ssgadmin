@@ -115,7 +115,9 @@ const isContractProduct = (product: string | null | undefined): boolean => {
 };
 
 export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hideSubmit = false }: SaleEditFormProps) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialEditId = !embedded ? searchParams.get("edit") : null;
   const { options: CHANNELS } = useFieldOptions("channel");
   const { options: PRODUCTS } = useFieldOptions("product");
   const { options: SALE_TYPES } = useFieldOptions("sale_type");
@@ -128,11 +130,12 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   const { options: BANKS } = useFieldOptions("bank");
   const [form, setForm] = useState<Partial<SaleRow>>(emptyForm);
   const [customFields, setCustomFields] = useState<Record<string, any>>({});
-  const [loadingSale, setLoadingSale] = useState<boolean>(!!saleId);
+  const [loadingSale, setLoadingSale] = useState<boolean>(!!saleId || !!initialEditId);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [pendingItems, setPendingItems] = useState<string[]>([]);
   const [pendingNote, setPendingNote] = useState<string>("");
   const [pendingResolved, setPendingResolved] = useState<boolean>(true);
-  const [editingId, setEditingId] = useState<string | null>(saleId ?? null);
+  const [editingId, setEditingId] = useState<string | null>(saleId ?? initialEditId);
   const [busy, setBusy] = useState(false);
   // 원본 스냅샷 — 수정 모드에서 누락 필드(특히 담당자/인입경로)가 null로 덮어씌워지는 것을 방지
   const originalRef = useRef<any>(null);
@@ -142,7 +145,6 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   const [staffOptions, setStaffOptions] = useState<{ user_id: string; display_name: string; store: string | null }[]>([]);
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
   const [linkedInquiryId, setLinkedInquiryId] = useState<string | null>(null);
-  const [searchParams, setSearchParams] = useSearchParams();
 
   // 인입 → 실적 자동 채움 (URL 파라미터) — embedded 모드에서는 비활성
   useEffect(() => {
