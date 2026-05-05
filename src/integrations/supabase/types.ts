@@ -1924,7 +1924,7 @@ export type Database = {
           changed_by: string | null
           changes: Json
           id: string
-          sale_id: string
+          sale_id: string | null
         }
         Insert: {
           action: string
@@ -1932,7 +1932,7 @@ export type Database = {
           changed_by?: string | null
           changes?: Json
           id?: string
-          sale_id: string
+          sale_id?: string | null
         }
         Update: {
           action?: string
@@ -1940,17 +1940,9 @@ export type Database = {
           changed_by?: string | null
           changes?: Json
           id?: string
-          sale_id?: string
+          sale_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "sales_audit_log_sale_id_fkey"
-            columns: ["sale_id"]
-            isOneToOne: false
-            referencedRelation: "sales"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       seg_activities: {
         Row: {
