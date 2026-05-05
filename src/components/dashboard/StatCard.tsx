@@ -24,32 +24,32 @@ export const StatCard = ({ label, value, delta, icon: Icon, accent = "primary", 
   const positive = (delta ?? 0) >= 0;
   return (
     <div
-      className="group relative glass rounded-lg p-2.5 overflow-hidden shadow-card-elevated hover:shadow-elevated transition-all duration-300 hover:-translate-y-0.5"
+      className="group relative bg-card rounded-2xl p-4 md:p-5 overflow-hidden border border-border/60 shadow-card hover:shadow-elevated transition-all duration-300 hover:-translate-y-0.5"
       title={hint}
     >
-      <div className={cn("absolute -top-10 -right-10 size-28 rounded-full bg-gradient-to-br blur-2xl opacity-60 group-hover:opacity-100 transition-opacity", accentMap[accent])} />
+      <div className={cn("absolute -top-12 -right-12 size-32 rounded-full bg-gradient-to-br blur-2xl opacity-40 group-hover:opacity-70 transition-opacity", accentMap[accent])} />
       <div className="relative">
         {periodLabel && (
-          <div className="text-[9px] font-medium text-muted-foreground/80 uppercase tracking-wide truncate mb-0.5">
+          <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider truncate mb-1.5">
             {periodLabel}
           </div>
         )}
-        <div className="flex items-center justify-between">
-          <div className={cn("size-6 rounded-md grid place-items-center bg-gradient-to-br", accentMap[accent])}>
-            <Icon className="size-3" />
+        <div className="flex items-center justify-between mb-2">
+          <div className={cn("size-9 rounded-xl grid place-items-center bg-gradient-to-br", accentMap[accent])}>
+            <Icon className="size-4" />
           </div>
           {typeof delta === "number" && (
             <div className={cn(
-              "flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full",
+              "flex items-center gap-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full",
               positive ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
             )}>
-              {positive ? <ArrowUpRight className="size-2.5" /> : <ArrowDownRight className="size-2.5" />}
+              {positive ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}
               {Math.abs(delta).toFixed(1)}%
             </div>
           )}
         </div>
-        <div className="mt-1 text-[10px] text-muted-foreground truncate">{label}</div>
-        <div className="text-base md:text-lg font-bold tracking-tight tabular-nums leading-tight">{value}</div>
+        <div className="text-xs text-muted-foreground truncate font-medium">{label}</div>
+        <div className="mt-1 text-xl md:text-2xl font-bold tracking-tight tabular-nums leading-tight">{value}</div>
       </div>
     </div>
   );

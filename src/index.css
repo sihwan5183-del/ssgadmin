@@ -10,8 +10,8 @@
 
 @layer base {
   :root {
-    /* 베이스 — 클린 화이트 캔버스 */
-    --background: 0 0% 100%;
+    /* 베이스 — 아주 연한 그레이 캔버스 (#F9FAFB) */
+    --background: 220 14% 97%;
     /* 본문 텍스트: 거의 순수 검정에 가까운 진한 톤으로 강화 (#1A1A1A) */
     --foreground: 0 0% 10%;
 
@@ -78,8 +78,8 @@
 
     /* 그림자 / 글로우 — U+ 마젠타 글로우 */
     --shadow-glow: 0 0 40px hsl(325 90% 55% / 0.28);
-    --shadow-card: 0 4px 24px hsl(325 30% 40% / 0.08);
-    --shadow-elevated: 0 20px 60px -10px hsl(325 50% 35% / 0.18);
+    --shadow-card: 0 1px 2px hsl(220 14% 20% / 0.04), 0 4px 16px hsl(220 14% 20% / 0.06);
+    --shadow-elevated: 0 8px 32px -8px hsl(220 14% 20% / 0.12);
 
     /* Glassmorphism — 화이트 글래스 */
     --glass-bg: 0 0% 100% / 0.72;
@@ -118,8 +118,7 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "ss01", "tnum";
-    background-image: var(--gradient-mesh);
-    background-attachment: fixed;
+    background-color: hsl(var(--background));
   }
 
   /* === 가독성 강화: 폼 라벨 굵게 / 입력 테두리 진하게 / 포커스 강조 === */
