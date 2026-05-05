@@ -243,12 +243,12 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
           !!saleId ||
           !!editingId ||
           (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("edit"));
-        if (f.manager || !user || isEditMode) return f;
+        if (f.manager || !user || isEditMode || loadingSale) return f;
         const me = list.find((p) => p.user_id === user.id);
         return me ? { ...f, manager: me.user_id } : f;
       });
     })();
-  }, [user, saleId, editingId]);
+  }, [user, saleId, editingId, loadingSale]);
 
   // 외부 saleId가 바뀔 때 데이터 로드
   useEffect(() => {
