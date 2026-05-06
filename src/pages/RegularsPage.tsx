@@ -114,6 +114,7 @@ const RegularsPage = () => {
     activated: false,
     registered_date: today(),
     note: "",
+    is_promotion: false,
   });
   const [editSaving, setEditSaving] = useState(false);
 
@@ -123,7 +124,7 @@ const RegularsPage = () => {
       channel: r.channel ?? "",
       customer_name: r.customer_name ?? "",
       carrier: r.carrier ?? "",
-      phone: r.phone ?? "",
+      phone: formatPhone(r.phone ?? ""),
       birth_date: r.birth_date ?? "",
       manager: r.manager ?? "",
       coupon_sent: !!r.coupon_sent,
@@ -131,6 +132,7 @@ const RegularsPage = () => {
       activated: !!r.activated,
       registered_date: r.registered_date ?? today(),
       note: r.note ?? "",
+      is_promotion: !!r.is_promotion,
     });
     setEditOpen(true);
   };
@@ -146,7 +148,7 @@ const RegularsPage = () => {
         channel: editForm.channel,
         customer_name: editForm.customer_name.trim(),
         carrier: editForm.carrier || null,
-        phone: editForm.phone || null,
+        phone: editForm.phone ? formatPhone(editForm.phone) : null,
         birth_date: editForm.birth_date || null,
         manager: editForm.manager || null,
         coupon_sent: editForm.coupon_sent,
@@ -154,6 +156,7 @@ const RegularsPage = () => {
         activated: editForm.activated,
         registered_date: editForm.registered_date,
         note: editForm.note || null,
+        is_promotion: editForm.is_promotion,
       })
       .eq("id", editing.id);
     setEditSaving(false);
@@ -177,6 +180,7 @@ const RegularsPage = () => {
     activated: false,
     registered_date: today(),
     note: "",
+    is_promotion: false,
   });
 
   // 검색/필터
@@ -186,6 +190,7 @@ const RegularsPage = () => {
   const [filterCarrier, setFilterCarrier] = useState<string>("all");
   const [onlyConverted, setOnlyConverted] = useState<boolean>(false);
   const [filterStaff, setFilterStaff] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<"all" | "promotion">("all");
   // 직원별 통계 기간 필터 (YYYY-MM, 'all' 이면 전체)
   const [staffStatMonth, setStaffStatMonth] = useState<string>(() => {
     const d = new Date();
