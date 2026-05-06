@@ -41,6 +41,7 @@ import { StrategyConfigManager } from "@/components/admin/StrategyConfigManager"
 import { UserManagementPanel } from "@/components/admin/UserManagementPanel";
 import { RankingConfigManager } from "@/components/admin/RankingConfigManager";
 import { PushScheduleSettings } from "@/components/admin/PushScheduleSettings";
+import { NotificationRulesManager } from "@/components/admin/NotificationRulesManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole, type AppRole } from "@/hooks/useRole";
@@ -197,10 +198,17 @@ export default function AdminPage() {
           <TabsTrigger value="push" className="gap-2">
             <BellRing className="size-4" /> 푸시 알림
           </TabsTrigger>
+          <TabsTrigger value="notif_rules" className="gap-2">
+            <BellRing className="size-4" /> 알림 항목 관리
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="push">
           <PushScheduleSettings />
+        </TabsContent>
+
+        <TabsContent value="notif_rules">
+          <NotificationRulesManager />
         </TabsContent>
 
         <TabsContent value="ranking">
