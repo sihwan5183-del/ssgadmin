@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Calendar as CalIcon, ArrowLeft, Plus, FileText, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalIcon, ArrowLeft, Plus, ClipboardCheck, CheckCircle2 } from "lucide-react";
 import { useSegPartners, useSegActivities, type SegActivity } from "@/hooks/useSegPartners";
 import { addMonths, format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameDay, isSameMonth } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { PartnerDetailDrawer } from "@/components/seg/PartnerDetailDrawer";
 import { QuickScheduleDialog } from "@/components/seg/QuickScheduleDialog";
+import { ActivityReportDialog } from "@/components/seg/ActivityReportDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -58,6 +59,8 @@ export default function SegCalendarPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [quickDate, setQuickDate] = useState<string | undefined>(undefined);
+  const [reportTarget, setReportTarget] = useState<SegActivity | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
   const [listSort, setListSort] = useState<"date" | "recent">("date");
   const [statusFilter, setStatusFilter] = useState<"all" | "scheduled" | "done">("all");
 
@@ -293,6 +296,7 @@ export default function SegCalendarPage() {
                   const pri = (a.custom_fields as any)?.priority as string | undefined;
                   const priInfo = pri ? PRIORITY_BADGE[pri] : undefined;
                   const name = a.title || p?.company_name || "-";
+                  const reported = !!(a.custom_fields as any)?.reported_at;
                   return (
                     <tr key={a.id} className={cn(
                       "border-b border-border/40 hover:bg-muted/40 transition-colors",
@@ -342,18 +346,14 @@ export default function SegCalendarPage() {
                           </Button>
                           <Button
                             size="sm"
-                            variant="outline"
-                            className="h-7 px-2 text-xs"
-                            onClick={() => {
-                              const params = new URLSearchParams();
-                              const company = p?.company_name ?? a.title ?? "";
-                              if (company) params.set("customer_name", company);
-                              if (a.assignee_name) params.set("manager", a.assignee_name);
-                              params.set("from_inquiry", `seg:${a.id}`);
-                              navigate(`/input?${params.toString()}`);
-                            }}
+                            variant={reported ? "secondary" : "outline"}
+                            className={cn(
+                              "h-7 px-2 text-xs",
+                              reported && "bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-300 hover:bg-emerald-500/20"
+                            )}
+                            onClick={() => { setReportTarget(a); setReportOpen(true); }}
                           >
-                            <FileText className="size-3.5 mr-1" /> 실적등록
+                            <ClipboardCheck className="size-3.5 mr-1" /> {reported ? "보고완료" : "활동보고"}
                           </Button>
                         </div>
                       </td>
@@ -371,6 +371,12 @@ export default function SegCalendarPage() {
         open={quickOpen}
         onOpenChange={setQuickOpen}
         defaultDate={quickDate}
+        onSaved={refresh}
+      />
+      <ActivityReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        activity={reportTarget}
         onSaved={refresh}
       />
     </div>
