@@ -43,8 +43,22 @@ async function runForMode(mode: "d1" | "today") {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  let body: { mode?: "d1" | "today" | "auto" } = {};
+  let body: {
+    mode?: "d1" | "today" | "auto" | "broadcast";
+    title?: string;
+    message?: string;
+    url?: string;
+    user_ids?: string[];
+  } = {};
   try { body = await req.json(); } catch { /* ignore */ }
+
+  // 즉시 테스트 발송: 권한을 허용한 모든 구독자(또는 지정 user_ids)에게 즉시 푸시
+  if (body.mode === "broadcast") {
+    return new Response(
+      JSON.stringify({ ok: true, ...(await broadcast(body)) }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
 
   // auto 모드: app_settings 의 시간과 현재 KST HH:MM 비교
   if (!body.mode || body.mode === "auto") {
