@@ -313,13 +313,13 @@ export const ChannelActivationBreakdown = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <div className="inline-flex items-center gap-0.5 p-0.5 rounded-full bg-muted/60 border border-border/50 flex-wrap">
+          <div className="flex items-center gap-2.5 flex-wrap w-full md:w-auto">
+            <div className="inline-flex items-center gap-0.5 p-0.5 rounded-full bg-muted/60 border border-border/50 flex-nowrap overflow-x-auto max-w-full scrollbar-hide -mx-1 px-1">
               <button
                 type="button"
                 onClick={() => setSelectedProductFilter("전체")}
                 className={cn(
-                  "px-2.5 py-1 text-xs font-semibold rounded-full transition-all tabular-nums",
+                  "px-3 py-1.5 text-sm font-semibold rounded-full transition-all tabular-nums shrink-0",
                   selectedProductFilter === "전체"
                     ? "bg-background shadow-sm text-foreground"
                     : "text-muted-foreground hover:text-foreground"
@@ -331,7 +331,7 @@ export const ChannelActivationBreakdown = () => {
                   type="button"
                   onClick={() => setSelectedProductFilter(p.label)}
                   className={cn(
-                    "px-2.5 py-1 text-xs font-semibold rounded-full transition-all tabular-nums",
+                    "px-3 py-1.5 text-sm font-semibold rounded-full transition-all tabular-nums shrink-0 whitespace-nowrap",
                     selectedProductFilter === p.label
                       ? "bg-background shadow-sm text-foreground"
                       : "text-muted-foreground hover:text-foreground"
