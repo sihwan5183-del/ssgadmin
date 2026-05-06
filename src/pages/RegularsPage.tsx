@@ -664,9 +664,12 @@ const RegularsPage = () => {
             <Input
               className="mt-1.5"
               value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })}
               placeholder={form.carrier ? "010-0000-0000" : "통신사를 먼저 선택"}
               disabled={!form.carrier}
+              type="tel"
+              inputMode="numeric"
+              maxLength={13}
             />
           </div>
           <div className="md:col-span-2">
