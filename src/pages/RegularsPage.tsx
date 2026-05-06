@@ -922,8 +922,8 @@ const RegularsPage = () => {
                     <span className="tabular-nums">{r.registered_date}</span>
                     {r.manager && <span>· {r.manager}</span>}
                     {r.phone && (
-                      <a href={`tel:${r.phone}`} className="text-foreground/90" onClick={(e) => e.stopPropagation()}>
-                        {r.phone}
+                      <a href={`tel:${onlyDigits(r.phone)}`} className="text-foreground/90" onClick={(e) => e.stopPropagation()}>
+                        {formatPhone(r.phone)}
                       </a>
                     )}
                   </>
@@ -1035,7 +1035,7 @@ const RegularsPage = () => {
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-muted-foreground">{r.phone ?? "—"}</td>
+                    <td className="px-3 py-2 text-muted-foreground tabular-nums">{r.phone ? formatPhone(r.phone) : "—"}</td>
                     <td className="px-3 py-2 text-muted-foreground">{r.manager ?? "—"}</td>
                     <td className="px-3 py-2">
                       <span className="text-[11px] font-medium px-2 py-1 rounded-md bg-primary/10 text-primary-glow">
