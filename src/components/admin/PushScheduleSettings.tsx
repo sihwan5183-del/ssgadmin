@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { BellRing, Clock, Send } from "lucide-react";
+import { BellRing, Clock, Send, Zap } from "lucide-react";
 
 type Schedule = { enabled: boolean; d1_time: string; today_time: string };
 
@@ -23,6 +23,13 @@ export function PushScheduleSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState<"d1" | "today" | null>(null);
+  const [broadcasting, setBroadcasting] = useState(false);
+  const [lastResult, setLastResult] = useState<null | {
+    total: number;
+    sent: number;
+    failed: number;
+    failures?: Array<{ user_id: string; reason: string; status?: number }>;
+  }>(null);
 
   const load = async () => {
     setLoading(true);
@@ -80,6 +87,34 @@ export function PushScheduleSettings() {
       toast.error("테스트 실패: " + (e as Error).message);
     } finally {
       setTesting(null);
+    }
+  };
+
+  const sendBroadcast = async () => {
+    setBroadcasting(true);
+    setLastResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("seg-push-reminders", {
+        body: { mode: "broadcast" },
+      });
+      if (error) throw error;
+      const r = (data ?? {}) as {
+        total?: number; sent?: number; failed?: number;
+        failures?: Array<{ user_id: string; reason: string; status?: number }>;
+      };
+      const total = r.total ?? 0;
+      const sent = r.sent ?? 0;
+      const failed = r.failed ?? 0;
+      setLastResult({ total, sent, failed, failures: r.failures });
+      if (total === 0) {
+        toast.warning("발송 대상이 없습니다 — 알림 권한을 허용한 직원이 없습니다");
+      } else {
+        toast.success(`테스트 발송 완료 · 성공 ${sent}건 / 실패 ${failed}건 (총 ${total}건)`);
+      }
+    } catch (e) {
+      toast.error("테스트 발송 실패: " + (e as Error).message);
+    } finally {
+      setBroadcasting(false);
     }
   };
 
@@ -171,6 +206,54 @@ export function PushScheduleSettings() {
 
       <div className="text-[11px] text-muted-foreground border-t border-border/40 pt-3">
         💡 시스템이 매분 시간을 확인하여 설정한 시각에 자동으로 발송합니다. 변경 사항은 즉시 적용됩니다.
+      </div>
+
+      <div className="rounded-xl border border-primary/40 bg-primary/5 p-4 space-y-3">
+        <div className="flex items-start gap-3">
+          <div className="size-9 rounded-lg bg-primary/20 text-primary grid place-items-center shrink-0">
+            <Zap className="size-4" />
+          </div>
+          <div className="flex-1">
+            <h4 className="font-semibold text-sm">즉시 테스트 발송</h4>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              알림 권한을 허용한 모든 직원에게 시스템 테스트 푸시를 즉시 전송합니다.
+              제목 "[시스템 테스트] 알림 수신 확인" 메시지가 발송됩니다.
+            </p>
+          </div>
+          <Button
+            onClick={sendBroadcast}
+            disabled={broadcasting}
+            className="gap-1.5 shrink-0"
+          >
+            <Send className="size-4" />
+            {broadcasting ? "발송 중…" : "테스트 알림 즉시 발송"}
+          </Button>
+        </div>
+
+        {lastResult && (
+          <div className="rounded-lg bg-background/60 border border-border/50 p-3 text-xs space-y-2">
+            <div className="flex gap-4 font-medium">
+              <span>전체 <span className="text-foreground">{lastResult.total}</span></span>
+              <span className="text-emerald-500">성공 {lastResult.sent}</span>
+              <span className="text-rose-500">실패 {lastResult.failed}</span>
+            </div>
+            {lastResult.failures && lastResult.failures.length > 0 && (
+              <div className="space-y-1 pt-2 border-t border-border/40">
+                <div className="text-[11px] text-muted-foreground">실패 로그</div>
+                {lastResult.failures.slice(0, 10).map((f, i) => (
+                  <div key={i} className="font-mono text-[10px] text-muted-foreground">
+                    {f.user_id.slice(0, 8)}… · [{f.status ?? "-"}] {f.reason}
+                  </div>
+                ))}
+                {lastResult.failures.length > 10 && (
+                  <div className="text-[10px] text-muted-foreground">
+                    +{lastResult.failures.length - 10}건 더…
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </Card>
   );

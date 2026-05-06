@@ -43,8 +43,22 @@ async function runForMode(mode: "d1" | "today") {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  let body: { mode?: "d1" | "today" | "auto" } = {};
+  let body: {
+    mode?: "d1" | "today" | "auto" | "broadcast";
+    title?: string;
+    message?: string;
+    url?: string;
+    user_ids?: string[];
+  } = {};
   try { body = await req.json(); } catch { /* ignore */ }
+
+  // 즉시 테스트 발송: 권한을 허용한 모든 구독자(또는 지정 user_ids)에게 즉시 푸시
+  if (body.mode === "broadcast") {
+    return new Response(
+      JSON.stringify({ ok: true, ...(await broadcast(body)) }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
 
   // auto 모드: app_settings 의 시간과 현재 KST HH:MM 비교
   if (!body.mode || body.mode === "auto") {
@@ -144,4 +158,74 @@ async function dispatch(mode: "d1" | "today", target: string, labelPrefix: strin
   }
 
   return { mode, target, activities: activities?.length ?? 0, sent, failed };
+}
+
+async function broadcast(opts: {
+  title?: string;
+  message?: string;
+  url?: string;
+  user_ids?: string[];
+}) {
+  const title = opts.title || "[시스템 테스트] 알림 수신 확인";
+  const body =
+    opts.message ||
+    "이 메시지가 보인다면 푸시 알림 설정이 정상적으로 완료된 것입니다. 확인해 주셔서 감사합니다.";
+  const url = opts.url || "/admin";
+
+  let q = supabase.from("user_push_tokens").select("id, user_id, endpoint, p256dh, auth");
+  if (opts.user_ids && opts.user_ids.length > 0) {
+    q = q.in("user_id", opts.user_ids);
+  }
+  const { data: tokens, error } = await q;
+  if (error) return { error: error.message, total: 0, sent: 0, failed: 0 };
+
+  const total = tokens?.length ?? 0;
+  let sent = 0, failed = 0;
+  const failures: Array<{ user_id: string; reason: string; status?: number }> = [];
+  const recipients = new Set<string>();
+
+  for (const t of tokens ?? []) {
+    try {
+      await webpush.sendNotification(
+        { endpoint: t.endpoint, keys: { p256dh: t.p256dh, auth: t.auth } },
+        JSON.stringify({ title, body, url, tag: `test-${Date.now()}` }),
+      );
+      sent++;
+      recipients.add(t.user_id);
+      await supabase
+        .from("user_push_tokens")
+        .update({ last_used_at: new Date().toISOString() })
+        .eq("id", t.id);
+    } catch (e) {
+      failed++;
+      const status = (e as { statusCode?: number })?.statusCode;
+      let reason = (e as Error).message || "unknown";
+      if (status === 410 || status === 404) {
+        reason = "구독 만료 또는 알림 권한 차단 (토큰 삭제됨)";
+        await supabase.from("user_push_tokens").delete().eq("id", t.id);
+      } else if (status === 403) {
+        reason = "VAPID 인증 실패";
+      } else if (status === 413) {
+        reason = "페이로드 크기 초과";
+      } else if (status === 429) {
+        reason = "푸시 서비스 요청 제한";
+      }
+      failures.push({ user_id: t.user_id, reason, status });
+      console.warn("[push:test] failed", status, reason);
+    }
+  }
+
+  // 인앱 알림도 함께 (수신자 단위)
+  for (const uid of recipients) {
+    await supabase.from("notifications").insert({
+      recipient_id: uid,
+      kind: "system_test",
+      title,
+      message: body,
+      link: url,
+      metadata: { test: true, ts: Date.now() },
+    });
+  }
+
+  return { total, sent, failed, recipients: recipients.size, failures };
 }
