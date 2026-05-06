@@ -9,23 +9,23 @@ import { GlobalSearch } from "./GlobalSearch";
  */
 export const MobileTopBar = () => {
   return (
-    <div className="lg:hidden sticky top-0 z-30 glass-strong border-b border-border/40 pt-[max(0.5rem,env(safe-area-inset-top))]">
-    <div className="px-3 py-2 flex items-center gap-2">
-      <MobileSidebar />
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        <div className="size-8 rounded-lg bg-gradient-primary grid place-items-center shadow-glow shrink-0">
-          <Sparkles className="size-4 text-primary-foreground" />
+    <div className="lg:hidden sticky top-0 z-30 glass-strong border-b border-border/40 pt-[max(0.25rem,env(safe-area-inset-top))]">
+      <div className="px-2.5 py-1.5 flex items-center gap-2">
+        <MobileSidebar />
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <div className="size-7 rounded-lg bg-gradient-primary grid place-items-center shadow-glow shrink-0">
+            <Sparkles className="size-3.5 text-primary-foreground" />
+          </div>
+          <div className="min-w-0 leading-tight">
+            <div className="text-[9px] text-muted-foreground leading-none">U+다이렉트</div>
+            <div className="text-sm font-semibold tracking-tight truncate">영업기획팀</div>
+          </div>
         </div>
-         <div className="min-w-0">
-           <div className="text-[10px] text-muted-foreground leading-none">U+다이렉트</div>
-           <div className="text-sm font-semibold tracking-tight leading-tight mt-0.5 truncate">영업기획팀</div>
-         </div>
+        <NotificationBell />
       </div>
-      <NotificationBell />
-    </div>
-    <div className="px-3 pb-2">
-      <GlobalSearch className="w-full" />
-    </div>
+      <div className="px-2.5 pb-1.5">
+        <GlobalSearch className="w-full" />
+      </div>
     </div>
   );
 };
