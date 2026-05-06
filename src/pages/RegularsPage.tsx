@@ -223,6 +223,7 @@ const RegularsPage = () => {
     setSaving(true);
     const { error } = await supabase.from("regulars").insert({
       ...form,
+      phone: form.phone ? formatPhone(form.phone) : null,
       birth_date: form.birth_date || null,
       manager: form.manager || null,
       note: form.note || null,
@@ -296,6 +297,9 @@ const RegularsPage = () => {
   // 필터된 리스트
   const filtered = useMemo(() => {
     return list.filter((r) => {
+      if (activeTab === "promotion") {
+        if (!r.is_promotion) return false;
+      }
       if (filterChannel !== "all" && r.channel !== filterChannel) return false;
       if (filterStaff !== "all" && r.created_by !== filterStaff) return false;
       if (onlyConverted && !r.converted) return false;
@@ -308,12 +312,12 @@ const RegularsPage = () => {
       }
       if (q) {
         const needle = q.toLowerCase();
-        const hay = `${r.customer_name} ${r.phone ?? ""} ${r.manager ?? ""}`.toLowerCase();
+        const hay = `${r.customer_name} ${r.phone ?? ""} ${onlyDigits(r.phone ?? "")} ${r.manager ?? ""}`.toLowerCase();
         if (!hay.includes(needle)) return false;
       }
       return true;
     });
-  }, [list, q, filterChannel, filterConverted, filterCarrier, onlyConverted, filterStaff]);
+  }, [list, q, filterChannel, filterConverted, filterCarrier, onlyConverted, filterStaff, activeTab]);
 
   // 직원별 단골 등록 통계 (월/전체 필터)
   const staffStats = useMemo(() => {
