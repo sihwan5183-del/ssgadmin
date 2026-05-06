@@ -1190,9 +1190,13 @@ export type Database = {
           label: string
           last_run_at: string | null
           link: string | null
+          month_days: number[]
+          position_filter: string[]
+          repeat_type: string
           rule_key: string
           send_time: string | null
           sort_order: number
+          store_filter: string[]
           title_template: string
           trigger_type: string
           updated_at: string
@@ -1209,9 +1213,13 @@ export type Database = {
           label: string
           last_run_at?: string | null
           link?: string | null
+          month_days?: number[]
+          position_filter?: string[]
+          repeat_type?: string
           rule_key: string
           send_time?: string | null
           sort_order?: number
+          store_filter?: string[]
           title_template: string
           trigger_type?: string
           updated_at?: string
@@ -1228,13 +1236,53 @@ export type Database = {
           label?: string
           last_run_at?: string | null
           link?: string | null
+          month_days?: number[]
+          position_filter?: string[]
+          repeat_type?: string
           rule_key?: string
           send_time?: string | null
           sort_order?: number
+          store_filter?: string[]
           title_template?: string
           trigger_type?: string
           updated_at?: string
           weekdays?: number[]
+        }
+        Relationships: []
+      }
+      notification_templates: {
+        Row: {
+          body_template: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          link: string | null
+          name: string
+          title_template: string
+          updated_at: string
+        }
+        Insert: {
+          body_template: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          link?: string | null
+          name: string
+          title_template: string
+          updated_at?: string
+        }
+        Update: {
+          body_template?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          link?: string | null
+          name?: string
+          title_template?: string
+          updated_at?: string
         }
         Relationships: []
       }
