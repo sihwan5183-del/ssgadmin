@@ -63,6 +63,10 @@ interface Rule {
   link: string | null;
   audience: string;
   conditions: Record<string, unknown>;
+  repeat_type?: string;
+  month_days?: number[];
+  store_filter?: string[];
+  position_filter?: string[];
 }
 
 async function getRule(ruleKey: string): Promise<Rule | null> {
@@ -76,6 +80,16 @@ async function getRecipientUserIds(audience: string, opts?: { user_ids?: string[
   if (audience === "dashboard_only") q = q.eq("show_in_dashboard", true);
   // 기본: active 직원만
   q = q.eq("status", "active");
+  const { data } = await q;
+  return (data ?? []).map((r) => (r as { user_id: string }).user_id);
+}
+
+async function getFilteredRecipients(rule: Rule, opts?: { user_ids?: string[] }): Promise<string[]> {
+  if (opts?.user_ids?.length) return opts.user_ids;
+  let q = supabase.from("profiles").select("user_id, store, position").eq("push_enabled", true).eq("status", "active");
+  if (rule.audience === "dashboard_only") q = q.eq("show_in_dashboard", true);
+  if (rule.store_filter && rule.store_filter.length > 0) q = q.in("store", rule.store_filter);
+  if (rule.position_filter && rule.position_filter.length > 0) q = q.in("position", rule.position_filter);
   const { data } = await q;
   return (data ?? []).map((r) => (r as { user_id: string }).user_id);
 }
@@ -158,9 +172,55 @@ async function runRule(rule: Rule, override?: { title?: string; body?: string; u
       totals.sent += r.sent; totals.failed += r.failed; totals.blocked += r.blocked;
       totals.recipients += 1;
     }
+  } else if (rule.trigger_type === "sales_threshold") {
+    // 조건: { op: 'lt' | 'gte', value: number, goal?: number }
+    const cond = (rule.conditions ?? {}) as { op?: string; value?: number; goal?: number };
+    const op = cond.op === "gte" ? "gte" : "lt";
+    const N = Number(cond.value ?? 0);
+    const goal = Number(cond.goal ?? 0);
+    const recipients = await getFilteredRecipients(rule);
+    const { data: sales } = await supabase
+      .from("sales").select("created_by").eq("open_date", k.date);
+    const counts = new Map<string, number>();
+    for (const s of sales ?? []) {
+      const u = (s as any).created_by; if (!u) continue;
+      counts.set(u, (counts.get(u) ?? 0) + 1);
+    }
+    const targets = recipients.filter((uid) => {
+      const c = counts.get(uid) ?? 0;
+      return op === "lt" ? c < N : c >= N;
+    });
+    for (const uid of targets) {
+      const { data: prof } = await supabase.from("profiles").select("display_name").eq("user_id", uid).maybeSingle();
+      const cur = counts.get(uid) ?? 0;
+      const vars = {
+        ...baseVars,
+        "직원이름": (prof as any)?.display_name ?? "",
+        "현재실적": String(cur),
+        "목표실적": String(goal || N),
+        "기준값": String(N),
+      };
+      const title = fillTpl(rule.title_template, vars);
+      const body = fillTpl(rule.body_template, vars);
+      const r = await sendToUser(uid, title, body, rule.link ?? "/input", `rule_${rule.rule_key}`);
+      totals.sent += r.sent; totals.failed += r.failed; totals.blocked += r.blocked;
+      totals.recipients += 1;
+    }
+  } else if (rule.trigger_type === "broadcast") {
+    // 자유 스케줄 단순 공지
+    const recipients = await getFilteredRecipients(rule, { user_ids: override?.user_ids });
+    for (const uid of recipients) {
+      const { data: prof } = await supabase.from("profiles").select("display_name").eq("user_id", uid).maybeSingle();
+      const vars = { ...baseVars, "직원이름": (prof as any)?.display_name ?? "" };
+      const title = override?.title ?? fillTpl(rule.title_template, vars);
+      const body = override?.body ?? fillTpl(rule.body_template, vars);
+      const r = await sendToUser(uid, title, body, rule.link ?? "/", `rule_${rule.rule_key}`);
+      totals.sent += r.sent; totals.failed += r.failed; totals.blocked += r.blocked;
+      totals.recipients += 1;
+    }
   } else {
     // manual / partner_assigned: 명시된 user_ids 또는 audience 기준
-    const recipients = await getRecipientUserIds(rule.audience, { user_ids: override?.user_ids });
+    const recipients = await getFilteredRecipients(rule, { user_ids: override?.user_ids });
     for (const uid of recipients) {
       const { data: prof } = await supabase.from("profiles").select("display_name").eq("user_id", uid).maybeSingle();
       const vars = { ...baseVars, "직원이름": (prof as any)?.display_name ?? "" };
@@ -214,8 +274,17 @@ Deno.serve(async (req) => {
   for (const r of (rules ?? []) as Rule[]) {
     if (!r.send_time) continue;
     if (r.send_time.slice(0, 5) !== k.hhmm) continue;
-    if (!r.weekdays?.includes(k.weekday)) continue;
     if (r.trigger_type === "manual" || r.trigger_type === "partner_assigned") continue;
+    // 반복 주기 매칭
+    const repeat = r.repeat_type ?? "weekly";
+    if (repeat === "daily") {
+      // pass
+    } else if (repeat === "weekly") {
+      if (!r.weekdays?.includes(k.weekday)) continue;
+    } else if (repeat === "monthly") {
+      const day = Number(k.date.slice(8, 10));
+      if (!r.month_days?.includes(day)) continue;
+    }
     const stat = await runRule(r);
     (results.ran as unknown[]).push({ rule: r.rule_key, ...stat });
   }
