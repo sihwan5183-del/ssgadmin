@@ -279,7 +279,8 @@ export default function SegCalendarPage() {
                   <th className="text-left font-medium py-2 px-2 w-[110px]">날짜</th>
                   <th className="text-left font-medium py-2 px-2">활동명</th>
                   <th className="text-left font-medium py-2 px-2 w-[100px]">담당자</th>
-                  <th className="text-left font-medium py-2 px-2">메모</th>
+                  <th className="text-left font-medium py-2 px-2 w-[90px]">타사등록</th>
+                  <th className="text-left font-medium py-2 px-2 min-w-[280px]">메모</th>
                   <th className="text-left font-medium py-2 px-2 w-[80px]">중요도</th>
                   <th className="text-left font-medium py-2 px-2 w-[80px]">상태</th>
                   <th className="text-right font-medium py-2 px-2 w-[160px]">액션</th>
@@ -310,9 +311,15 @@ export default function SegCalendarPage() {
                         </button>
                       </td>
                       <td className="py-2 px-2 align-top text-xs">{a.assignee_name ?? "-"}</td>
+                      <td className="py-2 px-2 align-top text-xs tabular-nums">
+                        {(() => {
+                          const c = (a.custom_fields as any)?.partner_count;
+                          return c != null && c !== "" ? `${c}건` : <span className="text-muted-foreground">-</span>;
+                        })()}
+                      </td>
                       <td className="py-2 px-2 align-top">
                         {a.content
-                          ? <div className="text-[11px] text-muted-foreground truncate max-w-[280px]">{a.content}</div>
+                          ? <div className="text-[11px] text-foreground/80 whitespace-pre-wrap break-words leading-relaxed">{a.content}</div>
                           : <span className="text-xs text-muted-foreground">-</span>}
                       </td>
                       <td className="py-2 px-2 align-top">
@@ -337,7 +344,14 @@ export default function SegCalendarPage() {
                             size="sm"
                             variant="outline"
                             className="h-7 px-2 text-xs"
-                            onClick={() => navigate(`/sales/new?seg_company=${encodeURIComponent(p?.company_name ?? "")}`)}
+                            onClick={() => {
+                              const params = new URLSearchParams();
+                              const company = p?.company_name ?? a.title ?? "";
+                              if (company) params.set("customer_name", company);
+                              if (a.assignee_name) params.set("manager", a.assignee_name);
+                              params.set("from_inquiry", `seg:${a.id}`);
+                              navigate(`/input?${params.toString()}`);
+                            }}
                           >
                             <FileText className="size-3.5 mr-1" /> 실적등록
                           </Button>
