@@ -173,6 +173,32 @@ async function runRule(rule: Rule, override?: { title?: string; body?: string; u
       totals.recipients += 1;
     }
   } else if (rule.trigger_type === "sales_threshold") {
+  } else if (rule.trigger_type === "pending_unresolved") {
+    // 미처리(pending_resolved=false) 실적이 있는 직원에게 발송
+    const recipients = await getFilteredRecipients(rule);
+    const { data: pend } = await supabase
+      .from("sales").select("created_by").eq("pending_resolved", false);
+    const counts = new Map<string, number>();
+    for (const s of pend ?? []) {
+      const u = (s as any).created_by; if (!u) continue;
+      counts.set(u, (counts.get(u) ?? 0) + 1);
+    }
+    const targets = recipients.filter((u) => (counts.get(u) ?? 0) > 0);
+    for (const uid of targets) {
+      const { data: prof } = await supabase.from("profiles").select("display_name").eq("user_id", uid).maybeSingle();
+      const cnt = counts.get(uid) ?? 0;
+      const vars = {
+        ...baseVars,
+        "직원이름": (prof as any)?.display_name ?? "",
+        "미처리건수": String(cnt),
+      };
+      const title = fillTpl(rule.title_template, vars);
+      const body = fillTpl(rule.body_template, vars);
+      const r = await sendToUser(uid, title, body, rule.link ?? "/activities?filter=pending", `rule_${rule.rule_key}`);
+      totals.sent += r.sent; totals.failed += r.failed; totals.blocked += r.blocked;
+      totals.recipients += 1;
+    }
+  } else if (rule.trigger_type === "_sales_threshold_dummy_marker") {
     // 조건: { op: 'lt' | 'gte', value: number, goal?: number }
     const cond = (rule.conditions ?? {}) as { op?: string; value?: number; goal?: number };
     const op = cond.op === "gte" ? "gte" : "lt";
