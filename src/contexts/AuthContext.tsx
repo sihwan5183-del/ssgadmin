@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, ReactNode } fro
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { usePushSubscription } from "@/hooks/usePushSubscription";
 
 interface AuthCtx {
   session: Session | null;
@@ -64,6 +65,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [profileStatus, setProfileStatus] = useState<string | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
+  // Web Push 구독 (로그인 후 자동)
+  usePushSubscription(session?.user?.id);
   // 세션 시작 시각 — 이 시각 이후 force_logout_at 이 갱신되면 강제 로그아웃
   const sessionStartedAtRef = useRef<number>(Date.now());
   const forcedRef = useRef<boolean>(false);
