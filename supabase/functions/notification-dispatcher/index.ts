@@ -172,7 +172,6 @@ async function runRule(rule: Rule, override?: { title?: string; body?: string; u
       totals.sent += r.sent; totals.failed += r.failed; totals.blocked += r.blocked;
       totals.recipients += 1;
     }
-  } else if (rule.trigger_type === "sales_threshold") {
   } else if (rule.trigger_type === "pending_unresolved") {
     // 미처리(pending_resolved=false) 실적이 있는 직원에게 발송
     const recipients = await getFilteredRecipients(rule);
