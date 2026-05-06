@@ -33,6 +33,7 @@ interface Row {
   hire_date: string | null;
   created_at: string;
   show_in_dashboard?: boolean;
+  push_enabled?: boolean;
 }
 
 const STATUS_BADGE: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -62,15 +63,17 @@ export default function AccountStaffPage() {
   const { stores } = useStores();
   const yearMonth = useMemo(() => new Date().toISOString().slice(0, 7), []);
   const [successMap, setSuccessMap] = useState<Record<string, number>>({});
+  const [pushTokenUsers, setPushTokenUsers] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     const monthStart = `${yearMonth}-01`;
     const monthEnd = new Date(new Date(monthStart).getFullYear(), new Date(monthStart).getMonth() + 1, 0).toISOString().slice(0, 10);
-    const [{ data: profs }, { data: roleRows }, { data: salesRows }] = await Promise.all([
+    const [{ data: profs }, { data: roleRows }, { data: salesRows }, { data: tokenRows }] = await Promise.all([
       supabase
         .from("profiles")
-        .select("user_id, display_name, phone, team, store, position, status, hire_date, created_at, show_in_dashboard")
+        .select("user_id, display_name, phone, team, store, position, status, hire_date, created_at, show_in_dashboard, push_enabled")
         .order("created_at", { ascending: false }),
       supabase.from("user_roles").select("user_id, role"),
       supabase.from("sales")
@@ -78,8 +81,10 @@ export default function AccountStaffPage() {
         .gte("open_date", monthStart)
         .lte("open_date", monthEnd)
         .limit(20000),
+      supabase.from("user_push_tokens").select("user_id"),
     ]);
     setRows((profs ?? []) as Row[]);
+    setPushTokenUsers(new Set(((tokenRows ?? []) as { user_id: string }[]).map((t) => t.user_id)));
     const roleMap: Record<string, AppRole[]> = {};
     for (const r of (roleRows ?? []) as { user_id: string; role: AppRole }[]) {
       (roleMap[r.user_id] ||= []).push(r.role);
