@@ -33,6 +33,7 @@ interface Row {
   hire_date: string | null;
   created_at: string;
   show_in_dashboard?: boolean;
+  push_enabled?: boolean;
 }
 
 const STATUS_BADGE: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -62,15 +63,17 @@ export default function AccountStaffPage() {
   const { stores } = useStores();
   const yearMonth = useMemo(() => new Date().toISOString().slice(0, 7), []);
   const [successMap, setSuccessMap] = useState<Record<string, number>>({});
+  const [pushTokenUsers, setPushTokenUsers] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     const monthStart = `${yearMonth}-01`;
     const monthEnd = new Date(new Date(monthStart).getFullYear(), new Date(monthStart).getMonth() + 1, 0).toISOString().slice(0, 10);
-    const [{ data: profs }, { data: roleRows }, { data: salesRows }] = await Promise.all([
+    const [{ data: profs }, { data: roleRows }, { data: salesRows }, { data: tokenRows }] = await Promise.all([
       supabase
         .from("profiles")
-        .select("user_id, display_name, phone, team, store, position, status, hire_date, created_at, show_in_dashboard")
+        .select("user_id, display_name, phone, team, store, position, status, hire_date, created_at, show_in_dashboard, push_enabled")
         .order("created_at", { ascending: false }),
       supabase.from("user_roles").select("user_id, role"),
       supabase.from("sales")
@@ -78,8 +81,10 @@ export default function AccountStaffPage() {
         .gte("open_date", monthStart)
         .lte("open_date", monthEnd)
         .limit(20000),
+      supabase.from("user_push_tokens").select("user_id"),
     ]);
     setRows((profs ?? []) as Row[]);
+    setPushTokenUsers(new Set(((tokenRows ?? []) as { user_id: string }[]).map((t) => t.user_id)));
     const roleMap: Record<string, AppRole[]> = {};
     for (const r of (roleRows ?? []) as { user_id: string; role: AppRole }[]) {
       (roleMap[r.user_id] ||= []).push(r.role);
@@ -191,6 +196,40 @@ export default function AccountStaffPage() {
           />
           <span>퇴사자 포함 보기</span>
         </label>
+        {canDelete && (
+          <div className="flex items-center gap-1.5 ml-auto">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={bulkBusy}
+              onClick={async () => {
+                const ids = filtered.map((r) => r.user_id);
+                if (ids.length === 0) return;
+                setBulkBusy(true);
+                const { error } = await supabase.from("profiles").update({ push_enabled: true }).in("user_id", ids);
+                setBulkBusy(false);
+                if (error) { toast.error("일괄 변경 실패: " + error.message); return; }
+                setRows((prev) => prev.map((x) => ids.includes(x.user_id) ? { ...x, push_enabled: true } : x));
+                toast.success(`${ids.length}명 알림 수신 ON`);
+              }}
+            >전체 ON</Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={bulkBusy}
+              onClick={async () => {
+                const ids = filtered.map((r) => r.user_id);
+                if (ids.length === 0) return;
+                setBulkBusy(true);
+                const { error } = await supabase.from("profiles").update({ push_enabled: false }).in("user_id", ids);
+                setBulkBusy(false);
+                if (error) { toast.error("일괄 변경 실패: " + error.message); return; }
+                setRows((prev) => prev.map((x) => ids.includes(x.user_id) ? { ...x, push_enabled: false } : x));
+                toast.success(`${ids.length}명 알림 수신 OFF`);
+              }}
+            >전체 OFF</Button>
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -212,6 +251,7 @@ export default function AccountStaffPage() {
                   <th className="text-left px-3 py-2">상태</th>
                   <th className="text-right px-3 py-2">개통</th>
                   <th className="text-center px-3 py-2">대시보드</th>
+                  <th className="text-center px-3 py-2">알림 수신</th>
                   <th className="text-right px-3 py-2"></th>
                 </tr>
               </thead>
@@ -262,6 +302,26 @@ export default function AccountStaffPage() {
                           }}
                         />
                       </td>
+                      <td className="px-3 py-2 text-center">
+                        <div className="inline-flex flex-col items-center gap-0.5">
+                          <Switch
+                            checked={r.push_enabled !== false}
+                            className="data-[state=checked]:bg-primary"
+                            onCheckedChange={async (v) => {
+                              const { error } = await supabase
+                                .from("profiles")
+                                .update({ push_enabled: v })
+                                .eq("user_id", r.user_id);
+                              if (error) { toast.error("변경 실패: " + error.message); return; }
+                              setRows((prev) => prev.map((x) => x.user_id === r.user_id ? { ...x, push_enabled: v } : x));
+                              toast.success(`${r.display_name} · 알림 ${v ? "ON" : "OFF"}`);
+                            }}
+                          />
+                          {!pushTokenUsers.has(r.user_id) && (
+                            <span className="text-[9px] text-muted-foreground leading-none">(미등록 기기)</span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-3 py-2 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button size="sm" variant="ghost" onClick={() => setSelected({ id: r.user_id, email: emails[r.user_id] ?? null })}>상세</Button>
@@ -282,7 +342,7 @@ export default function AccountStaffPage() {
                   );
                 })}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={12} className="text-center py-10 text-muted-foreground text-sm">결과 없음</td></tr>
+                  <tr><td colSpan={13} className="text-center py-10 text-muted-foreground text-sm">결과 없음</td></tr>
                 )}
               </tbody>
             </table>

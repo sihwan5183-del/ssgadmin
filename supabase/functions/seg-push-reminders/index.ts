@@ -137,6 +137,16 @@ async function dispatch(mode: "d1" | "today", target: string, labelPrefix: strin
     const recipientId = act.assignee || act.created_by;
     if (!recipientId) continue;
 
+    // 관리자 알림 수신 토글 체크
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("push_enabled")
+      .eq("user_id", recipientId)
+      .maybeSingle();
+    if (prof && (prof as { push_enabled?: boolean }).push_enabled === false) {
+      continue;
+    }
+
     const title = `${labelPrefix} ${act.title ?? "영업 일정"}`;
     const body =
       mode === "today"
@@ -204,12 +214,29 @@ async function broadcast(opts: {
   const { data: tokens, error } = await q;
   if (error) return { error: error.message, total: 0, sent: 0, failed: 0 };
 
-  const total = tokens?.length ?? 0;
+  // 관리자 토글: push_enabled = false 인 직원 제외
+  const allTokens = tokens ?? [];
+  const uniqueUids = Array.from(new Set(allTokens.map((t) => t.user_id)));
+  const allowed = new Set<string>(uniqueUids);
+  if (uniqueUids.length > 0) {
+    const { data: profs } = await supabase
+      .from("profiles")
+      .select("user_id, push_enabled")
+      .in("user_id", uniqueUids);
+    for (const p of profs ?? []) {
+      if ((p as { push_enabled?: boolean }).push_enabled === false) {
+        allowed.delete((p as { user_id: string }).user_id);
+      }
+    }
+  }
+  const filteredTokens = allTokens.filter((t) => allowed.has(t.user_id));
+  const blocked = allTokens.length - filteredTokens.length;
+  const total = filteredTokens.length;
   let sent = 0, failed = 0;
   const failures: Array<{ user_id: string; reason: string; status?: number }> = [];
   const recipients = new Set<string>();
 
-  for (const t of tokens ?? []) {
+  for (const t of filteredTokens) {
     try {
       await webpush.sendNotification(
         { endpoint: t.endpoint, keys: { p256dh: t.p256dh, auth: t.auth } },
@@ -252,5 +279,5 @@ async function broadcast(opts: {
     });
   }
 
-  return { total, sent, failed, recipients: recipients.size, failures };
+  return { total, sent, failed, blocked, recipients: recipients.size, failures };
 }
