@@ -391,6 +391,20 @@ const RegularsPage = () => {
         subtitle="채널별 단골 등록 현황 · 전환율 · 신규 등록"
       />
 
+      {/* 탭: 전체 / 프로모션 참여 */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "all" | "promotion")} className="mb-4">
+        <TabsList>
+          <TabsTrigger value="all" className="gap-1.5">
+            <HeartHandshake className="size-4" /> 전체 단골
+            <Badge variant="outline" className="ml-1 text-[10px]">{list.filter(r => !r.is_promotion).length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="promotion" className="gap-1.5">
+            <Gift className="size-4" /> 프로모션 참여 고객
+            <Badge variant="outline" className="ml-1 text-[10px]">{list.filter(r => r.is_promotion).length}</Badge>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       {/* KPI */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <KpiCard label="전체 단골" value={total} icon={HeartHandshake} color="from-primary/30 to-secondary/10 text-primary-glow" suffix="명" />
