@@ -1178,6 +1178,66 @@ export type Database = {
           },
         ]
       }
+      notification_rules: {
+        Row: {
+          audience: string
+          body_template: string
+          conditions: Json
+          created_at: string
+          description: string | null
+          enabled: boolean
+          id: string
+          label: string
+          last_run_at: string | null
+          link: string | null
+          rule_key: string
+          send_time: string | null
+          sort_order: number
+          title_template: string
+          trigger_type: string
+          updated_at: string
+          weekdays: number[]
+        }
+        Insert: {
+          audience?: string
+          body_template: string
+          conditions?: Json
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          label: string
+          last_run_at?: string | null
+          link?: string | null
+          rule_key: string
+          send_time?: string | null
+          sort_order?: number
+          title_template: string
+          trigger_type?: string
+          updated_at?: string
+          weekdays?: number[]
+        }
+        Update: {
+          audience?: string
+          body_template?: string
+          conditions?: Json
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          label?: string
+          last_run_at?: string | null
+          link?: string | null
+          rule_key?: string
+          send_time?: string | null
+          sort_order?: number
+          title_template?: string
+          trigger_type?: string
+          updated_at?: string
+          weekdays?: number[]
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
