@@ -243,6 +243,7 @@ const RegularsPage = () => {
         activated: false,
         registered_date: today(),
         note: "",
+        is_promotion: false,
       });
       load();
     }
