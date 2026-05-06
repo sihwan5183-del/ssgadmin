@@ -47,6 +47,7 @@ const TRIGGER_LABELS: Record<string, string> = {
   seg_today: "영업 일정 당일",
   sales_zero: "당일 실적 0건",
   sales_threshold: "실적 조건 (N건 미만/이상)",
+  pending_unresolved: "미처리 실적 보유 직원",
   broadcast: "자유 스케줄 공지",
   manual: "수동/즉시 발송",
   partner_assigned: "업체 배정 시",
@@ -61,7 +62,7 @@ const AUDIENCE_LABELS: Record<string, string> = {
   all: "전 직원 (활성)",
   dashboard_only: "대시보드 노출 직원",
 };
-const VARIABLES = ["{직원이름}", "{현재실적}", "{목표실적}", "{기준값}", "{활동명}", "{현재시간}", "{오늘날짜}", "{업체명}", "{제목}", "{본문}"];
+const VARIABLES = ["{직원이름}", "{현재실적}", "{목표실적}", "{기준값}", "{미처리건수}", "{활동명}", "{현재시간}", "{오늘날짜}", "{업체명}", "{제목}", "{본문}"];
 
 export function NotificationRulesManager() {
   const [rules, setRules] = useState<Rule[]>([]);

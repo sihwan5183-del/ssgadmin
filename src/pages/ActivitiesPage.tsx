@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   FileWarning, Search, Upload, Phone, User, Smartphone, AlertTriangle, ListChecks,
-  ClipboardList, CheckCircle2, Pencil, Building2, Clock, ShieldCheck,
+  ClipboardList, CheckCircle2, Pencil, Building2, Clock, ShieldCheck, AlarmClock,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
@@ -449,6 +449,7 @@ const ActivitiesPage = () => {
   const wantPending = searchParams.get("pending") === "1";
   const tabParam = searchParams.get("tab");
   const statusParam = searchParams.get("status");
+  const filterParam = searchParams.get("filter");
   // 미완료 항목 탭은 [통합 검수함]으로 통합됨
   const isReviewParam =
     tabParam === "review" ||
@@ -459,13 +460,16 @@ const ActivitiesPage = () => {
     statusParam === "청약완료,택배발송";
   const initialTab = isReviewParam
     ? "review"
-    : (tabParam || (wantPending ? "review" : (isAdmin ? "super" : "review")));
+    : (filterParam === "pending"
+        ? "pending"
+        : (tabParam || (wantPending ? "review" : (isAdmin ? "super" : "review"))));
   const [tab, setTab] = useState<string>(initialTab);
   useEffect(() => {
-    if (isReviewParam) setTab("review");
+    if (filterParam === "pending") setTab("pending");
+    else if (isReviewParam) setTab("review");
     else if (tabParam) setTab(tabParam);
     else if (wantPending) setTab("review");
-  }, [wantPending, tabParam, statusParam, isReviewParam]);
+  }, [wantPending, tabParam, statusParam, isReviewParam, filterParam]);
 
   return (
     <>
@@ -496,6 +500,9 @@ const ActivitiesPage = () => {
           <TabsTrigger value="missing-docs" className="gap-2">
             <FileWarning className="size-4" /> 서류 미첨부
           </TabsTrigger>
+          <TabsTrigger value="pending" className="gap-2">
+            <AlarmClock className="size-4" /> 미처리 실적
+          </TabsTrigger>
         </TabsList>
 
         {isAdmin && (
@@ -520,6 +527,10 @@ const ActivitiesPage = () => {
 
         <TabsContent value="missing-docs">
           <MissingDocsSection />
+        </TabsContent>
+
+        <TabsContent value="pending">
+          <PendingItemsSection />
         </TabsContent>
       </Tabs>
     </>
