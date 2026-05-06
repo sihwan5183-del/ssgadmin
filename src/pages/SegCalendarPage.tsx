@@ -204,7 +204,7 @@ export default function SegCalendarPage() {
                         "text-[10px] flex items-center gap-1 px-1 py-0.5 rounded truncate",
                         it.kind === "do" && it.act.is_completed
                           ? "opacity-40 line-through bg-muted/40"
-                          : "bg-slate-100 dark:bg-slate-800",
+                          : "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100",
                       )}>
                         <span className={`size-1.5 rounded-full shrink-0 ${TYPE_DOT[it.act.activity_type] ?? "bg-muted-foreground"} ${it.kind === "next" ? "ring-1 ring-amber-500" : ""}`} />
                         <span className="truncate font-medium">{name}</span>
