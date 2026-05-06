@@ -30,6 +30,9 @@ import { PurgeByFilterDialog, type PurgeFilter } from "@/components/common/Purge
 import { ShieldAlert } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileListCard } from "@/components/common/MobileListCard";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatPhone, onlyDigits } from "@/lib/phoneFormat";
+import { Gift } from "lucide-react";
 
 interface Regular {
   id: string;
@@ -49,6 +52,7 @@ interface Regular {
   converted_at?: string | null;
   updated_at?: string | null;
   updated_by?: string | null;
+  is_promotion?: boolean;
 }
 
 const CARRIERS = [
@@ -110,6 +114,7 @@ const RegularsPage = () => {
     activated: false,
     registered_date: today(),
     note: "",
+    is_promotion: false,
   });
   const [editSaving, setEditSaving] = useState(false);
 
@@ -119,7 +124,7 @@ const RegularsPage = () => {
       channel: r.channel ?? "",
       customer_name: r.customer_name ?? "",
       carrier: r.carrier ?? "",
-      phone: r.phone ?? "",
+      phone: formatPhone(r.phone ?? ""),
       birth_date: r.birth_date ?? "",
       manager: r.manager ?? "",
       coupon_sent: !!r.coupon_sent,
@@ -127,6 +132,7 @@ const RegularsPage = () => {
       activated: !!r.activated,
       registered_date: r.registered_date ?? today(),
       note: r.note ?? "",
+      is_promotion: !!r.is_promotion,
     });
     setEditOpen(true);
   };
@@ -142,7 +148,7 @@ const RegularsPage = () => {
         channel: editForm.channel,
         customer_name: editForm.customer_name.trim(),
         carrier: editForm.carrier || null,
-        phone: editForm.phone || null,
+        phone: editForm.phone ? formatPhone(editForm.phone) : null,
         birth_date: editForm.birth_date || null,
         manager: editForm.manager || null,
         coupon_sent: editForm.coupon_sent,
@@ -150,6 +156,7 @@ const RegularsPage = () => {
         activated: editForm.activated,
         registered_date: editForm.registered_date,
         note: editForm.note || null,
+        is_promotion: editForm.is_promotion,
       })
       .eq("id", editing.id);
     setEditSaving(false);
@@ -173,6 +180,7 @@ const RegularsPage = () => {
     activated: false,
     registered_date: today(),
     note: "",
+    is_promotion: false,
   });
 
   // 검색/필터
@@ -182,6 +190,7 @@ const RegularsPage = () => {
   const [filterCarrier, setFilterCarrier] = useState<string>("all");
   const [onlyConverted, setOnlyConverted] = useState<boolean>(false);
   const [filterStaff, setFilterStaff] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<"all" | "promotion">("all");
   // 직원별 통계 기간 필터 (YYYY-MM, 'all' 이면 전체)
   const [staffStatMonth, setStaffStatMonth] = useState<string>(() => {
     const d = new Date();
@@ -214,6 +223,7 @@ const RegularsPage = () => {
     setSaving(true);
     const { error } = await supabase.from("regulars").insert({
       ...form,
+      phone: form.phone ? formatPhone(form.phone) : null,
       birth_date: form.birth_date || null,
       manager: form.manager || null,
       note: form.note || null,
@@ -234,6 +244,7 @@ const RegularsPage = () => {
         activated: false,
         registered_date: today(),
         note: "",
+        is_promotion: false,
       });
       load();
     }
@@ -286,6 +297,9 @@ const RegularsPage = () => {
   // 필터된 리스트
   const filtered = useMemo(() => {
     return list.filter((r) => {
+      if (activeTab === "promotion") {
+        if (!r.is_promotion) return false;
+      }
       if (filterChannel !== "all" && r.channel !== filterChannel) return false;
       if (filterStaff !== "all" && r.created_by !== filterStaff) return false;
       if (onlyConverted && !r.converted) return false;
@@ -298,12 +312,12 @@ const RegularsPage = () => {
       }
       if (q) {
         const needle = q.toLowerCase();
-        const hay = `${r.customer_name} ${r.phone ?? ""} ${r.manager ?? ""}`.toLowerCase();
+        const hay = `${r.customer_name} ${r.phone ?? ""} ${onlyDigits(r.phone ?? "")} ${r.manager ?? ""}`.toLowerCase();
         if (!hay.includes(needle)) return false;
       }
       return true;
     });
-  }, [list, q, filterChannel, filterConverted, filterCarrier, onlyConverted, filterStaff]);
+  }, [list, q, filterChannel, filterConverted, filterCarrier, onlyConverted, filterStaff, activeTab]);
 
   // 직원별 단골 등록 통계 (월/전체 필터)
   const staffStats = useMemo(() => {
@@ -376,6 +390,20 @@ const RegularsPage = () => {
         title="단골 관리"
         subtitle="채널별 단골 등록 현황 · 전환율 · 신규 등록"
       />
+
+      {/* 탭: 전체 / 프로모션 참여 */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "all" | "promotion")} className="mb-4">
+        <TabsList>
+          <TabsTrigger value="all" className="gap-1.5">
+            <HeartHandshake className="size-4" /> 전체 단골
+            <Badge variant="outline" className="ml-1 text-[10px]">{list.filter(r => !r.is_promotion).length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="promotion" className="gap-1.5">
+            <Gift className="size-4" /> 프로모션 참여 고객
+            <Badge variant="outline" className="ml-1 text-[10px]">{list.filter(r => r.is_promotion).length}</Badge>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {/* KPI */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -650,9 +678,12 @@ const RegularsPage = () => {
             <Input
               className="mt-1.5"
               value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })}
               placeholder={form.carrier ? "010-0000-0000" : "통신사를 먼저 선택"}
               disabled={!form.carrier}
+              type="tel"
+              inputMode="numeric"
+              maxLength={13}
             />
           </div>
           <div className="md:col-span-2">
@@ -743,7 +774,16 @@ const RegularsPage = () => {
             />
           </div>
         </div>
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <label className="flex items-center gap-2 px-3 h-10 rounded-md border border-amber-500/40 bg-amber-500/5 cursor-pointer text-xs">
+            <Checkbox
+              checked={form.is_promotion}
+              onCheckedChange={(v) => setForm({ ...form, is_promotion: !!v })}
+              className="border-amber-600 data-[state=checked]:bg-amber-600"
+            />
+            <Gift className="size-3.5 text-amber-600" />
+            <span className="text-amber-700 dark:text-amber-400 font-medium">프로모션 전용 고객으로 등록</span>
+          </label>
           <Button onClick={submit} disabled={saving} className="bg-gradient-primary">
             {saving ? "저장 중…" : "단골 등록"}
           </Button>
@@ -905,8 +945,8 @@ const RegularsPage = () => {
                     <span className="tabular-nums">{r.registered_date}</span>
                     {r.manager && <span>· {r.manager}</span>}
                     {r.phone && (
-                      <a href={`tel:${r.phone}`} className="text-foreground/90" onClick={(e) => e.stopPropagation()}>
-                        {r.phone}
+                      <a href={`tel:${onlyDigits(r.phone)}`} className="text-foreground/90" onClick={(e) => e.stopPropagation()}>
+                        {formatPhone(r.phone)}
                       </a>
                     )}
                   </>
@@ -1018,7 +1058,7 @@ const RegularsPage = () => {
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-muted-foreground">{r.phone ?? "—"}</td>
+                    <td className="px-3 py-2 text-muted-foreground tabular-nums">{r.phone ? formatPhone(r.phone) : "—"}</td>
                     <td className="px-3 py-2 text-muted-foreground">{r.manager ?? "—"}</td>
                     <td className="px-3 py-2">
                       <span className="text-[11px] font-medium px-2 py-1 rounded-md bg-primary/10 text-primary-glow">
@@ -1128,9 +1168,12 @@ const RegularsPage = () => {
               <Input
                 className="mt-1.5"
                 value={editForm.phone}
-                onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                onChange={(e) => setEditForm({ ...editForm, phone: formatPhone(e.target.value) })}
                 placeholder={editForm.carrier ? "010-0000-0000" : "통신사를 먼저 선택"}
                 disabled={!editForm.carrier}
+                type="tel"
+                inputMode="numeric"
+                maxLength={13}
               />
             </div>
             <div className="md:col-span-2">
@@ -1227,6 +1270,18 @@ const RegularsPage = () => {
               {new Date(editing.updated_at).toLocaleString("ko-KR")}
             </p>
           )}
+
+          <div className="mt-2">
+            <label className="inline-flex items-center gap-2 px-3 h-10 rounded-md border border-amber-500/40 bg-amber-500/5 cursor-pointer text-xs">
+              <Checkbox
+                checked={editForm.is_promotion}
+                onCheckedChange={(v) => setEditForm({ ...editForm, is_promotion: !!v })}
+                className="border-amber-600 data-[state=checked]:bg-amber-600"
+              />
+              <Gift className="size-3.5 text-amber-600" />
+              <span className="text-amber-700 dark:text-amber-400 font-medium">프로모션 전용 고객</span>
+            </label>
+          </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>취소</Button>
