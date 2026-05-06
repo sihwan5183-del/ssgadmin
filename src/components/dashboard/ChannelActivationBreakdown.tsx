@@ -343,21 +343,21 @@ export const ChannelActivationBreakdown = () => {
             </div>
 
             <div className="text-right">
-              <div className="text-[11px] font-medium text-muted-foreground leading-tight">
+              <div className="text-[11px] font-semibold text-muted-foreground leading-tight">
                 {filterLabel === "전체" ? "당월 합계" : `${filterLabel} 당월 합계`}
               </div>
-              <div className="font-extrabold tabular-nums text-lg leading-tight">
+              <div className="font-black tabular-nums text-2xl leading-tight text-foreground">
                 {totalMonthly.toLocaleString()}
-                <span className="text-[11px] font-semibold text-muted-foreground ml-0.5">건</span>
+                <span className="text-xs font-bold text-muted-foreground ml-0.5">건</span>
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[11px] font-medium text-muted-foreground leading-tight">
+              <div className="text-[11px] font-semibold text-muted-foreground leading-tight">
                 {filterLabel === "전체" ? "오늘 합계" : `${filterLabel} 오늘`}
               </div>
-              <div className="font-extrabold tabular-nums text-lg text-primary leading-tight">
+              <div className="font-black tabular-nums text-2xl text-primary leading-tight drop-shadow-[0_0_10px_hsl(330_100%_55%/0.45)]">
                 {totalToday.toLocaleString()}
-                <span className="text-[11px] font-semibold text-muted-foreground ml-0.5">건</span>
+                <span className="text-xs font-bold text-muted-foreground ml-0.5">건</span>
               </div>
             </div>
             {topToday && topToday.today > 0 && (
@@ -513,7 +513,7 @@ export const ChannelActivationBreakdown = () => {
         ) : rows.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground text-sm font-medium">선택한 기간 내 데이터가 없습니다</div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
             {rows.map((row, idx) => {
               const ratio = (row.monthly / maxMonthly) * 100;
               const color = colorFor(row.channel, idx);
@@ -522,16 +522,16 @@ export const ChannelActivationBreakdown = () => {
                 <div
                   key={row.channel}
                   className={cn(
-                    "p-3 rounded-xl border transition-colors",
+                    "p-3.5 rounded-xl border transition-colors min-h-[112px]",
                     isTop
-                      ? "border-primary/30 bg-primary/5 shadow-sm"
+                      ? "border-primary/40 bg-primary/5 shadow-sm"
                       : "border-border/60 bg-card hover:bg-accent/30"
                   )}
                 >
-                  <div className="flex items-center justify-between mb-1.5 gap-1">
+                  <div className="flex items-center justify-between mb-2 gap-1">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="size-2.5 rounded-full shrink-0 ring-1 ring-white/20" style={{ background: color }} />
-                      <span className="text-xs font-bold truncate leading-tight">{row.channel}</span>
+                      <span className="size-3 rounded-full shrink-0 ring-1 ring-white/20" style={{ background: color }} />
+                      <span className="text-sm font-bold truncate leading-tight">{row.channel}</span>
                     </div>
                     {selectedProductFilter !== "전체" && (
                       <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[9px] font-semibold shrink-0">
@@ -542,14 +542,14 @@ export const ChannelActivationBreakdown = () => {
                   </div>
                   <div className="flex items-baseline gap-1 leading-none">
                     <span className={cn(
-                      "text-xl font-extrabold tabular-nums tracking-tight",
-                      isTop && "text-primary"
+                      "text-2xl font-black tabular-nums tracking-tight",
+                      isTop ? "text-primary" : "text-foreground"
                     )}>{row.monthly}</span>
-                    <span className="text-[10px] font-semibold text-muted-foreground">건</span>
+                    <span className="text-[11px] font-bold text-muted-foreground">건</span>
                   </div>
-                  <div className="mt-1 flex items-baseline gap-1 leading-none">
-                    <span className="text-sm font-bold tabular-nums text-primary">+{row.today}</span>
-                    <span className="text-[10px] font-medium text-muted-foreground">오늘</span>
+                  <div className="mt-1.5 flex items-baseline gap-1 leading-none">
+                    <span className="text-base font-extrabold tabular-nums text-primary">+{row.today}</span>
+                    <span className="text-[11px] font-semibold text-muted-foreground">오늘</span>
                   </div>
                   <div className="mt-2 h-1.5 rounded-full bg-muted/80 overflow-hidden">
                     <div
