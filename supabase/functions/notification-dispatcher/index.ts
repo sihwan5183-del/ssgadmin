@@ -198,7 +198,7 @@ async function runRule(rule: Rule, override?: { title?: string; body?: string; u
       totals.sent += r.sent; totals.failed += r.failed; totals.blocked += r.blocked;
       totals.recipients += 1;
     }
-  } else if (rule.trigger_type === "_sales_threshold_dummy_marker") {
+  } else if (rule.trigger_type === "sales_threshold") {
     // 조건: { op: 'lt' | 'gte', value: number, goal?: number }
     const cond = (rule.conditions ?? {}) as { op?: string; value?: number; goal?: number };
     const op = cond.op === "gte" ? "gte" : "lt";
