@@ -808,14 +808,46 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
             </div>
             <div className="col-span-9 md:col-span-3">
               <Field label="동판/번들">
-                <div className="flex items-center gap-2 h-9 px-2.5 rounded-md border border-border/40 bg-input/60">
-                  <Switch
-                    checked={form.bundle === "Y"}
-                    onCheckedChange={(v) => set("bundle", v ? "Y" : null)}
-                  />
-                  <span className={cn("text-xs font-medium truncate", form.bundle === "Y" ? "text-primary" : "text-muted-foreground")}>
-                    {form.bundle === "Y" ? "동판/번들" : "해당없음"}
-                  </span>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 h-9 px-2.5 rounded-md border border-border/40 bg-input/60">
+                    <Switch
+                      checked={form.bundle === "Y"}
+                      onCheckedChange={(v) => {
+                        set("bundle", v ? "Y" : null);
+                        if (!v) setCustomFields((f) => ({ ...f, bundle_type: null }));
+                      }}
+                    />
+                    <span className={cn("text-xs font-medium truncate", form.bundle === "Y" ? "text-primary" : "text-muted-foreground")}>
+                      {form.bundle === "Y" ? "동판/번들" : "해당없음"}
+                    </span>
+                  </div>
+                  {form.bundle === "Y" && (
+                    <div className={cn(
+                      "inline-flex h-9 w-full rounded-md border p-0.5 text-xs",
+                      customFields.bundle_type ? "bg-input/60 border-border/40" : "bg-input/60 border-destructive/60",
+                    )}>
+                      {[
+                        { v: "MNP", label: "MNP동판" },
+                        { v: "기변", label: "기변동판" },
+                        { v: "신규", label: "신규동판" },
+                      ].map((opt) => {
+                        const active = customFields.bundle_type === opt.v;
+                        return (
+                          <button
+                            key={opt.v}
+                            type="button"
+                            onClick={() => setCustomFields((f) => ({ ...f, bundle_type: opt.v }))}
+                            className={cn(
+                              "flex-1 rounded-[5px] font-medium transition-colors",
+                              active ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground hover:bg-muted/60",
+                            )}
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </Field>
             </div>
