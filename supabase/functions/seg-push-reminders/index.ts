@@ -26,17 +26,60 @@ function kstDate(offsetDays = 0): string {
   return kst.toISOString().slice(0, 10);
 }
 
+function kstHHmm(): string {
+  const now = new Date();
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const hh = String(kst.getUTCHours()).padStart(2, "0");
+  const mm = String(kst.getUTCMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+async function runForMode(mode: "d1" | "today") {
+  const target = mode === "today" ? kstDate(0) : kstDate(1);
+  const labelPrefix = mode === "today" ? "[오늘 일정]" : "[내일 일정]";
+  return await dispatch(mode, target, labelPrefix);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  let mode: "d1" | "today" = "d1";
-  try {
-    const body = await req.json().catch(() => ({}));
-    if (body?.mode === "today") mode = "today";
-  } catch { /* ignore */ }
+  let body: { mode?: "d1" | "today" | "auto" } = {};
+  try { body = await req.json(); } catch { /* ignore */ }
 
-  const target = mode === "today" ? kstDate(0) : kstDate(1);
-  const labelPrefix = mode === "today" ? "[오늘 일정]" : "[내일 일정]";
+  // auto 모드: app_settings 의 시간과 현재 KST HH:MM 비교
+  if (!body.mode || body.mode === "auto") {
+    const { data: s } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "notifications.push_schedule")
+      .maybeSingle();
+    const cfg = (s?.value as { enabled?: boolean; d1_time?: string; today_time?: string }) ?? {};
+    if (cfg.enabled === false) {
+      return new Response(JSON.stringify({ ok: true, skipped: "disabled" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const nowHm = kstHHmm();
+    const results: Record<string, unknown> = { now_kst: nowHm };
+    if (cfg.d1_time && cfg.d1_time.slice(0, 5) === nowHm) {
+      results.d1 = await runForMode("d1");
+    }
+    if (cfg.today_time && cfg.today_time.slice(0, 5) === nowHm) {
+      results.today = await runForMode("today");
+    }
+    return new Response(JSON.stringify({ ok: true, ...results }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // 수동 트리거 (관리자 테스트용)
+  const result = await runForMode(body.mode);
+  return new Response(JSON.stringify({ ok: true, ...result }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+});
+
+async function dispatch(mode: "d1" | "today", target: string, labelPrefix: string) {
 
   // 해당 날짜에 일정이 있는 활동 조회 (미완료만)
   const { data: activities, error: aerr } = await supabase
@@ -46,10 +89,7 @@ Deno.serve(async (req) => {
     .eq("is_completed", false);
 
   if (aerr) {
-    return new Response(JSON.stringify({ error: aerr.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return { error: aerr.message };
   }
 
   let sent = 0, failed = 0;
@@ -103,8 +143,5 @@ Deno.serve(async (req) => {
     }
   }
 
-  return new Response(
-    JSON.stringify({ ok: true, mode, target, activities: activities?.length ?? 0, sent, failed }),
-    { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-  );
-});
+  return { mode, target, activities: activities?.length ?? 0, sent, failed };
+}

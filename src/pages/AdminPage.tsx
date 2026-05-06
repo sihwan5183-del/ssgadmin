@@ -27,6 +27,7 @@ import {
   History,
   Coins,
   Sparkles,
+  BellRing,
 } from "lucide-react";
 import { Crown } from "lucide-react";
 import { DynamicFieldsManager } from "@/components/admin/DynamicFieldsManager";
@@ -39,6 +40,7 @@ import { ReviewChecklistManager } from "@/components/admin/ReviewChecklistManage
 import { StrategyConfigManager } from "@/components/admin/StrategyConfigManager";
 import { UserManagementPanel } from "@/components/admin/UserManagementPanel";
 import { RankingConfigManager } from "@/components/admin/RankingConfigManager";
+import { PushScheduleSettings } from "@/components/admin/PushScheduleSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole, type AppRole } from "@/hooks/useRole";
@@ -192,7 +194,14 @@ export default function AdminPage() {
           <TabsTrigger value="ranking" className="gap-2">
             <Crown className="size-4" /> 랭킹 설정
           </TabsTrigger>
+          <TabsTrigger value="push" className="gap-2">
+            <BellRing className="size-4" /> 푸시 알림
+          </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="push">
+          <PushScheduleSettings />
+        </TabsContent>
 
         <TabsContent value="ranking">
           <RankingConfigManager />
