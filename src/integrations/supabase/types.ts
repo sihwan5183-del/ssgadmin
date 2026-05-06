@@ -1586,6 +1586,7 @@ export type Database = {
           created_by: string
           customer_name: string
           id: string
+          is_promotion: boolean
           manager: string | null
           note: string | null
           phone: string | null
@@ -1605,6 +1606,7 @@ export type Database = {
           created_by: string
           customer_name: string
           id?: string
+          is_promotion?: boolean
           manager?: string | null
           note?: string | null
           phone?: string | null
@@ -1624,6 +1626,7 @@ export type Database = {
           created_by?: string
           customer_name?: string
           id?: string
+          is_promotion?: boolean
           manager?: string | null
           note?: string | null
           phone?: string | null
