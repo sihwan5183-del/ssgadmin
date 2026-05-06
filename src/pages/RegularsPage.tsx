@@ -774,7 +774,16 @@ const RegularsPage = () => {
             />
           </div>
         </div>
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <label className="flex items-center gap-2 px-3 h-10 rounded-md border border-amber-500/40 bg-amber-500/5 cursor-pointer text-xs">
+            <Checkbox
+              checked={form.is_promotion}
+              onCheckedChange={(v) => setForm({ ...form, is_promotion: !!v })}
+              className="border-amber-600 data-[state=checked]:bg-amber-600"
+            />
+            <Gift className="size-3.5 text-amber-600" />
+            <span className="text-amber-700 dark:text-amber-400 font-medium">프로모션 전용 고객으로 등록</span>
+          </label>
           <Button onClick={submit} disabled={saving} className="bg-gradient-primary">
             {saving ? "저장 중…" : "단골 등록"}
           </Button>
