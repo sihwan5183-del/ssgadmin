@@ -245,3 +245,12 @@
     font-size: 16px !important;
   }
 }
+
+/* 가로 스크롤 시 스크롤바 숨김 (모바일 탭/필터 등) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
