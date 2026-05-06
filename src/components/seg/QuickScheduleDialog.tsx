@@ -22,6 +22,43 @@ const PRIORITIES = [
   { value: "low", label: "하", className: "text-emerald-600" },
 ];
 
+function DatePopover({
+  label, value, onChange, min, clearable,
+}: { label: string; value: string; onChange: (v: string) => void; min?: string; clearable?: boolean }) {
+  const date = value ? parseISO(value) : undefined;
+  return (
+    <div className="space-y-1">
+      <span className="text-[10px] text-muted-foreground">{label}</span>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn("w-full h-9 justify-start text-left font-normal text-xs", !value && "text-muted-foreground")}
+          >
+            <CalendarIcon className="size-3.5 mr-1.5 opacity-70" />
+            {date ? format(date, "yyyy-MM-dd (eee)", { locale: ko }) : "날짜 선택"}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={date}
+            onSelect={(d) => onChange(d ? format(d, "yyyy-MM-dd") : "")}
+            disabled={min ? (d) => format(d, "yyyy-MM-dd") < min : undefined}
+            initialFocus
+            className={cn("p-3 pointer-events-auto")}
+          />
+          {clearable && value && (
+            <div className="p-2 border-t">
+              <Button size="sm" variant="ghost" className="w-full h-7 text-xs" onClick={() => onChange("")}>지우기</Button>
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
