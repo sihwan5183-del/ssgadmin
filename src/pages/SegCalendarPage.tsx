@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Calendar as CalIcon, ArrowLeft, Plus, ClipboardCheck, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalIcon, ArrowLeft, Plus, ClipboardCheck, CheckCircle2, Pencil, Trash2 } from "lucide-react";
 import { useSegPartners, useSegActivities, type SegActivity } from "@/hooks/useSegPartners";
 import { addMonths, format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameDay, isSameMonth } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -12,6 +12,11 @@ import { useNavigate } from "react-router-dom";
 import { PartnerDetailDrawer } from "@/components/seg/PartnerDetailDrawer";
 import { QuickScheduleDialog } from "@/components/seg/QuickScheduleDialog";
 import { ActivityReportDialog } from "@/components/seg/ActivityReportDialog";
+import { useRole } from "@/hooks/useRole";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -53,6 +58,7 @@ export default function SegCalendarPage() {
   const { activities, refresh } = useSegActivities();
   const { partners } = useSegPartners();
   const { user } = useAuth();
+  const { isAdmin } = useRole();
   const navigate = useNavigate();
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [drawerPartner, setDrawerPartner] = useState<any>(null);
@@ -61,6 +67,8 @@ export default function SegCalendarPage() {
   const [quickDate, setQuickDate] = useState<string | undefined>(undefined);
   const [reportTarget, setReportTarget] = useState<SegActivity | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
+  const [editingAct, setEditingAct] = useState<SegActivity | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SegActivity | null>(null);
   const [listSort, setListSort] = useState<"date" | "recent">("date");
   const [statusFilter, setStatusFilter] = useState<"all" | "scheduled" | "done">("all");
 
@@ -127,8 +135,28 @@ export default function SegCalendarPage() {
   }, [filteredActs, selectedDay, cursor, listSort, statusFilter]);
 
   const openQuickFor = (d: Date) => {
+    setEditingAct(null);
     setQuickDate(format(d, "yyyy-MM-dd"));
     setQuickOpen(true);
+  };
+
+  const openEdit = (a: SegActivity) => {
+    setEditingAct(a);
+    setQuickDate(a.activity_date);
+    setQuickOpen(true);
+  };
+
+  const canModify = (a: SegActivity) => isAdmin || a.created_by === user?.id;
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const { error } = await (supabase as any)
+      .from("seg_activities")
+      .delete()
+      .eq("id", deleteTarget.id);
+    if (error) toast.error(error.message);
+    else { toast.success("일정이 삭제되었습니다"); refresh(); }
+    setDeleteTarget(null);
   };
 
   const toggleComplete = async (a: SegActivity) => {
@@ -297,6 +325,7 @@ export default function SegCalendarPage() {
                   const priInfo = pri ? PRIORITY_BADGE[pri] : undefined;
                   const name = a.title || p?.company_name || "-";
                   const reported = !!(a.custom_fields as any)?.reported_at;
+                  const editable = canModify(a);
                   return (
                     <tr key={a.id} className={cn(
                       "border-b border-border/40 hover:bg-muted/40 transition-colors",
@@ -355,6 +384,26 @@ export default function SegCalendarPage() {
                           >
                             <ClipboardCheck className="size-3.5 mr-1" /> {reported ? "보고완료" : "활동보고"}
                           </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7"
+                            disabled={!editable}
+                            title={editable ? "수정" : "권한 없음"}
+                            onClick={() => openEdit(a)}
+                          >
+                            <Pencil className="size-3.5" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-rose-600 hover:text-rose-700 hover:bg-rose-500/10"
+                            disabled={!editable}
+                            title={editable ? "삭제" : "권한 없음"}
+                            onClick={() => setDeleteTarget(a)}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -371,6 +420,7 @@ export default function SegCalendarPage() {
         open={quickOpen}
         onOpenChange={setQuickOpen}
         defaultDate={quickDate}
+        editing={editingAct}
         onSaved={refresh}
       />
       <ActivityReportDialog
@@ -379,6 +429,23 @@ export default function SegCalendarPage() {
         activity={reportTarget}
         onSaved={refresh}
       />
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>일정을 삭제하시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription>
+              “{deleteTarget?.title ?? "-"}” 일정과 연결된 활동보고 내용이 모두 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-rose-600 hover:bg-rose-700 text-white"
+            >삭제</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
