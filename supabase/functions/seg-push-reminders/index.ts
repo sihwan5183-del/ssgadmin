@@ -7,11 +7,29 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const VAPID_PUBLIC = Deno.env.get("VAPID_PUBLIC_KEY")!;
-const VAPID_PRIVATE = Deno.env.get("VAPID_PRIVATE_KEY")!;
-const VAPID_SUBJECT = Deno.env.get("VAPID_SUBJECT") || "mailto:admin@example.com";
+const VAPID_PUBLIC = Deno.env.get("VAPID_PUBLIC_KEY") ?? "";
+const VAPID_PRIVATE = Deno.env.get("VAPID_PRIVATE_KEY") ?? "";
+const RAW_SUBJECT = (Deno.env.get("VAPID_SUBJECT") ?? "").trim();
+// VAPID subject 는 반드시 mailto:/https: URL 이어야 함. 이메일만 들어온 경우 자동 보정.
+const VAPID_SUBJECT = RAW_SUBJECT
+  ? (RAW_SUBJECT.startsWith("mailto:") || RAW_SUBJECT.startsWith("http")
+      ? RAW_SUBJECT
+      : `mailto:${RAW_SUBJECT}`)
+  : "mailto:admin@example.com";
 
-webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE);
+let vapidReady = false;
+let vapidError: string | null = null;
+try {
+  if (VAPID_PUBLIC && VAPID_PRIVATE) {
+    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE);
+    vapidReady = true;
+  } else {
+    vapidError = "VAPID_PUBLIC_KEY 또는 VAPID_PRIVATE_KEY 가 설정되어 있지 않습니다.";
+  }
+} catch (e) {
+  vapidError = `VAPID 설정 오류: ${(e as Error).message}`;
+  console.error("[push] vapid init failed", e);
+}
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -42,6 +60,13 @@ async function runForMode(mode: "d1" | "today") {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  if (!vapidReady) {
+    return new Response(
+      JSON.stringify({ ok: false, error: vapidError ?? "VAPID 미설정" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
 
   let body: {
     mode?: "d1" | "today" | "auto" | "broadcast";
