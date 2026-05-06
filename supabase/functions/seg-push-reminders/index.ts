@@ -137,6 +137,16 @@ async function dispatch(mode: "d1" | "today", target: string, labelPrefix: strin
     const recipientId = act.assignee || act.created_by;
     if (!recipientId) continue;
 
+    // 관리자 알림 수신 토글 체크
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("push_enabled")
+      .eq("user_id", recipientId)
+      .maybeSingle();
+    if (prof && (prof as { push_enabled?: boolean }).push_enabled === false) {
+      continue;
+    }
+
     const title = `${labelPrefix} ${act.title ?? "영업 일정"}`;
     const body =
       mode === "today"
