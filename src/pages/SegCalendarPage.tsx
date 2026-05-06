@@ -27,6 +27,19 @@ const TYPE_DOT: Record<string, string> = {
   기타: "bg-muted-foreground",
 };
 
+// 활동 유형별 파스텔톤 칩 색상 (라이트/다크 모두 시인성 확보)
+const TYPE_CHIP: Record<string, string> = {
+  방문: "bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200",
+  MOU: "bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-200",
+  상담: "bg-sky-100 text-sky-800 dark:bg-sky-500/20 dark:text-sky-200",
+  전화: "bg-cyan-100 text-cyan-800 dark:bg-cyan-500/20 dark:text-cyan-200",
+  제안: "bg-purple-100 text-purple-800 dark:bg-purple-500/20 dark:text-purple-200",
+  계약: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200",
+  사후관리: "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200",
+  이벤트: "bg-pink-100 text-pink-800 dark:bg-pink-500/20 dark:text-pink-200",
+  기타: "bg-slate-100 text-slate-800 dark:bg-slate-700/60 dark:text-slate-100",
+};
+
 const PRIORITY_BADGE: Record<string, { label: string; cls: string }> = {
   high: { label: "상", cls: "bg-rose-500/15 text-rose-700 border-rose-500/30 dark:text-rose-300" },
   mid:  { label: "중", cls: "bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-300" },
@@ -181,8 +194,8 @@ export default function SegCalendarPage() {
                 className={cn(
                   "group relative min-h-[96px] p-1.5 rounded-lg border text-left cursor-pointer transition-colors",
                   isSel ? "border-slate-900 dark:border-slate-100 ring-2 ring-slate-900/20 dark:ring-slate-100/20" : "border-border/50 hover:border-slate-400 dark:hover:border-slate-500",
-                  inMonth ? "bg-card" : "bg-muted/30 opacity-60",
-                  isToday && "bg-blue-50/60 dark:bg-blue-950/30",
+                  inMonth ? "bg-white dark:bg-card" : "bg-muted/20 opacity-60",
+                  isToday && "bg-blue-50 dark:bg-blue-950/30 border-blue-500 dark:border-blue-400 ring-2 ring-blue-500/30",
                 )}
               >
                 <div className="text-xs font-medium mb-1 flex items-center justify-between">
@@ -199,12 +212,13 @@ export default function SegCalendarPage() {
                 <div className="space-y-0.5">
                   {items.slice(0, 3).map((it, i) => {
                     const name = it.act.title || partnerById.get(it.act.partner_id)?.company_name || "-";
+                    const chip = TYPE_CHIP[it.act.activity_type] ?? TYPE_CHIP["기타"];
                     return (
                       <div key={i} className={cn(
                         "text-[10px] flex items-center gap-1 px-1 py-0.5 rounded truncate",
                         it.kind === "do" && it.act.is_completed
                           ? "opacity-40 line-through bg-muted/40"
-                          : "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100",
+                          : chip,
                       )}>
                         <span className={`size-1.5 rounded-full shrink-0 ${TYPE_DOT[it.act.activity_type] ?? "bg-muted-foreground"} ${it.kind === "next" ? "ring-1 ring-amber-500" : ""}`} />
                         <span className="truncate font-medium">{name}</span>
@@ -265,7 +279,8 @@ export default function SegCalendarPage() {
                   <th className="text-left font-medium py-2 px-2 w-[110px]">날짜</th>
                   <th className="text-left font-medium py-2 px-2">활동명</th>
                   <th className="text-left font-medium py-2 px-2 w-[100px]">담당자</th>
-                  <th className="text-left font-medium py-2 px-2">메모</th>
+                  <th className="text-left font-medium py-2 px-2 w-[90px]">타사등록</th>
+                  <th className="text-left font-medium py-2 px-2 min-w-[280px]">메모</th>
                   <th className="text-left font-medium py-2 px-2 w-[80px]">중요도</th>
                   <th className="text-left font-medium py-2 px-2 w-[80px]">상태</th>
                   <th className="text-right font-medium py-2 px-2 w-[160px]">액션</th>
@@ -296,9 +311,15 @@ export default function SegCalendarPage() {
                         </button>
                       </td>
                       <td className="py-2 px-2 align-top text-xs">{a.assignee_name ?? "-"}</td>
+                      <td className="py-2 px-2 align-top text-xs tabular-nums">
+                        {(() => {
+                          const c = (a.custom_fields as any)?.partner_count;
+                          return c != null && c !== "" ? `${c}건` : <span className="text-muted-foreground">-</span>;
+                        })()}
+                      </td>
                       <td className="py-2 px-2 align-top">
                         {a.content
-                          ? <div className="text-[11px] text-muted-foreground truncate max-w-[280px]">{a.content}</div>
+                          ? <div className="text-[11px] text-foreground/80 whitespace-pre-wrap break-words leading-relaxed">{a.content}</div>
                           : <span className="text-xs text-muted-foreground">-</span>}
                       </td>
                       <td className="py-2 px-2 align-top">
@@ -323,7 +344,14 @@ export default function SegCalendarPage() {
                             size="sm"
                             variant="outline"
                             className="h-7 px-2 text-xs"
-                            onClick={() => navigate(`/sales/new?seg_company=${encodeURIComponent(p?.company_name ?? "")}`)}
+                            onClick={() => {
+                              const params = new URLSearchParams();
+                              const company = p?.company_name ?? a.title ?? "";
+                              if (company) params.set("customer_name", company);
+                              if (a.assignee_name) params.set("manager", a.assignee_name);
+                              params.set("from_inquiry", `seg:${a.id}`);
+                              navigate(`/input?${params.toString()}`);
+                            }}
                           >
                             <FileText className="size-3.5 mr-1" /> 실적등록
                           </Button>

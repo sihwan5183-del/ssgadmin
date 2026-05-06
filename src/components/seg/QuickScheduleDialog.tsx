@@ -28,6 +28,7 @@ export function QuickScheduleDialog({ open, onOpenChange, defaultDate, onSaved }
   const [assigneeName, setAssigneeName] = useState("");
   const [priority, setPriority] = useState("mid");
   const [content, setContent] = useState("");
+  const [partnerCount, setPartnerCount] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
 
@@ -39,6 +40,7 @@ export function QuickScheduleDialog({ open, onOpenChange, defaultDate, onSaved }
       setAssigneeName("");
       setPriority("mid");
       setContent("");
+      setPartnerCount("");
       // 활동명 칸 자동 포커스
       setTimeout(() => nameRef.current?.focus(), 50);
     }
@@ -86,7 +88,11 @@ export function QuickScheduleDialog({ open, onOpenChange, defaultDate, onSaved }
         content: content || null,
         is_completed: false,
         assignee_name: assigneeName || null,
-        custom_fields: { priority, activity_name: name },
+        custom_fields: {
+          priority,
+          activity_name: name,
+          partner_count: partnerCount ? Number(partnerCount) : null,
+        },
         created_by: user.id,
       });
       if (error) throw error;
@@ -145,6 +151,17 @@ export function QuickScheduleDialog({ open, onOpenChange, defaultDate, onSaved }
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">타사등록 갯수 (선택)</Label>
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              value={partnerCount}
+              onChange={(e) => setPartnerCount(e.target.value.replace(/[^0-9]/g, ""))}
+              placeholder="예: 3"
+            />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">메모 (선택)</Label>
