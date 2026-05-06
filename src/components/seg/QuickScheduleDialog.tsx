@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import type { SegActivity } from "@/hooks/useSegPartners";
 
 const PRIORITIES = [
   { value: "high", label: "상", className: "text-rose-600" },
@@ -20,40 +21,73 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   defaultDate?: string; // yyyy-MM-dd
   onSaved?: () => void;
+  editing?: SegActivity | null;
 }
 
-export function QuickScheduleDialog({ open, onOpenChange, defaultDate, onSaved }: Props) {
+export function QuickScheduleDialog({ open, onOpenChange, defaultDate, onSaved, editing }: Props) {
   const { user } = useAuth();
   const [activityName, setActivityName] = useState("");
   const [assigneeName, setAssigneeName] = useState("");
   const [priority, setPriority] = useState("mid");
   const [content, setContent] = useState("");
   const [partnerCount, setPartnerCount] = useState<string>("");
+  const [activityDate, setActivityDate] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
 
-  const date = defaultDate ?? new Date().toISOString().slice(0, 10);
+  const isEdit = !!editing;
 
   useEffect(() => {
     if (open) {
-      setActivityName("");
-      setAssigneeName("");
-      setPriority("mid");
-      setContent("");
-      setPartnerCount("");
-      // 활동명 칸 자동 포커스
+      if (editing) {
+        const cf = (editing.custom_fields as any) ?? {};
+        setActivityName(editing.title ?? "");
+        setAssigneeName(editing.assignee_name ?? "");
+        setPriority(cf.priority ?? "mid");
+        setContent(editing.content ?? "");
+        setPartnerCount(cf.partner_count != null ? String(cf.partner_count) : "");
+        setActivityDate(editing.activity_date);
+      } else {
+        setActivityName("");
+        setAssigneeName("");
+        setPriority("mid");
+        setContent("");
+        setPartnerCount("");
+        setActivityDate(defaultDate ?? new Date().toISOString().slice(0, 10));
+      }
       setTimeout(() => nameRef.current?.focus(), 50);
     }
-  }, [open]);
+  }, [open, editing, defaultDate]);
 
   const onSubmit = async () => {
     if (!user) return;
     const name = activityName.trim();
     if (!name) { toast.error("활동명을 입력하세요"); nameRef.current?.focus(); return; }
 
-    // 활동명을 임시 파트너로 저장 (제약 없는 자유 입력 보장)
     setSaving(true);
     try {
+      if (isEdit && editing) {
+        const cf = { ...((editing.custom_fields as any) ?? {}) };
+        cf.priority = priority;
+        cf.activity_name = name;
+        cf.partner_count = partnerCount ? Number(partnerCount) : null;
+        const { error } = await (supabase as any)
+          .from("seg_activities")
+          .update({
+            activity_date: activityDate,
+            title: name,
+            content: content || null,
+            assignee_name: assigneeName || null,
+            custom_fields: cf,
+          })
+          .eq("id", editing.id);
+        if (error) throw error;
+        toast.success("일정이 수정되었습니다");
+        onSaved?.();
+        onOpenChange(false);
+        return;
+      }
+
       // 동일한 자유 입력 활동명에 대해 partner 1건을 (자동) 보장 — 매번 새로 만들지 않도록 가벼운 재사용
       let pid: string | null = null;
       const { data: existing } = await (supabase as any)
@@ -82,7 +116,7 @@ export function QuickScheduleDialog({ open, onOpenChange, defaultDate, onSaved }
 
       const { error } = await (supabase as any).from("seg_activities").insert({
         partner_id: pid,
-        activity_date: date,
+        activity_date: activityDate,
         activity_type: "기타",
         title: name,
         content: content || null,
@@ -110,9 +144,13 @@ export function QuickScheduleDialog({ open, onOpenChange, defaultDate, onSaved }
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>새 일정 등록 · {date}</DialogTitle>
+          <DialogTitle>{isEdit ? "일정 수정" : "새 일정 등록"} · {activityDate}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">날짜</Label>
+            <Input type="date" value={activityDate} onChange={(e) => setActivityDate(e.target.value)} />
+          </div>
           <div className="space-y-1.5">
             <Label className="text-xs">활동명</Label>
             <Input
