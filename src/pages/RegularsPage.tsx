@@ -1271,6 +1271,18 @@ const RegularsPage = () => {
             </p>
           )}
 
+          <div className="mt-2">
+            <label className="inline-flex items-center gap-2 px-3 h-10 rounded-md border border-amber-500/40 bg-amber-500/5 cursor-pointer text-xs">
+              <Checkbox
+                checked={editForm.is_promotion}
+                onCheckedChange={(v) => setEditForm({ ...editForm, is_promotion: !!v })}
+                className="border-amber-600 data-[state=checked]:bg-amber-600"
+              />
+              <Gift className="size-3.5 text-amber-600" />
+              <span className="text-amber-700 dark:text-amber-400 font-medium">프로모션 전용 고객</span>
+            </label>
+          </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>취소</Button>
             <Button onClick={saveEdit} disabled={editSaving} className="bg-gradient-primary">
