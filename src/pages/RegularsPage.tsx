@@ -30,6 +30,9 @@ import { PurgeByFilterDialog, type PurgeFilter } from "@/components/common/Purge
 import { ShieldAlert } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileListCard } from "@/components/common/MobileListCard";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatPhone, onlyDigits } from "@/lib/phoneFormat";
+import { Gift } from "lucide-react";
 
 interface Regular {
   id: string;
@@ -49,6 +52,7 @@ interface Regular {
   converted_at?: string | null;
   updated_at?: string | null;
   updated_by?: string | null;
+  is_promotion?: boolean;
 }
 
 const CARRIERS = [
