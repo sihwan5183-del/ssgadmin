@@ -5,6 +5,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
+import { format, parseISO, startOfDay } from "date-fns";
+import { ko } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -32,6 +38,7 @@ export function QuickScheduleDialog({ open, onOpenChange, defaultDate, onSaved, 
   const [content, setContent] = useState("");
   const [partnerCount, setPartnerCount] = useState<string>("");
   const [activityDate, setActivityDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
 
@@ -47,6 +54,7 @@ export function QuickScheduleDialog({ open, onOpenChange, defaultDate, onSaved, 
         setContent(editing.content ?? "");
         setPartnerCount(cf.partner_count != null ? String(cf.partner_count) : "");
         setActivityDate(editing.activity_date);
+        setEndDate(cf.end_date ?? "");
       } else {
         setActivityName("");
         setAssigneeName("");
@@ -54,6 +62,7 @@ export function QuickScheduleDialog({ open, onOpenChange, defaultDate, onSaved, 
         setContent("");
         setPartnerCount("");
         setActivityDate(defaultDate ?? new Date().toISOString().slice(0, 10));
+        setEndDate("");
       }
       setTimeout(() => nameRef.current?.focus(), 50);
     }
@@ -63,6 +72,13 @@ export function QuickScheduleDialog({ open, onOpenChange, defaultDate, onSaved, 
     if (!user) return;
     const name = activityName.trim();
     if (!name) { toast.error("활동명을 입력하세요"); nameRef.current?.focus(); return; }
+    if (!activityDate) { toast.error("시작 날짜를 선택하세요"); return; }
+    if (endDate && endDate < activityDate) { toast.error("종료일이 시작일보다 빠를 수 없습니다"); return; }
+    const today = format(startOfDay(new Date()), "yyyy-MM-dd");
+    if (!isEdit && activityDate < today) {
+      const ok = window.confirm("과거 날짜에 일정을 등록하시겠습니까?");
+      if (!ok) return;
+    }
 
     setSaving(true);
     try {
@@ -71,6 +87,7 @@ export function QuickScheduleDialog({ open, onOpenChange, defaultDate, onSaved, 
         cf.priority = priority;
         cf.activity_name = name;
         cf.partner_count = partnerCount ? Number(partnerCount) : null;
+        cf.end_date = endDate || null;
         const { error } = await (supabase as any)
           .from("seg_activities")
           .update({
@@ -126,6 +143,7 @@ export function QuickScheduleDialog({ open, onOpenChange, defaultDate, onSaved, 
           priority,
           activity_name: name,
           partner_count: partnerCount ? Number(partnerCount) : null,
+          end_date: endDate || null,
         },
         created_by: user.id,
       });
@@ -147,9 +165,17 @@ export function QuickScheduleDialog({ open, onOpenChange, defaultDate, onSaved, 
           <DialogTitle>{isEdit ? "일정 수정" : "새 일정 등록"} · {activityDate}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs">날짜</Label>
-            <Input type="date" value={activityDate} onChange={(e) => setActivityDate(e.target.value)} />
+          <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+            <Label className="text-xs flex items-center gap-1.5 text-muted-foreground">
+              <CalendarIcon className="size-3.5" /> 활동 날짜
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              <DatePopover label="시작" value={activityDate} onChange={setActivityDate} />
+              <DatePopover label="종료(선택)" value={endDate} onChange={setEndDate} min={activityDate} clearable />
+            </div>
+            {endDate && endDate < activityDate && (
+              <p className="text-[11px] text-rose-600">종료일이 시작일보다 빠를 수 없습니다.</p>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">활동명</Label>
