@@ -1,4 +1,4 @@
-import { Bell, FileText, ArrowRightLeft, CheckCheck } from "lucide-react";
+import { Bell, FileText, ArrowRightLeft, CheckCheck, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 const KIND_ICON: Record<string, React.ElementType> = {
   document_uploaded: FileText,
   transfer_pending: ArrowRightLeft,
+  seg_reminder: CalendarClock,
 };
 
 export const NotificationBell = () => {
