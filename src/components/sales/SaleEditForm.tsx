@@ -929,6 +929,12 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                         className="h-9 bg-input/60 text-xs"
                         maxLength={200}
                       />
+                      {form.vas1 && form.vas1.trim() !== "" && (
+                        <VasActionToggle
+                          value={(form.vas1_action as any) ?? null}
+                          onChange={(v) => set("vas1_action", v)}
+                        />
+                      )}
                     </Field>
                   </div>
                   <div className="col-span-12 md:col-span-4">
@@ -940,6 +946,12 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                         className="h-9 bg-input/60 text-xs"
                         maxLength={200}
                       />
+                      {form.vas2 && form.vas2.trim() !== "" && (
+                        <VasActionToggle
+                          value={(form.vas2_action as any) ?? null}
+                          onChange={(v) => set("vas2_action", v)}
+                        />
+                      )}
                     </Field>
                   </div>
                   <div className="col-span-12 md:col-span-4">
@@ -962,6 +974,40 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                       </Select>
                     </Field>
                   </div>
+          </div>
+
+          {/* 요금제 사후 관리 — 유지기간 후 변경 토글 */}
+          <div className="rounded-lg border border-border/50 bg-muted/20 p-3 mt-2">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <div className="text-xs font-semibold flex items-center gap-2">
+                  <Sparkles className="size-3.5 text-primary" />
+                  유지기간 후 요금제 변경
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  ON으로 두면 유지기간 만료일에 자동으로 요금제 변경 캘린더에 표시됩니다.
+                </p>
+              </div>
+              <Switch
+                checked={!!form.plan_change_planned}
+                onCheckedChange={(v) => {
+                  set("plan_change_planned", v);
+                  if (!v) set("plan_change_target_plan", null);
+                }}
+              />
+            </div>
+            {form.plan_change_planned && (
+              <div className="mt-3">
+                <Label className="text-[11px] text-muted-foreground">변경할 요금제 명칭</Label>
+                <Input
+                  value={form.plan_change_target_plan ?? ""}
+                  onChange={(e) => set("plan_change_target_plan", e.target.value || null)}
+                  placeholder="예: 5G 시그니처, LTE 안심데이터 등"
+                  className="h-9 mt-1 bg-input/60 text-xs"
+                  maxLength={120}
+                />
+              </div>
+            )}
           </div>
 
           {/* TV 추가 (인터넷/유선결합 상품) */}
