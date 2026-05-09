@@ -85,6 +85,10 @@ const emptyForm: Partial<SaleRow> = {
   moyo_excluded: false,
   cash_open: false,
   trade_in_enabled: false,
+  plan_change_planned: false,
+  plan_change_target_plan: null,
+  vas1_action: null,
+  vas2_action: null,
 };
 
 interface SaleEditFormProps {
@@ -128,6 +132,7 @@ const SALE_FORM_KEYS = [
   "cash_account", "cash_holder", "net_fee", "delivery_type", "tracking_no", "note", "bundle",
   "trade_in_enabled", "trade_in_model", "trade_in_estimate", "trade_in_confirmed",
   "customer_support_amount", "corp_card_amount",
+  "plan_change_planned", "plan_change_target_plan", "vas1_action", "vas2_action",
 ] as const;
 
 const NUMERIC_FORM_KEYS = new Set<string>([
@@ -136,7 +141,7 @@ const NUMERIC_FORM_KEYS = new Set<string>([
   "customer_support_amount", "corp_card_amount",
 ]);
 
-const BOOLEAN_FORM_KEYS = new Set<string>(["moyo_excluded", "cash_open", "trade_in_enabled"]);
+const BOOLEAN_FORM_KEYS = new Set<string>(["moyo_excluded", "cash_open", "trade_in_enabled", "plan_change_planned"]);
 
 const bindSaleToForm = (sale: Record<string, any>): Partial<SaleRow> => {
   const bound: Record<string, any> = {};
