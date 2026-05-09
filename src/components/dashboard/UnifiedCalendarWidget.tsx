@@ -8,7 +8,7 @@ type TabKey = "sales" | "seg" | "apt" | "ad";
 
 const MAGENTA = "#E6007E";
 
-const TABS: { key: TabKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+const TABS: { key: TabKey; label: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }> }[] = [
   { key: "sales", label: "일별 판매실적", icon: TrendingUp },
   { key: "seg", label: "영업 캘린더", icon: Briefcase },
   { key: "apt", label: "아파트게시 캘린더", icon: MapPin },
