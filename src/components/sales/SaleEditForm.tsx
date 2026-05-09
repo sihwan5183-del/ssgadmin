@@ -78,6 +78,10 @@ export type SaleRow = {
   trade_in_model?: string | null;
   trade_in_estimate?: number | null;
   trade_in_confirmed?: number | null;
+  plan_change_planned?: boolean | null;
+  plan_change_target_plan?: string | null;
+  vas1_action?: string | null;
+  vas2_action?: string | null;
 };
 
 const emptyForm: Partial<SaleRow> = {
