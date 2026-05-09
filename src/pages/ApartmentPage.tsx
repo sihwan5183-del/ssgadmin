@@ -269,67 +269,92 @@ export default function ApartmentPage() {
                 <Plus className="size-4 mr-1.5" /> 새 게시 등록
               </Button>
             </div>
-            {postings.length === 0 ? (
-              <div className="py-12 text-center text-muted-foreground text-sm">
-                등록된 게시 활동이 없습니다
-              </div>
-            ) : (
-              <div className="grid gap-3 md:grid-cols-2">
-                {postings.map((p) => {
-                  const status = computePostingStatus(p);
-                  const leadCount = leadCountByPosting.get(p.id) ?? 0;
+            {/* Team tabs */}
+            <div className="-mx-1 mb-3 overflow-x-auto">
+              <div className="flex gap-1 px-1 min-w-max">
+                {[{ name: "__all__", label: `전체 (${postings.length})` },
+                  ...fieldTeams.map((t) => ({
+                    name: t.name,
+                    label: `${t.name} (${postings.filter((p) => p.team === t.name).length})`,
+                  }))].map((t) => {
+                  const active = teamTab === t.name;
                   return (
-                    <div
-                      key={p.id}
-                      className="p-4 rounded-xl border border-border/40 bg-card/40 space-y-2"
+                    <button
+                      key={t.name}
+                      onClick={() => setTeamTab(t.name)}
+                      className={cn(
+                        "whitespace-nowrap px-3 py-1.5 text-xs font-medium border transition-colors",
+                        active
+                          ? "border-foreground bg-foreground text-background"
+                          : "border-border text-foreground hover:border-foreground",
+                      )}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <div className="font-semibold truncate">{p.apartment_name}</div>
-                          {p.location_detail && (
-                            <div className="text-xs text-muted-foreground truncate flex items-center gap-1 mt-0.5">
-                              <MapPin className="size-3" /> {p.location_detail}
-                            </div>
-                          )}
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className={
-                            status === "게시중"
-                              ? "border-primary/40 text-primary"
-                              : status === "예정"
-                              ? "border-amber-400/40 text-amber-500"
-                              : "text-muted-foreground"
-                          }
-                        >
-                          {status}
-                        </Badge>
-                      </div>
-                      <div className="text-xs text-muted-foreground flex items-center gap-3 flex-wrap">
-                        {p.team && (
-                          <span className="flex items-center gap-1">
-                            <Users2 className="size-3" /> {p.team}
-                          </span>
-                        )}
-                        <span className="flex items-center gap-1">
-                          <CalIcon className="size-3" /> {p.start_date} ~ {p.end_date}
-                        </span>
-                        <span>인입 {leadCount}건</span>
-                      </div>
-                      {p.note && <p className="text-xs text-foreground/70">{p.note}</p>}
-                      <div className="flex justify-end gap-1 pt-1">
-                        <Button size="sm" variant="ghost" onClick={() => openEditPosting(p)}>
-                          <Pencil className="size-3.5 mr-1" /> 수정
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => removePosting(p.id)}>
-                          <Trash2 className="size-3.5 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
+                      {t.label}
+                    </button>
                   );
                 })}
               </div>
-            )}
+            </div>
+
+            {(() => {
+              const filtered = teamTab === "__all__"
+                ? postings
+                : postings.filter((p) => p.team === teamTab);
+              if (filtered.length === 0) {
+                return (
+                  <div className="py-12 text-center text-muted-foreground text-sm">
+                    등록된 게시 활동이 없습니다
+                  </div>
+                );
+              }
+              return (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-[11px] text-muted-foreground border-b border-border/50">
+                      <tr>
+                        <th className="text-left py-1.5 px-2 w-20">상태</th>
+                        <th className="text-left py-1.5 px-2">아파트명</th>
+                        <th className="text-left py-1.5 px-2 w-32">담당자</th>
+                        <th className="text-left py-1.5 px-2 w-28">팀</th>
+                        <th className="text-left py-1.5 px-2 w-44">게시 기간</th>
+                        <th className="text-right py-1.5 px-2 w-20">인입</th>
+                        <th className="text-right py-1.5 px-2 w-20"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map((p) => {
+                        const status = computePostingStatus(p);
+                        const leadCount = leadCountByPosting.get(p.id) ?? 0;
+                        const fmt = (d: string) => d.slice(2).replace(/-/g, ".");
+                        return (
+                          <tr key={p.id} className="border-b border-border/30 hover:bg-muted/30">
+                            <td className="py-1.5 px-2 text-foreground text-[12px] font-medium">{status}</td>
+                            <td className="py-1.5 px-2">
+                              <div className="font-medium truncate">{p.apartment_name}</div>
+                              {p.location_detail && (
+                                <div className="text-[10px] text-muted-foreground truncate">{p.location_detail}</div>
+                              )}
+                            </td>
+                            <td className="py-1.5 px-2 text-foreground/80">{resolveStaff(p.created_by)}</td>
+                            <td className="py-1.5 px-2 text-muted-foreground">{p.team ?? "-"}</td>
+                            <td className="py-1.5 px-2 text-muted-foreground tabular-nums">{fmt(p.start_date)} ~ {fmt(p.end_date)}</td>
+                            <td className="py-1.5 px-2 text-right tabular-nums">{leadCount}건</td>
+                            <td className="py-1.5 px-2 text-right whitespace-nowrap">
+                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEditPosting(p)}>
+                                <Pencil className="size-3.5" />
+                              </Button>
+                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => removePosting(p.id)}>
+                                <Trash2 className="size-3.5 text-destructive" />
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </Card>
         </TabsContent>
 
