@@ -2117,6 +2117,8 @@ export type Database = {
           plan_change_completed_at: string | null
           plan_change_due_date: string | null
           plan_change_note: string | null
+          plan_change_planned: boolean
+          plan_change_target_plan: string | null
           product: string | null
           rate_plan: string | null
           re_review_requested_at: string | null
@@ -2141,7 +2143,9 @@ export type Database = {
           usim_serial: string | null
           vas_fee: number | null
           vas1: string | null
+          vas1_action: string | null
           vas2: string | null
+          vas2_action: string | null
           voucher: string | null
           voucher_returned: string | null
         }
@@ -2187,6 +2191,8 @@ export type Database = {
           plan_change_completed_at?: string | null
           plan_change_due_date?: string | null
           plan_change_note?: string | null
+          plan_change_planned?: boolean
+          plan_change_target_plan?: string | null
           product?: string | null
           rate_plan?: string | null
           re_review_requested_at?: string | null
@@ -2211,7 +2217,9 @@ export type Database = {
           usim_serial?: string | null
           vas_fee?: number | null
           vas1?: string | null
+          vas1_action?: string | null
           vas2?: string | null
+          vas2_action?: string | null
           voucher?: string | null
           voucher_returned?: string | null
         }
@@ -2257,6 +2265,8 @@ export type Database = {
           plan_change_completed_at?: string | null
           plan_change_due_date?: string | null
           plan_change_note?: string | null
+          plan_change_planned?: boolean
+          plan_change_target_plan?: string | null
           product?: string | null
           rate_plan?: string | null
           re_review_requested_at?: string | null
@@ -2281,7 +2291,9 @@ export type Database = {
           usim_serial?: string | null
           vas_fee?: number | null
           vas1?: string | null
+          vas1_action?: string | null
           vas2?: string | null
+          vas2_action?: string | null
           voucher?: string | null
           voucher_returned?: string | null
         }
