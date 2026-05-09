@@ -273,13 +273,13 @@ export default function SegCalendarPage() {
             {selectedDay ? (
               <>
                 <span>{format(selectedDay, "yyyy년 M월 d일 (eee)", { locale: ko })}</span>
-                <Badge variant="outline">{listActs.length}건</Badge>
+                <span className="text-xs font-medium border border-foreground/30 px-1.5 py-0.5 rounded">{listActs.length}건</span>
                 <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setSelectedDay(null)}>전체 보기</Button>
               </>
             ) : (
               <>
                 <span>{format(cursor, "yyyy년 M월", { locale: ko })} 전체 일정</span>
-                <Badge variant="outline">{listActs.length}건</Badge>
+                <span className="text-xs font-medium border border-foreground/30 px-1.5 py-0.5 rounded">{listActs.length}건</span>
               </>
             )}
           </div>
@@ -308,15 +308,15 @@ export default function SegCalendarPage() {
           <div className="overflow-x-auto -mx-4 px-4">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-xs text-muted-foreground border-b border-border">
-                  <th className="text-left font-medium py-2 px-2 w-[110px]">날짜</th>
-                  <th className="text-left font-medium py-2 px-2">활동명</th>
-                  <th className="text-left font-medium py-2 px-2 w-[100px]">담당자</th>
-                  <th className="text-left font-medium py-2 px-2 w-[90px]">타사등록</th>
-                  <th className="text-left font-medium py-2 px-2 min-w-[280px]">메모</th>
-                  <th className="text-left font-medium py-2 px-2 w-[80px]">중요도</th>
-                  <th className="text-left font-medium py-2 px-2 w-[80px]">상태</th>
-                  <th className="text-right font-medium py-2 px-2 w-[160px]">액션</th>
+                <tr className="text-[11px] text-muted-foreground border-b border-border">
+                  <th className="text-left font-medium py-1.5 px-2 w-[110px]">날짜</th>
+                  <th className="text-left font-medium py-1.5 px-2">활동명</th>
+                  <th className="text-left font-medium py-1.5 px-2 w-[100px]">담당자</th>
+                  <th className="text-left font-medium py-1.5 px-2 w-[90px]">타사등록</th>
+                  <th className="text-left font-medium py-1.5 px-2 min-w-[280px]">메모</th>
+                  <th className="text-left font-medium py-1.5 px-2 w-[70px]">중요도</th>
+                  <th className="text-left font-medium py-1.5 px-2 w-[70px]">상태</th>
+                  <th className="text-right font-medium py-1.5 px-2 w-[160px]">액션</th>
                 </tr>
               </thead>
               <tbody>
