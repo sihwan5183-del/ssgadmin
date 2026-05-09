@@ -342,6 +342,15 @@ export default function PlanChangeCalendarPage() {
                       </Badge>
                     </td>
                     <td className="px-3 py-3 text-xs">{r.rate_plan ?? "-"}</td>
+                    <td className="px-3 py-3 text-xs">
+                      {r.plan_change_target_plan ? (
+                        <span className="inline-flex items-center gap-1 text-primary font-medium">
+                          → {r.plan_change_target_plan}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/60">-</span>
+                      )}
+                    </td>
                     <td className="px-3 py-3 text-center">
                       {done ? (
                         <Badge className="bg-success/15 text-success border border-success/30">
