@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Header } from "@/components/layout/Header";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -33,8 +33,15 @@ export default function ApartmentPage() {
   const { user } = useAuth();
   const { rows: postings, refresh: refreshPostings } = useApartmentPostings();
   const { rows: leads, refresh: refreshLeads } = useApartmentLeads();
-  const teamOptions = useFieldOptions("team");
-  const carrierOptions = useFieldOptions("carrier");
+  const { options: carrierOptions } = useFieldOptions("carrier");
+  const [teamOptions, setTeamOptions] = useState<string[]>([]);
+  useEffect(() => {
+    supabase.from("profiles").select("team").not("team", "is", null).then(({ data }) => {
+      const set = new Set<string>();
+      (data ?? []).forEach((r: { team: string | null }) => { if (r.team) set.add(r.team); });
+      setTeamOptions(Array.from(set).sort());
+    });
+  }, []);
   const { fields: postingFields } = useFieldDefinitions("apartment_posting");
   const { fields: leadFields } = useFieldDefinitions("apartment_lead");
 
@@ -84,7 +91,7 @@ export default function ApartmentPage() {
       custom_fields: pForm.custom_fields,
     };
     if (pEdit) {
-      const { error } = await supabase.from("apartment_postings").update(payload).eq("id", pEdit.id);
+      const { error } = await (supabase as any).from("apartment_postings").update(payload).eq("id", pEdit.id);
       if (error) return toast.error(error.message);
       toast.success("수정되었습니다");
     } else {
@@ -99,7 +106,7 @@ export default function ApartmentPage() {
   };
   const removePosting = async (id: string) => {
     if (!confirm("게시 활동을 삭제하시겠습니까?")) return;
-    const { error } = await supabase.from("apartment_postings").delete().eq("id", id);
+    const { error } = await (supabase as any).from("apartment_postings").delete().eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("삭제되었습니다");
     refreshPostings();
@@ -168,7 +175,7 @@ export default function ApartmentPage() {
       custom_fields: lForm.custom_fields,
     };
     if (lEdit) {
-      const { error } = await supabase.from("apartment_leads").update(payload).eq("id", lEdit.id);
+      const { error } = await (supabase as any).from("apartment_leads").update(payload).eq("id", lEdit.id);
       if (error) return toast.error(error.message);
       toast.success("수정되었습니다");
     } else {
@@ -182,13 +189,13 @@ export default function ApartmentPage() {
     refreshLeads();
   };
   const updateLeadStatus = async (id: string, status: string) => {
-    const { error } = await supabase.from("apartment_leads").update({ result_status: status }).eq("id", id);
+    const { error } = await (supabase as any).from("apartment_leads").update({ result_status: status }).eq("id", id);
     if (error) return toast.error(error.message);
     refreshLeads();
   };
   const removeLead = async (id: string) => {
     if (!confirm("인입 고객을 삭제하시겠습니까?")) return;
-    const { error } = await supabase.from("apartment_leads").delete().eq("id", id);
+    const { error } = await (supabase as any).from("apartment_leads").delete().eq("id", id);
     if (error) return toast.error(error.message);
     refreshLeads();
   };
