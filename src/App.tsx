@@ -53,6 +53,8 @@ import PlanChangeCalendarPage from "./pages/PlanChangeCalendarPage.tsx";
 import ApartmentPage from "./pages/ApartmentPage.tsx";
 import FileVaultPage from "./pages/FileVaultPage.tsx";
 import FileApprovalsPage from "./pages/FileApprovalsPage.tsx";
+import AddonRetentionAdminPage from "./pages/AddonRetentionAdminPage.tsx";
+import AddonTasksPage from "./pages/AddonTasksPage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -131,6 +133,11 @@ const App = () => {
                           }
                         />
                         <Route path="/plan-change-calendar" element={<PlanChangeCalendarPage />} />
+                        <Route
+                          path="/admin/addon-retention"
+                          element={<AdminOnlyRoute><AddonRetentionAdminPage /></AdminOnlyRoute>}
+                        />
+                        <Route path="/addon-tasks" element={<AddonTasksPage />} />
                         <Route path="/admin/accounts" element={<AdminOnlyRoute><AccountManagementPage /></AdminOnlyRoute>}>
                           <Route path="pending" element={<AccountPendingPage />} />
                           <Route path="staff" element={<AccountStaffPage />} />
