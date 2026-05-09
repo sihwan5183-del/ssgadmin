@@ -305,6 +305,7 @@ export default function PlanChangeCalendarPage() {
                 <th className="text-left px-3 py-2.5">개통일</th>
                 <th className="text-left px-3 py-2.5">가입조건</th>
                 <th className="text-left px-3 py-2.5">기존 요금제</th>
+                <th className="text-left px-3 py-2.5">변경할 요금제</th>
                 <th className="text-center px-3 py-2.5">상태</th>
                 <th className="text-right px-3 py-2.5">처리</th>
               </tr>
@@ -312,7 +313,7 @@ export default function PlanChangeCalendarPage() {
             <tbody>
               {dayRows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <td colSpan={8} className="text-center py-8 text-muted-foreground">
                     해당 일자에 표시할 대상이 없습니다
                   </td>
                 </tr>
