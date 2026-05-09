@@ -939,6 +939,89 @@ export type Database = {
         }
         Relationships: []
       }
+      file_vault: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          description: string | null
+          file_name: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          rejected_reason: string | null
+          status: string
+          storage_path: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          description?: string | null
+          file_name: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          rejected_reason?: string | null
+          status?: string
+          storage_path: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          description?: string | null
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          rejected_reason?: string | null
+          status?: string
+          storage_path?: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
+      file_vault_downloads: {
+        Row: {
+          downloaded_at: string
+          downloaded_by: string
+          file_id: string
+          id: string
+          ip: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          downloaded_at?: string
+          downloaded_by: string
+          file_id: string
+          id?: string
+          ip?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          downloaded_at?: string
+          downloaded_by?: string
+          file_id?: string
+          id?: string
+          ip?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_vault_downloads_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "file_vault"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       incentive_policies: {
         Row: {
           active: boolean
