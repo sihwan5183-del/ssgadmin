@@ -181,7 +181,7 @@ const Index = () => {
         ) : undefined}
       />
 
-      {/* 대시보드 기간 범위: 기본 [이번 달] · 필요 시 [전체 기간] 토글 */}
+      {/* 대시보드 기간 범위: [이번 달 / 전체 기간] + [월간 현황 / 일간 현황] 한 줄 */}
       <div className="mb-2 flex items-center gap-2 flex-wrap">
         <div className="inline-flex p-1 rounded-2xl bg-muted/40 border border-border/40">
           <button
@@ -209,6 +209,9 @@ const Index = () => {
             <CalendarRange className="size-3.5" /> 전체 기간 ({year}년)
           </button>
         </div>
+
+        <ScopeBigToggle />
+
         <span className="text-xs text-muted-foreground">
           기준: <span className="font-semibold text-foreground">{periodLabel}</span>
           {!isThisMonth && (
@@ -223,16 +226,8 @@ const Index = () => {
         </span>
       </div>
 
-      {/* 상단 [월간 현황 / 일간 현황] 큰 토글 — 모든 카드/차트의 기준 동기화 */}
-      <ScopeBigToggle />
-
       {/* === 본인 검수 피드백 (반려/수정요청) === */}
       {isVisible("review_alerts") && <MyReviewAlerts />}
-
-      {/* 통합 캘린더 (판매실적 / 영업 / 아파트게시 / 광고) */}
-      <section className="mb-4">
-        <UnifiedCalendarWidget />
-      </section>
 
       {/* 업무 바로가기 */}
       {canSeeAdminWidgets && isVisible("quick_links") && (
@@ -240,6 +235,11 @@ const Index = () => {
           <QuickLinksWidget />
         </section>
       )}
+
+      {/* 통합 캘린더 (판매실적 / 영업 / 아파트게시 / 광고) */}
+      <section className="mb-4">
+        <UnifiedCalendarWidget />
+      </section>
 
       {excludedLabels.length > 0 && (
         <div className="mb-1.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 flex items-center gap-2 text-xs">
