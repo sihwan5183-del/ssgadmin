@@ -354,8 +354,8 @@ export default function MenuManagerPage() {
   };
 
   const persistGroupsOrder = async (arr: MenuGroup[]) => {
-    const updates = arr.map((g, idx) =>
-      supabase.from("menu_groups").update({ sort_order: idx * 10 }).eq("id", g.id),
+    const updates = arr.map(async (g, idx) =>
+      await supabase.from("menu_groups").update({ sort_order: idx * 10 }).eq("id", g.id),
     );
     const results = await Promise.all(updates);
     const failed = results.find((r: any) => r.error);
@@ -370,10 +370,11 @@ export default function MenuManagerPage() {
       const list = itemList.filter((it) => (it.group_id ?? UNASSIGNED) === gid);
       list.forEach((it, idx) => {
         ops.push(
-          supabase.from("menu_items").update({
-            sort_order: idx * 10,
-            group_id: gid === UNASSIGNED ? null : gid,
-          }).eq("id", it.id),
+          (async () =>
+            await supabase.from("menu_items").update({
+              sort_order: idx * 10,
+              group_id: gid === UNASSIGNED ? null : gid,
+            }).eq("id", it.id))(),
         );
       });
     }
