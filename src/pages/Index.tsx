@@ -59,7 +59,7 @@ const pctChange = (cur: number, prev: number): number | undefined => {
 
 /** 대시보드 상단의 [월간 현황 / 일간 현황] 큰 전환 토글 */
 const ScopeBigToggle = () => {
-  const { mode, setMode, setSingleDay, customStart, label } = usePeriod();
+  const { mode, setMode, setSingleDay, customStart } = usePeriod();
   const isDayMode = mode === "day";
   const isMonthMode = mode === "month";
   const items = [
@@ -67,36 +67,31 @@ const ScopeBigToggle = () => {
     { key: "day" as const, label: "일간 현황", icon: CalendarIcon, hint: "선택한 하루 단일 실적" },
   ];
   return (
-    <div className="mb-2 flex items-center gap-2 flex-wrap">
-      <div className="inline-flex p-1 rounded-2xl bg-muted/40 border border-border/40">
-        {items.map((it) => {
-          const Icon = it.icon;
-          const active =
-            (it.key === "month" && isMonthMode) || (it.key === "day" && isDayMode);
-          return (
-            <button
-              key={it.key}
-              onClick={() => {
-                if (it.key === "month") setMode("month");
-                else setSingleDay(customStart ?? isoToday());
-              }}
-              className={cn(
-                "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-300 whitespace-nowrap",
-                active
-                  ? "bg-gradient-primary text-primary-foreground shadow-glow"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-              title={it.hint}
-            >
-              <Icon className="size-3.5" />
-              {it.label}
-            </button>
-          );
-        })}
-      </div>
-      <span className="text-xs text-muted-foreground">
-        기준: <span className="font-semibold text-foreground">{label}</span>
-      </span>
+    <div className="inline-flex p-1 rounded-2xl bg-muted/40 border border-border/40">
+      {items.map((it) => {
+        const Icon = it.icon;
+        const active =
+          (it.key === "month" && isMonthMode) || (it.key === "day" && isDayMode);
+        return (
+          <button
+            key={it.key}
+            onClick={() => {
+              if (it.key === "month") setMode("month");
+              else setSingleDay(customStart ?? isoToday());
+            }}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-300 whitespace-nowrap",
+              active
+                ? "bg-gradient-primary text-primary-foreground shadow-glow"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+            title={it.hint}
+          >
+            <Icon className="size-3.5" />
+            {it.label}
+          </button>
+        );
+      })}
     </div>
   );
 };
@@ -181,7 +176,7 @@ const Index = () => {
         ) : undefined}
       />
 
-      {/* 대시보드 기간 범위: 기본 [이번 달] · 필요 시 [전체 기간] 토글 */}
+      {/* 대시보드 기간 범위: [이번 달 / 전체 기간] + [월간 현황 / 일간 현황] 한 줄 */}
       <div className="mb-2 flex items-center gap-2 flex-wrap">
         <div className="inline-flex p-1 rounded-2xl bg-muted/40 border border-border/40">
           <button
@@ -209,6 +204,9 @@ const Index = () => {
             <CalendarRange className="size-3.5" /> 전체 기간 ({year}년)
           </button>
         </div>
+
+        <ScopeBigToggle />
+
         <span className="text-xs text-muted-foreground">
           기준: <span className="font-semibold text-foreground">{periodLabel}</span>
           {!isThisMonth && (
@@ -223,16 +221,8 @@ const Index = () => {
         </span>
       </div>
 
-      {/* 상단 [월간 현황 / 일간 현황] 큰 토글 — 모든 카드/차트의 기준 동기화 */}
-      <ScopeBigToggle />
-
       {/* === 본인 검수 피드백 (반려/수정요청) === */}
       {isVisible("review_alerts") && <MyReviewAlerts />}
-
-      {/* 통합 캘린더 (판매실적 / 영업 / 아파트게시 / 광고) */}
-      <section className="mb-4">
-        <UnifiedCalendarWidget />
-      </section>
 
       {/* 업무 바로가기 */}
       {canSeeAdminWidgets && isVisible("quick_links") && (
@@ -240,6 +230,11 @@ const Index = () => {
           <QuickLinksWidget />
         </section>
       )}
+
+      {/* 통합 캘린더 (판매실적 / 영업 / 아파트게시 / 광고) */}
+      <section className="mb-4">
+        <UnifiedCalendarWidget />
+      </section>
 
       {excludedLabels.length > 0 && (
         <div className="mb-1.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 flex items-center gap-2 text-xs">
