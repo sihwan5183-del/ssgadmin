@@ -646,6 +646,56 @@ export default function ApartmentPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Map preview dialog */}
+      <Dialog open={!!mapTarget} onOpenChange={(o) => !o && setMapTarget(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPin className="size-4" />
+              {mapTarget?.apartment_name}
+            </DialogTitle>
+          </DialogHeader>
+          {mapTarget && (
+            <div className="space-y-3">
+              <div className="text-xs text-muted-foreground">{mapTarget.location_detail}</div>
+              <div className="w-full aspect-[16/10] rounded-md overflow-hidden border border-border/40 bg-muted">
+                <iframe
+                  title="map"
+                  className="w-full h-full"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src={`https://www.google.com/maps?q=${encodeURIComponent(
+                    `${mapTarget.location_detail ?? ""} ${mapTarget.apartment_name}`,
+                  )}&output=embed`}
+                />
+              </div>
+              <div className="flex gap-2 justify-end text-xs">
+                <a
+                  href={`https://map.naver.com/p/search/${encodeURIComponent(
+                    `${mapTarget.location_detail ?? ""} ${mapTarget.apartment_name}`,
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline text-foreground"
+                >
+                  네이버 지도에서 열기
+                </a>
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                    `${mapTarget.location_detail ?? ""} ${mapTarget.apartment_name}`,
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline text-foreground"
+                >
+                  구글 지도에서 열기
+                </a>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
