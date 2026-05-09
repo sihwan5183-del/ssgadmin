@@ -214,6 +214,110 @@ export type Database = {
         }
         Relationships: []
       }
+      apartment_leads: {
+        Row: {
+          apartment_name: string | null
+          assigned_to: string | null
+          created_at: string
+          created_by: string
+          current_carrier: string | null
+          custom_fields: Json
+          customer_name: string
+          customer_phone: string | null
+          id: string
+          inquiry_date: string
+          inquiry_note: string | null
+          posting_id: string | null
+          result_status: string
+          team: string | null
+          updated_at: string
+        }
+        Insert: {
+          apartment_name?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          created_by: string
+          current_carrier?: string | null
+          custom_fields?: Json
+          customer_name: string
+          customer_phone?: string | null
+          id?: string
+          inquiry_date?: string
+          inquiry_note?: string | null
+          posting_id?: string | null
+          result_status?: string
+          team?: string | null
+          updated_at?: string
+        }
+        Update: {
+          apartment_name?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string
+          current_carrier?: string | null
+          custom_fields?: Json
+          customer_name?: string
+          customer_phone?: string | null
+          id?: string
+          inquiry_date?: string
+          inquiry_note?: string | null
+          posting_id?: string | null
+          result_status?: string
+          team?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apartment_leads_posting_id_fkey"
+            columns: ["posting_id"]
+            isOneToOne: false
+            referencedRelation: "apartment_postings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      apartment_postings: {
+        Row: {
+          apartment_name: string
+          created_at: string
+          created_by: string
+          custom_fields: Json
+          end_date: string
+          id: string
+          location_detail: string | null
+          note: string | null
+          start_date: string
+          team: string | null
+          updated_at: string
+        }
+        Insert: {
+          apartment_name: string
+          created_at?: string
+          created_by: string
+          custom_fields?: Json
+          end_date: string
+          id?: string
+          location_detail?: string | null
+          note?: string | null
+          start_date: string
+          team?: string | null
+          updated_at?: string
+        }
+        Update: {
+          apartment_name?: string
+          created_at?: string
+          created_by?: string
+          custom_fields?: Json
+          end_date?: string
+          id?: string
+          location_detail?: string | null
+          note?: string | null
+          start_date?: string
+          team?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           description: string | null
