@@ -24,6 +24,7 @@ import {
 } from "@/hooks/useApartment";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { useFieldDefinitions } from "@/hooks/useFieldDefinitions";
+import { useFieldTeams } from "@/hooks/useFieldTeams";
 import { DynamicFieldRenderer } from "@/components/admin/DynamicFieldRenderer";
 import { formatPhone } from "@/lib/phoneFormat";
 
@@ -34,14 +35,8 @@ export default function ApartmentPage() {
   const { rows: postings, refresh: refreshPostings } = useApartmentPostings();
   const { rows: leads, refresh: refreshLeads } = useApartmentLeads();
   const { options: carrierOptions } = useFieldOptions("carrier");
-  const [teamOptions, setTeamOptions] = useState<string[]>([]);
-  useEffect(() => {
-    supabase.from("profiles").select("team").not("team", "is", null).then(({ data }) => {
-      const set = new Set<string>();
-      (data ?? []).forEach((r: { team: string | null }) => { if (r.team) set.add(r.team); });
-      setTeamOptions(Array.from(set).sort());
-    });
-  }, []);
+  const { rows: fieldTeams } = useFieldTeams(true);
+  const teamOptions = fieldTeams.map((t) => t.name);
   const { fields: postingFields } = useFieldDefinitions("apartment_posting");
   const { fields: leadFields } = useFieldDefinitions("apartment_lead");
 
