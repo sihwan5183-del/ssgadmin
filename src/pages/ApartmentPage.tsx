@@ -96,7 +96,7 @@ export default function ApartmentPage() {
       toast.success("수정되었습니다");
     } else {
       const { error } = await supabase
-        .from("apartment_postings")
+        .from("apartment_postings" as any)
         .insert({ ...payload, created_by: user.id });
       if (error) return toast.error(error.message);
       toast.success("게시 활동이 등록되었습니다");
@@ -180,7 +180,7 @@ export default function ApartmentPage() {
       toast.success("수정되었습니다");
     } else {
       const { error } = await supabase
-        .from("apartment_leads")
+        .from("apartment_leads" as any)
         .insert({ ...payload, created_by: user.id });
       if (error) return toast.error(error.message);
       toast.success("인입 고객이 등록되었습니다");
