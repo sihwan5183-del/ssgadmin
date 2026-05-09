@@ -218,6 +218,21 @@ export function PartnerFormDialog({ open, onOpenChange, partner, onSaved }: Prop
               <SelectContent>{CONTRACT_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
             </Select>
           </Field>
+          <Field label="활동 분류">
+            <Select value={activityCategory} onValueChange={(v) => setActivityCategory(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{ACTIVITY_CATEGORIES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+            </Select>
+          </Field>
+          {activityCategory === "기타" && (
+            <Field label="활동 분류 (직접 입력)">
+              <Input
+                value={activityCategoryCustom}
+                onChange={(e) => setActivityCategoryCustom(e.target.value)}
+                placeholder="예: 박람회 부스, 지역 행사 등"
+              />
+            </Field>
+          )}
           <Field label="계약일">
             <Input type="date" value={form.contract_date ?? ""} onChange={(e) => set("contract_date", e.target.value)} />
           </Field>
