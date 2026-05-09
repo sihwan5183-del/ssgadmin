@@ -333,11 +333,11 @@ export default function SegCalendarPage() {
                       "border-b border-border/40 hover:bg-muted/40 transition-colors",
                       done && "opacity-55",
                     )}>
-                      <td className="py-2 px-2 align-top">
+                      <td className="py-2 px-2 align-middle">
                         <div className="font-mono tabular-nums text-xs">{a.activity_date}</div>
                         <div className="text-[10px] text-muted-foreground">등록 {a.created_at?.slice(0,10)}</div>
                       </td>
-                      <td className="py-2 px-2 align-top">
+                      <td className="py-2 px-2 align-middle">
                         <button
                           onClick={() => { if (p) { setDrawerPartner(p); setDrawerOpen(true); } }}
                           className="font-semibold hover:underline text-left text-sm"
@@ -345,28 +345,28 @@ export default function SegCalendarPage() {
                           {name}
                         </button>
                       </td>
-                      <td className="py-1.5 px-2 align-top text-xs">{a.assignee_name ?? "-"}</td>
-                      <td className="py-1.5 px-2 align-top text-xs tabular-nums">
+                      <td className="py-1.5 px-2 align-middle text-xs">{a.assignee_name ?? "-"}</td>
+                      <td className="py-1.5 px-2 align-middle text-xs tabular-nums">
                         {(() => {
                           const cf = (a.custom_fields as any) ?? {};
                           const c = cf.regulars_count ?? cf.partner_count;
                           return c != null && c !== "" ? `${c}건` : <span className="text-muted-foreground">-</span>;
                         })()}
                       </td>
-                      <td className="py-2 px-2 align-top">
+                      <td className="py-2 px-2 align-middle">
                         {a.content
                           ? <div className="text-[11px] text-foreground/80 whitespace-pre-wrap break-words leading-relaxed">{a.content}</div>
                           : <span className="text-xs text-muted-foreground">-</span>}
                       </td>
-                      <td className="py-1.5 px-2 align-top">
+                      <td className="py-1.5 px-2 align-middle">
                         {priInfo ? (
                           <span className={CLEAN_BADGE}>{priInfo.label}</span>
                         ) : <span className="text-xs text-muted-foreground">-</span>}
                       </td>
-                      <td className="py-1.5 px-2 align-top">
+                      <td className="py-1.5 px-2 align-middle">
                         <span className={CLEAN_BADGE}>{done ? "완료" : "예정"}</span>
                       </td>
-                      <td className="py-2 px-2 align-top">
+                      <td className="py-2 px-2 align-middle">
                         <div className="flex justify-end gap-1">
                           <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => toggleComplete(a)}>
                             <CheckCircle2 className="size-3.5 mr-1" />
