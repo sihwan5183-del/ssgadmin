@@ -24,6 +24,7 @@ import { CashTodayCard } from "@/components/dashboard/CashTodayCard";
 import { MyReviewAlerts } from "@/components/dashboard/MyReviewAlerts";
 import { UntreatedLeadsCard } from "@/components/dashboard/UntreatedLeadsCard";
 import { MyIncentiveWidget } from "@/components/dashboard/MyIncentiveWidget";
+import { UnifiedCalendarWidget } from "@/components/dashboard/UnifiedCalendarWidget";
 import { formatShortKRW } from "@/data/mockData";
 import { TrendingUp, TrendingDown, Sparkles, Target } from "lucide-react";
 import { useBudgetCategories } from "@/hooks/useBudgetCategories";
@@ -227,6 +228,11 @@ const Index = () => {
 
       {/* === 본인 검수 피드백 (반려/수정요청) === */}
       {isVisible("review_alerts") && <MyReviewAlerts />}
+
+      {/* 통합 캘린더 (판매실적 / 영업 / 아파트게시 / 광고) */}
+      <section className="mb-4">
+        <UnifiedCalendarWidget />
+      </section>
 
       {/* 업무 바로가기 */}
       {canSeeAdminWidgets && isVisible("quick_links") && (
