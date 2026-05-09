@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus, Trash2, Send, Save, BookmarkPlus, FileText } from "lucide-react";
+import { SortableList, SortableItem } from "@/components/common/SortableList";
 
 interface Rule {
   id: string;
@@ -116,6 +117,17 @@ export function NotificationRulesManager() {
     toast.success("삭제됨"); refresh();
   };
 
+  const handleReorder = async (newItems: Rule[]) => {
+    setRules(newItems);
+    const updates = newItems.map((r, idx) =>
+      supabase.from("notification_rules").update({ sort_order: idx }).eq("id", r.id),
+    );
+    const results = await Promise.all(updates);
+    const failed = results.find((r) => r.error);
+    if (failed) return toast.error("순서 저장 실패");
+    toast.success("순서가 변경되었습니다");
+  };
+
   const addNew = async () => {
     const key = prompt("새 알림 항목의 고유 키 (영문/숫자/_)", `custom_${Date.now()}`);
     if (!key) return;
@@ -197,12 +209,14 @@ export function NotificationRulesManager() {
         </Card>
       )}
 
-      {rules.map((r) => {
-        const cond = (r.conditions ?? {}) as { op?: string; value?: number; goal?: number };
-        const isThreshold = r.trigger_type === "sales_threshold";
-        const showSchedule = !["manual", "partner_assigned"].includes(r.trigger_type);
-        return (
-          <Card key={r.id} className="p-4 space-y-3">
+      <SortableList items={rules} onReorder={handleReorder}>
+        {(r) => {
+          const cond = (r.conditions ?? {}) as { op?: string; value?: number; goal?: number };
+          const isThreshold = r.trigger_type === "sales_threshold";
+          const showSchedule = !["manual", "partner_assigned"].includes(r.trigger_type);
+          return (
+            <SortableItem key={r.id} id={r.id} className="rounded-lg border bg-card p-4 space-y-3 mb-3 flex items-start gap-2">
+              <div className="flex-1 space-y-3">
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-3 flex-wrap">
                 <Switch checked={r.enabled} onCheckedChange={(v) => update(r.id, { enabled: v })} />
@@ -398,9 +412,11 @@ export function NotificationRulesManager() {
                   onChange={(e) => setAdhoc((p) => ({ ...p, [r.id]: { ...(p[r.id] ?? { title: "", body: "" }), body: e.target.value } }))} rows={2} />
               </div>
             )}
-          </Card>
-        );
-      })}
+              </div>
+            </SortableItem>
+          );
+        }}
+      </SortableList>
     </div>
   );
 }
