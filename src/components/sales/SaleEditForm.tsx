@@ -969,12 +969,6 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                         className="h-9 bg-input/60 text-xs"
                         maxLength={200}
                       />
-                      {form.vas1 && form.vas1.trim() !== "" && (
-                        <VasActionToggle
-                          value={(form.vas1_action as any) ?? null}
-                          onChange={(v) => set("vas1_action", v)}
-                        />
-                      )}
                     </Field>
                   </div>
                   <div className="col-span-12 md:col-span-4">
@@ -986,12 +980,6 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                         className="h-9 bg-input/60 text-xs"
                         maxLength={200}
                       />
-                      {form.vas2 && form.vas2.trim() !== "" && (
-                        <VasActionToggle
-                          value={(form.vas2_action as any) ?? null}
-                          onChange={(v) => set("vas2_action", v)}
-                        />
-                      )}
                     </Field>
                   </div>
                   <div className="col-span-12 md:col-span-4">
@@ -1016,38 +1004,78 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                   </div>
           </div>
 
-          {/* 요금제 사후 관리 — 유지기간 후 변경 토글 */}
-          <div className="rounded-lg border border-border/50 bg-muted/20 p-3 mt-2">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div>
-                <div className="text-xs font-semibold flex items-center gap-2">
-                  <Sparkles className="size-3.5 text-primary" />
-                  유지기간 후 요금제 변경
+          {/* 사후 관리 — 요금제 변경 / 부가서비스 유지·삭제 (1:1 그리드) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+            {/* 요금제 변경 */}
+            <div className="rounded-lg border border-border/50 bg-muted/20 p-3 flex flex-col">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold flex items-center gap-1.5">
+                    <Sparkles className="size-3.5 text-primary shrink-0" />
+                    유지기간 후 요금제 변경
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
+                    ON: 만료일에 요금제 변경 캘린더 자동 표시
+                  </p>
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  ON으로 두면 유지기간 만료일에 자동으로 요금제 변경 캘린더에 표시됩니다.
-                </p>
-              </div>
-              <Switch
-                checked={!!form.plan_change_planned}
-                onCheckedChange={(v) => {
-                  set("plan_change_planned", v);
-                  if (!v) set("plan_change_target_plan", null);
-                }}
-              />
-            </div>
-            {form.plan_change_planned && (
-              <div className="mt-3">
-                <Label className="text-[11px] text-muted-foreground">변경할 요금제 명칭</Label>
-                <Input
-                  value={form.plan_change_target_plan ?? ""}
-                  onChange={(e) => set("plan_change_target_plan", e.target.value || null)}
-                  placeholder="예: 5G 시그니처, LTE 안심데이터 등"
-                  className="h-9 mt-1 bg-input/60 text-xs"
-                  maxLength={120}
+                <Switch
+                  checked={!!form.plan_change_planned}
+                  onCheckedChange={(v) => {
+                    set("plan_change_planned", v);
+                    if (!v) set("plan_change_target_plan", null);
+                  }}
                 />
               </div>
-            )}
+              {form.plan_change_planned && (
+                <div className="mt-2">
+                  <Label className="text-[10px] text-muted-foreground">변경할 요금제</Label>
+                  <Input
+                    value={form.plan_change_target_plan ?? ""}
+                    onChange={(e) => set("plan_change_target_plan", e.target.value || null)}
+                    placeholder="예: 5G 시그니처"
+                    className="h-8 mt-0.5 bg-input/60 text-xs"
+                    maxLength={120}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* 부가서비스 유지/삭제 */}
+            <div className="rounded-lg border border-border/50 bg-muted/20 p-3 flex flex-col">
+              <div className="text-xs font-semibold flex items-center gap-1.5">
+                <Sparkles className="size-3.5 text-destructive shrink-0" />
+                부가서비스 유지 / 삭제
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
+                삭제 선택 시 유지일수 만료일에 자동 알림
+              </p>
+              <div className="mt-2 space-y-1.5">
+                {[
+                  { name: form.vas1, key: "vas1_action" as const, val: form.vas1_action },
+                  { name: form.vas2, key: "vas2_action" as const, val: form.vas2_action },
+                ].map((row, idx) => {
+                  const has = !!(row.name && row.name.trim());
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between gap-2 rounded-md bg-background/50 border border-border/30 px-2 py-1.5 min-h-[32px]"
+                    >
+                      <span className={cn("text-xs truncate", !has && "text-muted-foreground/60")}>
+                        {has ? row.name : `부가서비스 ${idx + 1} 미입력`}
+                      </span>
+                      {has ? (
+                        <VasActionToggle
+                          value={(row.val as any) ?? null}
+                          onChange={(v) => set(row.key, v)}
+                        />
+                      ) : (
+                        <span className="text-[9px] text-muted-foreground/50">—</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           {/* TV 추가 (인터넷/유선결합 상품) */}
