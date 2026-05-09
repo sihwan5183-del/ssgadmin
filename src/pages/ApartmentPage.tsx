@@ -377,7 +377,7 @@ export default function ApartmentPage() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {RESULT_STATUSES.map((s) => (
+                              {resultOptions.map((s) => (
                                 <SelectItem key={s} value={s}>{s}</SelectItem>
                               ))}
                             </SelectContent>
