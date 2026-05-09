@@ -29,8 +29,11 @@ interface VaultRow {
 
 const MAX = 50 * 1024 * 1024; // 50MB
 
-const sanitize = (s: string) =>
-  (s || "").replace(/[\\/:*?"<>|\s]+/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
+// Supabase Storage key는 ASCII 안전문자만 허용 — 한글/공백/특수문자 모두 제거
+const safeExt = (name: string) => {
+  const m = name.match(/\.([A-Za-z0-9]{1,8})$/);
+  return m ? m[1].toLowerCase() : "bin";
+};
 
 const STATUS_LABEL: Record<string, { label: string; cls: string; icon: any }> = {
   pending: { label: "승인 대기", cls: "text-amber-600", icon: Clock },
@@ -75,9 +78,10 @@ export default function FileVaultPage() {
         toast.error(`${file.name} — 50MB 초과`);
         continue;
       }
-      const ext = file.name.includes(".") ? file.name.split(".").pop() : "bin";
-      const safe = sanitize(file.name.replace(/\.[^.]+$/, "")) || "file";
-      const path = `${user.id}/${Date.now()}_${safe}.${ext}`;
+      // 키는 UUID + 타임스탬프 + 확장자 (ASCII only)
+      const ext = safeExt(file.name);
+      const uid = (crypto as any)?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      const path = `${user.id}/${Date.now()}_${uid}.${ext}`;
       const { error: upErr } = await supabase.storage
         .from("secure-files")
         .upload(path, file, { contentType: file.type, upsert: false });
