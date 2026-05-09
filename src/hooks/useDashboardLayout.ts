@@ -10,6 +10,7 @@ export type WidgetConfig = {
 
 export const WIDGET_REGISTRY: { id: string; label: string }[] = [
   { id: "review_alerts", label: "검수 피드백 알림" },
+  { id: "today_care", label: "오늘의 관리 고객 (요금제·부가서비스)" },
   { id: "quick_links", label: "업무 바로가기" },
   { id: "goal_gauge", label: "목표 달성률 게이지" },
   { id: "hero_performance", label: "핵심 실적 지표" },
