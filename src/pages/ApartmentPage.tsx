@@ -35,6 +35,8 @@ export default function ApartmentPage() {
   const { rows: postings, refresh: refreshPostings } = useApartmentPostings();
   const { rows: leads, refresh: refreshLeads } = useApartmentLeads();
   const { options: carrierOptions } = useFieldOptions("carrier");
+  const { options: resultOptionsCustom } = useFieldOptions("apartment_result");
+  const resultOptions = resultOptionsCustom.length > 0 ? resultOptionsCustom : (RESULT_STATUSES as readonly string[]);
   const { rows: fieldTeams } = useFieldTeams(true);
   const teamOptions = fieldTeams.map((t) => t.name);
   const { fields: postingFields } = useFieldDefinitions("apartment_posting");
@@ -375,7 +377,7 @@ export default function ApartmentPage() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {RESULT_STATUSES.map((s) => (
+                              {resultOptions.map((s) => (
                                 <SelectItem key={s} value={s}>{s}</SelectItem>
                               ))}
                             </SelectContent>
@@ -435,6 +437,7 @@ export default function ApartmentPage() {
               <Label className="text-xs text-muted-foreground">시작일 *</Label>
               <Input
                 type="date"
+                className="bg-card border-border text-foreground [color-scheme:dark]"
                 value={pForm.start_date}
                 onChange={(e) => setPForm({ ...pForm, start_date: e.target.value })}
               />
@@ -443,6 +446,7 @@ export default function ApartmentPage() {
               <Label className="text-xs text-muted-foreground">종료일 *</Label>
               <Input
                 type="date"
+                className="bg-card border-border text-foreground [color-scheme:dark]"
                 value={pForm.end_date}
                 onChange={(e) => setPForm({ ...pForm, end_date: e.target.value })}
               />
@@ -512,6 +516,7 @@ export default function ApartmentPage() {
               <Label className="text-xs text-muted-foreground">인입 일자</Label>
               <Input
                 type="date"
+                className="bg-card border-border text-foreground [color-scheme:dark]"
                 value={lForm.inquiry_date}
                 onChange={(e) => setLForm({ ...lForm, inquiry_date: e.target.value })}
               />
@@ -536,14 +541,14 @@ export default function ApartmentPage() {
                 onChange={(e) => setLForm({ ...lForm, customer_phone: formatPhone(e.target.value) })}
               />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1 col-span-2">
               <Label className="text-xs text-muted-foreground">현재 통신사</Label>
               {carrierOptions.length > 0 ? (
                 <Select
                   value={lForm.current_carrier}
                   onValueChange={(v) => setLForm({ ...lForm, current_carrier: v })}
                 >
-                  <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+                  <SelectTrigger className="h-10 w-full"><SelectValue placeholder="선택" /></SelectTrigger>
                   <SelectContent>
                     {carrierOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
@@ -565,9 +570,14 @@ export default function ApartmentPage() {
               />
             </div>
             <div className="space-y-1 col-span-2">
-              <Label className="text-xs text-muted-foreground">최종 결과</Label>
+              <Label className="text-xs text-muted-foreground">
+                최종 결과
+                <span className="ml-1 text-[10px] text-muted-foreground/70">
+                  (관리자 → 입력 옵션 관리 → "아파트 인입 최종결과" 에서 커스텀)
+                </span>
+              </Label>
               <div className="flex gap-2 flex-wrap">
-                {RESULT_STATUSES.map((s) => (
+                {resultOptions.map((s) => (
                   <Button
                     key={s}
                     type="button"
