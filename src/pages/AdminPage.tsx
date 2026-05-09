@@ -178,6 +178,9 @@ export default function AdminPage() {
           <TabsTrigger value="staff" className="gap-2">
             <Users className="size-4" /> 직원 관리
           </TabsTrigger>
+          <TabsTrigger value="field_teams" className="gap-2">
+            <Building2 className="size-4" /> 현장 팀 관리
+          </TabsTrigger>
           <TabsTrigger value="users" className="gap-2">
             <ShieldCheck className="size-4" /> 권한 빠른 변경
           </TabsTrigger>
@@ -201,9 +204,6 @@ export default function AdminPage() {
           </TabsTrigger>
           <TabsTrigger value="notif_rules" className="gap-2">
             <BellRing className="size-4" /> 알림 항목 관리
-          </TabsTrigger>
-          <TabsTrigger value="field_teams" className="gap-2">
-            <Building2 className="size-4" /> 현장 팀 관리
           </TabsTrigger>
         </TabsList>
 
