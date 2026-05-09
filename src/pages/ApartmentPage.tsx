@@ -308,14 +308,14 @@ export default function ApartmentPage() {
               }
               return (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-sm table-fixed">
                     <thead className="text-[11px] text-muted-foreground border-b border-border/50">
                       <tr>
-                        <th className="text-left py-1 px-2 w-16 text-foreground">상태</th>
-                        <th className="text-left py-1 px-2 text-foreground">아파트명</th>
-                        <th className="text-left py-1 px-2 w-28 text-foreground">팀</th>
-                        <th className="text-left py-1 px-2 w-40 text-foreground">게시 기간</th>
-                        <th className="text-right py-1 px-2 w-16 text-foreground">인입</th>
+                        <th className="text-left py-1 px-2 w-14 text-foreground">상태</th>
+                        <th className="text-left py-1 px-2 w-[28%] text-foreground">아파트명</th>
+                        <th className="text-center py-1 px-2 w-24 text-foreground">팀</th>
+                        <th className="text-center py-1 px-2 w-32 text-foreground">게시 기간</th>
+                        <th className="text-center py-1 px-2 w-14 text-foreground">인입</th>
                         <th className="text-left py-1 px-2 text-foreground">메모</th>
                         <th className="text-right py-1 px-2 w-20"></th>
                       </tr>
@@ -326,11 +326,11 @@ export default function ApartmentPage() {
                         const leadCount = leadCountByPosting.get(p.id) ?? 0;
                         const fmt = (d: string) => d.slice(2).replace(/-/g, ".");
                         return (
-                          <tr key={p.id} className="border-b border-border/30 hover:bg-muted/30">
+                          <tr key={p.id} className="border-b border-border/30 hover:bg-muted/30 align-top">
                             <td className="py-1 px-2 text-foreground text-[12px] font-medium">{status}</td>
                             <td className="py-1 px-2">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="font-medium truncate text-foreground">{p.apartment_name}</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-medium text-foreground break-words">{p.apartment_name}</span>
                                 {p.location_detail && (
                                   <button
                                     type="button"
@@ -344,10 +344,10 @@ export default function ApartmentPage() {
                                 )}
                               </div>
                             </td>
-                            <td className="py-1 px-2 text-foreground">{p.team ?? "-"}</td>
-                            <td className="py-1 px-2 text-foreground tabular-nums">{fmt(p.start_date)} ~ {fmt(p.end_date)}</td>
-                            <td className="py-1 px-2 text-right tabular-nums text-foreground">{leadCount}건</td>
-                            <td className="py-1 px-2 text-foreground/80 truncate max-w-[280px]" title={p.note ?? ""}>{p.note ?? "-"}</td>
+                            <td className="py-1 px-2 text-foreground text-center">{p.team ?? "-"}</td>
+                            <td className="py-1 px-2 text-foreground tabular-nums text-center whitespace-nowrap">{fmt(p.start_date)} ~ {fmt(p.end_date)}</td>
+                            <td className="py-1 px-2 tabular-nums text-foreground text-center">{leadCount}건</td>
+                            <td className="py-1 px-2 text-foreground/80 whitespace-pre-wrap break-words">{p.note ?? "-"}</td>
                             <td className="py-1 px-2 text-right whitespace-nowrap">
                               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEditPosting(p)}>
                                 <Pencil className="size-3.5" />
