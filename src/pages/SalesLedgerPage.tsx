@@ -113,6 +113,11 @@ type SaleRow = {
   custom_fields?: Record<string, any> | null;
   customer_support_amount?: number | null;
   corp_card_amount?: number | null;
+  plan_change_planned?: boolean | null;
+  plan_change_target_plan?: string | null;
+  plan_change_completed_at?: string | null;
+  vas1_action?: string | null;
+  vas2_action?: string | null;
 };
 
 const SalesLedgerPage = () => {
@@ -1261,7 +1266,25 @@ const SalesLedgerPage = () => {
                     </td>
                     <td className="text-center">{r.product ?? "-"}</td>
                     <td className="text-left">
-                      <span className="font-medium truncate block max-w-[88px]">{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
+                      <div className="flex items-center gap-1">
+                        <span className="font-medium truncate block max-w-[88px]">{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
+                        {r.plan_change_planned && !r.plan_change_completed_at && (
+                          <span
+                            title={r.plan_change_target_plan ? `요금제 변경 예정: ${r.plan_change_target_plan}` : "요금제 변경 예정"}
+                            className="inline-flex items-center rounded-[3px] border border-primary/40 text-primary bg-primary/5 px-1 py-px text-[9px] font-bold leading-none"
+                          >
+                            요변
+                          </span>
+                        )}
+                        {(r.vas1_action === "remove" || r.vas2_action === "remove") && (
+                          <span
+                            title="부가서비스 삭제 예정"
+                            className="inline-flex items-center rounded-[3px] border border-destructive/40 text-destructive bg-destructive/5 px-1 py-px text-[9px] font-bold leading-none"
+                          >
+                            부삭
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="text-left text-foreground whitespace-nowrap">
                       {(() => {
