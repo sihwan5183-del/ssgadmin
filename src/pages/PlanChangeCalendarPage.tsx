@@ -26,6 +26,7 @@ interface SaleRow {
   plan_change_due_date: string;
   plan_change_completed_at: string | null;
   plan_change_note: string | null;
+  plan_change_target_plan: string | null;
 }
 
 type FilterMode = "all" | "pending" | "done";
@@ -60,7 +61,7 @@ export default function PlanChangeCalendarPage() {
     const { data, error } = await supabase
       .from("sales")
       .select(
-        "id, customer_name, phone, open_date, rate_plan, sale_type, plan_change_due_date, plan_change_completed_at, plan_change_note"
+        "id, customer_name, phone, open_date, rate_plan, sale_type, plan_change_due_date, plan_change_completed_at, plan_change_note, plan_change_target_plan"
       )
       .gte("plan_change_due_date", range.startDate)
       .lte("plan_change_due_date", range.endDate)
@@ -304,6 +305,7 @@ export default function PlanChangeCalendarPage() {
                 <th className="text-left px-3 py-2.5">개통일</th>
                 <th className="text-left px-3 py-2.5">가입조건</th>
                 <th className="text-left px-3 py-2.5">기존 요금제</th>
+                <th className="text-left px-3 py-2.5">변경할 요금제</th>
                 <th className="text-center px-3 py-2.5">상태</th>
                 <th className="text-right px-3 py-2.5">처리</th>
               </tr>
@@ -311,7 +313,7 @@ export default function PlanChangeCalendarPage() {
             <tbody>
               {dayRows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <td colSpan={8} className="text-center py-8 text-muted-foreground">
                     해당 일자에 표시할 대상이 없습니다
                   </td>
                 </tr>
@@ -341,6 +343,15 @@ export default function PlanChangeCalendarPage() {
                       </Badge>
                     </td>
                     <td className="px-3 py-3 text-xs">{r.rate_plan ?? "-"}</td>
+                    <td className="px-3 py-3 text-xs">
+                      {r.plan_change_target_plan ? (
+                        <span className="inline-flex items-center gap-1 text-primary font-medium">
+                          → {r.plan_change_target_plan}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/60">-</span>
+                      )}
+                    </td>
                     <td className="px-3 py-3 text-center">
                       {done ? (
                         <Badge className="bg-success/15 text-success border border-success/30">

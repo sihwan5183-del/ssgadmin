@@ -78,6 +78,10 @@ export type SaleRow = {
   trade_in_model?: string | null;
   trade_in_estimate?: number | null;
   trade_in_confirmed?: number | null;
+  plan_change_planned?: boolean | null;
+  plan_change_target_plan?: string | null;
+  vas1_action?: string | null;
+  vas2_action?: string | null;
 };
 
 const emptyForm: Partial<SaleRow> = {
@@ -85,6 +89,10 @@ const emptyForm: Partial<SaleRow> = {
   moyo_excluded: false,
   cash_open: false,
   trade_in_enabled: false,
+  plan_change_planned: false,
+  plan_change_target_plan: null,
+  vas1_action: null,
+  vas2_action: null,
 };
 
 interface SaleEditFormProps {
@@ -128,6 +136,7 @@ const SALE_FORM_KEYS = [
   "cash_account", "cash_holder", "net_fee", "delivery_type", "tracking_no", "note", "bundle",
   "trade_in_enabled", "trade_in_model", "trade_in_estimate", "trade_in_confirmed",
   "customer_support_amount", "corp_card_amount",
+  "plan_change_planned", "plan_change_target_plan", "vas1_action", "vas2_action",
 ] as const;
 
 const NUMERIC_FORM_KEYS = new Set<string>([
@@ -136,7 +145,47 @@ const NUMERIC_FORM_KEYS = new Set<string>([
   "customer_support_amount", "corp_card_amount",
 ]);
 
-const BOOLEAN_FORM_KEYS = new Set<string>(["moyo_excluded", "cash_open", "trade_in_enabled"]);
+const BOOLEAN_FORM_KEYS = new Set<string>(["moyo_excluded", "cash_open", "trade_in_enabled", "plan_change_planned"]);
+
+/**
+ * 부가서비스 유지/삭제 선택 토글.
+ * - 'keep' = 유지 (캘린더/알림 미표시)
+ * - 'remove' = 삭제 예정 (유지 일수 만료일에 알림 자동 생성)
+ */
+function VasActionToggle({
+  value,
+  onChange,
+}: {
+  value: "keep" | "remove" | null;
+  onChange: (v: "keep" | "remove" | null) => void;
+}) {
+  return (
+    <div className="mt-1 inline-flex items-center gap-1 rounded-md border border-border/40 bg-background/60 p-0.5 text-[10px]">
+      {(["keep", "remove"] as const).map((k) => {
+        const active = value === k;
+        const label = k === "keep" ? "유지" : "삭제";
+        return (
+          <button
+            key={k}
+            type="button"
+            onClick={() => onChange(active ? null : k)}
+            className={cn(
+              "px-2 py-0.5 rounded-[4px] font-medium transition-colors",
+              active
+                ? k === "remove"
+                  ? "bg-destructive text-destructive-foreground"
+                  : "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {label}
+          </button>
+        );
+      })}
+      {value == null && <span className="px-1 text-[9px] text-muted-foreground">미선택</span>}
+    </div>
+  );
+}
 
 const bindSaleToForm = (sale: Record<string, any>): Partial<SaleRow> => {
   const bound: Record<string, any> = {};
@@ -920,6 +969,12 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                         className="h-9 bg-input/60 text-xs"
                         maxLength={200}
                       />
+                      {form.vas1 && form.vas1.trim() !== "" && (
+                        <VasActionToggle
+                          value={(form.vas1_action as any) ?? null}
+                          onChange={(v) => set("vas1_action", v)}
+                        />
+                      )}
                     </Field>
                   </div>
                   <div className="col-span-12 md:col-span-4">
@@ -931,6 +986,12 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                         className="h-9 bg-input/60 text-xs"
                         maxLength={200}
                       />
+                      {form.vas2 && form.vas2.trim() !== "" && (
+                        <VasActionToggle
+                          value={(form.vas2_action as any) ?? null}
+                          onChange={(v) => set("vas2_action", v)}
+                        />
+                      )}
                     </Field>
                   </div>
                   <div className="col-span-12 md:col-span-4">
@@ -953,6 +1014,40 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                       </Select>
                     </Field>
                   </div>
+          </div>
+
+          {/* 요금제 사후 관리 — 유지기간 후 변경 토글 */}
+          <div className="rounded-lg border border-border/50 bg-muted/20 p-3 mt-2">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <div className="text-xs font-semibold flex items-center gap-2">
+                  <Sparkles className="size-3.5 text-primary" />
+                  유지기간 후 요금제 변경
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  ON으로 두면 유지기간 만료일에 자동으로 요금제 변경 캘린더에 표시됩니다.
+                </p>
+              </div>
+              <Switch
+                checked={!!form.plan_change_planned}
+                onCheckedChange={(v) => {
+                  set("plan_change_planned", v);
+                  if (!v) set("plan_change_target_plan", null);
+                }}
+              />
+            </div>
+            {form.plan_change_planned && (
+              <div className="mt-3">
+                <Label className="text-[11px] text-muted-foreground">변경할 요금제 명칭</Label>
+                <Input
+                  value={form.plan_change_target_plan ?? ""}
+                  onChange={(e) => set("plan_change_target_plan", e.target.value || null)}
+                  placeholder="예: 5G 시그니처, LTE 안심데이터 등"
+                  className="h-9 mt-1 bg-input/60 text-xs"
+                  maxLength={120}
+                />
+              </div>
+            )}
           </div>
 
           {/* TV 추가 (인터넷/유선결합 상품) */}
