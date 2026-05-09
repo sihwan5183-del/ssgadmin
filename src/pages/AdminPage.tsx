@@ -42,10 +42,11 @@ import { UserManagementPanel } from "@/components/admin/UserManagementPanel";
 import { RankingConfigManager } from "@/components/admin/RankingConfigManager";
 import { PushScheduleSettings } from "@/components/admin/PushScheduleSettings";
 import { NotificationRulesManager } from "@/components/admin/NotificationRulesManager";
+import { FieldTeamsManager } from "@/components/admin/FieldTeamsManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole, type AppRole } from "@/hooks/useRole";
-import { Users, Tv } from "lucide-react";
+import { Users, Tv, Building2 } from "lucide-react";
 import { useAppSettings, type DashboardWidgets } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
@@ -201,6 +202,9 @@ export default function AdminPage() {
           <TabsTrigger value="notif_rules" className="gap-2">
             <BellRing className="size-4" /> 알림 항목 관리
           </TabsTrigger>
+          <TabsTrigger value="field_teams" className="gap-2">
+            <Building2 className="size-4" /> 현장 팀 관리
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="push">
@@ -209,6 +213,10 @@ export default function AdminPage() {
 
         <TabsContent value="notif_rules">
           <NotificationRulesManager />
+        </TabsContent>
+
+        <TabsContent value="field_teams">
+          <FieldTeamsManager />
         </TabsContent>
 
         <TabsContent value="ranking">

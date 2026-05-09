@@ -19,6 +19,8 @@ const TABLES = [
   { key: "device_inventory", label: "단말기 재고" },
   { key: "ad_spend", label: "지출 (ad_spend)" },
   { key: "inquiries", label: "채널 인입 (inquiries)" },
+  { key: "apartment_posting", label: "아파트 게시 활동" },
+  { key: "apartment_lead", label: "아파트 인입 고객" },
 ] as const;
 
 const TYPES = ["text", "number", "date", "select", "boolean", "textarea"] as const;
