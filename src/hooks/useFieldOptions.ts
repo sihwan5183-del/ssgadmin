@@ -16,7 +16,8 @@ export type FieldKey =
   | "fixed_expense_type"
   | "carrier"
   | "inquiry_status"
-  | "inquiry_quick_memo";
+  | "inquiry_quick_memo"
+  | "apartment_result";
 
 export interface FieldOption {
   id: string;
