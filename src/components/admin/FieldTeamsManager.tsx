@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useFieldTeams, type FieldTeam } from "@/hooks/useFieldTeams";
+import { SortableList, SortableItem } from "@/components/common/SortableList";
 
 export function FieldTeamsManager() {
   const { user } = useAuth();
@@ -77,6 +78,17 @@ export function FieldTeamsManager() {
     refresh();
   };
 
+  const handleReorder = async (newItems: FieldTeam[]) => {
+    const updates = newItems.map((t, idx) =>
+      (supabase as any).from("field_teams").update({ sort_order: idx }).eq("id", t.id),
+    );
+    const results = await Promise.all(updates);
+    const failed = results.find((r: any) => r.error);
+    if (failed) return toast.error("순서 저장 실패");
+    toast.success("순서가 변경되었습니다");
+    refresh();
+  };
+
   return (
     <Card className="p-6 glass">
       <div className="flex items-center justify-between mb-4">
@@ -98,30 +110,33 @@ export function FieldTeamsManager() {
           등록된 현장 팀이 없습니다
         </div>
       ) : (
-        <div className="grid gap-2 md:grid-cols-2">
-          {rows.map((t) => (
-            <div
-              key={t.id}
-              className="p-3 rounded-xl border border-border/40 bg-card/40 flex items-center gap-3"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="font-medium flex items-center gap-2">
-                  {t.name}
-                  {!t.active && <Badge variant="outline" className="text-muted-foreground">비활성</Badge>}
+        <div className="grid gap-2">
+          <SortableList items={rows} onReorder={handleReorder}>
+            {(t) => (
+              <SortableItem
+                key={t.id}
+                id={t.id}
+                className="p-3 rounded-xl border border-border/40 bg-card/40 flex items-center gap-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium flex items-center gap-2">
+                    {t.name}
+                    {!t.active && <Badge variant="outline" className="text-muted-foreground">비활성</Badge>}
+                  </div>
+                  {t.description && (
+                    <div className="text-xs text-muted-foreground truncate">{t.description}</div>
+                  )}
                 </div>
-                {t.description && (
-                  <div className="text-xs text-muted-foreground truncate">{t.description}</div>
-                )}
-              </div>
-              <Switch checked={t.active} onCheckedChange={() => toggleActive(t)} />
-              <Button size="icon" variant="ghost" onClick={() => openEdit(t)}>
-                <Pencil className="size-3.5" />
-              </Button>
-              <Button size="icon" variant="ghost" onClick={() => remove(t.id)}>
-                <Trash2 className="size-3.5 text-destructive" />
-              </Button>
-            </div>
-          ))}
+                <Switch checked={t.active} onCheckedChange={() => toggleActive(t)} />
+                <Button size="icon" variant="ghost" onClick={() => openEdit(t)}>
+                  <Pencil className="size-3.5" />
+                </Button>
+                <Button size="icon" variant="ghost" onClick={() => remove(t.id)}>
+                  <Trash2 className="size-3.5 text-destructive" />
+                </Button>
+              </SortableItem>
+            )}
+          </SortableList>
         </div>
       )}
 
