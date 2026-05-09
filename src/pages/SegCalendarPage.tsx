@@ -46,11 +46,13 @@ const TYPE_CHIP: Record<string, string> = {
   기타: "bg-slate-100 text-slate-800 dark:bg-slate-700/60 dark:text-slate-100",
 };
 
-const PRIORITY_BADGE: Record<string, { label: string; cls: string }> = {
-  high: { label: "상", cls: "bg-rose-500/15 text-rose-700 border-rose-500/30 dark:text-rose-300" },
-  mid:  { label: "중", cls: "bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-300" },
-  low:  { label: "하", cls: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-300" },
+// 상태/중요도 표기: 배경색 없이 얇은 테두리 + 블랙 텍스트로 통일 (시인성 우선)
+const PRIORITY_BADGE: Record<string, { label: string }> = {
+  high: { label: "상" },
+  mid:  { label: "중" },
+  low:  { label: "하" },
 };
+const CLEAN_BADGE = "h-5 px-1.5 text-[10px] font-medium border border-foreground/30 bg-transparent text-foreground rounded";
 
 export default function SegCalendarPage() {
   const [cursor, setCursor] = useState(new Date());
@@ -343,10 +345,11 @@ export default function SegCalendarPage() {
                           {name}
                         </button>
                       </td>
-                      <td className="py-2 px-2 align-top text-xs">{a.assignee_name ?? "-"}</td>
-                      <td className="py-2 px-2 align-top text-xs tabular-nums">
+                      <td className="py-1.5 px-2 align-top text-xs">{a.assignee_name ?? "-"}</td>
+                      <td className="py-1.5 px-2 align-top text-xs tabular-nums">
                         {(() => {
-                          const c = (a.custom_fields as any)?.partner_count;
+                          const cf = (a.custom_fields as any) ?? {};
+                          const c = cf.regulars_count ?? cf.partner_count;
                           return c != null && c !== "" ? `${c}건` : <span className="text-muted-foreground">-</span>;
                         })()}
                       </td>
@@ -355,17 +358,13 @@ export default function SegCalendarPage() {
                           ? <div className="text-[11px] text-foreground/80 whitespace-pre-wrap break-words leading-relaxed">{a.content}</div>
                           : <span className="text-xs text-muted-foreground">-</span>}
                       </td>
-                      <td className="py-2 px-2 align-top">
+                      <td className="py-1.5 px-2 align-top">
                         {priInfo ? (
-                          <Badge variant="outline" className={cn("h-5 text-[10px]", priInfo.cls)}>{priInfo.label}</Badge>
+                          <span className={CLEAN_BADGE}>{priInfo.label}</span>
                         ) : <span className="text-xs text-muted-foreground">-</span>}
                       </td>
-                      <td className="py-2 px-2 align-top">
-                        {done ? (
-                          <Badge variant="outline" className="h-5 text-[10px] bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-300">완료</Badge>
-                        ) : (
-                          <Badge variant="outline" className="h-5 text-[10px] bg-blue-500/10 text-blue-700 border-blue-500/30 dark:text-blue-300">예정</Badge>
-                        )}
+                      <td className="py-1.5 px-2 align-top">
+                        <span className={CLEAN_BADGE}>{done ? "완료" : "예정"}</span>
                       </td>
                       <td className="py-2 px-2 align-top">
                         <div className="flex justify-end gap-1">
@@ -375,11 +374,8 @@ export default function SegCalendarPage() {
                           </Button>
                           <Button
                             size="sm"
-                            variant={reported ? "secondary" : "outline"}
-                            className={cn(
-                              "h-7 px-2 text-xs",
-                              reported && "bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-300 hover:bg-emerald-500/20"
-                            )}
+                            variant="outline"
+                            className="h-7 px-2 text-xs border-foreground/30 bg-transparent text-foreground hover:bg-muted"
                             onClick={() => { setReportTarget(a); setReportOpen(true); }}
                           >
                             <ClipboardCheck className="size-3.5 mr-1" /> {reported ? "보고완료" : "활동보고"}
