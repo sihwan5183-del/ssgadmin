@@ -232,6 +232,36 @@ async function runRule(rule: Rule, override?: { title?: string; body?: string; u
       totals.recipients += 1;
     }
   } else if (rule.trigger_type === "broadcast") {
+    // pass-through to broadcast handling below
+    const recipients = await getFilteredRecipients(rule, { user_ids: override?.user_ids });
+    for (const uid of recipients) {
+      const { data: prof } = await supabase.from("profiles").select("display_name").eq("user_id", uid).maybeSingle();
+      const vars = { ...baseVars, "직원이름": (prof as any)?.display_name ?? "" };
+      const title = override?.title ?? fillTpl(rule.title_template, vars);
+      const body = override?.body ?? fillTpl(rule.body_template, vars);
+      const r = await sendToUser(uid, title, body, rule.link ?? "/", `rule_${rule.rule_key}`);
+      totals.sent += r.sent; totals.failed += r.failed; totals.blocked += r.blocked;
+      totals.recipients += 1;
+    }
+  } else if (rule.trigger_type === "apartment_posting_ending") {
+    // 내일 종료 예정 게시물 → 같은 팀 직원에게 발송
+    const tomorrow = kstDateOffset(1);
+    const { data: postings } = await supabase
+      .from("apartment_postings").select("id, team, apartment_name, end_date").eq("end_date", tomorrow);
+    for (const p of (postings ?? []) as any[]) {
+      if (!p.team) continue;
+      const { data: members } = await supabase
+        .from("profiles").select("user_id, display_name").eq("team", p.team).eq("status", "active").eq("push_enabled", true);
+      for (const m of (members ?? []) as any[]) {
+        const vars = { ...baseVars, "직원이름": m.display_name ?? "", "아파트명": p.apartment_name, "종료일": p.end_date };
+        const title = fillTpl(rule.title_template, vars);
+        const body = fillTpl(rule.body_template, vars);
+        const r = await sendToUser(m.user_id, title, body, rule.link ?? "/apartment", `rule_${rule.rule_key}`);
+        totals.sent += r.sent; totals.failed += r.failed; totals.blocked += r.blocked;
+        totals.recipients += 1;
+      }
+    }
+  } else if (rule.trigger_type === "broadcast_legacy_unused") {
     // 자유 스케줄 단순 공지
     const recipients = await getFilteredRecipients(rule, { user_ids: override?.user_ids });
     for (const uid of recipients) {
