@@ -22,6 +22,7 @@ import { StrategyModelGauges } from "@/components/dashboard/StrategyModelGauges"
 import { PendingItemsCard } from "@/components/dashboard/PendingItemsCard";
 import { CashTodayCard } from "@/components/dashboard/CashTodayCard";
 import { MyReviewAlerts } from "@/components/dashboard/MyReviewAlerts";
+import { TodayCareWidget } from "@/components/dashboard/TodayCareWidget";
 import { UntreatedLeadsCard } from "@/components/dashboard/UntreatedLeadsCard";
 import { MyIncentiveWidget } from "@/components/dashboard/MyIncentiveWidget";
 import { UnifiedCalendarWidget } from "@/components/dashboard/UnifiedCalendarWidget";
@@ -223,6 +224,13 @@ const Index = () => {
 
       {/* === 본인 검수 피드백 (반려/수정요청) === */}
       {isVisible("review_alerts") && <MyReviewAlerts />}
+
+      {/* === 오늘의 관리 고객 (요금제 변경 + 부가서비스 해지) === */}
+      {isVisible("today_care") && (
+        <section className="mb-3">
+          <TodayCareWidget />
+        </section>
+      )}
 
       {/* 업무 바로가기 */}
       {canSeeAdminWidgets && isVisible("quick_links") && (

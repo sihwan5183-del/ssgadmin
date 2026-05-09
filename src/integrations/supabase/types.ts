@@ -214,6 +214,42 @@ export type Database = {
         }
         Relationships: []
       }
+      addon_retention_rules: {
+        Row: {
+          active: boolean
+          addon_name: string
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+          retention_days: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          addon_name: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          retention_days?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          addon_name?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          retention_days?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       apartment_leads: {
         Row: {
           apartment_name: string | null
@@ -2250,6 +2286,50 @@ export type Database = {
           voucher_returned?: string | null
         }
         Relationships: []
+      }
+      sales_addon_tasks: {
+        Row: {
+          addon_name: string
+          completed_at: string | null
+          completed_by: string | null
+          completed_note: string | null
+          created_at: string
+          due_date: string
+          id: string
+          sale_id: string
+          updated_at: string
+        }
+        Insert: {
+          addon_name: string
+          completed_at?: string | null
+          completed_by?: string | null
+          completed_note?: string | null
+          created_at?: string
+          due_date: string
+          id?: string
+          sale_id: string
+          updated_at?: string
+        }
+        Update: {
+          addon_name?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          completed_note?: string | null
+          created_at?: string
+          due_date?: string
+          id?: string
+          sale_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_addon_tasks_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sales_audit_log: {
         Row: {
