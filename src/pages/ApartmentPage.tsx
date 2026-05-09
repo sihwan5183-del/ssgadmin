@@ -27,7 +27,6 @@ import { useFieldDefinitions } from "@/hooks/useFieldDefinitions";
 import { useFieldTeams } from "@/hooks/useFieldTeams";
 import { DynamicFieldRenderer } from "@/components/admin/DynamicFieldRenderer";
 import { formatPhone } from "@/lib/phoneFormat";
-import { useStaffNames } from "@/hooks/useStaffNames";
 import { cn } from "@/lib/utils";
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -41,8 +40,8 @@ export default function ApartmentPage() {
   const resultOptions = resultOptionsCustom.length > 0 ? resultOptionsCustom : (RESULT_STATUSES as readonly string[]);
   const { rows: fieldTeams } = useFieldTeams(true);
   const teamOptions = fieldTeams.map((t) => t.name);
-  const { resolve: resolveStaff } = useStaffNames();
   const [teamTab, setTeamTab] = useState<string>("__all__");
+  const [mapTarget, setMapTarget] = useState<ApartmentPosting | null>(null);
   const { fields: postingFields } = useFieldDefinitions("apartment_posting");
   const { fields: leadFields } = useFieldDefinitions("apartment_lead");
 
@@ -312,13 +311,13 @@ export default function ApartmentPage() {
                   <table className="w-full text-sm">
                     <thead className="text-[11px] text-muted-foreground border-b border-border/50">
                       <tr>
-                        <th className="text-left py-1.5 px-2 w-20">상태</th>
-                        <th className="text-left py-1.5 px-2">아파트명</th>
-                        <th className="text-left py-1.5 px-2 w-32">담당자</th>
-                        <th className="text-left py-1.5 px-2 w-28">팀</th>
-                        <th className="text-left py-1.5 px-2 w-44">게시 기간</th>
-                        <th className="text-right py-1.5 px-2 w-20">인입</th>
-                        <th className="text-right py-1.5 px-2 w-20"></th>
+                        <th className="text-left py-1 px-2 w-16 text-foreground">상태</th>
+                        <th className="text-left py-1 px-2 text-foreground">아파트명</th>
+                        <th className="text-left py-1 px-2 w-28 text-foreground">팀</th>
+                        <th className="text-left py-1 px-2 w-40 text-foreground">게시 기간</th>
+                        <th className="text-right py-1 px-2 w-16 text-foreground">인입</th>
+                        <th className="text-left py-1 px-2 text-foreground">메모</th>
+                        <th className="text-right py-1 px-2 w-20"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -328,18 +327,28 @@ export default function ApartmentPage() {
                         const fmt = (d: string) => d.slice(2).replace(/-/g, ".");
                         return (
                           <tr key={p.id} className="border-b border-border/30 hover:bg-muted/30">
-                            <td className="py-1.5 px-2 text-foreground text-[12px] font-medium">{status}</td>
-                            <td className="py-1.5 px-2">
-                              <div className="font-medium truncate">{p.apartment_name}</div>
-                              {p.location_detail && (
-                                <div className="text-[10px] text-muted-foreground truncate">{p.location_detail}</div>
-                              )}
+                            <td className="py-1 px-2 text-foreground text-[12px] font-medium">{status}</td>
+                            <td className="py-1 px-2">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="font-medium truncate text-foreground">{p.apartment_name}</span>
+                                {p.location_detail && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setMapTarget(p)}
+                                    className="shrink-0 text-muted-foreground hover:text-foreground"
+                                    title={p.location_detail}
+                                    aria-label="지도 보기"
+                                  >
+                                    <MapPin className="size-3.5" />
+                                  </button>
+                                )}
+                              </div>
                             </td>
-                            <td className="py-1.5 px-2 text-foreground/80">{resolveStaff(p.created_by)}</td>
-                            <td className="py-1.5 px-2 text-muted-foreground">{p.team ?? "-"}</td>
-                            <td className="py-1.5 px-2 text-muted-foreground tabular-nums">{fmt(p.start_date)} ~ {fmt(p.end_date)}</td>
-                            <td className="py-1.5 px-2 text-right tabular-nums">{leadCount}건</td>
-                            <td className="py-1.5 px-2 text-right whitespace-nowrap">
+                            <td className="py-1 px-2 text-foreground">{p.team ?? "-"}</td>
+                            <td className="py-1 px-2 text-foreground tabular-nums">{fmt(p.start_date)} ~ {fmt(p.end_date)}</td>
+                            <td className="py-1 px-2 text-right tabular-nums text-foreground">{leadCount}건</td>
+                            <td className="py-1 px-2 text-foreground/80 truncate max-w-[280px]" title={p.note ?? ""}>{p.note ?? "-"}</td>
+                            <td className="py-1 px-2 text-right whitespace-nowrap">
                               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEditPosting(p)}>
                                 <Pencil className="size-3.5" />
                               </Button>
@@ -634,6 +643,56 @@ export default function ApartmentPage() {
             <Button variant="outline" onClick={() => setLOpen(false)}>취소</Button>
             <Button onClick={saveLead}>{lEdit ? "수정" : "등록"}</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Map preview dialog */}
+      <Dialog open={!!mapTarget} onOpenChange={(o) => !o && setMapTarget(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPin className="size-4" />
+              {mapTarget?.apartment_name}
+            </DialogTitle>
+          </DialogHeader>
+          {mapTarget && (
+            <div className="space-y-3">
+              <div className="text-xs text-muted-foreground">{mapTarget.location_detail}</div>
+              <div className="w-full aspect-[16/10] rounded-md overflow-hidden border border-border/40 bg-muted">
+                <iframe
+                  title="map"
+                  className="w-full h-full"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src={`https://www.google.com/maps?q=${encodeURIComponent(
+                    `${mapTarget.location_detail ?? ""} ${mapTarget.apartment_name}`,
+                  )}&output=embed`}
+                />
+              </div>
+              <div className="flex gap-2 justify-end text-xs">
+                <a
+                  href={`https://map.naver.com/p/search/${encodeURIComponent(
+                    `${mapTarget.location_detail ?? ""} ${mapTarget.apartment_name}`,
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline text-foreground"
+                >
+                  네이버 지도에서 열기
+                </a>
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                    `${mapTarget.location_detail ?? ""} ${mapTarget.apartment_name}`,
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline text-foreground"
+                >
+                  구글 지도에서 열기
+                </a>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
