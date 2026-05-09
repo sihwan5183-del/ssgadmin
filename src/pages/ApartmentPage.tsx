@@ -27,7 +27,6 @@ import { useFieldDefinitions } from "@/hooks/useFieldDefinitions";
 import { useFieldTeams } from "@/hooks/useFieldTeams";
 import { DynamicFieldRenderer } from "@/components/admin/DynamicFieldRenderer";
 import { formatPhone } from "@/lib/phoneFormat";
-import { useStaffNames } from "@/hooks/useStaffNames";
 import { cn } from "@/lib/utils";
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
