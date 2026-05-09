@@ -21,6 +21,7 @@ interface Props {
 
 const BUSINESS_TYPES = ["법인", "개인사업자", "기타"];
 const CONTRACT_TYPES = ["MOU", "전단지", "공동구매", "제휴", "이벤트", "기타"];
+const ACTIVITY_CATEGORIES = ["자체 점두행사", "법인 MOU", "아파트 게시판", "기타"];
 const STATUSES = [
   { value: "active", label: "진행중" },
   { value: "paused", label: "보류" },
@@ -32,6 +33,8 @@ export function PartnerFormDialog({ open, onOpenChange, partner, onSaved }: Prop
   const [form, setForm] = useState<Partial<SegPartner>>({});
   const [saving, setSaving] = useState(false);
   const [pricingTerms, setPricingTerms] = useState("");
+  const [activityCategory, setActivityCategory] = useState<string>("자체 점두행사");
+  const [activityCategoryCustom, setActivityCategoryCustom] = useState<string>("");
   const [existingAttachments, setExistingAttachments] = useState<any[]>([]);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<Record<string, string>>({});
@@ -48,6 +51,17 @@ export function PartnerFormDialog({ open, onOpenChange, partner, onSaved }: Prop
         }
       );
       setPricingTerms((partner?.custom_fields as any)?.pricing_terms ?? "");
+      const cat = (partner?.custom_fields as any)?.activity_category as string | undefined;
+      if (cat && ACTIVITY_CATEGORIES.includes(cat)) {
+        setActivityCategory(cat);
+        setActivityCategoryCustom("");
+      } else if (cat) {
+        setActivityCategory("기타");
+        setActivityCategoryCustom(cat);
+      } else {
+        setActivityCategory("자체 점두행사");
+        setActivityCategoryCustom("");
+      }
       setPendingFiles([]);
       setPreviews({});
       setSignedUrls({});
@@ -134,7 +148,15 @@ export function PartnerFormDialog({ open, onOpenChange, partner, onSaved }: Prop
     if (!user) return;
     setSaving(true);
     try {
-      const cf = { ...(form.custom_fields ?? {}), pricing_terms: pricingTerms || undefined };
+      const finalCategory =
+        activityCategory === "기타" && activityCategoryCustom.trim()
+          ? activityCategoryCustom.trim()
+          : activityCategory;
+      const cf = {
+        ...(form.custom_fields ?? {}),
+        pricing_terms: pricingTerms || undefined,
+        activity_category: finalCategory || undefined,
+      };
       const payload = {
         company_name: form.company_name!.trim(),
         business_type: form.business_type || "법인",
@@ -196,6 +218,21 @@ export function PartnerFormDialog({ open, onOpenChange, partner, onSaved }: Prop
               <SelectContent>{CONTRACT_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
             </Select>
           </Field>
+          <Field label="활동 분류">
+            <Select value={activityCategory} onValueChange={(v) => setActivityCategory(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{ACTIVITY_CATEGORIES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+            </Select>
+          </Field>
+          {activityCategory === "기타" && (
+            <Field label="활동 분류 (직접 입력)">
+              <Input
+                value={activityCategoryCustom}
+                onChange={(e) => setActivityCategoryCustom(e.target.value)}
+                placeholder="예: 박람회 부스, 지역 행사 등"
+              />
+            </Field>
+          )}
           <Field label="계약일">
             <Input type="date" value={form.contract_date ?? ""} onChange={(e) => set("contract_date", e.target.value)} />
           </Field>

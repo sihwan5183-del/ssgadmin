@@ -12,11 +12,8 @@ import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isBefore 
 import { useNavigate } from "react-router-dom";
 
 const STATUS_LABEL: Record<string, string> = { active: "진행중", paused: "보류", ended: "종료" };
-const STATUS_TONE: Record<string, string> = {
-  active: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30",
-  paused: "bg-amber-500/15 text-amber-600 border-amber-500/30",
-  ended: "bg-muted text-muted-foreground",
-};
+// 상태/뱃지: 배경/테두리 제거, 블랙 텍스트로 통일
+const CLEAN_STATUS_CLS = "text-foreground text-[11px] font-medium";
 
 export default function SegPartnersPage() {
   const { partners } = useSegPartners();
@@ -24,6 +21,7 @@ export default function SegPartnersPage() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [contractFilter, setContractFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [formOpen, setFormOpen] = useState(false);
   const [selected, setSelected] = useState<SegPartner | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -33,6 +31,10 @@ export default function SegPartnersPage() {
     return partners.filter((p) => {
       if (statusFilter !== "all" && p.status !== statusFilter) return false;
       if (contractFilter !== "all" && p.contract_type !== contractFilter) return false;
+      if (categoryFilter !== "all") {
+        const cat = (p.custom_fields as any)?.activity_category;
+        if (cat !== categoryFilter) return false;
+      }
       if (q.trim()) {
         const s = q.toLowerCase();
         return (
@@ -43,7 +45,7 @@ export default function SegPartnersPage() {
       }
       return true;
     });
-  }, [partners, q, statusFilter, contractFilter]);
+  }, [partners, q, statusFilter, contractFilter, categoryFilter]);
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -62,6 +64,16 @@ export default function SegPartnersPage() {
 
   const contractTypes = useMemo(() => {
     const set = new Set(partners.map((p) => p.contract_type).filter(Boolean) as string[]);
+    return Array.from(set);
+  }, [partners]);
+
+  const activityCategories = useMemo(() => {
+    const base = ["자체 점두행사", "법인 MOU", "아파트 게시판", "기타"];
+    const set = new Set<string>(base);
+    partners.forEach((p) => {
+      const c = (p.custom_fields as any)?.activity_category;
+      if (c && typeof c === "string") set.add(c);
+    });
     return Array.from(set);
   }, [partners]);
 
@@ -116,6 +128,13 @@ export default function SegPartnersPage() {
             {contractTypes.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">활동 분류별 보기</SelectItem>
+            {activityCategories.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -129,6 +148,12 @@ export default function SegPartnersPage() {
           const lastAct = partnerActs[0];
           const today = format(new Date(), "yyyy-MM-dd");
           const overdue = partnerActs.find((a) => !a.is_completed && a.next_action_date && a.next_action_date < today);
+          const category = (p.custom_fields as any)?.activity_category as string | undefined;
+          const regularsTotal = partnerActs.reduce((sum, a) => {
+            const cf = (a.custom_fields as any) ?? {};
+            const v = Number(cf.regulars_count ?? cf.partner_count ?? 0);
+            return sum + (isFinite(v) ? v : 0);
+          }, 0);
           return (
             <Card
               key={p.id}
@@ -139,8 +164,11 @@ export default function SegPartnersPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-semibold truncate">{p.company_name}</h3>
-                    <Badge variant="outline" className={STATUS_TONE[p.status]}>{STATUS_LABEL[p.status] ?? p.status}</Badge>
+                    <span className={CLEAN_STATUS_CLS}>{STATUS_LABEL[p.status] ?? p.status}</span>
                   </div>
+                  {category && (
+                    <div className="text-xs font-medium text-foreground mt-0.5">{category}</div>
+                  )}
                   <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-2">
                     <span>{p.business_type}</span>
                     {p.contract_type && <span>· {p.contract_type}</span>}
@@ -148,12 +176,13 @@ export default function SegPartnersPage() {
                   </div>
                 </div>
                 {overdue && (
-                  <Badge variant="destructive" className="shrink-0">기한 초과</Badge>
+                  <span className="shrink-0 text-foreground text-[11px] font-medium">기한 초과</span>
                 )}
               </div>
               <div className="mt-3 text-xs space-y-0.5 text-muted-foreground">
                 {p.contact_name && <div>담당: {p.contact_name}{p.contact_phone ? ` · ${p.contact_phone}` : ""}</div>}
                 <div>활동: {partnerActs.length}건{lastAct ? ` · 최근 ${lastAct.activity_date}` : ""}</div>
+                <div>타사등록: {regularsTotal > 0 ? `${regularsTotal}건` : "-"}</div>
               </div>
             </Card>
           );
