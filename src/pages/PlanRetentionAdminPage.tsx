@@ -125,7 +125,7 @@ export default function PlanRetentionAdminPage() {
     <div>
       <Header
         title="요금제 유지 조건 설정"
-        subtitle="가입 조건(sale_type)별로 요금제 유지 일수를 설정합니다. 실적 입력 시 개통일 + 유지 일수로 변경 예정일이 자동 계산됩니다."
+        subtitle="가입 조건별 요금제 유지 일수를 설정합니다. 조건명은 실적 입력의 약정 정보와 정확히 일치해야 합니다 (선택약정 / 선택약정+유통망지원금 / 이통사지원금(공시) / 이통사지원금+유통망지원금)."
         showScopeToggle={false}
         showPeriodFilter={false}
       />
@@ -137,7 +137,7 @@ export default function PlanRetentionAdminPage() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-[1fr_160px_auto] gap-2 items-end">
           <div>
-            <Label className="text-xs">조건명 (실적 입력의 sale_type 값과 정확히 일치)</Label>
+            <Label className="text-xs">조건명 (약정 정보와 정확히 일치)</Label>
             <Input
               value={newType}
               onChange={(e) => setNewType(e.target.value)}
