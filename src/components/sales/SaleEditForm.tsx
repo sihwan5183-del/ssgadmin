@@ -147,6 +147,46 @@ const NUMERIC_FORM_KEYS = new Set<string>([
 
 const BOOLEAN_FORM_KEYS = new Set<string>(["moyo_excluded", "cash_open", "trade_in_enabled", "plan_change_planned"]);
 
+/**
+ * 부가서비스 유지/삭제 선택 토글.
+ * - 'keep' = 유지 (캘린더/알림 미표시)
+ * - 'remove' = 삭제 예정 (유지 일수 만료일에 알림 자동 생성)
+ */
+function VasActionToggle({
+  value,
+  onChange,
+}: {
+  value: "keep" | "remove" | null;
+  onChange: (v: "keep" | "remove" | null) => void;
+}) {
+  return (
+    <div className="mt-1 inline-flex items-center gap-1 rounded-md border border-border/40 bg-background/60 p-0.5 text-[10px]">
+      {(["keep", "remove"] as const).map((k) => {
+        const active = value === k;
+        const label = k === "keep" ? "유지" : "삭제";
+        return (
+          <button
+            key={k}
+            type="button"
+            onClick={() => onChange(active ? null : k)}
+            className={cn(
+              "px-2 py-0.5 rounded-[4px] font-medium transition-colors",
+              active
+                ? k === "remove"
+                  ? "bg-destructive text-destructive-foreground"
+                  : "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {label}
+          </button>
+        );
+      })}
+      {value == null && <span className="px-1 text-[9px] text-muted-foreground">미선택</span>}
+    </div>
+  );
+}
+
 const bindSaleToForm = (sale: Record<string, any>): Partial<SaleRow> => {
   const bound: Record<string, any> = {};
   for (const key of SALE_FORM_KEYS) {
