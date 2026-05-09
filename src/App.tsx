@@ -50,6 +50,7 @@ import StaffGoalsPage from "./pages/StaffGoalsPage.tsx";
 import PendingItemsAdminPage from "./pages/PendingItemsAdminPage.tsx";
 import PlanRetentionAdminPage from "./pages/PlanRetentionAdminPage.tsx";
 import PlanChangeCalendarPage from "./pages/PlanChangeCalendarPage.tsx";
+import ApartmentPage from "./pages/ApartmentPage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -146,6 +147,7 @@ const App = () => {
                         <Route path="/sales-ledger" element={<SalesLedgerPage />} />
                         <Route path="/seg-partners" element={<SegPartnersPage />} />
                         <Route path="/seg-calendar" element={<SegCalendarPage />} />
+                        <Route path="/apartment" element={<ApartmentPage />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </AppShell>
