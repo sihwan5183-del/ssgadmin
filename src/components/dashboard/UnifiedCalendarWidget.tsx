@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Megaphone, MapPin, Briefcase, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 
 type TabKey = "sales" | "seg" | "apt" | "ad";
 
-const TABS: { key: TabKey; label: string }[] = [
-  { key: "sales", label: "일별 판매실적" },
-  { key: "seg", label: "영업 캘린더" },
-  { key: "apt", label: "아파트게시 캘린더" },
-  { key: "ad", label: "광고 캘린더" },
+const MAGENTA = "#E6007E";
+
+const TABS: { key: TabKey; label: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }> }[] = [
+  { key: "sales", label: "일별 판매실적", icon: TrendingUp },
+  { key: "seg", label: "영업 캘린더", icon: Briefcase },
+  { key: "apt", label: "아파트게시 캘린더", icon: MapPin },
+  { key: "ad", label: "광고 캘린더", icon: Megaphone },
 ];
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -128,6 +130,7 @@ export function UnifiedCalendarWidget() {
     const inMonth = d.getMonth() === month0;
     const isToday = iso === todayIso();
     const isSel = iso === selected;
+    const dow = d.getDay(); // 0=일, 6=토
 
     let badge: React.ReactNode = null;
     if (tab === "sales") {
@@ -146,8 +149,9 @@ export function UnifiedCalendarWidget() {
         badge = (
           <div className="mt-0.5 space-y-0.5">
             {list.slice(0, 2).map((r) => (
-              <div key={r.id} className="text-[10px] leading-tight truncate border-l border-black pl-1 text-black">
-                {r.title || r.activity_type || "활동"}
+              <div key={r.id} className="flex items-center gap-1 text-[10px] leading-tight truncate text-black rounded-md bg-[#FCE6F1] px-1.5 py-0.5">
+                <Briefcase className="size-2.5 shrink-0" style={{ color: MAGENTA }} />
+                <span className="truncate">{r.title || r.activity_type || "활동"}</span>
               </div>
             ))}
             {list.length > 2 && <div className="text-[9px] text-black">+{list.length - 2}</div>}
@@ -157,6 +161,7 @@ export function UnifiedCalendarWidget() {
     } else {
       const list = (tab === "apt" ? apt : ads).filter((r) => inRange(iso, r));
       if (list.length) {
+        const Icon = tab === "apt" ? MapPin : Megaphone;
         badge = (
           <div className="mt-0.5 space-y-0.5">
             {list.slice(0, 2).map((r) => {
@@ -166,12 +171,14 @@ export function UnifiedCalendarWidget() {
                 <div
                   key={r.id}
                   className={cn(
-                    "text-[10px] leading-tight truncate text-black border-y border-black px-1",
-                    isStart && "border-l rounded-l",
-                    isEnd && "border-r rounded-r",
+                    "flex items-center gap-1 text-[10px] leading-tight truncate text-black px-1.5 py-0.5 bg-[#FCE6F1]",
+                    isStart && "rounded-l-md",
+                    isEnd && "rounded-r-md",
+                    !isStart && !isEnd && "rounded-none",
                   )}
                 >
-                  {r.title}
+                  {isStart && <Icon className="size-2.5 shrink-0" style={{ color: MAGENTA }} />}
+                  <span className="truncate">{r.title}</span>
                 </div>
               );
             })}
@@ -186,15 +193,28 @@ export function UnifiedCalendarWidget() {
         key={iso}
         onClick={() => setSelected(iso)}
         className={cn(
-          "min-h-[64px] text-left p-1 border border-border bg-card transition-colors",
+          "min-h-[72px] text-left p-1.5 bg-card transition-colors hover:bg-[#FAFAFA] focus:outline-none",
           !inMonth && "opacity-40",
-          isSel && "ring-1 ring-black",
-          isToday && "bg-muted/50",
+          isSel && "bg-[#FFF1F8]",
         )}
       >
-        <div className="flex items-center justify-between text-[11px] font-medium text-foreground">
-          <span>{d.getDate()}</span>
-          {isToday && <span className="text-[9px] text-black">TODAY</span>}
+        <div className="flex items-center justify-between text-[11px] font-medium">
+          {isToday ? (
+            <span
+              className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[10px] font-semibold"
+              style={{ backgroundColor: MAGENTA }}
+            >
+              {d.getDate()}
+            </span>
+          ) : (
+            <span className={cn(
+              dow === 0 && "text-neutral-400",
+              dow === 6 && "text-neutral-500",
+              dow !== 0 && dow !== 6 && "text-[#1A1A1A]",
+            )}>
+              {d.getDate()}
+            </span>
+          )}
         </div>
         {badge}
       </button>
@@ -225,24 +245,30 @@ export function UnifiedCalendarWidget() {
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card p-3 md:p-4">
+    <div className="rounded-2xl border border-[#F0F0F0] bg-card p-4 md:p-5 shadow-sm">
       {/* Tab bar */}
-      <div className="-mx-1 mb-3 overflow-x-auto">
+      <div className="-mx-1 mb-4 overflow-x-auto scrollbar-hide border-b border-[#F0F0F0]">
         <div className="flex gap-1 px-1 min-w-max">
           {TABS.map((t) => {
             const active = tab === t.key;
+            const Icon = t.icon;
             return (
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
                 className={cn(
-                  "whitespace-nowrap px-3 py-1.5 text-xs font-medium border transition-colors",
-                  active
-                    ? "border-black bg-black text-white"
-                    : "border-border text-foreground hover:border-black",
+                  "relative whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-colors inline-flex items-center gap-1.5",
+                  active ? "text-[#1A1A1A]" : "text-neutral-500 hover:text-[#1A1A1A]",
                 )}
               >
+                <Icon className="size-3.5" style={active ? { color: MAGENTA } : undefined} />
                 {t.label}
+                {active && (
+                  <span
+                    className="absolute left-3 right-3 -bottom-px h-0.5 rounded-full"
+                    style={{ backgroundColor: MAGENTA }}
+                  />
+                )}
               </button>
             );
           })}
@@ -250,38 +276,57 @@ export function UnifiedCalendarWidget() {
       </div>
 
       {/* Month nav */}
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-1">
-          <button onClick={goPrev} className="p-1 border border-border hover:border-black"><ChevronLeft className="size-4" /></button>
-          <div className="px-2 text-sm font-semibold text-foreground tabular-nums">{year}.{pad(month0 + 1)}</div>
-          <button onClick={goNext} className="p-1 border border-border hover:border-black"><ChevronRight className="size-4" /></button>
-          <button onClick={goToday} className="ml-1 px-2 py-0.5 text-[11px] border border-border hover:border-black">오늘</button>
+          <button onClick={goPrev} className="p-1.5 rounded-full hover:bg-[#F5F5F5] transition-colors"><ChevronLeft className="size-4 text-[#1A1A1A]" /></button>
+          <div className="px-3 text-base font-semibold text-[#1A1A1A] tabular-nums">{year}.{pad(month0 + 1)}</div>
+          <button onClick={goNext} className="p-1.5 rounded-full hover:bg-[#F5F5F5] transition-colors"><ChevronRight className="size-4 text-[#1A1A1A]" /></button>
+          <button
+            onClick={goToday}
+            className="ml-2 px-3 py-1 text-[11px] font-medium rounded-full border transition-colors"
+            style={{ borderColor: MAGENTA, color: MAGENTA }}
+          >
+            오늘
+          </button>
         </div>
         <Link to={detailLink[tab].to} className="text-[11px] text-foreground hover:underline">{detailLink[tab].label}</Link>
       </div>
 
       {/* Weekday header */}
-      <div className="grid grid-cols-7 text-[10px] font-medium text-muted-foreground mb-1">
-        {["월", "화", "수", "목", "금", "토", "일"].map((w) => (
-          <div key={w} className="px-1 py-0.5">{w}</div>
+      <div className="grid grid-cols-7 text-[11px] font-semibold mb-2">
+        {["월", "화", "수", "목", "금", "토", "일"].map((w, i) => (
+          <div
+            key={w}
+            className={cn(
+              "px-1 py-1.5 text-center",
+              i === 5 && "text-neutral-500",
+              i === 6 && "text-neutral-400",
+              i < 5 && "text-[#1A1A1A]",
+            )}
+          >
+            {w}
+          </div>
         ))}
       </div>
 
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-px bg-border">
+      <div className="grid grid-cols-7 gap-px bg-[#F0F0F0] rounded-lg overflow-hidden border border-[#F0F0F0]">
         {days.map(renderCell)}
       </div>
 
       {/* Detail list */}
-      <div className="mt-3 border-t border-border pt-3">
-        <div className="mb-2 text-xs font-semibold text-foreground">{detailTitle} 상세</div>
+      <div className="mt-4 border-t border-[#F0F0F0] pt-4">
+        <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#1A1A1A]">
+          <span className="inline-block w-1 h-4 rounded-full" style={{ backgroundColor: MAGENTA }} />
+          {detailTitle} 상세
+        </div>
         {detailList.length === 0 ? (
           <div className="text-xs text-muted-foreground">선택한 날짜에 데이터가 없습니다.</div>
         ) : (
-          <ul className="space-y-1">
+          <ul className="space-y-1.5">
             {detailList.map((r, i) => (
-              <li key={i} className="flex items-start gap-2 text-xs text-foreground border-b border-border/60 pb-1 last:border-0">
-                <span className="min-w-[110px] text-muted-foreground">{r.k}</span>
+              <li key={i} className="flex items-start gap-3 text-xs text-[#1A1A1A] border-b border-[#F0F0F0] pb-1.5 last:border-0">
+                <span className="min-w-[110px] text-neutral-500">{r.k}</span>
                 <span className="flex-1">{r.v}</span>
               </li>
             ))}
