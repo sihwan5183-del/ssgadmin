@@ -26,6 +26,7 @@ interface SaleRow {
   plan_change_due_date: string;
   plan_change_completed_at: string | null;
   plan_change_note: string | null;
+  plan_change_target_plan: string | null;
 }
 
 type FilterMode = "all" | "pending" | "done";
@@ -60,7 +61,7 @@ export default function PlanChangeCalendarPage() {
     const { data, error } = await supabase
       .from("sales")
       .select(
-        "id, customer_name, phone, open_date, rate_plan, sale_type, plan_change_due_date, plan_change_completed_at, plan_change_note"
+        "id, customer_name, phone, open_date, rate_plan, sale_type, plan_change_due_date, plan_change_completed_at, plan_change_note, plan_change_target_plan"
       )
       .gte("plan_change_due_date", range.startDate)
       .lte("plan_change_due_date", range.endDate)
