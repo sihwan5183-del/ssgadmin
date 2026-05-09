@@ -9,11 +9,13 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useStaffNames } from "@/hooks/useStaffNames";
 import { toast } from "sonner";
 import {
-  ShieldCheck, XCircle, Clock, Eye, Download, History, Search, FileText,
+  ShieldCheck, XCircle, Clock, Eye, Download, History, Search, FileText, Users,
 } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 interface VaultRow {
   id: string;
@@ -45,13 +47,40 @@ const TABS = [
 
 export default function FileApprovalsPage() {
   const { user } = useAuth();
-  const { resolve } = useStaffNames();
   const [tab, setTab] = useState<(typeof TABS)[number]["key"]>("pending");
   const [rows, setRows] = useState<VaultRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [teamFilter, setTeamFilter] = useState<string>("all");
+  const [profiles, setProfiles] = useState<Record<string, { name: string; team: string | null; resigned: boolean }>>({});
   const [logsOpen, setLogsOpen] = useState<VaultRow | null>(null);
   const [logs, setLogs] = useState<DLog[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("user_id, display_name, team, status, deleted_at")
+        .limit(2000);
+      const m: Record<string, { name: string; team: string | null; resigned: boolean }> = {};
+      (data ?? []).forEach((p: any) => {
+        if (!p.user_id) return;
+        const resigned = p.status === "deleted" || p.status === "resigned" || !!p.deleted_at;
+        m[p.user_id] = {
+          name: resigned ? `${p.display_name}(퇴사자)` : p.display_name,
+          team: p.team ?? null,
+          resigned,
+        };
+      });
+      setProfiles(m);
+    })();
+  }, []);
+
+  const resolveName = (uid: string) => profiles[uid]?.name ?? "-";
+  const resolveTeam = (uid: string) => profiles[uid]?.team ?? "";
+  const teamOptions = Array.from(
+    new Set(Object.values(profiles).map((p) => p.team).filter(Boolean) as string[])
+  ).sort();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -67,9 +96,11 @@ export default function FileApprovalsPage() {
   useEffect(() => { load(); }, [load]);
 
   const filtered = rows.filter((r) => {
+    if (teamFilter !== "all" && resolveTeam(r.uploaded_by) !== teamFilter) return false;
     const q = search.trim().toLowerCase();
     if (!q) return true;
-    return (r.file_name + " " + (r.description ?? "") + " " + resolve(r.uploaded_by, ""))
+    const meta = profiles[r.uploaded_by];
+    return (r.file_name + " " + (r.description ?? "") + " " + (meta?.name ?? "") + " " + (meta?.team ?? ""))
       .toLowerCase()
       .includes(q);
   });
@@ -156,14 +187,28 @@ export default function FileApprovalsPage() {
             </button>
           );
         })}
-        <div className="ml-auto relative max-w-xs w-full">
+        <div className="ml-auto flex items-center gap-2">
+          <Select value={teamFilter} onValueChange={setTeamFilter}>
+            <SelectTrigger className="h-9 w-[150px] text-sm">
+              <Users className="size-3.5 mr-1 text-muted-foreground" />
+              <SelectValue placeholder="팀 전체" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">팀 전체</SelectItem>
+              {teamOptions.map((t) => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="relative w-[220px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="파일명·설명·업로더 검색…"
+            placeholder="파일명·업로더·팀 검색…"
             className="h-9 pl-9 text-sm"
           />
+          </div>
         </div>
       </div>
 
@@ -172,26 +217,44 @@ export default function FileApprovalsPage() {
           <table className="w-full text-sm">
             <thead className="bg-muted/30 text-xs text-muted-foreground">
               <tr>
+                <th className="text-left px-3 py-2">상태</th>
                 <th className="text-left px-3 py-2">파일</th>
                 <th className="text-left px-3 py-2">설명</th>
-                <th className="text-left px-3 py-2">업로더</th>
+                <th className="text-left px-3 py-2">업로더 / 팀</th>
                 <th className="text-left px-3 py-2">크기</th>
-                <th className="text-left px-3 py-2">시각</th>
+                <th className="text-left px-3 py-2">업로드 일시</th>
                 <th className="text-right px-3 py-2 w-[280px]">조치</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} className="text-center py-10 text-muted-foreground">불러오는 중…</td></tr>
+                <tr><td colSpan={7} className="text-center py-10 text-muted-foreground">불러오는 중…</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-10 text-muted-foreground">파일이 없습니다</td></tr>
-              ) : filtered.map((r) => (
+                <tr><td colSpan={7} className="text-center py-10 text-muted-foreground">파일이 없습니다</td></tr>
+              ) : filtered.map((r) => {
+                const statusMeta =
+                  r.status === "approved"
+                    ? { label: "승인 완료", cls: "text-emerald-600", Icon: ShieldCheck }
+                    : r.status === "rejected"
+                    ? { label: "반려", cls: "text-rose-600", Icon: XCircle }
+                    : { label: "승인 대기", cls: "text-amber-600", Icon: Clock };
+                const SIcon = statusMeta.Icon;
+                return (
                 <tr key={r.id} className="border-t border-border/30 hover:bg-muted/10 align-top">
+                  <td className="px-3 py-2.5">
+                    <span className={`inline-flex items-center gap-1 text-xs ${statusMeta.cls}`}>
+                      <SIcon className="size-3.5" /> {statusMeta.label}
+                    </span>
+                  </td>
                   <td className="px-3 py-2.5 font-medium">
-                    <span className="inline-flex items-center gap-1.5">
+                    <button
+                      onClick={() => preview(r)}
+                      className="inline-flex items-center gap-1.5 hover:text-[#E6007E] hover:underline text-left"
+                      title="미리보기"
+                    >
                       <FileText className="size-3.5 text-muted-foreground" />
                       {r.file_name}
-                    </span>
+                    </button>
                   </td>
                   <td className="px-3 py-2.5 text-xs text-muted-foreground max-w-[280px]">
                     {r.description || "-"}
@@ -199,13 +262,17 @@ export default function FileApprovalsPage() {
                       <div className="text-rose-600 mt-1">반려 사유: {r.rejected_reason}</div>
                     )}
                   </td>
-                  <td className="px-3 py-2.5 text-xs">{resolve(r.uploaded_by, "-")}</td>
+                  <td className="px-3 py-2.5 text-xs">
+                    <div className="font-medium text-foreground">{resolveName(r.uploaded_by)}</div>
+                    <div className="text-[11px] text-muted-foreground">{resolveTeam(r.uploaded_by) || "-"}</div>
+                  </td>
                   <td className="px-3 py-2.5 text-xs text-muted-foreground">
                     {r.file_size ? `${(r.file_size / 1024).toFixed(0)} KB` : "-"}
                   </td>
                   <td className="px-3 py-2.5 text-xs text-muted-foreground">
                     {new Date(r.created_at).toLocaleString("ko-KR", {
-                      month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+                      year: "numeric", month: "2-digit", day: "2-digit",
+                      hour: "2-digit", minute: "2-digit",
                     })}
                   </td>
                   <td className="px-3 py-2.5 text-right">
@@ -237,7 +304,8 @@ export default function FileApprovalsPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -256,7 +324,12 @@ export default function FileApprovalsPage() {
             <ul className="space-y-1.5 max-h-[60vh] overflow-y-auto">
               {logs.map((l) => (
                 <li key={l.id} className="flex items-center justify-between text-sm border-b border-border/30 pb-1.5">
-                  <span className="font-medium">{resolve(l.downloaded_by, "-")}</span>
+                  <span className="font-medium">
+                    {resolveName(l.downloaded_by)}
+                    {resolveTeam(l.downloaded_by) && (
+                      <span className="text-[11px] text-muted-foreground ml-1.5">/ {resolveTeam(l.downloaded_by)}</span>
+                    )}
+                  </span>
                   <span className="text-xs text-muted-foreground">
                     {new Date(l.downloaded_at).toLocaleString("ko-KR")}
                   </span>
