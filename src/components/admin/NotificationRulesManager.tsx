@@ -412,9 +412,11 @@ export function NotificationRulesManager() {
                   onChange={(e) => setAdhoc((p) => ({ ...p, [r.id]: { ...(p[r.id] ?? { title: "", body: "" }), body: e.target.value } }))} rows={2} />
               </div>
             )}
-          </Card>
-        );
-      })}
+              </div>
+            </SortableItem>
+          );
+        }}
+      </SortableList>
     </div>
   );
 }
