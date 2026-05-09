@@ -27,6 +27,8 @@ import { useFieldDefinitions } from "@/hooks/useFieldDefinitions";
 import { useFieldTeams } from "@/hooks/useFieldTeams";
 import { DynamicFieldRenderer } from "@/components/admin/DynamicFieldRenderer";
 import { formatPhone } from "@/lib/phoneFormat";
+import { useStaffNames } from "@/hooks/useStaffNames";
+import { cn } from "@/lib/utils";
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
@@ -39,6 +41,8 @@ export default function ApartmentPage() {
   const resultOptions = resultOptionsCustom.length > 0 ? resultOptionsCustom : (RESULT_STATUSES as readonly string[]);
   const { rows: fieldTeams } = useFieldTeams(true);
   const teamOptions = fieldTeams.map((t) => t.name);
+  const { resolve: resolveStaff } = useStaffNames();
+  const [teamTab, setTeamTab] = useState<string>("__all__");
   const { fields: postingFields } = useFieldDefinitions("apartment_posting");
   const { fields: leadFields } = useFieldDefinitions("apartment_lead");
 
