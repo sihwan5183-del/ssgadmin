@@ -51,6 +51,8 @@ import PendingItemsAdminPage from "./pages/PendingItemsAdminPage.tsx";
 import PlanRetentionAdminPage from "./pages/PlanRetentionAdminPage.tsx";
 import PlanChangeCalendarPage from "./pages/PlanChangeCalendarPage.tsx";
 import ApartmentPage from "./pages/ApartmentPage.tsx";
+import FileVaultPage from "./pages/FileVaultPage.tsx";
+import FileApprovalsPage from "./pages/FileApprovalsPage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -148,6 +150,8 @@ const App = () => {
                         <Route path="/seg-partners" element={<SegPartnersPage />} />
                         <Route path="/seg-calendar" element={<SegCalendarPage />} />
                         <Route path="/apartment" element={<ApartmentPage />} />
+                        <Route path="/file-vault" element={<FileVaultPage />} />
+                        <Route path="/admin/file-approvals" element={<AdminOnlyRoute><FileApprovalsPage /></AdminOnlyRoute>} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </AppShell>
