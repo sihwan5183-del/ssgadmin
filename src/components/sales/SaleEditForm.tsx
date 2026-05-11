@@ -1615,14 +1615,15 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                     <span className="text-primary">₩{(form.trade_in_confirmed ?? 0).toLocaleString()}</span>
                   </div>
                 )}
-                <div className="flex justify-between border-t border-border/30 pt-1 mt-1">
-                  <span className="font-semibold">최종 수익 (5대 수익 − 총 오퍼)</span>
-                  {(() => {
-                    const revenue =
-                      (form.unit_price ?? 0) +
-                      (form.vas_fee ?? 0) +
-                      (form.trade_in_enabled ? (form.trade_in_confirmed ?? 0) : 0) +
-                      Number(customFields?.voucher_amount ?? 0);
+                 <div className="flex justify-between border-t border-border/30 pt-1 mt-1">
+                   <span className="font-semibold">최종 수익 (5대 수익 − 총 오퍼)</span>
+                   {(() => {
+                     const voucherReturned = form.voucher_returned === "유";
+                     const revenue =
+                       (form.unit_price ?? 0) +
+                       (form.vas_fee ?? 0) +
+                       (form.trade_in_enabled ? (form.trade_in_confirmed ?? 0) : 0) +
+                       (voucherReturned ? Number(customFields?.voucher_amount ?? 0) : 0);
                     const offerTotal =
                       (form.distributor_amount ?? 0) +
                       (form.cash_support_amount ?? 0) +
@@ -1656,8 +1657,8 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                 value={Number(customFields?.voucher_amount ?? 0)}
                 onChange={(v) => setCustomFields((f) => ({ ...f, voucher_amount: v }))}
               />
-              <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5">
-                수익(+)으로 합산됩니다 · 추가지원금과 별개 항목
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                * 반납상태가 <b>완료</b>인 경우에만 수익에 포함됩니다.
               </p>
               {form.voucher && String(form.voucher).trim() !== "" && form.voucher_returned !== "유" && (
                 <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">
