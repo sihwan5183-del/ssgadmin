@@ -40,8 +40,9 @@ export const StoreRevenueRanking = () => {
           .limit(10000),
         supabase
           .from("profiles")
-          .select("user_id, display_name, store")
-          .neq("status", "deleted"),
+          .select("user_id, display_name, store, show_in_dashboard")
+          .neq("status", "deleted")
+          .eq("show_in_dashboard", true),
       ]);
       if (!alive) return;
 
