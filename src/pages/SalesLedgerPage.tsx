@@ -276,8 +276,9 @@ const SalesLedgerPage = () => {
     (async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("user_id, display_name")
+        .select("user_id, display_name, show_in_dashboard")
         .eq("status", "active")
+        .eq("show_in_dashboard", true)
         .order("display_name", { ascending: true });
       const list = (data ?? []) as { user_id: string; display_name: string }[];
       setStaffList(list);
