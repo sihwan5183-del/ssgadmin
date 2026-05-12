@@ -290,7 +290,11 @@ const RankingPage = () => {
     const yPeriod = periodUpToYesterday(period);
 
     // Fetch profiles
-    const { data: profs } = await supabase.from("profiles").select("user_id, display_name, store").eq("status", "active");
+    const { data: profs } = await supabase
+      .from("profiles")
+      .select("user_id, display_name, store, show_in_dashboard")
+      .eq("status", "active")
+      .eq("show_in_dashboard", true);
     const pMap: ProfileMap = {};
     const storeSet = new Set<string>();
     (profs ?? []).forEach((p) => {
