@@ -425,6 +425,11 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
       toast.error("동판 유형을 선택해 주세요", { description: "MNP동판 / 기변동판 / 신규동판 중 하나를 선택해야 합니다." });
       return;
     }
+    // 인터넷 상품은 신규/재약정 구분 필수
+    if (form.product === "인터넷" && !["신규", "재약정"].includes(String(form.sale_type ?? ""))) {
+      toast.error("인터넷 상품은 신규 또는 재약정 여부를 선택해야 합니다");
+      return;
+    }
     // 단말기 모델: 마스터에 등록된 정확한 펫네임만 허용
     if (form.device_model && form.device_model.trim().length > 0) {
       const ok = deviceModels.some((m) => m.model_name === form.device_model);
@@ -671,12 +676,19 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
             <Field label="판매유형">
               {(() => {
                 const allowed = getAllowedSaleTypes(form.product);
-                const types = allowed.length > 0 ? SALE_TYPES.filter((s) => allowed.includes(s)) : SALE_TYPES;
                 const defaults = getDefaultsForProduct(form.product);
                 const mismatch = defaults?.default_sale_type && form.sale_type && form.sale_type !== defaults.default_sale_type && !autoFilledFields.has("sale_type");
-                // 유선 상품(인터넷/TV프리/스마트홈)은 판매유형이 의미가 없어 비활성화 + 흐림 처리
-                const wiredProducts = ["인터넷", "TV프리", "스마트홈"];
+                // 인터넷은 신규/재약정 구분 필수, 그 외 유선(TV프리/스마트홈)은 비활성화
+                const isInternet = form.product === "인터넷";
+                const wiredProducts = ["TV프리", "스마트홈"];
                 const isWired = !!form.product && wiredProducts.includes(form.product);
+                let types = allowed.length > 0 ? SALE_TYPES.filter((s) => allowed.includes(s)) : SALE_TYPES;
+                if (isInternet) {
+                  const internetTypes = ["신규", "재약정"];
+                  types = internetTypes.filter((t) => SALE_TYPES.includes(t));
+                  if (types.length === 0) types = internetTypes;
+                }
+                const internetMissing = isInternet && !["신규", "재약정"].includes(String(form.sale_type ?? ""));
                 return (
                   <div className={isWired ? "opacity-50" : ""}>
                     <Select
@@ -684,11 +696,16 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                       onValueChange={(v) => set("sale_type", v)}
                       disabled={isWired}
                     >
-                      <SelectTrigger className="h-9 bg-input/60 text-xs">
-                        <SelectValue placeholder={isWired ? "해당 없음" : "선택 (선택 사항)"} />
+                      <SelectTrigger className={`h-9 bg-input/60 text-xs ${internetMissing ? "border-destructive" : ""}`}>
+                        <SelectValue placeholder={isWired ? "해당 없음" : (isInternet ? "신규 / 재약정 선택 *" : "선택 (선택 사항)")} />
                       </SelectTrigger>
                       <SelectContent>{types.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                     </Select>
+                    {internetMissing && (
+                      <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
+                        <AlertTriangle className="size-3" /> 인터넷 상품은 신규 또는 재약정 여부를 선택해야 합니다
+                      </p>
+                    )}
                     {!isWired && mismatch && (
                       <p className="text-[10px] text-amber-500 mt-1 flex items-center gap-1">
                         <AlertTriangle className="size-3" /> 기본 설정({defaults.default_sale_type})과 다릅니다

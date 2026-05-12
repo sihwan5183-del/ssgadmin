@@ -5,26 +5,29 @@ import { usePeriod } from "@/contexts/PeriodContext";
 import { Crown, Medal, Users, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type CatKey = "mobile" | "usim" | "second" | "internet" | "tvfree" | "smarthome" | "upsell";
+type CatKey = "mobile" | "usim" | "second" | "internet" | "renewal" | "tvfree" | "smarthome" | "upsell";
 
 const COLUMNS: { key: CatKey; label: string }[] = [
   { key: "mobile", label: "모바일" },
   { key: "usim", label: "USIM" },
   { key: "second", label: "2nd" },
   { key: "internet", label: "인터넷" },
+  { key: "renewal", label: "재약정" },
   { key: "tvfree", label: "TV프리" },
   { key: "smarthome", label: "스마트홈" },
   { key: "upsell", label: "업셀" },
 ];
 
-const classify = (product: string | null): CatKey | null => {
+const classify = (product: string | null, saleType?: string | null): CatKey | null => {
   const p = (product ?? "").trim();
   if (!p) return null;
   if (/맞춤|업셀|upsell/i.test(p)) return "upsell";
   if (/USIM|유심/i.test(p)) return "usim";
   if (/2nd|세컨/i.test(p)) return "second";
   if (/모바일|mobile/i.test(p)) return "mobile";
-  if (/인터넷|internet|홈$|^홈/i.test(p)) return "internet";
+  if (/인터넷|internet|홈$|^홈/i.test(p)) {
+    return (saleType ?? "").trim() === "재약정" ? "renewal" : "internet";
+  }
   if (/TV/i.test(p)) return "tvfree";
   if (/스마트홈|IOT/i.test(p)) return "smarthome";
   return null;
@@ -49,7 +52,7 @@ export const StaffPerformanceMatrix = () => {
     const [salesRes, profilesRes] = await Promise.all([
       supabase
         .from("sales")
-        .select("created_by, manager, product, custom_fields")
+        .select("created_by, manager, product, sale_type, custom_fields")
         .gte("open_date", startDate)
         .lte("open_date", endDate)
         .neq("status", "취소")
@@ -77,7 +80,7 @@ export const StaffPerformanceMatrix = () => {
     };
 
     const empty = (): Record<CatKey, number> => ({
-      mobile: 0, usim: 0, second: 0, internet: 0, tvfree: 0, smarthome: 0, upsell: 0,
+      mobile: 0, usim: 0, second: 0, internet: 0, renewal: 0, tvfree: 0, smarthome: 0, upsell: 0,
     });
 
     const map = new Map<string, Row>();
@@ -94,7 +97,7 @@ export const StaffPerformanceMatrix = () => {
         counts: empty(),
         total: 0,
       };
-      const cat = classify(s.product);
+      const cat = classify(s.product, s.sale_type);
       if (cat) {
         cur.counts[cat] += 1;
         cur.total += 1;
