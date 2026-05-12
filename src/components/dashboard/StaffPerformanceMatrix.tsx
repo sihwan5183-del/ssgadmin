@@ -7,6 +7,18 @@ import { cn } from "@/lib/utils";
 
 type CatKey = "mobile" | "usim" | "second" | "internet" | "renewal" | "tvfree" | "smarthome" | "upsell";
 
+// 컬럼 키 → 판매원장 필터로 전달할 product 값(들). renewal 은 sale_type 도 함께 전달.
+const CAT_FILTER: Record<CatKey, { products: string[]; saleType?: string }> = {
+  mobile: { products: ["모바일"] },
+  usim: { products: ["USIM", "USIM MNP"] },
+  second: { products: ["세컨", "2ND", "2nd"] },
+  internet: { products: ["인터넷"] },
+  renewal: { products: ["인터넷"], saleType: "재약정" },
+  tvfree: { products: ["TV프리", "TV"] },
+  smarthome: { products: ["스마트홈"] },
+  upsell: { products: ["대명", "업셀"] },
+};
+
 const COLUMNS: { key: CatKey; label: string }[] = [
   { key: "mobile", label: "모바일" },
   { key: "usim", label: "USIM" },
@@ -44,6 +56,19 @@ type Row = {
 export const StaffPerformanceMatrix = () => {
   const { startDate, endDate, label } = usePeriod();
   const navigate = useNavigate();
+  const goLedger = (name: string, cat?: CatKey) => {
+    const params = new URLSearchParams();
+    params.set("manager", name);
+    params.set("from_dashboard", "1");
+    if (cat) {
+      const f = CAT_FILTER[cat];
+      if (f.products.length === 1) params.set("product", f.products[0]);
+      else params.set("products", f.products.join(","));
+      if (f.saleType) params.set("sale_type", f.saleType);
+    }
+    navigate(`/sales-ledger?${params.toString()}`);
+  };
+
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
 
