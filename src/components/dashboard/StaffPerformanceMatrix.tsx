@@ -59,6 +59,7 @@ export const StaffPerformanceMatrix = () => {
   const goLedger = (name: string, cat?: CatKey) => {
     const params = new URLSearchParams();
     params.set("manager", name);
+    params.set("staffName", name);
     params.set("from_dashboard", "1");
     if (cat) {
       const f = CAT_FILTER[cat];

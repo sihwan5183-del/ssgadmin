@@ -119,7 +119,7 @@ export const StoreRevenueRanking = () => {
             return (
               <button
                 key={r.uid}
-                onClick={() => navigate(`/sales-ledger?manager=${encodeURIComponent(r.name)}&from_dashboard=1`)}
+                onClick={() => navigate(`/sales-ledger?manager=${encodeURIComponent(r.name)}&staffName=${encodeURIComponent(r.name)}&from_dashboard=1`)}
                 className="w-full text-left group"
               >
                 <div className="flex items-center justify-between text-xs mb-1.5">
