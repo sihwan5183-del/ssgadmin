@@ -37,6 +37,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { calcDashboardProfit } from "@/lib/profit";
+import { useDashboardStaff } from "@/hooks/useDashboardStaff";
 
 const PAGE_SIZE = 25;
 
@@ -128,6 +129,7 @@ const SalesLedgerPage = () => {
   const location = useLocation();
   const quickExport = useQuickExport();
   const resignedIds = useResignedUsers();
+  const { staff: dashboardStaff, isDashboardStaff } = useDashboardStaff();
 
   const [rows, setRows] = useState<SaleRow[]>([]);
   const [page, setPage] = useState(0);
@@ -274,8 +276,9 @@ const SalesLedgerPage = () => {
     (async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("user_id, display_name")
+        .select("user_id, display_name, show_in_dashboard")
         .eq("status", "active")
+        .eq("show_in_dashboard", true)
         .order("display_name", { ascending: true });
       const list = (data ?? []) as { user_id: string; display_name: string }[];
       setStaffList(list);
@@ -574,8 +577,18 @@ const SalesLedgerPage = () => {
   const managers = useMemo(() => {
     const set = new Set<string>();
     rows.forEach((r) => r.manager && set.add(r.manager));
-    return Array.from(set).sort();
-  }, [rows]);
+    // [실적 대시보드 노출] OFF 인 직원은 드롭다운에서 제외 — 실 판매자만 빠르게 선택
+    const arr = Array.from(set).filter((m) => {
+      const v = m.trim();
+      if (!v) return false;
+      if (UUID_RE.test(v)) {
+        // UUID → 이름 매핑이 있고 노출 대상인 경우만
+        return isDashboardStaff(v) || isDashboardStaff(managerNameMap[v] ?? "");
+      }
+      return isDashboardStaff(v);
+    });
+    return arr.sort();
+  }, [rows, dashboardStaff, managerNameMap]);
 
   // 담당자가 UUID 형태로 저장된 행이 있으면 profiles에서 실명을 조회해 매핑
   useEffect(() => {

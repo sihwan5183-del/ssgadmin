@@ -40,8 +40,9 @@ export const StoreRevenueRanking = () => {
           .limit(10000),
         supabase
           .from("profiles")
-          .select("user_id, display_name, store")
-          .neq("status", "deleted"),
+          .select("user_id, display_name, store, show_in_dashboard")
+          .neq("status", "deleted")
+          .eq("show_in_dashboard", true),
       ]);
       if (!alive) return;
 
@@ -62,7 +63,9 @@ export const StoreRevenueRanking = () => {
         const uid = ownerOf(r);
         if (!uid) return;
         const p = byId.get(uid);
-        const name = p?.display_name ?? "미지정";
+        // [실적 노출] OFF 직원은 매장 평균/랭킹 통계에서 제외
+        if (!p) return;
+        const name = p.display_name ?? "미지정";
         const store = p?.store ?? "-";
 
         const { revenue, expense, profit } = calcDashboardProfit(r);

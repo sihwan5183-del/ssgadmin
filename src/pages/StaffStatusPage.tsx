@@ -226,8 +226,9 @@ export default function StaffStatusPage() {
     (async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("user_id, display_name, team, status")
+        .select("user_id, display_name, team, status, show_in_dashboard")
         .in("status", ["active", "leave", "suspended", "resigned", "deleted"])
+        .eq("show_in_dashboard", true)
         .order("display_name");
       const list = (data ?? []) as Profile[];
       const visible = canViewAll ? list : list.filter((p) => p.user_id === user.id);
