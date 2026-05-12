@@ -856,7 +856,7 @@ const SalesLedgerPage = () => {
                     <button
                       key={opt.v}
                       type="button"
-                      onClick={() => setSaleTypeFilter(opt.v as any)}
+                      onClick={() => { setSaleTypeFilter(opt.v as any); setSaleTypeOverride(null); }}
                       className={cn(
                         "px-3 h-8 rounded-md text-xs font-semibold transition-all",
                         active ? `${opt.cls} shadow` : "text-foreground/70 hover:text-foreground hover:bg-background/60",
@@ -882,7 +882,7 @@ const SalesLedgerPage = () => {
               </Select>
 
               {/* 상품 필터 */}
-              <Select value={productFilter} onValueChange={setProductFilter}>
+              <Select value={productFilter} onValueChange={(v) => { setProductFilter(v); setProductsOverride(null); }}>
                 <SelectTrigger className="h-9 md:w-[140px]">
                   <SelectValue placeholder="상품 전체" />
                 </SelectTrigger>
