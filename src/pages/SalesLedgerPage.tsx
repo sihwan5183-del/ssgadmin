@@ -144,6 +144,9 @@ const SalesLedgerPage = () => {
   const [storeFilter, setStoreFilter] = useState<string>("all");
   const [productFilter, setProductFilter] = useState<string>("all");
   const [saleTypeFilter, setSaleTypeFilter] = useState<"all" | "신규" | "MNP" | "기변">("all");
+  // 대시보드 딥링크 전용 오버라이드 — 사용자가 직접 product/saleType 필터를 바꾸면 해제
+  const [productsOverride, setProductsOverride] = useState<string[] | null>(null);
+  const [saleTypeOverride, setSaleTypeOverride] = useState<string | null>(null);
   // 반납/검수 필터
   // returnFilter: all | returned(반납완료) | unreturned(미반납)
   // inspectionFilter: all | inspected(검수완료=확정) | uninspected(미검수)
@@ -158,8 +161,26 @@ const SalesLedgerPage = () => {
     const sp = new URLSearchParams(window.location.search);
     const p = sp.get("product");
     const m = sp.get("manager");
+    const ps = sp.get("products");
+    const stOverride = sp.get("sale_type");
+    const fromDash = sp.get("from_dashboard") === "1";
     if (p) setProductFilter(p);
     if (m) setManagerFilter(m);
+    if (ps) {
+      const list = ps.split(",").map((s) => s.trim()).filter(Boolean);
+      if (list.length > 0) {
+        setProductsOverride(list);
+        setProductFilter("all"); // 단일 필터 UI는 비우고 오버라이드를 우선
+      }
+    }
+    if (stOverride) setSaleTypeOverride(stOverride);
+    // 대시보드 진입: 항상 이번 달 기준으로 강제
+    if (fromDash) {
+      const now = new Date();
+      setMode("month");
+      setYear(now.getFullYear());
+      setMonth(now.getMonth() + 1);
+    }
     const st = sp.get("status");
     if (st) {
       const list = st.split(",").map((s) => s.trim()).filter(Boolean);
@@ -322,8 +343,12 @@ const SalesLedgerPage = () => {
     }
     if (productFilter !== "all") {
       query = query.eq("product", productFilter);
+    } else if (productsOverride && productsOverride.length > 0) {
+      query = query.in("product", productsOverride);
     }
-    if (saleTypeFilter !== "all") {
+    if (saleTypeOverride) {
+      query = query.eq("sale_type", saleTypeOverride);
+    } else if (saleTypeFilter !== "all") {
       const list = saleTypeFilter === "MNP"
         ? ["MNP", "USIM MNP"]
         : saleTypeFilter === "기변"
@@ -371,7 +396,7 @@ const SalesLedgerPage = () => {
     setRows((data ?? []) as SaleRow[]);
     setTotal(count ?? 0);
     setSearching(false);
-  }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, saleTypeFilter, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
+  }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, productsOverride, saleTypeFilter, saleTypeOverride, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
 
   const loadSummary = useCallback(async () => {
     // 정책: 저장된 모든 실적은 즉시 합계에 반영. (status·approval_status·검수상태와 무관)
@@ -387,7 +412,10 @@ const SalesLedgerPage = () => {
     else if (managerFilter !== "all") q = q.eq("manager", managerFilter);
     if (storeFilter !== "all") q = q.eq("channel", storeFilter);
     if (productFilter !== "all") q = q.eq("product", productFilter);
-    if (saleTypeFilter !== "all") {
+    else if (productsOverride && productsOverride.length > 0) q = q.in("product", productsOverride);
+    if (saleTypeOverride) {
+      q = q.eq("sale_type", saleTypeOverride);
+    } else if (saleTypeFilter !== "all") {
       const list = saleTypeFilter === "MNP"
         ? ["MNP", "USIM MNP"]
         : saleTypeFilter === "기변"
