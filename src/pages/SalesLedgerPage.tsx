@@ -160,12 +160,19 @@ const SalesLedgerPage = () => {
     if (typeof window === "undefined") return;
     const sp = new URLSearchParams(window.location.search);
     const p = sp.get("product");
-    const m = sp.get("manager");
+    const m = sp.get("manager") ?? sp.get("staffName");
     const ps = sp.get("products");
     const stOverride = sp.get("sale_type");
     const fromDash = sp.get("from_dashboard") === "1";
     if (p) setProductFilter(p);
     if (m) setManagerFilter(m);
+    // 대시보드(staffName/manager)로 진입한 경우: 항상 이번 달 강제
+    if (sp.get("staffName")) {
+      const now = new Date();
+      setMode("month");
+      setYear(now.getFullYear());
+      setMonth(now.getMonth() + 1);
+    }
     if (ps) {
       const list = ps.split(",").map((s) => s.trim()).filter(Boolean);
       if (list.length > 0) {
@@ -222,6 +229,31 @@ const SalesLedgerPage = () => {
   // 담당자 필드에 UUID가 들어간 경우 프로필 display_name으로 치환하기 위한 맵
   const [managerNameMap, setManagerNameMap] = useState<Record<string, string>>({});
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  // 담당자 필터가 표시명(이름)인 경우, sales.manager 컬럼에 UUID/이름 둘 다 저장될 수 있어
+  // 매칭되는 user_id 들을 함께 IN 절로 넣어줘야 누락 없이 검색됨.
+  const [managerValues, setManagerValues] = useState<string[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    if (managerFilter === "all" || managerFilter === "__none__") {
+      setManagerValues(null);
+      return;
+    }
+    if (UUID_RE.test(managerFilter)) {
+      setManagerValues([managerFilter]);
+      return;
+    }
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("display_name", managerFilter);
+      if (!alive) return;
+      const uids = (data ?? []).map((p: any) => p.user_id).filter(Boolean);
+      setManagerValues([managerFilter, ...uids]);
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [managerFilter]);
   const resolveManager = useCallback(
     (raw: string | null | undefined, fallbackUid?: string | null) => {
       const v = (raw ?? "").trim();
@@ -336,7 +368,11 @@ const SalesLedgerPage = () => {
     if (managerFilter === "__none__") {
       query = query.or("manager.is.null,manager.eq.");
     } else if (managerFilter !== "all") {
-      query = query.eq("manager", managerFilter);
+      if (managerValues && managerValues.length > 1) {
+        query = query.in("manager", managerValues);
+      } else {
+        query = query.eq("manager", managerFilter);
+      }
     }
     if (storeFilter !== "all") {
       query = query.eq("channel", storeFilter);
@@ -396,7 +432,7 @@ const SalesLedgerPage = () => {
     setRows((data ?? []) as SaleRow[]);
     setTotal(count ?? 0);
     setSearching(false);
-  }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, productsOverride, saleTypeFilter, saleTypeOverride, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
+  }, [page, startDate, endDate, statusFilter, managerFilter, managerValues, storeFilter, productFilter, productsOverride, saleTypeFilter, saleTypeOverride, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
 
   const loadSummary = useCallback(async () => {
     // 정책: 저장된 모든 실적은 즉시 합계에 반영. (status·approval_status·검수상태와 무관)
@@ -409,7 +445,10 @@ const SalesLedgerPage = () => {
         `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
       );
     if (managerFilter === "__none__") q = q.or("manager.is.null,manager.eq.");
-    else if (managerFilter !== "all") q = q.eq("manager", managerFilter);
+    else if (managerFilter !== "all") {
+      if (managerValues && managerValues.length > 1) q = q.in("manager", managerValues);
+      else q = q.eq("manager", managerFilter);
+    }
     if (storeFilter !== "all") q = q.eq("channel", storeFilter);
     if (productFilter !== "all") q = q.eq("product", productFilter);
     else if (productsOverride && productsOverride.length > 0) q = q.in("product", productsOverride);
@@ -491,15 +530,15 @@ const SalesLedgerPage = () => {
       .not("voucher", "is", null)
       .neq("voucher_returned", "유");
     setUnreturnedCount(urc ?? 0);
-  }, [startDate, endDate, managerFilter, storeFilter, productFilter, productsOverride, saleTypeFilter, saleTypeOverride, moyoFilter]);
+  }, [startDate, endDate, managerFilter, managerValues, storeFilter, productFilter, productsOverride, saleTypeFilter, saleTypeOverride, moyoFilter]);
 
   useEffect(() => {
     load();
     loadSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, productsOverride, saleTypeOverride, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
+  }, [page, startDate, endDate, statusFilter, managerFilter, managerValues, storeFilter, productFilter, productsOverride, saleTypeOverride, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
 
-  useEffect(() => { setPage(0); }, [startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, productsOverride, saleTypeFilter, saleTypeOverride, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
+  useEffect(() => { setPage(0); }, [startDate, endDate, statusFilter, managerFilter, managerValues, storeFilter, productFilter, productsOverride, saleTypeFilter, saleTypeOverride, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
 
   // 실적 입력 후 navigate로 진입 시 즉시 강제 리로드 (캐시 우회)
   useEffect(() => {
