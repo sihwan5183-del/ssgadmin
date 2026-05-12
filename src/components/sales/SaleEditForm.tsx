@@ -425,6 +425,11 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
       toast.error("동판 유형을 선택해 주세요", { description: "MNP동판 / 기변동판 / 신규동판 중 하나를 선택해야 합니다." });
       return;
     }
+    // 인터넷 상품은 신규/재약정 구분 필수
+    if (form.product === "인터넷" && !["신규", "재약정"].includes(String(form.sale_type ?? ""))) {
+      toast.error("인터넷 상품은 신규 또는 재약정 여부를 선택해야 합니다");
+      return;
+    }
     // 단말기 모델: 마스터에 등록된 정확한 펫네임만 허용
     if (form.device_model && form.device_model.trim().length > 0) {
       const ok = deviceModels.some((m) => m.model_name === form.device_model);
