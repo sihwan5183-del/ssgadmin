@@ -201,13 +201,15 @@ export const StaffPerformanceMatrix = () => {
                 return (
                   <tr
                     key={r.uid}
-                    className="border-b border-border/40 hover:bg-muted/40 transition-colors cursor-pointer group"
-                    onClick={() => navigate(`/activities?manager=${encodeURIComponent(r.name)}`)}
+                    className="border-b border-border/40 hover:bg-muted/40 transition-colors group"
                   >
                     <td className="px-2 py-2 tabular-nums text-muted-foreground sticky left-0 bg-card group-hover:bg-muted/40 z-10">
                       {i + 1}
                     </td>
-                    <td className="px-2 py-2 sticky left-8 bg-card group-hover:bg-muted/40 z-10">
+                    <td
+                      className="px-2 py-2 sticky left-8 bg-card group-hover:bg-muted/40 z-10 cursor-pointer"
+                      onClick={() => goLedger(r.name)}
+                    >
                       <div className="flex items-center gap-1.5">
                         {RankIcon && <RankIcon className={cn("size-3.5", rankColor)} />}
                         <span
@@ -229,13 +231,18 @@ export const StaffPerformanceMatrix = () => {
                           className={cn(
                             "text-right px-2 py-2 tabular-nums",
                             v === 0 ? "text-muted-foreground/40" : "text-foreground font-medium",
+                            v > 0 && "cursor-pointer hover:text-primary hover:underline",
                           )}
+                          onClick={v > 0 ? () => goLedger(r.name, c.key) : undefined}
                         >
                           {v === 0 ? "–" : v}
                         </td>
                       );
                     })}
-                    <td className="text-right px-2 py-2 tabular-nums">
+                    <td
+                      className="text-right px-2 py-2 tabular-nums cursor-pointer"
+                      onClick={() => goLedger(r.name)}
+                    >
                       <div className="inline-flex flex-col items-end gap-1 min-w-[60px]">
                         <span className={cn("font-bold", i < 3 ? "text-primary" : "text-foreground")}>
                           {r.total === 0 ? "–" : r.total}
