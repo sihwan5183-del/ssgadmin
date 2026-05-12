@@ -365,6 +365,8 @@ const RankingPage = () => {
       if (seenSaleIds.has(s.id)) return;
       seenSaleIds.add(s.id);
       const uid = ownerOf(s as any);
+      // [실적 노출] OFF 직원의 실적은 랭킹에서 제외
+      if (!pMap[uid]) return;
       if (!uMap.has(uid)) uMap.set(uid, {
         count: 0, profit: 0, strategyCount: 0, voucherReturned: 0,
         dateCounts: new Map(),
