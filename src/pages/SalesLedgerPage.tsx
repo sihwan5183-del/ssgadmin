@@ -37,6 +37,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { calcDashboardProfit } from "@/lib/profit";
+import { useDashboardStaff } from "@/hooks/useDashboardStaff";
 
 const PAGE_SIZE = 25;
 
