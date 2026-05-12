@@ -368,7 +368,11 @@ const SalesLedgerPage = () => {
     if (managerFilter === "__none__") {
       query = query.or("manager.is.null,manager.eq.");
     } else if (managerFilter !== "all") {
-      query = query.eq("manager", managerFilter);
+      if (managerValues && managerValues.length > 1) {
+        query = query.in("manager", managerValues);
+      } else {
+        query = query.eq("manager", managerFilter);
+      }
     }
     if (storeFilter !== "all") {
       query = query.eq("channel", storeFilter);
