@@ -160,12 +160,19 @@ const SalesLedgerPage = () => {
     if (typeof window === "undefined") return;
     const sp = new URLSearchParams(window.location.search);
     const p = sp.get("product");
-    const m = sp.get("manager");
+    const m = sp.get("manager") ?? sp.get("staffName");
     const ps = sp.get("products");
     const stOverride = sp.get("sale_type");
     const fromDash = sp.get("from_dashboard") === "1";
     if (p) setProductFilter(p);
     if (m) setManagerFilter(m);
+    // 대시보드(staffName/manager)로 진입한 경우: 항상 이번 달 강제
+    if (sp.get("staffName")) {
+      const now = new Date();
+      setMode("month");
+      setYear(now.getFullYear());
+      setMonth(now.getMonth() + 1);
+    }
     if (ps) {
       const list = ps.split(",").map((s) => s.trim()).filter(Boolean);
       if (list.length > 0) {
