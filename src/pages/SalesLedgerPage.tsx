@@ -229,6 +229,31 @@ const SalesLedgerPage = () => {
   // 담당자 필드에 UUID가 들어간 경우 프로필 display_name으로 치환하기 위한 맵
   const [managerNameMap, setManagerNameMap] = useState<Record<string, string>>({});
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  // 담당자 필터가 표시명(이름)인 경우, sales.manager 컬럼에 UUID/이름 둘 다 저장될 수 있어
+  // 매칭되는 user_id 들을 함께 IN 절로 넣어줘야 누락 없이 검색됨.
+  const [managerValues, setManagerValues] = useState<string[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    if (managerFilter === "all" || managerFilter === "__none__") {
+      setManagerValues(null);
+      return;
+    }
+    if (UUID_RE.test(managerFilter)) {
+      setManagerValues([managerFilter]);
+      return;
+    }
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("display_name", managerFilter);
+      if (!alive) return;
+      const uids = (data ?? []).map((p: any) => p.user_id).filter(Boolean);
+      setManagerValues([managerFilter, ...uids]);
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [managerFilter]);
   const resolveManager = useCallback(
     (raw: string | null | undefined, fallbackUid?: string | null) => {
       const v = (raw ?? "").trim();
