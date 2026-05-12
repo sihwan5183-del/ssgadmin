@@ -129,6 +129,7 @@ const SalesLedgerPage = () => {
   const location = useLocation();
   const quickExport = useQuickExport();
   const resignedIds = useResignedUsers();
+  const { staff: dashboardStaff, isDashboardStaff } = useDashboardStaff();
 
   const [rows, setRows] = useState<SaleRow[]>([]);
   const [page, setPage] = useState(0);
