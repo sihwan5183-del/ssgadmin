@@ -445,7 +445,10 @@ const SalesLedgerPage = () => {
         `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
       );
     if (managerFilter === "__none__") q = q.or("manager.is.null,manager.eq.");
-    else if (managerFilter !== "all") q = q.eq("manager", managerFilter);
+    else if (managerFilter !== "all") {
+      if (managerValues && managerValues.length > 1) q = q.in("manager", managerValues);
+      else q = q.eq("manager", managerFilter);
+    }
     if (storeFilter !== "all") q = q.eq("channel", storeFilter);
     if (productFilter !== "all") q = q.eq("product", productFilter);
     else if (productsOverride && productsOverride.length > 0) q = q.in("product", productsOverride);
