@@ -576,8 +576,18 @@ const SalesLedgerPage = () => {
   const managers = useMemo(() => {
     const set = new Set<string>();
     rows.forEach((r) => r.manager && set.add(r.manager));
-    return Array.from(set).sort();
-  }, [rows]);
+    // [실적 대시보드 노출] OFF 인 직원은 드롭다운에서 제외 — 실 판매자만 빠르게 선택
+    const arr = Array.from(set).filter((m) => {
+      const v = m.trim();
+      if (!v) return false;
+      if (UUID_RE.test(v)) {
+        // UUID → 이름 매핑이 있고 노출 대상인 경우만
+        return isDashboardStaff(v) || isDashboardStaff(managerNameMap[v] ?? "");
+      }
+      return isDashboardStaff(v);
+    });
+    return arr.sort();
+  }, [rows, dashboardStaff, managerNameMap]);
 
   // 담당자가 UUID 형태로 저장된 행이 있으면 profiles에서 실명을 조회해 매핑
   useEffect(() => {
