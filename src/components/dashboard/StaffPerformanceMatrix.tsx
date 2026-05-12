@@ -7,6 +7,18 @@ import { cn } from "@/lib/utils";
 
 type CatKey = "mobile" | "usim" | "second" | "internet" | "renewal" | "tvfree" | "smarthome" | "upsell";
 
+// 컬럼 키 → 판매원장 필터로 전달할 product 값(들). renewal 은 sale_type 도 함께 전달.
+const CAT_FILTER: Record<CatKey, { products: string[]; saleType?: string }> = {
+  mobile: { products: ["모바일"] },
+  usim: { products: ["USIM", "USIM MNP"] },
+  second: { products: ["세컨", "2ND", "2nd"] },
+  internet: { products: ["인터넷"] },
+  renewal: { products: ["인터넷"], saleType: "재약정" },
+  tvfree: { products: ["TV프리", "TV"] },
+  smarthome: { products: ["스마트홈"] },
+  upsell: { products: ["대명", "업셀"] },
+};
+
 const COLUMNS: { key: CatKey; label: string }[] = [
   { key: "mobile", label: "모바일" },
   { key: "usim", label: "USIM" },
@@ -44,6 +56,19 @@ type Row = {
 export const StaffPerformanceMatrix = () => {
   const { startDate, endDate, label } = usePeriod();
   const navigate = useNavigate();
+  const goLedger = (name: string, cat?: CatKey) => {
+    const params = new URLSearchParams();
+    params.set("manager", name);
+    params.set("from_dashboard", "1");
+    if (cat) {
+      const f = CAT_FILTER[cat];
+      if (f.products.length === 1) params.set("product", f.products[0]);
+      else params.set("products", f.products.join(","));
+      if (f.saleType) params.set("sale_type", f.saleType);
+    }
+    navigate(`/sales-ledger?${params.toString()}`);
+  };
+
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -176,13 +201,15 @@ export const StaffPerformanceMatrix = () => {
                 return (
                   <tr
                     key={r.uid}
-                    className="border-b border-border/40 hover:bg-muted/40 transition-colors cursor-pointer group"
-                    onClick={() => navigate(`/activities?manager=${encodeURIComponent(r.name)}`)}
+                    className="border-b border-border/40 hover:bg-muted/40 transition-colors group"
                   >
                     <td className="px-2 py-2 tabular-nums text-muted-foreground sticky left-0 bg-card group-hover:bg-muted/40 z-10">
                       {i + 1}
                     </td>
-                    <td className="px-2 py-2 sticky left-8 bg-card group-hover:bg-muted/40 z-10">
+                    <td
+                      className="px-2 py-2 sticky left-8 bg-card group-hover:bg-muted/40 z-10 cursor-pointer"
+                      onClick={() => goLedger(r.name)}
+                    >
                       <div className="flex items-center gap-1.5">
                         {RankIcon && <RankIcon className={cn("size-3.5", rankColor)} />}
                         <span
@@ -204,13 +231,18 @@ export const StaffPerformanceMatrix = () => {
                           className={cn(
                             "text-right px-2 py-2 tabular-nums",
                             v === 0 ? "text-muted-foreground/40" : "text-foreground font-medium",
+                            v > 0 && "cursor-pointer hover:text-primary hover:underline",
                           )}
+                          onClick={v > 0 ? () => goLedger(r.name, c.key) : undefined}
                         >
                           {v === 0 ? "–" : v}
                         </td>
                       );
                     })}
-                    <td className="text-right px-2 py-2 tabular-nums">
+                    <td
+                      className="text-right px-2 py-2 tabular-nums cursor-pointer"
+                      onClick={() => goLedger(r.name)}
+                    >
                       <div className="inline-flex flex-col items-end gap-1 min-w-[60px]">
                         <span className={cn("font-bold", i < 3 ? "text-primary" : "text-foreground")}>
                           {r.total === 0 ? "–" : r.total}
