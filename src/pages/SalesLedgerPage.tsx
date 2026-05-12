@@ -432,7 +432,7 @@ const SalesLedgerPage = () => {
     setRows((data ?? []) as SaleRow[]);
     setTotal(count ?? 0);
     setSearching(false);
-  }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, productsOverride, saleTypeFilter, saleTypeOverride, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
+  }, [page, startDate, endDate, statusFilter, managerFilter, managerValues, storeFilter, productFilter, productsOverride, saleTypeFilter, saleTypeOverride, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
 
   const loadSummary = useCallback(async () => {
     // 정책: 저장된 모든 실적은 즉시 합계에 반영. (status·approval_status·검수상태와 무관)
@@ -530,15 +530,15 @@ const SalesLedgerPage = () => {
       .not("voucher", "is", null)
       .neq("voucher_returned", "유");
     setUnreturnedCount(urc ?? 0);
-  }, [startDate, endDate, managerFilter, storeFilter, productFilter, productsOverride, saleTypeFilter, saleTypeOverride, moyoFilter]);
+  }, [startDate, endDate, managerFilter, managerValues, storeFilter, productFilter, productsOverride, saleTypeFilter, saleTypeOverride, moyoFilter]);
 
   useEffect(() => {
     load();
     loadSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, productsOverride, saleTypeOverride, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
+  }, [page, startDate, endDate, statusFilter, managerFilter, managerValues, storeFilter, productFilter, productsOverride, saleTypeOverride, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
 
-  useEffect(() => { setPage(0); }, [startDate, endDate, statusFilter, managerFilter, storeFilter, productFilter, productsOverride, saleTypeFilter, saleTypeOverride, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
+  useEffect(() => { setPage(0); }, [startDate, endDate, statusFilter, managerFilter, managerValues, storeFilter, productFilter, productsOverride, saleTypeFilter, saleTypeOverride, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
 
   // 실적 입력 후 navigate로 진입 시 즉시 강제 리로드 (캐시 우회)
   useEffect(() => {
