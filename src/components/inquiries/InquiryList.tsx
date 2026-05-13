@@ -118,6 +118,27 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
     onChange();
   };
 
+  const handleExport = async () => {
+    if (rows.length === 0) {
+      toast.error("다운로드할 데이터가 없습니다");
+      return;
+    }
+    setExportBusy(true);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      await exportInquiriesToExcel(rows, latestMemos, profilesMap, `인입현황_${today}`);
+      toast.success("엑셀 다운로드 완료", {
+        description: `${rows.length}건의 데이터를 저장했습니다`,
+      });
+    } catch (e) {
+      toast.error("엑셀 생성 실패", {
+        description: e instanceof Error ? e.message : String(e),
+      });
+    } finally {
+      setExportBusy(false);
+    }
+  };
+
   const bulkDelete = async () => {
     setBulkBusy(true);
     const { error } = await supabase.from("inquiries").delete().in("id", bulk.selectedIds);
