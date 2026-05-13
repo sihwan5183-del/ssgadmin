@@ -168,14 +168,26 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
     <>
       {isMobile ? (
         <div className="space-y-2">
-          {/* 모바일 헤더: 전체 선택 */}
-          <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
-            <Checkbox
-              checked={bulk.allOnPageSelected}
-              onCheckedChange={(v) => bulk.togglePage(!!v)}
-              className="size-5"
-            />
-            <span>전체선택 · 총 {rows.length}건</span>
+          {/* 모바일 헤더 */}
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Checkbox
+                checked={bulk.allOnPageSelected}
+                onCheckedChange={(v) => bulk.togglePage(!!v)}
+                className="size-5"
+              />
+              <span>전체선택 · 총 {rows.length}건</span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs gap-1"
+              onClick={handleExport}
+              disabled={exportBusy || rows.length === 0}
+            >
+              <Download className="size-3.5" />
+              {exportBusy ? "생성 중…" : "엑셀 다운로드"}
+            </Button>
           </div>
           {loading ? (
             <Card className="p-6 text-center text-sm text-muted-foreground">불러오는 중…</Card>
