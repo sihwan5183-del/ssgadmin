@@ -12,7 +12,7 @@ import { useInquiryStatuses } from "@/hooks/useInquiryStatuses";
 import { inquiryStatusClass, inquiryStatusSolidClass } from "@/lib/inquiryStatus";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { ArrowRight, Trash2, CheckCircle2, Phone } from "lucide-react";
+import { ArrowRight, Trash2, CheckCircle2, Phone, Download } from "lucide-react";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { BulkActionBar } from "@/components/common/BulkActionBar";
 import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
