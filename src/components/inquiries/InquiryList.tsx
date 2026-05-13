@@ -61,12 +61,27 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
         if (!l.content) return;
         map[l.inquiry_id] = { content: l.content, created_at: l.created_at };
       });
-      setLatestMemos(map);
+    setLatestMemos(map);
+  })();
+  return () => {
+    cancelled = true;
+  };
+}, [ids.join(",")]);
+
+  // 프로필(작성자 이름 + 매장) 조회
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("profiles").select("user_id, display_name, store");
+      const map: Record<string, InquiryExcelProfile> = {};
+      (data ?? []).forEach((p: any) => {
+        map[p.user_id] = {
+          display_name: p.display_name ?? "",
+          store: p.store ?? null,
+        };
+      });
+      setProfilesMap(map);
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [ids.join(",")]);
+  }, []);
 
   const updateStatus = async (row: Inquiry, status: string) => {
     setBusyId(row.id);
