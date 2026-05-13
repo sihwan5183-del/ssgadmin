@@ -12,12 +12,14 @@ import { useInquiryStatuses } from "@/hooks/useInquiryStatuses";
 import { inquiryStatusClass, inquiryStatusSolidClass } from "@/lib/inquiryStatus";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { ArrowRight, Trash2, CheckCircle2, Phone } from "lucide-react";
+import { ArrowRight, Trash2, CheckCircle2, Phone, Download } from "lucide-react";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { BulkActionBar } from "@/components/common/BulkActionBar";
 import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
 import { MobileListCard } from "@/components/common/MobileListCard";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { exportInquiriesToExcel } from "@/lib/inquiryExcelExport";
+import type { InquiryExcelProfile } from "@/lib/inquiryExcelExport";
 
 interface Props {
   rows: Inquiry[];
@@ -35,6 +37,8 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [latestMemos, setLatestMemos] = useState<Record<string, { content: string; created_at: string }>>({});
+  const [profilesMap, setProfilesMap] = useState<Record<string, InquiryExcelProfile>>({});
+  const [exportBusy, setExportBusy] = useState(false);
 
   // Fetch the latest memo per inquiry for the visible rows
   useEffect(() => {
@@ -57,12 +61,27 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
         if (!l.content) return;
         map[l.inquiry_id] = { content: l.content, created_at: l.created_at };
       });
-      setLatestMemos(map);
+    setLatestMemos(map);
+  })();
+  return () => {
+    cancelled = true;
+  };
+}, [ids.join(",")]);
+
+  // 프로필(작성자 이름 + 매장) 조회
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("profiles").select("user_id, display_name, store");
+      const map: Record<string, InquiryExcelProfile> = {};
+      (data ?? []).forEach((p: any) => {
+        map[p.user_id] = {
+          display_name: p.display_name ?? "",
+          store: p.store ?? null,
+        };
+      });
+      setProfilesMap(map);
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [ids.join(",")]);
+  }, []);
 
   const updateStatus = async (row: Inquiry, status: string) => {
     setBusyId(row.id);
@@ -99,6 +118,27 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
     onChange();
   };
 
+  const handleExport = async () => {
+    if (rows.length === 0) {
+      toast.error("다운로드할 데이터가 없습니다");
+      return;
+    }
+    setExportBusy(true);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      await exportInquiriesToExcel(rows, latestMemos, profilesMap, `인입현황_${today}`);
+      toast.success("엑셀 다운로드 완료", {
+        description: `${rows.length}건의 데이터를 저장했습니다`,
+      });
+    } catch (e) {
+      toast.error("엑셀 생성 실패", {
+        description: e instanceof Error ? e.message : String(e),
+      });
+    } finally {
+      setExportBusy(false);
+    }
+  };
+
   const bulkDelete = async () => {
     setBulkBusy(true);
     const { error } = await supabase.from("inquiries").delete().in("id", bulk.selectedIds);
@@ -128,14 +168,26 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
     <>
       {isMobile ? (
         <div className="space-y-2">
-          {/* 모바일 헤더: 전체 선택 */}
-          <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
-            <Checkbox
-              checked={bulk.allOnPageSelected}
-              onCheckedChange={(v) => bulk.togglePage(!!v)}
-              className="size-5"
-            />
-            <span>전체선택 · 총 {rows.length}건</span>
+          {/* 모바일 헤더 */}
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Checkbox
+                checked={bulk.allOnPageSelected}
+                onCheckedChange={(v) => bulk.togglePage(!!v)}
+                className="size-5"
+              />
+              <span>전체선택 · 총 {rows.length}건</span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs gap-1"
+              onClick={handleExport}
+              disabled={exportBusy || rows.length === 0}
+            >
+              <Download className="size-3.5" />
+              {exportBusy ? "생성 중…" : "엑셀 다운로드"}
+            </Button>
           </div>
           {loading ? (
             <Card className="p-6 text-center text-sm text-muted-foreground">불러오는 중…</Card>
@@ -188,6 +240,21 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
         </div>
       ) : (
         <Card className="p-0 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b bg-muted/30">
+            <div className="text-sm font-medium text-foreground/80">
+              인입 목록 <span className="text-muted-foreground font-normal">({rows.length}건)</span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs gap-1"
+              onClick={handleExport}
+              disabled={exportBusy || rows.length === 0}
+            >
+              <Download className="size-3.5" />
+              {exportBusy ? "생성 중…" : "엑셀 다운로드"}
+            </Button>
+          </div>
           <Table className="table-fixed">
             <TableHeader>
               <TableRow>
