@@ -240,6 +240,21 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
         </div>
       ) : (
         <Card className="p-0 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b bg-muted/30">
+            <div className="text-sm font-medium text-foreground/80">
+              인입 목록 <span className="text-muted-foreground font-normal">({rows.length}건)</span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs gap-1"
+              onClick={handleExport}
+              disabled={exportBusy || rows.length === 0}
+            >
+              <Download className="size-3.5" />
+              {exportBusy ? "생성 중…" : "엑셀 다운로드"}
+            </Button>
+          </div>
           <Table className="table-fixed">
             <TableHeader>
               <TableRow>
