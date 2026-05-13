@@ -18,6 +18,8 @@ import { BulkActionBar } from "@/components/common/BulkActionBar";
 import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
 import { MobileListCard } from "@/components/common/MobileListCard";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { exportInquiriesToExcel } from "@/lib/inquiryExcelExport";
+import type { InquiryExcelProfile } from "@/lib/inquiryExcelExport";
 
 interface Props {
   rows: Inquiry[];
