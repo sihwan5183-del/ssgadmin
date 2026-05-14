@@ -148,6 +148,13 @@ export function InquiryDetailDialog({
     setName(inquiry.customer_name ?? "");
     setBirth(inquiry.birth_date ?? "");
     setPhone(inquiry.phone ?? "");
+    setChannel(inquiry.channel ?? "");
+    setContent(inquiry.content ?? "");
+    setNote(inquiry.note ?? "");
+    const icfInit = ((inquiry as any).custom_fields ?? {}) as Record<string, any>;
+    setConsultModel(icfInit.consult_device_model ?? "");
+    setConsultCapacity(icfInit.consult_device_capacity ?? "");
+    setConsultColor(icfInit.consult_device_color ?? "");
     setManager(inquiry.manager ?? "");
     setStatus(inquiry.status ?? "");
     setMemo("");
@@ -167,6 +174,13 @@ export function InquiryDetailDialog({
       setName(src.customer_name ?? "");
       setBirth(src.birth_date ?? "");
       setPhone(src.phone ?? "");
+      setChannel(src.channel ?? "");
+      setContent(src.content ?? "");
+      setNote(src.note ?? "");
+      const icf = (src.custom_fields as any) ?? {};
+      setConsultModel(icf.consult_device_model ?? "");
+      setConsultCapacity(icf.consult_device_capacity ?? "");
+      setConsultColor(icf.consult_device_color ?? "");
       setManager(src.manager ?? "");
       setStatus(src.status ?? "");
       const om = (src.custom_fields as any)?.open_method;
