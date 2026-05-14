@@ -119,6 +119,12 @@ export function InquiryDetailDialog({
   const [name, setName] = useState("");
   const [birth, setBirth] = useState("");
   const [phone, setPhone] = useState("");
+  const [channel, setChannel] = useState("");
+  const [content, setContent] = useState("");
+  const [note, setNote] = useState("");
+  const [consultModel, setConsultModel] = useState("");
+  const [consultCapacity, setConsultCapacity] = useState("");
+  const [consultColor, setConsultColor] = useState("");
 
   // sidebar
   const [manager, setManager] = useState("");
