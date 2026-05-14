@@ -114,6 +114,7 @@ export function InquiryDetailDialog({
   const { map: staffMap, resolve: resolveStaff } = useStaffNames();
   const { statuses } = useInquiryStatuses();
   const { options: quickMemos } = useFieldOptions("inquiry_quick_memo");
+  const { options: channelOptions } = useFieldOptions("inquiry_channel");
 
   // editable customer fields (left column header card)
   const [name, setName] = useState("");
