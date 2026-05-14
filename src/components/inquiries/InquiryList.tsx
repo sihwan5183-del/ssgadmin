@@ -12,13 +12,14 @@ import { useInquiryStatuses } from "@/hooks/useInquiryStatuses";
 import { inquiryStatusClass, inquiryStatusSolidClass } from "@/lib/inquiryStatus";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { ArrowRight, Trash2, CheckCircle2, Phone, Download } from "lucide-react";
+import { ArrowRight, Trash2, CheckCircle2, Phone, Download, Pencil } from "lucide-react";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { BulkActionBar } from "@/components/common/BulkActionBar";
 import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
 import { MobileListCard } from "@/components/common/MobileListCard";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { exportInquiriesToExcel } from "@/lib/inquiryExcelExport";
+import { InquiryDetailDialog } from "@/components/inquiries/InquiryDetailDialog";
 import type { InquiryExcelProfile } from "@/lib/inquiryExcelExport";
 
 interface Props {
