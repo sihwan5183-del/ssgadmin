@@ -26,14 +26,14 @@ import { toast } from "sonner";
 interface InquiryRow {
   id: string;
   customer_name: string | null;
-  birth_date: string | null;
+  birth_date?: string | null;
   phone: string | null;
   channel: string;
   content: string | null;
   manager: string | null;
   status: string;
-  note: string | null;
-  converted_sale_id: string | null;
+  note?: string | null;
+  converted_sale_id?: string | null;
   inquiry_date: string;
   created_at: string;
   custom_fields?: Record<string, any> | null;
@@ -114,11 +114,18 @@ export function InquiryDetailDialog({
   const { map: staffMap, resolve: resolveStaff } = useStaffNames();
   const { statuses } = useInquiryStatuses();
   const { options: quickMemos } = useFieldOptions("inquiry_quick_memo");
+  const { options: channelOptions } = useFieldOptions("inquiry_channel");
 
   // editable customer fields (left column header card)
   const [name, setName] = useState("");
   const [birth, setBirth] = useState("");
   const [phone, setPhone] = useState("");
+  const [channel, setChannel] = useState("");
+  const [content, setContent] = useState("");
+  const [note, setNote] = useState("");
+  const [consultModel, setConsultModel] = useState("");
+  const [consultCapacity, setConsultCapacity] = useState("");
+  const [consultColor, setConsultColor] = useState("");
 
   // sidebar
   const [manager, setManager] = useState("");
@@ -142,6 +149,13 @@ export function InquiryDetailDialog({
     setName(inquiry.customer_name ?? "");
     setBirth(inquiry.birth_date ?? "");
     setPhone(inquiry.phone ?? "");
+    setChannel(inquiry.channel ?? "");
+    setContent(inquiry.content ?? "");
+    setNote(inquiry.note ?? "");
+    const icfInit = ((inquiry as any).custom_fields ?? {}) as Record<string, any>;
+    setConsultModel(icfInit.consult_device_model ?? "");
+    setConsultCapacity(icfInit.consult_device_capacity ?? "");
+    setConsultColor(icfInit.consult_device_color ?? "");
     setManager(inquiry.manager ?? "");
     setStatus(inquiry.status ?? "");
     setMemo("");
@@ -161,6 +175,13 @@ export function InquiryDetailDialog({
       setName(src.customer_name ?? "");
       setBirth(src.birth_date ?? "");
       setPhone(src.phone ?? "");
+      setChannel(src.channel ?? "");
+      setContent(src.content ?? "");
+      setNote(src.note ?? "");
+      const icf = (src.custom_fields as any) ?? {};
+      setConsultModel(icf.consult_device_model ?? "");
+      setConsultCapacity(icf.consult_device_capacity ?? "");
+      setConsultColor(icf.consult_device_color ?? "");
       setManager(src.manager ?? "");
       setStatus(src.status ?? "");
       const om = (src.custom_fields as any)?.open_method;
@@ -229,15 +250,32 @@ export function InquiryDetailDialog({
 
   if (!inquiry) return null;
 
-  /* Persist header (name / birth / phone) */
+  /* Persist basic info (name / birth / phone / channel / content / note / consult device) */
   const saveHeader = async () => {
     setSavingHeader(true);
+    const { data: cur } = await supabase
+      .from("inquiries")
+      .select("custom_fields")
+      .eq("id", inquiry.id)
+      .maybeSingle();
+    const cf = { ...((cur?.custom_fields as any) ?? {}) };
+    if (consultModel.trim()) cf.consult_device_model = consultModel.trim();
+    else delete cf.consult_device_model;
+    if (consultCapacity.trim()) cf.consult_device_capacity = consultCapacity.trim();
+    else delete cf.consult_device_capacity;
+    if (consultColor.trim()) cf.consult_device_color = consultColor.trim();
+    else delete cf.consult_device_color;
+
     const { error } = await supabase
       .from("inquiries")
       .update({
         customer_name: name || null,
         birth_date: birth || null,
         phone: phone || null,
+        channel: channel || null,
+        content: content || null,
+        note: note || null,
+        custom_fields: cf,
         last_action_at: new Date().toISOString(),
       })
       .eq("id", inquiry.id);
@@ -427,12 +465,46 @@ export function InquiryDetailDialog({
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3 mt-3 text-xs">
-                <Row label="채널">
-                  <Badge variant="outline" className="text-[10px]">{inq.channel}</Badge>
-                </Row>
-                <Row label="생년월일(표시)">{formatBirth(birth)}</Row>
-                <Row label="문의 내용">{inq.content || "-"}</Row>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 text-xs">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-muted-foreground">채널</label>
+                  <Select value={channel || ""} onValueChange={(v) => setChannel(v)}>
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue placeholder="채널 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {channelOptions.map((c) => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-muted-foreground">생년월일(표시)</label>
+                  <div className="h-9 flex items-center px-3 rounded-md border border-border/40 bg-muted/30 text-muted-foreground">
+                    {formatBirth(birth)}
+                  </div>
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-[10px] text-muted-foreground">문의 내용</label>
+                  <Textarea
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    rows={2}
+                    placeholder="문의 내용을 입력하세요"
+                    className="text-xs"
+                  />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-[10px] text-muted-foreground">인입 메모</label>
+                  <Textarea
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    rows={2}
+                    placeholder="인입 메모를 입력하세요"
+                    className="text-xs"
+                  />
+                </div>
                 <Row label="등록일">{new Date(inq.created_at).toLocaleString("ko-KR")}</Row>
               </div>
             </Section>
@@ -441,25 +513,37 @@ export function InquiryDetailDialog({
             <Section icon={Smartphone} title="상담 기기 정보">
               {(() => {
                 const icf = ((inq as any).custom_fields ?? {}) as Record<string, any>;
-                const cm = icf.consult_device_model || "";
-                const cc = icf.consult_device_capacity || "";
-                const cl = icf.consult_device_color || "";
                 const carrier = sale?.carrier || icf.carrier || cf.carrier || "-";
-                const hasConsult = cm || cc || cl;
+                const hasConsult = consultModel || consultCapacity || consultColor;
                 return (
                   <>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-2">
-                      <div className="rounded-md border border-border/40 bg-muted/30 p-2.5">
-                        <div className="text-[10px] text-muted-foreground mb-0.5">모델명</div>
-                        <div className="text-xs font-medium text-foreground/90 break-words">{cm || "-"}</div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-muted-foreground">모델명</label>
+                        <Input
+                          value={consultModel}
+                          onChange={(e) => setConsultModel(e.target.value)}
+                          placeholder="예: 갤럭시 S25"
+                          className="h-9 text-xs"
+                        />
                       </div>
-                      <div className="rounded-md border border-border/40 bg-muted/30 p-2.5">
-                        <div className="text-[10px] text-muted-foreground mb-0.5">용량</div>
-                        <div className="text-xs font-medium text-foreground/90">{cc || "-"}</div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-muted-foreground">용량</label>
+                        <Input
+                          value={consultCapacity}
+                          onChange={(e) => setConsultCapacity(e.target.value)}
+                          placeholder="예: 256GB"
+                          className="h-9 text-xs"
+                        />
                       </div>
-                      <div className="rounded-md border border-border/40 bg-muted/30 p-2.5">
-                        <div className="text-[10px] text-muted-foreground mb-0.5">색상</div>
-                        <div className="text-xs font-medium text-foreground/90">{cl || "-"}</div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-muted-foreground">색상</label>
+                        <Input
+                          value={consultColor}
+                          onChange={(e) => setConsultColor(e.target.value)}
+                          placeholder="예: 티타늄 블루"
+                          className="h-9 text-xs"
+                        />
                       </div>
                     </div>
                     <Row label="통신사">

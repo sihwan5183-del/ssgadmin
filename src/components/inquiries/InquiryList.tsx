@@ -12,13 +12,14 @@ import { useInquiryStatuses } from "@/hooks/useInquiryStatuses";
 import { inquiryStatusClass, inquiryStatusSolidClass } from "@/lib/inquiryStatus";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { ArrowRight, Trash2, CheckCircle2, Phone, Download } from "lucide-react";
+import { ArrowRight, Trash2, CheckCircle2, Phone, Download, Pencil } from "lucide-react";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { BulkActionBar } from "@/components/common/BulkActionBar";
 import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
 import { MobileListCard } from "@/components/common/MobileListCard";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { exportInquiriesToExcel } from "@/lib/inquiryExcelExport";
+import { InquiryDetailDialog } from "@/components/inquiries/InquiryDetailDialog";
 import type { InquiryExcelProfile } from "@/lib/inquiryExcelExport";
 
 interface Props {
@@ -39,6 +40,8 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
   const [latestMemos, setLatestMemos] = useState<Record<string, { content: string; created_at: string }>>({});
   const [profilesMap, setProfilesMap] = useState<Record<string, InquiryExcelProfile>>({});
   const [exportBusy, setExportBusy] = useState(false);
+  const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   // Fetch the latest memo per inquiry for the visible rows
   useEffect(() => {
@@ -224,6 +227,17 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
                 }
                 actions={
                   <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedInquiry(r);
+                        setDetailOpen(true);
+                      }}
+                      className="h-10 flex-1 min-w-[80px]"
+                    >
+                      <Pencil className="size-3.5 mr-1" /> 수정
+                    </Button>
                     {r.status !== "개통완료" && (
                       <Button size="sm" onClick={() => updateStatus(r, "개통완료")} className="h-10 flex-1 min-w-[120px]">
                         실적 등록 <ArrowRight className="size-4 ml-1" />
@@ -327,6 +341,17 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
                     </span>
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap align-middle">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setSelectedInquiry(r);
+                        setDetailOpen(true);
+                      }}
+                      className="h-7 text-xs gap-1"
+                    >
+                      <Pencil className="size-3" /> 수정
+                    </Button>
                     {r.status !== "개통완료" && (
                       <Button size="sm" variant="ghost" onClick={() => updateStatus(r, "개통완료")} className="h-7 text-xs gap-1">
                         실적등록 <ArrowRight className="size-3" />
@@ -367,6 +392,18 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
         onConfirm={bulkDelete}
         loading={bulkBusy}
         confirmLabel="삭제"
+      />
+
+      <InquiryDetailDialog
+        inquiry={selectedInquiry}
+        open={detailOpen}
+        onOpenChange={(v) => {
+          setDetailOpen(v);
+          if (!v) setSelectedInquiry(null);
+        }}
+        onChanged={() => {
+          onChange();
+        }}
       />
     </>
   );
