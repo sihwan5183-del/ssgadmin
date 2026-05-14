@@ -26,14 +26,14 @@ import { toast } from "sonner";
 interface InquiryRow {
   id: string;
   customer_name: string | null;
-  birth_date: string | null;
+  birth_date?: string | null;
   phone: string | null;
   channel: string;
   content: string | null;
   manager: string | null;
   status: string;
-  note: string | null;
-  converted_sale_id: string | null;
+  note?: string | null;
+  converted_sale_id?: string | null;
   inquiry_date: string;
   created_at: string;
   custom_fields?: Record<string, any> | null;
