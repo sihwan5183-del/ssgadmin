@@ -40,6 +40,8 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
   const [latestMemos, setLatestMemos] = useState<Record<string, { content: string; created_at: string }>>({});
   const [profilesMap, setProfilesMap] = useState<Record<string, InquiryExcelProfile>>({});
   const [exportBusy, setExportBusy] = useState(false);
+  const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   // Fetch the latest memo per inquiry for the visible rows
   useEffect(() => {
