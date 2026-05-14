@@ -513,25 +513,37 @@ export function InquiryDetailDialog({
             <Section icon={Smartphone} title="상담 기기 정보">
               {(() => {
                 const icf = ((inq as any).custom_fields ?? {}) as Record<string, any>;
-                const cm = icf.consult_device_model || "";
-                const cc = icf.consult_device_capacity || "";
-                const cl = icf.consult_device_color || "";
                 const carrier = sale?.carrier || icf.carrier || cf.carrier || "-";
-                const hasConsult = cm || cc || cl;
+                const hasConsult = consultModel || consultCapacity || consultColor;
                 return (
                   <>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-2">
-                      <div className="rounded-md border border-border/40 bg-muted/30 p-2.5">
-                        <div className="text-[10px] text-muted-foreground mb-0.5">모델명</div>
-                        <div className="text-xs font-medium text-foreground/90 break-words">{cm || "-"}</div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-muted-foreground">모델명</label>
+                        <Input
+                          value={consultModel}
+                          onChange={(e) => setConsultModel(e.target.value)}
+                          placeholder="예: 갤럭시 S25"
+                          className="h-9 text-xs"
+                        />
                       </div>
-                      <div className="rounded-md border border-border/40 bg-muted/30 p-2.5">
-                        <div className="text-[10px] text-muted-foreground mb-0.5">용량</div>
-                        <div className="text-xs font-medium text-foreground/90">{cc || "-"}</div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-muted-foreground">용량</label>
+                        <Input
+                          value={consultCapacity}
+                          onChange={(e) => setConsultCapacity(e.target.value)}
+                          placeholder="예: 256GB"
+                          className="h-9 text-xs"
+                        />
                       </div>
-                      <div className="rounded-md border border-border/40 bg-muted/30 p-2.5">
-                        <div className="text-[10px] text-muted-foreground mb-0.5">색상</div>
-                        <div className="text-xs font-medium text-foreground/90">{cl || "-"}</div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-muted-foreground">색상</label>
+                        <Input
+                          value={consultColor}
+                          onChange={(e) => setConsultColor(e.target.value)}
+                          placeholder="예: 티타늄 블루"
+                          className="h-9 text-xs"
+                        />
                       </div>
                     </div>
                     <Row label="통신사">
