@@ -341,6 +341,17 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
                     </span>
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap align-middle">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setSelectedInquiry(r);
+                        setDetailOpen(true);
+                      }}
+                      className="h-7 text-xs gap-1"
+                    >
+                      <Pencil className="size-3" /> 수정
+                    </Button>
                     {r.status !== "개통완료" && (
                       <Button size="sm" variant="ghost" onClick={() => updateStatus(r, "개통완료")} className="h-7 text-xs gap-1">
                         실적등록 <ArrowRight className="size-3" />
