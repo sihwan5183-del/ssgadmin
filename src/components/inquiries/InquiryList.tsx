@@ -393,6 +393,18 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
         loading={bulkBusy}
         confirmLabel="삭제"
       />
+
+      <InquiryDetailDialog
+        inquiry={selectedInquiry}
+        open={detailOpen}
+        onOpenChange={(v) => {
+          setDetailOpen(v);
+          if (!v) setSelectedInquiry(null);
+        }}
+        onChanged={() => {
+          onChange();
+        }}
+      />
     </>
   );
 };
