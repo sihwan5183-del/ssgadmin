@@ -465,12 +465,46 @@ export function InquiryDetailDialog({
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3 mt-3 text-xs">
-                <Row label="채널">
-                  <Badge variant="outline" className="text-[10px]">{inq.channel}</Badge>
-                </Row>
-                <Row label="생년월일(표시)">{formatBirth(birth)}</Row>
-                <Row label="문의 내용">{inq.content || "-"}</Row>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 text-xs">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-muted-foreground">채널</label>
+                  <Select value={channel || ""} onValueChange={(v) => setChannel(v)}>
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue placeholder="채널 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {channelOptions.map((c) => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-muted-foreground">생년월일(표시)</label>
+                  <div className="h-9 flex items-center px-3 rounded-md border border-border/40 bg-muted/30 text-muted-foreground">
+                    {formatBirth(birth)}
+                  </div>
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-[10px] text-muted-foreground">문의 내용</label>
+                  <Textarea
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    rows={2}
+                    placeholder="문의 내용을 입력하세요"
+                    className="text-xs"
+                  />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-[10px] text-muted-foreground">인입 메모</label>
+                  <Textarea
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    rows={2}
+                    placeholder="인입 메모를 입력하세요"
+                    className="text-xs"
+                  />
+                </div>
                 <Row label="등록일">{new Date(inq.created_at).toLocaleString("ko-KR")}</Row>
               </div>
             </Section>
