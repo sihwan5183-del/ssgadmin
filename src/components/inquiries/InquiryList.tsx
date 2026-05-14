@@ -227,6 +227,17 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
                 }
                 actions={
                   <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedInquiry(r);
+                        setDetailOpen(true);
+                      }}
+                      className="h-10 flex-1 min-w-[80px]"
+                    >
+                      <Pencil className="size-3.5 mr-1" /> 수정
+                    </Button>
                     {r.status !== "개통완료" && (
                       <Button size="sm" onClick={() => updateStatus(r, "개통완료")} className="h-10 flex-1 min-w-[120px]">
                         실적 등록 <ArrowRight className="size-4 ml-1" />
