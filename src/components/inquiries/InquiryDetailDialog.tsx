@@ -249,15 +249,32 @@ export function InquiryDetailDialog({
 
   if (!inquiry) return null;
 
-  /* Persist header (name / birth / phone) */
+  /* Persist basic info (name / birth / phone / channel / content / note / consult device) */
   const saveHeader = async () => {
     setSavingHeader(true);
+    const { data: cur } = await supabase
+      .from("inquiries")
+      .select("custom_fields")
+      .eq("id", inquiry.id)
+      .maybeSingle();
+    const cf = { ...((cur?.custom_fields as any) ?? {}) };
+    if (consultModel.trim()) cf.consult_device_model = consultModel.trim();
+    else delete cf.consult_device_model;
+    if (consultCapacity.trim()) cf.consult_device_capacity = consultCapacity.trim();
+    else delete cf.consult_device_capacity;
+    if (consultColor.trim()) cf.consult_device_color = consultColor.trim();
+    else delete cf.consult_device_color;
+
     const { error } = await supabase
       .from("inquiries")
       .update({
         customer_name: name || null,
         birth_date: birth || null,
         phone: phone || null,
+        channel: channel || null,
+        content: content || null,
+        note: note || null,
+        custom_fields: cf,
         last_action_at: new Date().toISOString(),
       })
       .eq("id", inquiry.id);
