@@ -518,6 +518,60 @@ export type Database = {
           },
         ]
       }
+      custom_proposals: {
+        Row: {
+          change_date: string
+          created_at: string
+          created_by: string
+          customer_join_number: string | null
+          customer_name: string | null
+          final_upsell: number
+          id: string
+          manager: string | null
+          new_fee: number
+          new_select_discount: boolean
+          note: string | null
+          prev_fee: number
+          prev_select_discount: boolean
+          pure_upsell: number
+          updated_at: string
+        }
+        Insert: {
+          change_date?: string
+          created_at?: string
+          created_by: string
+          customer_join_number?: string | null
+          customer_name?: string | null
+          final_upsell?: number
+          id?: string
+          manager?: string | null
+          new_fee?: number
+          new_select_discount?: boolean
+          note?: string | null
+          prev_fee?: number
+          prev_select_discount?: boolean
+          pure_upsell?: number
+          updated_at?: string
+        }
+        Update: {
+          change_date?: string
+          created_at?: string
+          created_by?: string
+          customer_join_number?: string | null
+          customer_name?: string | null
+          final_upsell?: number
+          id?: string
+          manager?: string | null
+          new_fee?: number
+          new_select_discount?: boolean
+          note?: string | null
+          prev_fee?: number
+          prev_select_discount?: boolean
+          pure_upsell?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       device_inventory: {
         Row: {
           activated_at: string | null
