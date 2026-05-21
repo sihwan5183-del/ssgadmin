@@ -297,6 +297,38 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: false, error: "VAPID 미설정" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
+
+  // 인증/인가 검증
+  // - cron 호출은 x-cron-secret 헤더로 인증
+  // - 그 외는 JWT 검증 + 관리자 권한 필요
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  const headerCronSecret = req.headers.get("x-cron-secret");
+  const isCron = !!cronSecret && headerCronSecret === cronSecret;
+
+  if (!isCron) {
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    if (!token) {
+      return new Response(JSON.stringify({ ok: false, error: "unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const userClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: `Bearer ${token}` } } },
+    );
+    const { data: u, error: uerr } = await userClient.auth.getUser();
+    if (uerr || !u?.user) {
+      return new Response(JSON.stringify({ ok: false, error: "unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: u.user.id });
+    if (!isAdmin) {
+      return new Response(JSON.stringify({ ok: false, error: "forbidden" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+  }
+
   let body: {
     mode?: "auto" | "run_rule";
     rule_key?: string;
