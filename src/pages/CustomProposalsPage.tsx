@@ -16,6 +16,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDashboardStaff } from "@/hooks/useDashboardStaff";
@@ -35,7 +36,10 @@ type Row = {
   new_select_discount: boolean;
   pure_upsell: number;
   final_upsell: number;
+  offer_provided: boolean;
+  note: string | null;
   created_by: string;
+};
 };
 
 const todayStr = () => format(new Date(), "yyyy-MM-dd");
