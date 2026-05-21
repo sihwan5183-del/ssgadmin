@@ -445,6 +445,11 @@ export default function CustomProposalsPage() {
                     r.final_upsell > 0 ? "text-primary" : r.final_upsell < 0 ? "text-destructive" : "")}>
                     {r.final_upsell > 0 ? "+" : ""}{won(r.final_upsell)}
                   </TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant={r.offer_provided ? "default" : "secondary"} className="text-[9px]">
+                      {r.offer_provided ? "오퍼 제공" : "미제공"}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button size="icon" variant="ghost" onClick={() => edit(r)}>
