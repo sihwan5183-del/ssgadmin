@@ -364,6 +364,17 @@ export default function CustomProposalsPage() {
           </Card>
         </div>
 
+        {/* 상담 메모 */}
+        <div className="space-y-1.5">
+          <Label className="text-xs">상담 메모</Label>
+          <Textarea
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            placeholder="고객 반응 및 상담 특이사항을 자유롭게 기록하세요."
+            rows={3}
+          />
+        </div>
+
         <div className="flex justify-end">
           <Button onClick={save} disabled={saving}>
             <Plus className="size-4 mr-1" />
