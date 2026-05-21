@@ -68,6 +68,34 @@ Deno.serve(async (req) => {
     );
   }
 
+  // 인증/인가 검증
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  const headerCronSecret = req.headers.get("x-cron-secret");
+  const isCron = !!cronSecret && headerCronSecret === cronSecret;
+  if (!isCron) {
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    if (!token) {
+      return new Response(JSON.stringify({ ok: false, error: "unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const userClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: `Bearer ${token}` } } },
+    );
+    const { data: u, error: uerr } = await userClient.auth.getUser();
+    if (uerr || !u?.user) {
+      return new Response(JSON.stringify({ ok: false, error: "unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const { data: isAdmin } = await supabase.rpc("is_admin", { _user_id: u.user.id });
+    if (!isAdmin) {
+      return new Response(JSON.stringify({ ok: false, error: "forbidden" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+  }
+
   let body: {
     mode?: "d1" | "today" | "auto" | "broadcast";
     title?: string;

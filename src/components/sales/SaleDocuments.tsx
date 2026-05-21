@@ -88,7 +88,8 @@ export const SaleDocuments = ({ saleId, saleMeta, storeNameFallback, readOnly }:
       const ext = file.name.includes(".") ? file.name.split(".").pop() : "bin";
       const ts = Date.now();
       const safeName = sanitize(file.name.replace(/\.[^.]+$/, "")) || "file";
-      const path = `${folder}/${ts}_${safeName}.${ext}`;
+      // Storage RLS: 첫 폴더는 반드시 업로더의 user.id 여야 함 (다른 사용자 폴더 침입 방지)
+      const path = `${user.id}/${folder}/${ts}_${safeName}.${ext}`;
 
       const { error: upErr } = await supabase.storage
         .from("sale-documents")
