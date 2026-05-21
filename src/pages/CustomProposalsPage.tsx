@@ -40,7 +40,6 @@ type Row = {
   note: string | null;
   created_by: string;
 };
-};
 
 const todayStr = () => format(new Date(), "yyyy-MM-dd");
 const won = (n: number) => `${Math.round(n).toLocaleString()}원`;
