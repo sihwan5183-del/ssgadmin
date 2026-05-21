@@ -112,6 +112,8 @@ export default function CustomProposalsPage() {
     setPrevDiscount(false);
     setNewFee("");
     setNewDiscount(false);
+    setOfferProvided(false);
+    setMemo("");
   };
 
   const save = async () => {
@@ -132,6 +134,8 @@ export default function CustomProposalsPage() {
       new_select_discount: newDiscount,
       pure_upsell: pureUpsell,
       final_upsell: finalUpsell,
+      offer_provided: offerProvided,
+      note: memo.trim() || null,
     };
     const { error } = editId
       ? await supabase.from("custom_proposals").update(payload).eq("id", editId)
@@ -156,6 +160,8 @@ export default function CustomProposalsPage() {
     setPrevDiscount(!!r.prev_select_discount);
     setNewFee(String(r.new_fee ?? ""));
     setNewDiscount(!!r.new_select_discount);
+    setOfferProvided(!!r.offer_provided);
+    setMemo(r.note ?? "");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
