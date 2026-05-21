@@ -341,7 +341,7 @@ export default function CustomProposalsPage() {
         </div>
 
         {/* 실시간 업셀 결과 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Card className="p-4 border-primary/30 bg-primary/5">
             <div className="text-xs text-muted-foreground">순수 요금 업셀 금액</div>
             <div className="text-xs text-muted-foreground mt-0.5">(변경 요금 − 기존 요금)</div>
