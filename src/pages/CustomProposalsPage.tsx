@@ -278,7 +278,7 @@ export default function CustomProposalsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {/* 기존 요금제 */}
           <Card className="p-4 space-y-3 bg-muted/30">
             <div className="flex items-center justify-between">
