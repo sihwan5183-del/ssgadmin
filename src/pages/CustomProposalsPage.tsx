@@ -16,6 +16,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDashboardStaff } from "@/hooks/useDashboardStaff";
@@ -35,6 +36,8 @@ type Row = {
   new_select_discount: boolean;
   pure_upsell: number;
   final_upsell: number;
+  offer_provided: boolean;
+  note: string | null;
   created_by: string;
 };
 
@@ -62,6 +65,8 @@ export default function CustomProposalsPage() {
   const [prevDiscount, setPrevDiscount] = useState(false);
   const [newFee, setNewFee] = useState("");
   const [newDiscount, setNewDiscount] = useState(false);
+  const [offerProvided, setOfferProvided] = useState(false);
+  const [memo, setMemo] = useState("");
   const [saving, setSaving] = useState(false);
 
   // 기본 담당자 = 로그인 사용자 이름
@@ -107,6 +112,8 @@ export default function CustomProposalsPage() {
     setPrevDiscount(false);
     setNewFee("");
     setNewDiscount(false);
+    setOfferProvided(false);
+    setMemo("");
   };
 
   const save = async () => {
@@ -127,6 +134,8 @@ export default function CustomProposalsPage() {
       new_select_discount: newDiscount,
       pure_upsell: pureUpsell,
       final_upsell: finalUpsell,
+      offer_provided: offerProvided,
+      note: memo.trim() || null,
     };
     const { error } = editId
       ? await supabase.from("custom_proposals").update(payload).eq("id", editId)
@@ -151,6 +160,8 @@ export default function CustomProposalsPage() {
     setPrevDiscount(!!r.prev_select_discount);
     setNewFee(String(r.new_fee ?? ""));
     setNewDiscount(!!r.new_select_discount);
+    setOfferProvided(!!r.offer_provided);
+    setMemo(r.note ?? "");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -176,23 +187,37 @@ export default function CustomProposalsPage() {
   }, [rows, search]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Header title="맞춤제안 실적관리" subtitle="요금제 변경 업셀 실시간 계산 · 누적 실적 관리" />
 
       {/* 입력 폼 */}
-      <Card className="p-5 space-y-5">
-        <div className="flex items-center justify-between">
+      <Card className="p-4 space-y-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="text-sm font-semibold">
             {editId ? "맞춤제안 수정" : "신규 맞춤제안 등록"}
           </div>
-          {editId && (
-            <Button variant="ghost" size="sm" onClick={resetForm}>
-              <X className="size-4 mr-1" /> 수정 취소
-            </Button>
-          )}
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              "flex items-center gap-2 px-3 py-1.5 rounded-md border transition-colors",
+              offerProvided ? "border-primary/40 bg-primary/10" : "border-border bg-muted/40",
+            )}>
+              <span className={cn(
+                "text-xs font-semibold",
+                offerProvided ? "text-primary" : "text-muted-foreground",
+              )}>
+                {offerProvided ? "오퍼 제공" : "오퍼 미제공"}
+              </span>
+              <Switch checked={offerProvided} onCheckedChange={setOfferProvided} />
+            </div>
+            {editId && (
+              <Button variant="ghost" size="sm" onClick={resetForm}>
+                <X className="size-4 mr-1" /> 수정 취소
+              </Button>
+            )}
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="space-y-2">
             <Label>변경일</Label>
             <Popover>
@@ -253,9 +278,9 @@ export default function CustomProposalsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {/* 기존 요금제 */}
-          <Card className="p-4 space-y-3 bg-muted/30">
+          <Card className="p-3 space-y-2 bg-muted/30">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-semibold">기존 요금제</Label>
               <div className="flex items-center gap-2">
@@ -285,7 +310,7 @@ export default function CustomProposalsPage() {
           </Card>
 
           {/* 변경 요금제 */}
-          <Card className="p-4 space-y-3 bg-muted/30">
+          <Card className="p-3 space-y-2 bg-muted/30">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-semibold">변경 요금제</Label>
               <div className="flex items-center gap-2">
@@ -316,7 +341,7 @@ export default function CustomProposalsPage() {
         </div>
 
         {/* 실시간 업셀 결과 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Card className="p-4 border-primary/30 bg-primary/5">
             <div className="text-xs text-muted-foreground">순수 요금 업셀 금액</div>
             <div className="text-xs text-muted-foreground mt-0.5">(변경 요금 − 기존 요금)</div>
@@ -337,6 +362,17 @@ export default function CustomProposalsPage() {
               {finalUpsell > 0 ? "+" : ""}{won(finalUpsell)}
             </div>
           </Card>
+        </div>
+
+        {/* 상담 메모 */}
+        <div className="space-y-1.5">
+          <Label className="text-xs">상담 메모</Label>
+          <Textarea
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            placeholder="고객 반응 및 상담 특이사항을 자유롭게 기록하세요."
+            rows={3}
+          />
         </div>
 
         <div className="flex justify-end">
@@ -374,14 +410,15 @@ export default function CustomProposalsPage() {
                 <TableHead className="text-right">변경요금(선약)</TableHead>
                 <TableHead className="text-right">순수업셀</TableHead>
                 <TableHead className="text-right">최종업셀</TableHead>
+                <TableHead className="text-center">오퍼여부</TableHead>
                 <TableHead className="w-[100px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">불러오는 중…</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">불러오는 중…</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">등록된 맞춤제안이 없습니다</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">등록된 맞춤제안이 없습니다</TableCell></TableRow>
               ) : filtered.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="whitespace-nowrap">{r.change_date}</TableCell>
@@ -407,6 +444,11 @@ export default function CustomProposalsPage() {
                   <TableCell className={cn("text-right whitespace-nowrap font-semibold",
                     r.final_upsell > 0 ? "text-primary" : r.final_upsell < 0 ? "text-destructive" : "")}>
                     {r.final_upsell > 0 ? "+" : ""}{won(r.final_upsell)}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant={r.offer_provided ? "default" : "secondary"} className="text-[9px]">
+                      {r.offer_provided ? "오퍼 제공" : "미제공"}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">

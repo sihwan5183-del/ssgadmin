@@ -531,6 +531,7 @@ export type Database = {
           new_fee: number
           new_select_discount: boolean
           note: string | null
+          offer_provided: boolean
           prev_fee: number
           prev_select_discount: boolean
           pure_upsell: number
@@ -548,6 +549,7 @@ export type Database = {
           new_fee?: number
           new_select_discount?: boolean
           note?: string | null
+          offer_provided?: boolean
           prev_fee?: number
           prev_select_discount?: boolean
           pure_upsell?: number
@@ -565,6 +567,7 @@ export type Database = {
           new_fee?: number
           new_select_discount?: boolean
           note?: string | null
+          offer_provided?: boolean
           prev_fee?: number
           prev_select_discount?: boolean
           pure_upsell?: number

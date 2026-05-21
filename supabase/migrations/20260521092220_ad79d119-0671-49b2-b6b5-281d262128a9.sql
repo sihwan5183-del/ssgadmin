@@ -1,0 +1,1 @@
+ALTER TABLE public.custom_proposals ADD COLUMN IF NOT EXISTS offer_provided boolean NOT NULL DEFAULT false;
