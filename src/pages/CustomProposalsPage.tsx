@@ -65,6 +65,8 @@ export default function CustomProposalsPage() {
   const [prevDiscount, setPrevDiscount] = useState(false);
   const [newFee, setNewFee] = useState("");
   const [newDiscount, setNewDiscount] = useState(false);
+  const [offerProvided, setOfferProvided] = useState(false);
+  const [memo, setMemo] = useState("");
   const [saving, setSaving] = useState(false);
 
   // 기본 담당자 = 로그인 사용자 이름
