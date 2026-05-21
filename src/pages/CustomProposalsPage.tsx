@@ -410,6 +410,7 @@ export default function CustomProposalsPage() {
                 <TableHead className="text-right">변경요금(선약)</TableHead>
                 <TableHead className="text-right">순수업셀</TableHead>
                 <TableHead className="text-right">최종업셀</TableHead>
+                <TableHead className="text-center">오퍼여부</TableHead>
                 <TableHead className="w-[100px]"></TableHead>
               </TableRow>
             </TableHeader>
