@@ -187,23 +187,37 @@ export default function CustomProposalsPage() {
   }, [rows, search]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Header title="맞춤제안 실적관리" subtitle="요금제 변경 업셀 실시간 계산 · 누적 실적 관리" />
 
       {/* 입력 폼 */}
-      <Card className="p-5 space-y-5">
-        <div className="flex items-center justify-between">
+      <Card className="p-4 space-y-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="text-sm font-semibold">
             {editId ? "맞춤제안 수정" : "신규 맞춤제안 등록"}
           </div>
-          {editId && (
-            <Button variant="ghost" size="sm" onClick={resetForm}>
-              <X className="size-4 mr-1" /> 수정 취소
-            </Button>
-          )}
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              "flex items-center gap-2 px-3 py-1.5 rounded-md border transition-colors",
+              offerProvided ? "border-primary/40 bg-primary/10" : "border-border bg-muted/40",
+            )}>
+              <span className={cn(
+                "text-xs font-semibold",
+                offerProvided ? "text-primary" : "text-muted-foreground",
+              )}>
+                {offerProvided ? "오퍼 제공" : "오퍼 미제공"}
+              </span>
+              <Switch checked={offerProvided} onCheckedChange={setOfferProvided} />
+            </div>
+            {editId && (
+              <Button variant="ghost" size="sm" onClick={resetForm}>
+                <X className="size-4 mr-1" /> 수정 취소
+              </Button>
+            )}
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="space-y-2">
             <Label>변경일</Label>
             <Popover>
