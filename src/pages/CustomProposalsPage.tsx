@@ -310,7 +310,7 @@ export default function CustomProposalsPage() {
           </Card>
 
           {/* 변경 요금제 */}
-          <Card className="p-4 space-y-3 bg-muted/30">
+          <Card className="p-3 space-y-2 bg-muted/30">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-semibold">변경 요금제</Label>
               <div className="flex items-center gap-2">
