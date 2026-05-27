@@ -7,6 +7,7 @@ import { useRole } from "@/hooks/useRole";
 import { useMenuConfig, type MenuRole } from "@/hooks/useMenuConfig";
 import { resolveIcon } from "@/lib/menuIcons";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Sidebar = () => {
   const location = useLocation();
@@ -37,6 +38,32 @@ export const Sidebar = () => {
   }, [groups, items, currentRole, isAdmin]);
 
   const [openIds, setOpenIds] = useState<Record<string, boolean>>({});
+
+  // Realtime count of unhandled new leads — shown as a red badge next to /leads
+  const [newLeadCount, setNewLeadCount] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    const fetchCount = async () => {
+      const { count } = await supabase
+        .from("leads")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "신규 접수");
+      if (!cancelled) setNewLeadCount(count ?? 0);
+    };
+    fetchCount();
+    const ch = supabase
+      .channel("sidebar-leads-count")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "leads" },
+        fetchCount,
+      )
+      .subscribe();
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(ch);
+    };
+  }, []);
 
   // Auto-open the group containing the active route
   useEffect(() => {
@@ -116,6 +143,11 @@ export const Sidebar = () => {
                       >
                         <Icon className={cn("size-4", active && "text-primary-glow")} />
                         <span className="font-medium">{item.label}</span>
+                        {item.path === "/leads" && newLeadCount > 0 && (
+                          <span className="ml-auto inline-flex min-w-[18px] h-[18px] px-1.5 items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold tabular-nums">
+                            {newLeadCount}
+                          </span>
+                        )}
                         {item.is_admin_only && (
                           <span className="ml-auto text-[9px] text-primary uppercase tracking-wider font-semibold">
                             관리자
