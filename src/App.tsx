@@ -56,6 +56,7 @@ import FileApprovalsPage from "./pages/FileApprovalsPage.tsx";
 import AddonRetentionAdminPage from "./pages/AddonRetentionAdminPage.tsx";
 import AddonTasksPage from "./pages/AddonTasksPage.tsx";
 import CustomProposalsPage from "./pages/CustomProposalsPage.tsx";
+import LeadsPage from "./pages/LeadsPage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -161,6 +162,7 @@ const App = () => {
                         <Route path="/file-vault" element={<FileVaultPage />} />
                         <Route path="/admin/file-approvals" element={<AdminOnlyRoute><FileApprovalsPage /></AdminOnlyRoute>} />
                         <Route path="/custom-proposals" element={<CustomProposalsPage />} />
+                        <Route path="/leads" element={<LeadsPage />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </AppShell>
