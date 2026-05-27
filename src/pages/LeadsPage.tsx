@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDashboardStaff } from "@/hooks/useDashboardStaff";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,6 +63,7 @@ type Lead = {
   status: string;
   memo: string | null;
   source: string | null;
+  assigned_to: string | null;
 };
 
 type LeadNote = {
@@ -75,6 +77,7 @@ type LeadNote = {
 
 export default function LeadsPage() {
   const { user } = useAuth();
+  const { staff } = useDashboardStaff();
   const [rows, setRows] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -184,6 +187,19 @@ export default function LeadsPage() {
     }
   }
 
+  async function updateAssignee(id: string, assigned_to: string | null) {
+    const { error } = await supabase
+      .from("leads")
+      .update({ assigned_to })
+      .eq("id", id);
+    if (error) return toast.error(error.message);
+    setRows((p) => p.map((r) => (r.id === id ? { ...r, assigned_to } : r)));
+    if (openLead?.id === id) setOpenLead({ ...openLead, assigned_to });
+  }
+
+  const staffName = (uid: string | null | undefined) =>
+    staff.find((s) => s.user_id === uid)?.display_name ?? "";
+
   async function saveMemo() {
     if (!openLead) return;
     const { error } = await supabase
@@ -242,11 +258,11 @@ export default function LeadsPage() {
   }
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-6 space-y-5 text-foreground">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">잠재고객 관리</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">잠재고객 관리</h1>
+          <p className="text-sm text-foreground/70">
             메타 광고 등 외부 인입 리드를 통합 관리합니다.
           </p>
         </div>
@@ -342,33 +358,34 @@ export default function LeadsPage() {
       </Card>
 
       {/* Table */}
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden border-border">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>접수 일시</TableHead>
-              <TableHead>고객명</TableHead>
-              <TableHead>연락처</TableHead>
-              <TableHead>현재 통신사</TableHead>
-              <TableHead>희망 기종</TableHead>
-              <TableHead>희망 상품</TableHead>
-              <TableHead>캠페인</TableHead>
-              <TableHead className="w-36">상담 상태</TableHead>
-              <TableHead>메모</TableHead>
-              <TableHead className="w-20 text-center">관리</TableHead>
+            <TableRow className="bg-muted/60 border-b-2 border-border hover:bg-muted/60">
+              <TableHead className="text-foreground font-bold">접수 일시</TableHead>
+              <TableHead className="text-foreground font-bold">고객명</TableHead>
+              <TableHead className="text-foreground font-bold">연락처</TableHead>
+              <TableHead className="text-foreground font-bold">현재 통신사</TableHead>
+              <TableHead className="text-foreground font-bold">희망 기종</TableHead>
+              <TableHead className="text-foreground font-bold">희망 상품</TableHead>
+              <TableHead className="text-foreground font-bold">캠페인</TableHead>
+              <TableHead className="text-foreground font-bold w-40">담당자</TableHead>
+              <TableHead className="text-foreground font-bold w-36">상담 상태</TableHead>
+              <TableHead className="text-foreground font-bold">메모</TableHead>
+              <TableHead className="text-foreground font-bold w-20 text-center">관리</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading && (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-10 text-muted-foreground">
+                <TableCell colSpan={11} className="text-center py-10 text-foreground/60">
                   불러오는 중…
                 </TableCell>
               </TableRow>
             )}
             {!loading && filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-10 text-muted-foreground">
+                <TableCell colSpan={11} className="text-center py-10 text-foreground/60">
                   표시할 리드가 없습니다.
                 </TableCell>
               </TableRow>
@@ -376,10 +393,10 @@ export default function LeadsPage() {
             {filtered.map((r) => (
               <TableRow
                 key={r.id}
-                className="cursor-pointer"
+                className="cursor-pointer border-b border-border hover:bg-muted/40"
                 onClick={() => setOpenLead(r)}
               >
-                <TableCell className="tabular-nums text-xs">
+                <TableCell className="tabular-nums text-xs text-foreground font-medium">
                   {new Date(r.created_at).toLocaleString("ko-KR", {
                     month: "2-digit",
                     day: "2-digit",
@@ -387,13 +404,32 @@ export default function LeadsPage() {
                     minute: "2-digit",
                   })}
                 </TableCell>
-                <TableCell className="font-medium">{r.name ?? "-"}</TableCell>
-                <TableCell className="tabular-nums">{r.phone ?? "-"}</TableCell>
-                <TableCell>{r.current_carrier ?? "-"}</TableCell>
-                <TableCell>{r.desired_device ?? "-"}</TableCell>
-                <TableCell>{r.desired_product ?? "-"}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">
+                <TableCell className="font-bold text-foreground">{r.name ?? "-"}</TableCell>
+                <TableCell className="tabular-nums text-foreground font-medium">{r.phone ?? "-"}</TableCell>
+                <TableCell className="text-foreground">{r.current_carrier ?? "-"}</TableCell>
+                <TableCell className="text-foreground">{r.desired_device ?? "-"}</TableCell>
+                <TableCell className="text-foreground">{r.desired_product ?? "-"}</TableCell>
+                <TableCell className="text-xs text-foreground/70">
                   {r.campaign_name ?? "-"}
+                </TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  <Select
+                    value={r.assigned_to ?? "none"}
+                    onValueChange={(v) => updateAssignee(r.id, v === "none" ? null : v)}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="담당자 지정" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">담당자 지정</SelectItem>
+                      {staff.map((s) => (
+                        <SelectItem key={s.user_id} value={s.user_id}>
+                          {s.display_name}
+                          {s.position ? ` · ${s.position}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </TableCell>
                 <TableCell onClick={(e) => e.stopPropagation()}>
                   <Select
@@ -415,13 +451,13 @@ export default function LeadsPage() {
                   </Select>
                 </TableCell>
                 <TableCell
-                  className="max-w-[220px] truncate text-xs text-muted-foreground"
+                  className="max-w-[220px] truncate text-xs text-foreground/80"
                   onClick={(e) => {
                     e.stopPropagation();
                     setOpenLead(r);
                   }}
                 >
-                  {r.memo || <span className="italic">메모 추가…</span>}
+                  {r.memo || <span className="italic text-foreground/40">메모 추가…</span>}
                 </TableCell>
                 <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                   <Button size="sm" variant="ghost" onClick={() => setOpenLead(r)}>
@@ -436,96 +472,119 @@ export default function LeadsPage() {
 
       {/* Detail Sheet */}
       <Sheet open={!!openLead} onOpenChange={(o) => !o && setOpenLead(null)}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
           {openLead && (
             <>
-              <SheetHeader>
-                <SheetTitle className="flex items-center gap-2">
+              {/* Title block */}
+              <SheetHeader className="border-b border-border pb-4">
+                <div className="text-xs font-semibold text-foreground/60">
+                  인입 일시 ·{" "}
+                  {new Date(openLead.created_at).toLocaleString("ko-KR")}
+                </div>
+                <SheetTitle className="text-2xl font-bold text-foreground flex items-center gap-2">
                   {openLead.name ?? "이름 없음"}
                   <Badge className={STATUS_COLOR[openLead.status] ?? ""}>
                     {openLead.status}
                   </Badge>
                 </SheetTitle>
-                <SheetDescription>
-                  {new Date(openLead.created_at).toLocaleString("ko-KR")} 접수
+                <SheetDescription className="sr-only">
+                  잠재고객 상세 정보
                 </SheetDescription>
               </SheetHeader>
 
-              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                <Field label="연락처" value={openLead.phone} />
-                <Field label="현재 통신사" value={openLead.current_carrier} />
-                <Field label="희망 기종" value={openLead.desired_device} />
-                <Field label="희망 상품" value={openLead.desired_product} />
-                <Field label="캠페인" value={openLead.campaign_name} />
-                <Field label="유입 경로" value={openLead.source} />
-              </div>
-
-              <div className="mt-5 space-y-2">
-                <div className="text-xs font-semibold text-muted-foreground">상담 상태</div>
-                <Select
-                  value={openLead.status}
-                  onValueChange={(v) => updateStatus(openLead.id, v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="mt-5 space-y-2">
-                <div className="text-xs font-semibold text-muted-foreground">요약 메모</div>
-                <Textarea
-                  value={memoDraft}
-                  onChange={(e) => setMemoDraft(e.target.value)}
-                  rows={3}
-                />
-                <div className="text-right">
-                  <Button size="sm" onClick={saveMemo}>
-                    메모 저장
-                  </Button>
+              {/* Info grid */}
+              <div className="mt-5 rounded-lg border border-border overflow-hidden">
+                <InfoRow label="고객명" value={openLead.name} right={{ label: "연락처", value: openLead.phone }} />
+                <InfoRow label="현재 통신사" value={openLead.current_carrier} right={{ label: "희망 기종", value: openLead.desired_device }} />
+                <InfoRow label="희망 상품" value={openLead.desired_product} right={{ label: "인입 경로", value: openLead.campaign_name ?? openLead.source }} />
+                <div className="grid grid-cols-2 divide-x divide-border">
+                  <div className="p-3">
+                    <div className="text-[11px] font-semibold text-foreground/60 mb-1">담당자</div>
+                    <Select
+                      value={openLead.assigned_to ?? "none"}
+                      onValueChange={(v) => updateAssignee(openLead.id, v === "none" ? null : v)}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="담당자 지정" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">담당자 지정</SelectItem>
+                        {staff.map((s) => (
+                          <SelectItem key={s.user_id} value={s.user_id}>
+                            {s.display_name}
+                            {s.position ? ` · ${s.position}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="p-3">
+                    <div className="text-[11px] font-semibold text-foreground/60 mb-1">상담 상태</div>
+                    <Select
+                      value={openLead.status}
+                      onValueChange={(v) => updateStatus(openLead.id, v)}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATUS_OPTIONS.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {s}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-5 space-y-2">
-                <div className="text-xs font-semibold text-muted-foreground">
-                  누적 상담 이력
+              {/* Consultation memo feed */}
+              <div className="mt-6">
+                <div className="text-sm font-bold text-foreground mb-2">상담 메모</div>
+
+                <div className="rounded-lg border border-border p-3 bg-muted/30">
+                  <Textarea
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                    placeholder="새로운 상담 내용을 입력하세요"
+                    rows={3}
+                    className="bg-background"
+                  />
+                  <div className="text-right mt-2">
+                    <Button size="sm" onClick={addNote} disabled={!newNote.trim()}>
+                      메모 저장
+                    </Button>
+                  </div>
                 </div>
-                <Textarea
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  placeholder="통화 내용, 다음 액션 등을 기록하세요"
-                  rows={3}
-                />
-                <div className="text-right">
-                  <Button size="sm" onClick={addNote} disabled={!newNote.trim()}>
-                    이력 추가
-                  </Button>
-                </div>
-                <div className="space-y-2 mt-2">
+
+                <div className="mt-4 space-y-3">
+                  <div className="text-xs font-semibold text-foreground/70">
+                    누적 상담 이력 ({notes.length})
+                  </div>
                   {notes.length === 0 && (
-                    <div className="text-xs text-muted-foreground italic">
-                      아직 기록된 이력이 없습니다.
+                    <div className="text-sm text-foreground/50 italic py-4 text-center border border-dashed border-border rounded-lg">
+                      아직 기록된 상담 이력이 없습니다.
                     </div>
                   )}
-                  {notes.map((n) => (
-                    <div
-                      key={n.id}
-                      className="rounded-lg border border-border/40 p-2 text-sm"
-                    >
-                      <div className="text-[11px] text-muted-foreground flex justify-between">
-                        <span>{n.author_name ?? "—"}</span>
-                        <span>{new Date(n.created_at).toLocaleString("ko-KR")}</span>
-                      </div>
-                      <div className="whitespace-pre-wrap mt-1">{n.content}</div>
-                    </div>
-                  ))}
+                  <ol className="relative border-l-2 border-border ml-2 space-y-3">
+                    {notes.map((n) => (
+                      <li key={n.id} className="ml-4">
+                        <div className="absolute -left-[7px] mt-1.5 size-3 rounded-full bg-primary border-2 border-background" />
+                        <div className="rounded-lg border border-border bg-background p-3">
+                          <div className="text-[11px] text-foreground/60 flex justify-between font-medium">
+                            <span className="font-semibold text-foreground">
+                              {n.author_name ?? "—"}
+                            </span>
+                            <span>{new Date(n.created_at).toLocaleString("ko-KR")}</span>
+                          </div>
+                          <div className="whitespace-pre-wrap mt-1.5 text-sm text-foreground">
+                            {n.content}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
                 </div>
               </div>
             </>
@@ -580,8 +639,31 @@ export default function LeadsPage() {
 function Field({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
-      <div className="text-[11px] text-muted-foreground">{label}</div>
-      <div className="font-medium">{value || "-"}</div>
+      <div className="text-[11px] font-semibold text-foreground/60">{label}</div>
+      <div className="font-semibold text-foreground">{value || "-"}</div>
+    </div>
+  );
+}
+
+function InfoRow({
+  label,
+  value,
+  right,
+}: {
+  label: string;
+  value: string | null;
+  right: { label: string; value: string | null };
+}) {
+  return (
+    <div className="grid grid-cols-2 divide-x divide-border border-b border-border last:border-b-0">
+      <div className="p-3">
+        <div className="text-[11px] font-semibold text-foreground/60 mb-0.5">{label}</div>
+        <div className="text-sm font-semibold text-foreground">{value || "-"}</div>
+      </div>
+      <div className="p-3">
+        <div className="text-[11px] font-semibold text-foreground/60 mb-0.5">{right.label}</div>
+        <div className="text-sm font-semibold text-foreground">{right.value || "-"}</div>
+      </div>
     </div>
   );
 }
