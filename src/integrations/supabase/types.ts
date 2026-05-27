@@ -1339,6 +1339,89 @@ export type Database = {
           },
         ]
       }
+      lead_notes: {
+        Row: {
+          author_id: string | null
+          author_name: string | null
+          content: string
+          created_at: string
+          id: string
+          lead_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          author_name?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          lead_id: string
+        }
+        Update: {
+          author_id?: string | null
+          author_name?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          lead_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_notes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          assigned_to: string | null
+          campaign_name: string | null
+          created_at: string
+          current_carrier: string | null
+          desired_device: string | null
+          desired_product: string | null
+          id: string
+          memo: string | null
+          name: string | null
+          phone: string | null
+          source: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          campaign_name?: string | null
+          created_at?: string
+          current_carrier?: string | null
+          desired_device?: string | null
+          desired_product?: string | null
+          id?: string
+          memo?: string | null
+          name?: string | null
+          phone?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          campaign_name?: string | null
+          created_at?: string
+          current_carrier?: string | null
+          desired_device?: string | null
+          desired_product?: string | null
+          id?: string
+          memo?: string | null
+          name?: string | null
+          phone?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       magic_link_tokens: {
         Row: {
           created_at: string
