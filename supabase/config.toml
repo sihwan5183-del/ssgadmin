@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.generate-recurring-expenses]
 verify_jwt = false
+
+[functions.leads-webhook]
+verify_jwt = false
