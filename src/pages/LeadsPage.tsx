@@ -52,6 +52,49 @@ const STATUS_COLOR: Record<string, string> = {
   "취소": "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
 };
 
+const DOGMARU_CAMPAIGN = "도그마루_홈캠";
+
+const LEADS_SELECT = `
+  id,
+  created_at,
+  name,
+  phone,
+  current_carrier,
+  desired_device,
+  desired_product,
+  campaign_name,
+  status,
+  memo,
+  source,
+  assigned_to,
+  registration_date,
+  customer_name,
+  customer_phone,
+  branch_name,
+  activation_status,
+  cancellation_status,
+  activation_number
+`;
+
+const cleanText = (value: unknown) => {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  return value == null ? null : String(value);
+};
+
+const toDogmaruItem = (item: Lead) => ({
+  ...item,
+  registration_date: cleanText(item.registration_date),
+  customer_name: cleanText(item.customer_name),
+  customer_phone: cleanText(item.customer_phone),
+  branch_name: cleanText(item.branch_name),
+  activation_status: cleanText(item.activation_status),
+  cancellation_status: cleanText(item.cancellation_status),
+  activation_number: cleanText(item.activation_number),
+});
+
 type Lead = {
   id: string;
   created_at: string;
@@ -114,7 +157,7 @@ export default function LeadsPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from("leads")
-      .select("*")
+      .select(LEADS_SELECT)
       .order("created_at", { ascending: false })
       .limit(1000);
     if (error) toast.error(error.message);
@@ -181,7 +224,7 @@ export default function LeadsPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
-      const isDogmaru = r.campaign_name === "도그마루_홈캠";
+      const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
       if (sourceTab === "dogmaru" && !isDogmaru) return false;
       if (sourceTab === "meta" && isDogmaru) return false;
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
@@ -199,7 +242,7 @@ export default function LeadsPage() {
     let dogmaru = 0;
     let meta = 0;
     for (const r of rows) {
-      if (r.campaign_name === "도그마루_홈캠") dogmaru++;
+      if (r.campaign_name === DOGMARU_CAMPAIGN) dogmaru++;
       else meta++;
     }
     return { meta, dogmaru };
