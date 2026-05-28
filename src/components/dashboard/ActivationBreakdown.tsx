@@ -4,11 +4,13 @@ import { Smartphone, Sparkles, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { useStrategyConfig } from "@/hooks/useStrategyConfig";
+import { useProductScope, matchProductScope } from "@/contexts/ProductScopeContext";
 
 export const ActivationBreakdown = () => {
   const { startDate, endDate } = usePeriod();
   const { products } = useStrategyConfig();
-  const [rows, setRows] = useState<any[]>([]);
+  const { scope } = useProductScope();
+  const [allRows, setAllRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,11 +24,17 @@ export const ActivationBreakdown = () => {
         .lte("open_date", endDate)
         .limit(10000);
       if (!alive) return;
-      setRows(data ?? []);
+      setAllRows(data ?? []);
       setLoading(false);
     })();
     return () => { alive = false; };
   }, [startDate, endDate]);
+
+  // 상단 6대 카드 ProductScope에 따라 사전 필터링
+  const rows = useMemo(
+    () => allRows.filter((r) => matchProductScope(r.product, scope, { saleType: r.sale_type })),
+    [allRows, scope],
+  );
 
   const mobileStats = useMemo(() => {
     const types = [
