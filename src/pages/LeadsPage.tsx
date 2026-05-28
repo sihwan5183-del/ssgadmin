@@ -231,7 +231,7 @@ export default function LeadsPage() {
       if (productFilter !== "all" && r.desired_product !== productFilter) return false;
       if (carrierFilter !== "all" && r.current_carrier !== carrierFilter) return false;
       if (q) {
-        const hay = `${r.name ?? ""} ${r.phone ?? ""} ${r.campaign_name ?? ""} ${r.desired_device ?? ""}`.toLowerCase();
+        const hay = `${r.name ?? ""} ${r.phone ?? ""} ${r.campaign_name ?? ""} ${r.desired_device ?? ""} ${r.registration_date ?? ""} ${r.customer_name ?? ""} ${r.customer_phone ?? ""} ${r.branch_name ?? ""} ${r.activation_status ?? ""} ${r.cancellation_status ?? ""} ${r.activation_number ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -490,26 +490,27 @@ export default function LeadsPage() {
                 </TableRow>
               )}
               {filtered.map((r) => {
-                const isCancelled = !!r.cancellation_status && r.cancellation_status.trim() !== "";
-                const isActivated = (r.activation_status ?? "").includes("개통완료");
+                const item = toDogmaruItem(r);
+                const isCancelled = !!item.cancellation_status;
+                const isActivated = (item.activation_status ?? "").includes("개통완료");
                 return (
                   <TableRow
-                    key={r.id}
+                    key={item.id}
                     className="cursor-pointer border-b border-border hover:bg-muted/40"
-                    onClick={() => setOpenLead(r)}
+                    onClick={() => setOpenLead(item)}
                   >
                     <TableCell className="tabular-nums text-foreground font-medium">
-                      {r.registration_date ?? "-"}
+                      {item.registration_date ?? "-"}
                     </TableCell>
                     <TableCell className="font-bold text-foreground">
-                      {r.customer_name ?? r.name ?? "-"}
+                      {item.customer_name ?? "-"}
                     </TableCell>
                     <TableCell className="tabular-nums text-foreground font-medium">
-                      {r.customer_phone ?? r.phone ?? "-"}
+                      {item.customer_phone ?? "-"}
                     </TableCell>
-                    <TableCell className="text-foreground">{r.branch_name ?? "-"}</TableCell>
+                    <TableCell className="text-foreground">{item.branch_name ?? "-"}</TableCell>
                     <TableCell>
-                      {r.activation_status ? (
+                      {item.activation_status ? (
                         <Badge
                           className={
                             isActivated
@@ -517,7 +518,7 @@ export default function LeadsPage() {
                               : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
                           }
                         >
-                          {r.activation_status}
+                          {item.activation_status}
                         </Badge>
                       ) : (
                         <span className="text-foreground/40">-</span>
@@ -526,17 +527,17 @@ export default function LeadsPage() {
                     <TableCell>
                       {isCancelled ? (
                         <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
-                          {r.cancellation_status}
+                          {item.cancellation_status}
                         </Badge>
                       ) : (
                         <span className="text-foreground/40">-</span>
                       )}
                     </TableCell>
                     <TableCell className="tabular-nums text-foreground/80">
-                      {r.activation_number ?? "-"}
+                      {item.activation_number ?? "-"}
                     </TableCell>
                     <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                      <Button size="sm" variant="ghost" onClick={() => setOpenLead(r)}>
+                      <Button size="sm" variant="ghost" onClick={() => setOpenLead(item)}>
                         상세
                       </Button>
                     </TableCell>
