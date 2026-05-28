@@ -29,6 +29,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserCheck, PhoneCall, CheckCircle2, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 
