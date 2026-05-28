@@ -278,14 +278,14 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
                     onCheckedChange={(v) => bulk.togglePage(!!v)}
                   />
                 </TableHead>
-                <TableHead className="w-[88px] align-middle">날짜</TableHead>
-                <TableHead className="w-[72px] align-middle">채널</TableHead>
-                <TableHead className="w-[200px] align-middle">고객명</TableHead>
-                <TableHead className="w-[136px] align-middle whitespace-nowrap">연락처</TableHead>
-                <TableHead className="align-middle">상담 히스토리</TableHead>
-                <TableHead className="w-[88px] align-middle">담당자</TableHead>
-                <TableHead className="w-[120px] align-middle">상태</TableHead>
-                <TableHead className="w-[120px] text-right align-middle">액션</TableHead>
+                <TableHead className="w-[80px] align-middle">날짜</TableHead>
+                <TableHead className="w-[64px] align-middle">채널</TableHead>
+                <TableHead className="w-[120px] align-middle">고객명</TableHead>
+                <TableHead className="w-[124px] align-middle whitespace-nowrap">연락처</TableHead>
+                <TableHead className="min-w-[440px] align-middle">상담 히스토리</TableHead>
+                <TableHead className="w-[72px] align-middle">담당자</TableHead>
+                <TableHead className="w-[112px] align-middle">상태</TableHead>
+                <TableHead className="w-[110px] text-right align-middle">액션</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -313,13 +313,13 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
                   <TableCell className="text-xs tabular-nums whitespace-nowrap align-middle">
                     {r.phone ?? <span className="text-muted-foreground/50">-</span>}
                   </TableCell>
-                  <TableCell className="text-xs max-w-xs truncate align-middle" title={r.content ?? ""}>
+                  <TableCell className="text-xs min-w-[440px] whitespace-normal break-words leading-relaxed align-middle" title={r.content ?? ""}>
                     {latestMemos[r.id] ? (
-                      <span title={latestMemos[r.id].content} className="block truncate text-foreground/90">
+                      <span title={latestMemos[r.id].content} className="block text-foreground/90">
                         {latestMemos[r.id].content}
                       </span>
                     ) : r.content ? (
-                      <span title={r.content} className="block truncate text-muted-foreground/70">
+                      <span title={r.content} className="block text-muted-foreground/70">
                         {r.content}
                       </span>
                     ) : (
@@ -327,7 +327,7 @@ export const InquiryList = ({ rows, loading, onChange }: Props) => {
                     )}
                   </TableCell>
                   <TableCell className="text-xs whitespace-nowrap align-middle">
-                    {r.manager ?? <span className="text-muted-foreground/50">-</span>}
+                    {r.manager ? r.manager.split(" · ")[0].split(/[·•]/)[0].trim() : <span className="text-muted-foreground/50">-</span>}
                   </TableCell>
                   <TableCell className="align-middle">
                     <span
