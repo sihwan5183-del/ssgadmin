@@ -892,16 +892,26 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                     ? "전체 요금제 (매핑 미설정)"
                     : "선택";
                 return (
-                  <Select value={form.rate_plan ?? ""} onValueChange={(v) => set("rate_plan", v)}>
-                    <SelectTrigger className="h-9 bg-input/60 text-xs">
-                      <SelectValue placeholder={placeholder} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {plans.map((p) => (
-                        <SelectItem key={p} value={p}>{p}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <>
+                    <Select value={form.rate_plan ?? ""} onValueChange={(v) => set("rate_plan", v)} disabled={!form.product}>
+                      <SelectTrigger className={cn(
+                        "h-9 bg-input/60 text-xs border-border/60 hover:border-border",
+                        requiredErrors.rate_plan && "border-destructive focus-visible:ring-destructive/40",
+                      )}>
+                        <SelectValue placeholder={placeholder} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {plans.map((p) => (
+                          <SelectItem key={p} value={p}>{p}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {requiredErrors.rate_plan && form.product && (
+                      <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
+                        <AlertTriangle className="size-3" /> {requiredErrors.rate_plan}
+                      </p>
+                    )}
+                  </>
                 );
               })()}
               </Field>
@@ -1039,13 +1049,16 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                     </Field>
                   </div>
                   <div className="col-span-12 md:col-span-4">
-                    <Field label="부가서비스 2 (선택)">
-                      <Input
-                        value={form.vas2 ?? ""}
-                        onChange={(e) => set("vas2", e.target.value || null)}
-                        placeholder="여러 개는 쉼표(,)로 구분"
-                        className="h-9 bg-input/60 text-xs"
-                        maxLength={200}
+                    <Field label="부가서비스 2 (다중 선택)">
+                      <MultiSelectChips
+                        options={addonMaster}
+                        value={(form.vas2 ?? "")
+                          .split(/[,，]\s*/)
+                          .map((s) => s.trim())
+                          .filter(Boolean)}
+                        onChange={(next) => set("vas2", next.length > 0 ? next.join(", ") : null)}
+                        placeholder="마스터에서 선택…"
+                        emptyHint="어드민 [부가서비스 유지기간]에서 등록하세요"
                       />
                     </Field>
                   </div>
