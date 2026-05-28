@@ -589,14 +589,7 @@ const SalesLedgerPage = () => {
 
   const filteredRows = useMemo(() => {
     const q = debouncedSearchQ.trim().toLowerCase().replace(/\s+/g, "");
-    let result = rows;
-    if (quickFilter === "unpaid") {
-      result = result.filter((r) => (r.receivable_amount ?? 0) > 0 && r.receivable_paid !== "완료");
-    } else if (quickFilter === "unreturned") {
-      result = result.filter((r) => r.voucher && r.voucher.trim() !== "" && r.voucher_returned !== "유");
-    }
-    if (bundleFilter) result = result.filter((r) => r.bundle === "Y");
-    if (noOfferFilter) result = result.filter((r) => (r.custom_fields as any)?.has_offer === false);
+    const result = rows;
     if (!q) return result;
     const qDigits = q.replace(/[^0-9]/g, "");
     return result.filter((r) => {
@@ -609,7 +602,7 @@ const SalesLedgerPage = () => {
       if (qDigits && phone.includes(qDigits)) return true;
       return false;
     });
-  }, [rows, debouncedSearchQ, quickFilter, bundleFilter, noOfferFilter]);
+  }, [rows, debouncedSearchQ]);
 
   const allSelected = filteredRows.length > 0 && filteredRows.every((r) => selected.has(r.id));
   const toggleAll = () => {
@@ -639,29 +632,22 @@ const SalesLedgerPage = () => {
         `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
         `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
       );
-    if (statusFilter.length > 0) {
-      q = q.in("status", statusFilter);
+    if (colFilters.status.length > 0) q = q.in("status", colFilters.status);
+    if (colFilters.channel.length > 0) q = q.in("channel", colFilters.channel);
+    if (colFilters.product.length > 0) q = q.in("product", colFilters.product);
+    if (colFilters.sale_type.length > 0) q = q.in("sale_type", colFilters.sale_type);
+    if (colFilters.manager.length > 0) {
+      const realVals = managerValues ?? colFilters.manager.filter((v) => v !== "__none__");
+      if (realVals.length > 0) q = q.in("manager", realVals);
+      else if (colFilters.manager.includes("__none__")) q = q.or("manager.is.null,manager.eq.");
     }
-    if (managerFilter !== "all") q = q.eq("manager", managerFilter);
-    if (storeFilter !== "all") q = q.eq("channel", storeFilter);
-    if (productFilter !== "all") q = q.eq("product", productFilter);
-    if (returnFilter === "returned") q = q.eq("voucher_returned", "유");
-    else if (returnFilter === "unreturned") q = q.not("voucher", "is", null).neq("voucher", "").neq("voucher_returned", "유");
-    if (inspectionFilter === "inspected") q = q.eq("approval_status", "확정");
-    else if (inspectionFilter === "uninspected") q = q.neq("approval_status", "확정");
-    if (moyoFilter === "applied") q = q.eq("channel", "모요").eq("product", "모바일").or("moyo_excluded.is.null,moyo_excluded.eq.false");
-    else if (moyoFilter === "excluded") q = q.eq("channel", "모요").eq("product", "모바일").eq("moyo_excluded", true);
     const { data, error } = await q.order("open_date", { ascending: false, nullsFirst: false });
     if (error) return toast.error("엑셀 내보내기 실패", { description: error.message });
     let sales = (data ?? []) as any[];
-    // 클라이언트 측 보조 필터 (퀵필터/번들/노오퍼/검색어)
+    // 클라이언트 측 검색어 보조 필터
     const sq = debouncedSearchQ.trim().toLowerCase();
     const sqDigits = sq.replace(/[^0-9]/g, "");
     sales = sales.filter((r: any) => {
-      if (quickFilter === "unpaid" && !((r.receivable_amount ?? 0) > 0 && r.receivable_paid !== "완료")) return false;
-      if (quickFilter === "unreturned" && !(r.voucher && String(r.voucher).trim() !== "" && r.voucher_returned !== "유")) return false;
-      if (bundleFilter && r.bundle !== "Y") return false;
-      if (noOfferFilter && (r.custom_fields as any)?.has_offer !== false) return false;
       if (sq) {
         const name = (r.customer_name ?? "").toLowerCase();
         const phone = (r.phone ?? "").replace(/[^0-9]/g, "");
