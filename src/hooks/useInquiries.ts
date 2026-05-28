@@ -19,6 +19,7 @@ export interface Inquiry {
   created_by: string;
   created_at: string;
   updated_at: string;
+  campaign_name?: string | null;
 }
 
 interface Range {
