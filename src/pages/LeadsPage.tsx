@@ -164,6 +164,7 @@ export default function LeadsPage() {
   const [memoDraft, setMemoDraft] = useState("");
 
   const [showCreate, setShowCreate] = useState(false);
+  const [intakeFormOpen, setIntakeFormOpen] = useState(false);
   const [draft, setDraft] = useState<LeadDraft>({
     name: "",
     phone: "",
@@ -376,9 +377,15 @@ export default function LeadsPage() {
             메타 광고 등 외부 인입 리드를 통합 관리합니다.
           </p>
         </div>
-        <Button onClick={() => setShowCreate(true)}>
-          <Plus className="size-4 mr-1" /> 리드 추가
-        </Button>
+        {sourceTab === "other" ? (
+          <Button onClick={() => setIntakeFormOpen(true)}>
+            <Plus className="size-4 mr-1" /> 인입 등록
+          </Button>
+        ) : (
+          <Button onClick={() => setShowCreate(true)}>
+            <Plus className="size-4 mr-1" /> 리드 추가
+          </Button>
+        )}
       </div>
 
       {/* Stat cards */}
