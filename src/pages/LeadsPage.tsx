@@ -65,6 +65,14 @@ type Lead = {
   memo: string | null;
   source: string | null;
   assigned_to: string | null;
+  // 도그마루 시트 연동 필드
+  registration_date: string | null;
+  customer_name: string | null;
+  customer_phone: string | null;
+  branch_name: string | null;
+  activation_status: string | null;
+  cancellation_status: string | null;
+  activation_number: string | null;
 };
 
 type LeadNote = {
@@ -409,6 +417,92 @@ export default function LeadsPage() {
         </TabsList>
       </Tabs>
       <Card key={sourceTab} className="overflow-hidden border-border animate-fade-in">
+        {sourceTab === "dogmaru" ? (
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/60 border-b-2 border-border hover:bg-muted/60">
+                <TableHead className="text-foreground font-bold">접수 일자</TableHead>
+                <TableHead className="text-foreground font-bold">고객 성명</TableHead>
+                <TableHead className="text-foreground font-bold">연락처</TableHead>
+                <TableHead className="text-foreground font-bold">접수 지점명</TableHead>
+                <TableHead className="text-foreground font-bold">개통 상태</TableHead>
+                <TableHead className="text-foreground font-bold">해지 및 철회</TableHead>
+                <TableHead className="text-foreground font-bold">가입번호</TableHead>
+                <TableHead className="text-foreground font-bold w-20 text-center">관리</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading && (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-10 text-foreground/60">
+                    불러오는 중…
+                  </TableCell>
+                </TableRow>
+              )}
+              {!loading && filtered.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-10 text-foreground/60">
+                    도그마루 시트에서 인입된 데이터가 없습니다.
+                  </TableCell>
+                </TableRow>
+              )}
+              {filtered.map((r) => {
+                const isCancelled = !!r.cancellation_status && r.cancellation_status.trim() !== "";
+                const isActivated = (r.activation_status ?? "").includes("개통완료");
+                return (
+                  <TableRow
+                    key={r.id}
+                    className="cursor-pointer border-b border-border hover:bg-muted/40"
+                    onClick={() => setOpenLead(r)}
+                  >
+                    <TableCell className="tabular-nums text-foreground font-medium">
+                      {r.registration_date ?? "-"}
+                    </TableCell>
+                    <TableCell className="font-bold text-foreground">
+                      {r.customer_name ?? r.name ?? "-"}
+                    </TableCell>
+                    <TableCell className="tabular-nums text-foreground font-medium">
+                      {r.customer_phone ?? r.phone ?? "-"}
+                    </TableCell>
+                    <TableCell className="text-foreground">{r.branch_name ?? "-"}</TableCell>
+                    <TableCell>
+                      {r.activation_status ? (
+                        <Badge
+                          className={
+                            isActivated
+                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                              : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                          }
+                        >
+                          {r.activation_status}
+                        </Badge>
+                      ) : (
+                        <span className="text-foreground/40">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {isCancelled ? (
+                        <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
+                          {r.cancellation_status}
+                        </Badge>
+                      ) : (
+                        <span className="text-foreground/40">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="tabular-nums text-foreground/80">
+                      {r.activation_number ?? "-"}
+                    </TableCell>
+                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                      <Button size="sm" variant="ghost" onClick={() => setOpenLead(r)}>
+                        상세
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        ) : (
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/60 border-b-2 border-border hover:bg-muted/60">
@@ -518,6 +612,7 @@ export default function LeadsPage() {
             ))}
           </TableBody>
         </Table>
+        )}
       </Card>
 
       {/* Detail Sheet */}

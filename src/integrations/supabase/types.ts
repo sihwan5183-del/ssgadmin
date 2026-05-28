@@ -1379,46 +1379,67 @@ export type Database = {
       }
       leads: {
         Row: {
+          activation_number: string | null
+          activation_status: string | null
           assigned_to: string | null
+          branch_name: string | null
           campaign_name: string | null
+          cancellation_status: string | null
           created_at: string
           current_carrier: string | null
+          customer_name: string | null
+          customer_phone: string | null
           desired_device: string | null
           desired_product: string | null
           id: string
           memo: string | null
           name: string | null
           phone: string | null
+          registration_date: string | null
           source: string | null
           status: string
           updated_at: string
         }
         Insert: {
+          activation_number?: string | null
+          activation_status?: string | null
           assigned_to?: string | null
+          branch_name?: string | null
           campaign_name?: string | null
+          cancellation_status?: string | null
           created_at?: string
           current_carrier?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
           desired_device?: string | null
           desired_product?: string | null
           id?: string
           memo?: string | null
           name?: string | null
           phone?: string | null
+          registration_date?: string | null
           source?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
+          activation_number?: string | null
+          activation_status?: string | null
           assigned_to?: string | null
+          branch_name?: string | null
           campaign_name?: string | null
+          cancellation_status?: string | null
           created_at?: string
           current_carrier?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
           desired_device?: string | null
           desired_product?: string | null
           id?: string
           memo?: string | null
           name?: string | null
           phone?: string | null
+          registration_date?: string | null
           source?: string | null
           status?: string
           updated_at?: string
