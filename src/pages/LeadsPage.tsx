@@ -36,9 +36,9 @@ import ChannelIntakePage from "@/pages/ChannelIntakePage";
 
 const STATUS_OPTIONS = [
   "신규 접수",
-  "통화 중",
+  "케어중",
   "부재 중",
-  "보류",
+  "재케어",
   "개통 완료",
   "취소",
 ] as const;
@@ -47,9 +47,9 @@ type Status = (typeof STATUS_OPTIONS)[number];
 // 파스텔 배경 제거: 흰 배경 + 진한 텍스트/테두리로 명도 대비 확보
 const STATUS_COLOR: Record<string, string> = {
   "신규 접수": "bg-background text-red-700 border border-red-600 font-bold dark:text-red-300 dark:border-red-400",
-  "통화 중": "bg-background text-blue-700 border border-blue-600 font-bold dark:text-blue-300 dark:border-blue-400",
+  "케어중": "bg-background text-blue-700 border border-blue-600 font-bold dark:text-blue-300 dark:border-blue-400",
   "부재 중": "bg-background text-orange-700 border border-orange-600 font-bold dark:text-orange-300 dark:border-orange-400",
-  "보류": "bg-background text-zinc-700 border border-zinc-500 font-bold dark:text-zinc-200 dark:border-zinc-400",
+  "재케어": "bg-background text-zinc-700 border border-zinc-500 font-bold dark:text-zinc-200 dark:border-zinc-400",
   "개통 완료": "bg-background text-emerald-700 border border-emerald-600 font-bold dark:text-emerald-300 dark:border-emerald-400",
   "취소": "bg-background text-rose-700 border border-rose-600 font-bold dark:text-rose-300 dark:border-rose-400",
 };
