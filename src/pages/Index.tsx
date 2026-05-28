@@ -26,6 +26,8 @@ import { TodayCareWidget } from "@/components/dashboard/TodayCareWidget";
 import { UntreatedLeadsCard } from "@/components/dashboard/UntreatedLeadsCard";
 import { MyIncentiveWidget } from "@/components/dashboard/MyIncentiveWidget";
 import { UnifiedCalendarWidget } from "@/components/dashboard/UnifiedCalendarWidget";
+import { TopProductScoreboard } from "@/components/dashboard/TopProductScoreboard";
+import { ProductScopeProvider } from "@/contexts/ProductScopeContext";
 import { formatShortKRW } from "@/data/mockData";
 import { TrendingUp, TrendingDown, Sparkles, Target } from "lucide-react";
 import { useBudgetCategories } from "@/hooks/useBudgetCategories";
@@ -98,6 +100,14 @@ const ScopeBigToggle = () => {
 };
 
 const Index = () => {
+  return (
+    <ProductScopeProvider>
+      <IndexInner />
+    </ProductScopeProvider>
+  );
+};
+
+const IndexInner = () => {
   const finance = useFinanceData();
   const { excludedLabels } = useBudgetCategories();
   const { isAdmin } = useRole();
