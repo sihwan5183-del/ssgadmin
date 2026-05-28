@@ -1207,7 +1207,16 @@ const SalesLedgerPage = () => {
                     </td>
                     <td className="text-center text-foreground/90 tabular-nums text-[11px] font-mono tracking-tight">
                       {(() => {
-                        const an = ((r as any).activation_number ?? "").toString().trim();
+                        const cf = (r as any).custom_fields ?? {};
+                        const an = (
+                          cf.subscription_no ??
+                          cf.activation_number ??
+                          cf.가입번호 ??
+                          (r as any).activation_number ??
+                          ""
+                        )
+                          .toString()
+                          .trim();
                         if (!an) return <span className="text-muted-foreground/50">-</span>;
                         return <span>{an}</span>;
                       })()}
