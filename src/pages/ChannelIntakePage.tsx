@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -207,7 +208,20 @@ function TimelineDialog({
 }
 
 // ── Main Page ──
-const ChannelIntakePage = ({ embedded = false }: { embedded?: boolean } = {}) => {
+interface ChannelIntakePageProps {
+  embedded?: boolean;
+  formOpen?: boolean;
+  onFormOpenChange?: (open: boolean) => void;
+}
+
+const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: ChannelIntakePageProps = {}) => {
+  // 내부 형태로도 동작하도록 controlled/uncontrolled 동시 지원
+  const [internalFormOpen, setInternalFormOpen] = useState(false);
+  const isFormOpen = formOpen !== undefined ? formOpen : internalFormOpen;
+  const setFormOpen = (v: boolean) => {
+    if (onFormOpenChange) onFormOpenChange(v);
+    else setInternalFormOpen(v);
+  };
   const { startDate, endDate } = usePeriod();
   const { user } = useAuth();
   const { statuses: CRM_STATUSES, refresh: refreshStatuses } = useInquiryStatuses();
@@ -637,8 +651,30 @@ const ChannelIntakePage = ({ embedded = false }: { embedded?: boolean } = {}) =>
           </div>
         </div>
 
-        {/* Input form (collapsible) */}
-        <InquiryForm onSaved={refresh} />
+        {/* Input form — hidden by default; opens as a right-side drawer when triggered */}
+        {!embedded && (
+          <div className="flex justify-end">
+            <Button size="sm" className="h-9 gap-1.5" onClick={() => setFormOpen(true)}>
+              <Plus className="size-3.5" /> 인입 등록
+            </Button>
+          </div>
+        )}
+        <Sheet open={isFormOpen} onOpenChange={setFormOpen}>
+          <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>인입 등록</SheetTitle>
+              <SheetDescription>고객 정보와 상담 기기 정보를 입력하세요. 저장하면 자동으로 닫힙니다.</SheetDescription>
+            </SheetHeader>
+            <div className="mt-4">
+              <InquiryForm
+                onSaved={() => {
+                  refresh();
+                  setFormOpen(false);
+                }}
+              />
+            </div>
+          </SheetContent>
+        </Sheet>
 
         {/* List */}
         <Card className="glass border-border/40 overflow-hidden">
