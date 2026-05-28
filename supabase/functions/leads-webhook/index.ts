@@ -49,17 +49,29 @@ Deno.serve(async (req) => {
     return v == null ? null : String(v)
   }
 
+  const normalizeKey = (key: string) =>
+    key.toLowerCase().replace(/[\s_\-().:[\]{}]/g, '')
+
   const pick = (...keys: string[]) => {
-    const sources = [body, body?.data, body?.record, body?.fields, body?.values]
+    const sources = [body, body?.data, body?.record, body?.fields, body?.values, body?.payload]
+    const normalizedKeys = keys.map(normalizeKey)
     for (const source of sources) {
       if (!source || typeof source !== 'object') continue
       for (const key of keys) {
-        const value = str(source[key])
+        const value = str((source as Record<string, unknown>)[key])
         if (value) return value
+      }
+      for (const [sourceKey, sourceValue] of Object.entries(source as Record<string, unknown>)) {
+        if (normalizedKeys.includes(normalizeKey(sourceKey))) {
+          const value = str(sourceValue)
+          if (value) return value
+        }
       }
     }
     return null
   }
+
+  const campaignName = pick('campaign_name', 'campaign name', '캠페인명')
 
   const row = {
     name: pick('name', 'customer_name', '고객 성명', '성명'),
@@ -67,7 +79,7 @@ Deno.serve(async (req) => {
     current_carrier: pick('current_carrier'),
     desired_device: pick('desired_device'),
     desired_product: pick('desired_product'),
-    campaign_name: pick('campaign_name') ?? '도그마루_홈캠',
+    campaign_name: campaignName,
     memo: pick('memo') ?? null,
     status: '신규 접수',
     source: pick('source') ?? 'webhook',
