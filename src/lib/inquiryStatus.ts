@@ -21,26 +21,21 @@ const STYLE_ALIASES: Record<string, string> = {
 };
 
 const STYLES: Record<string, string> = {
-  상담전:
-    "bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-900/40 dark:text-orange-300 dark:border-orange-600",
-  상담중:
-    "bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/30",
-  부재:
-    "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30",
-  재케어:
-    "bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/30",
-  방문예약:
-    "bg-violet-100 text-violet-700 border-violet-300 dark:bg-violet-500/20 dark:text-violet-300 dark:border-violet-500/30",
-  택배발송:
-    "bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-500/20 dark:text-indigo-300 dark:border-indigo-500/30",
-  실패:
-    "bg-red-100 text-red-700 border-red-300 dark:bg-destructive/20 dark:text-destructive dark:border-destructive/30",
-  개통완료:
-    "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30",
+  // 파스텔 전면 폐기 — 흰 배경 + 진한 텍스트/보더로 통일 (메타/도그마루/기타 동일 규격)
+  상담전:    "bg-background text-red-700 border border-red-600 font-bold dark:text-red-300 dark:border-red-400",
+  미처리:    "bg-background text-red-700 border border-red-600 font-bold dark:text-red-300 dark:border-red-400",
+  상담중:    "bg-background text-blue-700 border border-blue-600 font-bold dark:text-blue-300 dark:border-blue-400",
+  케어중:    "bg-background text-blue-700 border border-blue-600 font-bold dark:text-blue-300 dark:border-blue-400",
+  부재:      "bg-background text-orange-700 border border-orange-600 font-bold dark:text-orange-300 dark:border-orange-400",
+  재케어:    "bg-background text-violet-700 border border-violet-600 font-bold dark:text-violet-300 dark:border-violet-400",
+  방문예약:  "bg-background text-indigo-700 border border-indigo-600 font-bold dark:text-indigo-300 dark:border-indigo-400",
+  택배발송:  "bg-background text-indigo-700 border border-indigo-600 font-bold dark:text-indigo-300 dark:border-indigo-400",
+  실패:      "bg-background text-rose-700 border border-rose-600 font-bold dark:text-rose-300 dark:border-rose-400",
+  개통완료:  "bg-background text-emerald-700 border border-emerald-600 font-bold dark:text-emerald-300 dark:border-emerald-400",
 };
 
 const FALLBACK_STYLE =
-  "bg-muted text-muted-foreground border-border/60";
+  "bg-background text-foreground border border-border font-semibold";
 
 export const inquiryStatusClass = (status: string | null | undefined): string => {
   if (!status) return FALLBACK_STYLE;
@@ -72,17 +67,20 @@ export const inquiryStatusSoftClass = (status: string | null | undefined): strin
 // 시인성 강화용 솔리드 배지: 진한 배경 + 흰색 글자.
 // 리스트의 [최종상태] 컬럼처럼 한눈에 구분이 필요한 곳에서 사용.
 const SOLID_STYLES: Record<string, string> = {
-  상담전: "bg-orange-500 text-white border-orange-600",
-  상담중: "bg-sky-600 text-white border-sky-700",
-  부재: "bg-amber-500 text-white border-amber-600",
-  재케어: "bg-blue-600 text-white border-blue-700",
-  방문예약: "bg-violet-600 text-white border-violet-700",
-  택배발송: "bg-indigo-600 text-white border-indigo-700",
-  실패: "bg-red-600 text-white border-red-700",
-  개통완료: "bg-emerald-600 text-white border-emerald-700",
+  // 솔리드 변형도 메타 탭과 동일하게 흰 배경 + 진한 텍스트/보더로 통일
+  상담전:    "bg-background text-red-700 border-red-600 font-bold dark:text-red-300 dark:border-red-400",
+  미처리:    "bg-background text-red-700 border-red-600 font-bold dark:text-red-300 dark:border-red-400",
+  상담중:    "bg-background text-blue-700 border-blue-600 font-bold dark:text-blue-300 dark:border-blue-400",
+  케어중:    "bg-background text-blue-700 border-blue-600 font-bold dark:text-blue-300 dark:border-blue-400",
+  부재:      "bg-background text-orange-700 border-orange-600 font-bold dark:text-orange-300 dark:border-orange-400",
+  재케어:    "bg-background text-violet-700 border-violet-600 font-bold dark:text-violet-300 dark:border-violet-400",
+  방문예약:  "bg-background text-indigo-700 border-indigo-600 font-bold dark:text-indigo-300 dark:border-indigo-400",
+  택배발송:  "bg-background text-indigo-700 border-indigo-600 font-bold dark:text-indigo-300 dark:border-indigo-400",
+  실패:      "bg-background text-rose-700 border-rose-600 font-bold dark:text-rose-300 dark:border-rose-400",
+  개통완료:  "bg-background text-emerald-700 border-emerald-600 font-bold dark:text-emerald-300 dark:border-emerald-400",
 };
 
-const SOLID_FALLBACK = "bg-slate-500 text-white border-slate-600";
+const SOLID_FALLBACK = "bg-background text-foreground border-border font-semibold";
 
 export const inquiryStatusSolidClass = (status: string | null | undefined): string => {
   if (!status) return SOLID_FALLBACK;
