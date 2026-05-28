@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -17,7 +18,7 @@ import {
 import {
   Download, Search, Trash2, Pencil, ShieldAlert, Hash,
   Wallet as WalletIcon, Gift, TrendingUp, Banknote, FileText,
-  AlertTriangle, Filter, X, Loader2, ChevronDown, ChevronUp, CheckCircle2, Ban,
+  AlertTriangle, Filter, X, Loader2, ChevronDown, ChevronUp, CheckCircle2, Ban, ListFilter,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -40,6 +41,67 @@ import { calcDashboardProfit } from "@/lib/profit";
 import { useDashboardStaff } from "@/hooks/useDashboardStaff";
 
 const PAGE_SIZE = 25;
+
+// ============= 엑셀형 컬럼 필터 (체크박스 다중선택) =============
+function ColumnFilter({
+  label, options, selected, onChange,
+}: {
+  label: string;
+  options: string[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const active = selected.length > 0;
+  const filtered = useMemo(
+    () => options.filter((o) => o.toLowerCase().includes(q.toLowerCase())),
+    [options, q],
+  );
+  const toggle = (v: string) => {
+    onChange(selected.includes(v) ? selected.filter((x) => x !== v) : [...selected, v]);
+  };
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`${label} 필터`}
+          className={cn(
+            "ml-1 inline-flex items-center justify-center size-4 rounded transition-colors",
+            active ? "text-primary bg-primary/15" : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/60",
+          )}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <ChevronDown className="size-3" strokeWidth={2.5} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-60 p-2" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-semibold">{label} 필터</span>
+          {active && (
+            <button onClick={() => onChange([])} className="text-[10px] text-muted-foreground hover:text-foreground">초기화</button>
+          )}
+        </div>
+        <Input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="검색…"
+          className="h-7 text-xs mb-2"
+        />
+        <div className="max-h-56 overflow-y-auto space-y-0.5">
+          {filtered.length === 0 && <div className="text-[11px] text-muted-foreground py-2 text-center">항목 없음</div>}
+          {filtered.map((o) => (
+            <label key={o} className="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-muted/60 cursor-pointer text-xs">
+              <Checkbox checked={selected.includes(o)} onCheckedChange={() => toggle(o)} />
+              <span className="truncate">{o || "(빈값)"}</span>
+            </label>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 function useAnimatedNumber(target: number, duration = 400) {
   const [display, setDisplay] = useState(target);
@@ -127,6 +189,7 @@ const SalesLedgerPage = () => {
   const { startDate, endDate, label: periodLabel, setMode, setYear, setMonth } = usePeriod();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const quickExport = useQuickExport();
   const resignedIds = useResignedUsers();
   const { staff: dashboardStaff, isDashboardStaff } = useDashboardStaff();
@@ -134,28 +197,31 @@ const SalesLedgerPage = () => {
   const [rows, setRows] = useState<SaleRow[]>([]);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
-  const [searchQ, setSearchQ] = useState("");
-  const [debouncedSearchQ, setDebouncedSearchQ] = useState("");
+  const [searchQ, setSearchQ] = useState(() => searchParams.get("q") ?? "");
+  const [debouncedSearchQ, setDebouncedSearchQ] = useState(() => searchParams.get("q") ?? "");
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
-  const [quickFilter, setQuickFilter] = useState<"unpaid" | "unreturned" | null>(null);
-  const [bundleFilter, setBundleFilter] = useState(false);
-  const [noOfferFilter, setNoOfferFilter] = useState(false);
-  const [managerFilter, setManagerFilter] = useState<string>("all");
-  const [storeFilter, setStoreFilter] = useState<string>("all");
-  const [productFilter, setProductFilter] = useState<string>("all");
-  const [saleTypeFilter, setSaleTypeFilter] = useState<"all" | "신규" | "MNP" | "기변">("all");
-  // 대시보드 딥링크 전용 오버라이드 — 사용자가 직접 product/saleType 필터를 바꾸면 해제
-  const [productsOverride, setProductsOverride] = useState<string[] | null>(null);
-  const [saleTypeOverride, setSaleTypeOverride] = useState<string | null>(null);
-  // 반납/검수 필터
-  // returnFilter: all | returned(반납완료) | unreturned(미반납)
-  // inspectionFilter: all | inspected(검수완료=확정) | uninspected(미검수)
-  const [returnFilter, setReturnFilter] = useState<"all" | "returned" | "unreturned">("all");
-  const [inspectionFilter, setInspectionFilter] = useState<"all" | "inspected" | "uninspected">("all");
-  // 모요 적용 구분: all | applied(모요+토글OFF) | excluded(모요+토글ON)
-  const [moyoFilter, setMoyoFilter] = useState<"all" | "applied" | "excluded">("all");
+
+  // === 엑셀형 컬럼 필터 (체크박스 다중 선택) ===
+  type ColKey = "channel" | "status" | "manager" | "product" | "sale_type";
+  const COL_KEYS: ColKey[] = ["channel", "status", "manager", "product", "sale_type"];
+  const readColFromUrl = (k: ColKey): string[] => {
+    const v = searchParams.get(`f_${k}`);
+    if (!v) return [];
+    return v.split("||").filter(Boolean);
+  };
+  const [colFilters, setColFilters] = useState<Record<ColKey, string[]>>(() => ({
+    channel: readColFromUrl("channel"),
+    status: readColFromUrl("status"),
+    manager: readColFromUrl("manager"),
+    product: readColFromUrl("product"),
+    sale_type: readColFromUrl("sale_type"),
+  }));
+  const setColFilter = (k: ColKey, vals: string[]) =>
+    setColFilters((prev) => ({ ...prev, [k]: vals }));
+  const clearColFilter = (k: ColKey) => setColFilter(k, []);
+  const clearAllColFilters = () =>
+    setColFilters({ channel: [], status: [], manager: [], product: [], sale_type: [] });
 
   // URL 쿼리 파라미터로 진입 시 초기 필터 적용 (직원별 현황 → 비중 차트 클릭 등)
   useEffect(() => {
@@ -166,8 +232,8 @@ const SalesLedgerPage = () => {
     const ps = sp.get("products");
     const stOverride = sp.get("sale_type");
     const fromDash = sp.get("from_dashboard") === "1";
-    if (p) setProductFilter(p);
-    if (m) setManagerFilter(m);
+    if (p) setColFilter("product", [p]);
+    if (m) setColFilter("manager", [m]);
     // 대시보드(staffName/manager)로 진입한 경우: 항상 이번 달 강제
     if (sp.get("staffName")) {
       const now = new Date();
@@ -177,12 +243,9 @@ const SalesLedgerPage = () => {
     }
     if (ps) {
       const list = ps.split(",").map((s) => s.trim()).filter(Boolean);
-      if (list.length > 0) {
-        setProductsOverride(list);
-        setProductFilter("all"); // 단일 필터 UI는 비우고 오버라이드를 우선
-      }
+      if (list.length > 0) setColFilter("product", list);
     }
-    if (stOverride) setSaleTypeOverride(stOverride);
+    if (stOverride) setColFilter("sale_type", [stOverride]);
     // 대시보드 진입: 항상 이번 달 기준으로 강제
     if (fromDash) {
       const now = new Date();
@@ -193,7 +256,7 @@ const SalesLedgerPage = () => {
     const st = sp.get("status");
     if (st) {
       const list = st.split(",").map((s) => s.trim()).filter(Boolean);
-      if (list.length > 0) setStatusFilter(list);
+      if (list.length > 0) setColFilter("status", list);
       // 대시보드 [개통 대기]에서 진입 시: 항상 이번 달 기준으로 강제
       const now = new Date();
       setMode("month");
@@ -205,8 +268,22 @@ const SalesLedgerPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // === 필터/검색 상태 → URL 동기화 (상세 진입 후 복귀 시 그대로 유지) ===
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    // 기존 dashboard deep-link 키는 유지
+    const q = searchQ.trim();
+    if (q) next.set("q", q); else next.delete("q");
+    COL_KEYS.forEach((k) => {
+      const v = colFilters[k];
+      if (v && v.length > 0) next.set(`f_${k}`, v.join("||"));
+      else next.delete(`f_${k}`);
+    });
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQ, colFilters]);
+
   const isMobile = useIsMobile();
-  const [filterOpen, setFilterOpen] = useState(false);
 
   const { options: channelOptions } = useFieldOptions("channel");
   const { options: productOptions } = useFieldOptions("product");
@@ -233,29 +310,27 @@ const SalesLedgerPage = () => {
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   // 담당자 필터가 표시명(이름)인 경우, sales.manager 컬럼에 UUID/이름 둘 다 저장될 수 있어
   // 매칭되는 user_id 들을 함께 IN 절로 넣어줘야 누락 없이 검색됨.
+  // 담당자 컬럼 필터에 표시명이 선택된 경우, sales.manager 에는 UUID/이름 둘 다 저장될 수 있어
+  // 대응되는 user_id 까지 함께 IN 절로 넣어줘야 누락 없이 검색됨.
   const [managerValues, setManagerValues] = useState<string[] | null>(null);
   useEffect(() => {
     let alive = true;
-    if (managerFilter === "all" || managerFilter === "__none__") {
-      setManagerValues(null);
-      return;
-    }
-    if (UUID_RE.test(managerFilter)) {
-      setManagerValues([managerFilter]);
-      return;
-    }
+    const sel = colFilters.manager.filter((v) => v && v !== "__none__");
+    if (sel.length === 0) { setManagerValues(null); return; }
+    const names = sel.filter((v) => !UUID_RE.test(v));
+    if (names.length === 0) { setManagerValues(sel); return; }
     (async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("user_id")
-        .eq("display_name", managerFilter);
+        .select("user_id, display_name")
+        .in("display_name", names);
       if (!alive) return;
       const uids = (data ?? []).map((p: any) => p.user_id).filter(Boolean);
-      setManagerValues([managerFilter, ...uids]);
+      setManagerValues(Array.from(new Set([...sel, ...uids])));
     })();
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [managerFilter]);
+  }, [colFilters.manager]);
   const resolveManager = useCallback(
     (raw: string | null | undefined, fallbackUid?: string | null) => {
       const v = (raw ?? "").trim();
@@ -365,50 +440,19 @@ const SalesLedgerPage = () => {
         `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
         `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
       );
-    if (statusFilter.length > 0) {
-      query = query.in("status", statusFilter);
-    }
-    if (managerFilter === "__none__") {
-      query = query.or("manager.is.null,manager.eq.");
-    } else if (managerFilter !== "all") {
-      if (managerValues && managerValues.length > 1) {
-        query = query.in("manager", managerValues);
-      } else {
-        query = query.eq("manager", managerFilter);
+    // === 엑셀형 컬럼 필터 적용 (서버 사이드) ===
+    if (colFilters.status.length > 0) query = query.in("status", colFilters.status);
+    if (colFilters.channel.length > 0) query = query.in("channel", colFilters.channel);
+    if (colFilters.product.length > 0) query = query.in("product", colFilters.product);
+    if (colFilters.sale_type.length > 0) query = query.in("sale_type", colFilters.sale_type);
+    if (colFilters.manager.length > 0) {
+      const hasNone = colFilters.manager.includes("__none__");
+      const realVals = managerValues ?? colFilters.manager.filter((v) => v !== "__none__");
+      if (hasNone && realVals.length === 0) {
+        query = query.or("manager.is.null,manager.eq.");
+      } else if (realVals.length > 0) {
+        query = query.in("manager", realVals);
       }
-    }
-    if (storeFilter !== "all") {
-      query = query.eq("channel", storeFilter);
-    }
-    if (productFilter !== "all") {
-      query = query.eq("product", productFilter);
-    } else if (productsOverride && productsOverride.length > 0) {
-      query = query.in("product", productsOverride);
-    }
-    if (saleTypeOverride) {
-      query = query.eq("sale_type", saleTypeOverride);
-    } else if (saleTypeFilter !== "all") {
-      const list = saleTypeFilter === "MNP"
-        ? ["MNP", "USIM MNP"]
-        : saleTypeFilter === "기변"
-          ? ["기변", "기변(재가입)"]
-          : ["신규"];
-      query = query.in("sale_type", list);
-    }
-    if (returnFilter === "returned") {
-      query = query.eq("voucher_returned", "유");
-    } else if (returnFilter === "unreturned") {
-      query = query.not("voucher", "is", null).neq("voucher", "").neq("voucher_returned", "유");
-    }
-    if (inspectionFilter === "inspected") {
-      query = query.eq("approval_status", "확정");
-    } else if (inspectionFilter === "uninspected") {
-      query = query.neq("approval_status", "확정");
-    }
-    if (moyoFilter === "applied") {
-      query = query.eq("channel", "모요").eq("product", "모바일").or("moyo_excluded.is.null,moyo_excluded.eq.false");
-    } else if (moyoFilter === "excluded") {
-      query = query.eq("channel", "모요").eq("product", "모바일").eq("moyo_excluded", true);
     }
     const sq = debouncedSearchQ.trim();
     if (sq) {
@@ -435,7 +479,7 @@ const SalesLedgerPage = () => {
     setRows((data ?? []) as SaleRow[]);
     setTotal(count ?? 0);
     setSearching(false);
-  }, [page, startDate, endDate, statusFilter, managerFilter, managerValues, storeFilter, productFilter, productsOverride, saleTypeFilter, saleTypeOverride, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
+  }, [page, startDate, endDate, colFilters, managerValues, debouncedSearchQ]);
 
   const loadSummary = useCallback(async () => {
     // 정책: 저장된 모든 실적은 즉시 합계에 반영. (status·approval_status·검수상태와 무관)
@@ -447,28 +491,15 @@ const SalesLedgerPage = () => {
         `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
         `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
       );
-    if (managerFilter === "__none__") q = q.or("manager.is.null,manager.eq.");
-    else if (managerFilter !== "all") {
-      if (managerValues && managerValues.length > 1) q = q.in("manager", managerValues);
-      else q = q.eq("manager", managerFilter);
-    }
-    if (storeFilter !== "all") q = q.eq("channel", storeFilter);
-    if (productFilter !== "all") q = q.eq("product", productFilter);
-    else if (productsOverride && productsOverride.length > 0) q = q.in("product", productsOverride);
-    if (saleTypeOverride) {
-      q = q.eq("sale_type", saleTypeOverride);
-    } else if (saleTypeFilter !== "all") {
-      const list = saleTypeFilter === "MNP"
-        ? ["MNP", "USIM MNP"]
-        : saleTypeFilter === "기변"
-          ? ["기변", "기변(재가입)"]
-          : ["신규"];
-      q = q.in("sale_type", list);
-    }
-    if (moyoFilter === "applied") {
-      q = q.eq("channel", "모요").eq("product", "모바일").or("moyo_excluded.is.null,moyo_excluded.eq.false");
-    } else if (moyoFilter === "excluded") {
-      q = q.eq("channel", "모요").eq("product", "모바일").eq("moyo_excluded", true);
+    if (colFilters.status.length > 0) q = q.in("status", colFilters.status);
+    if (colFilters.channel.length > 0) q = q.in("channel", colFilters.channel);
+    if (colFilters.product.length > 0) q = q.in("product", colFilters.product);
+    if (colFilters.sale_type.length > 0) q = q.in("sale_type", colFilters.sale_type);
+    if (colFilters.manager.length > 0) {
+      const hasNone = colFilters.manager.includes("__none__");
+      const realVals = managerValues ?? colFilters.manager.filter((v) => v !== "__none__");
+      if (hasNone && realVals.length === 0) q = q.or("manager.is.null,manager.eq.");
+      else if (realVals.length > 0) q = q.in("manager", realVals);
     }
     const { data } = await q;
     const all = data ?? [];
@@ -533,15 +564,15 @@ const SalesLedgerPage = () => {
       .not("voucher", "is", null)
       .neq("voucher_returned", "유");
     setUnreturnedCount(urc ?? 0);
-  }, [startDate, endDate, managerFilter, managerValues, storeFilter, productFilter, productsOverride, saleTypeFilter, saleTypeOverride, moyoFilter]);
+  }, [startDate, endDate, colFilters, managerValues]);
 
   useEffect(() => {
     load();
     loadSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, startDate, endDate, statusFilter, managerFilter, managerValues, storeFilter, productFilter, productsOverride, saleTypeOverride, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
+  }, [page, startDate, endDate, colFilters, managerValues, debouncedSearchQ]);
 
-  useEffect(() => { setPage(0); }, [startDate, endDate, statusFilter, managerFilter, managerValues, storeFilter, productFilter, productsOverride, saleTypeFilter, saleTypeOverride, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
+  useEffect(() => { setPage(0); }, [startDate, endDate, colFilters, managerValues, debouncedSearchQ]);
 
   // 실적 입력 후 navigate로 진입 시 즉시 강제 리로드 (캐시 우회)
   useEffect(() => {
@@ -619,14 +650,7 @@ const SalesLedgerPage = () => {
 
   const filteredRows = useMemo(() => {
     const q = debouncedSearchQ.trim().toLowerCase().replace(/\s+/g, "");
-    let result = rows;
-    if (quickFilter === "unpaid") {
-      result = result.filter((r) => (r.receivable_amount ?? 0) > 0 && r.receivable_paid !== "완료");
-    } else if (quickFilter === "unreturned") {
-      result = result.filter((r) => r.voucher && r.voucher.trim() !== "" && r.voucher_returned !== "유");
-    }
-    if (bundleFilter) result = result.filter((r) => r.bundle === "Y");
-    if (noOfferFilter) result = result.filter((r) => (r.custom_fields as any)?.has_offer === false);
+    const result = rows;
     if (!q) return result;
     const qDigits = q.replace(/[^0-9]/g, "");
     return result.filter((r) => {
@@ -639,7 +663,7 @@ const SalesLedgerPage = () => {
       if (qDigits && phone.includes(qDigits)) return true;
       return false;
     });
-  }, [rows, debouncedSearchQ, quickFilter, bundleFilter, noOfferFilter]);
+  }, [rows, debouncedSearchQ]);
 
   const allSelected = filteredRows.length > 0 && filteredRows.every((r) => selected.has(r.id));
   const toggleAll = () => {
@@ -669,29 +693,22 @@ const SalesLedgerPage = () => {
         `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
         `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
       );
-    if (statusFilter.length > 0) {
-      q = q.in("status", statusFilter);
+    if (colFilters.status.length > 0) q = q.in("status", colFilters.status);
+    if (colFilters.channel.length > 0) q = q.in("channel", colFilters.channel);
+    if (colFilters.product.length > 0) q = q.in("product", colFilters.product);
+    if (colFilters.sale_type.length > 0) q = q.in("sale_type", colFilters.sale_type);
+    if (colFilters.manager.length > 0) {
+      const realVals = managerValues ?? colFilters.manager.filter((v) => v !== "__none__");
+      if (realVals.length > 0) q = q.in("manager", realVals);
+      else if (colFilters.manager.includes("__none__")) q = q.or("manager.is.null,manager.eq.");
     }
-    if (managerFilter !== "all") q = q.eq("manager", managerFilter);
-    if (storeFilter !== "all") q = q.eq("channel", storeFilter);
-    if (productFilter !== "all") q = q.eq("product", productFilter);
-    if (returnFilter === "returned") q = q.eq("voucher_returned", "유");
-    else if (returnFilter === "unreturned") q = q.not("voucher", "is", null).neq("voucher", "").neq("voucher_returned", "유");
-    if (inspectionFilter === "inspected") q = q.eq("approval_status", "확정");
-    else if (inspectionFilter === "uninspected") q = q.neq("approval_status", "확정");
-    if (moyoFilter === "applied") q = q.eq("channel", "모요").eq("product", "모바일").or("moyo_excluded.is.null,moyo_excluded.eq.false");
-    else if (moyoFilter === "excluded") q = q.eq("channel", "모요").eq("product", "모바일").eq("moyo_excluded", true);
     const { data, error } = await q.order("open_date", { ascending: false, nullsFirst: false });
     if (error) return toast.error("엑셀 내보내기 실패", { description: error.message });
     let sales = (data ?? []) as any[];
-    // 클라이언트 측 보조 필터 (퀵필터/번들/노오퍼/검색어)
+    // 클라이언트 측 검색어 보조 필터
     const sq = debouncedSearchQ.trim().toLowerCase();
     const sqDigits = sq.replace(/[^0-9]/g, "");
     sales = sales.filter((r: any) => {
-      if (quickFilter === "unpaid" && !((r.receivable_amount ?? 0) > 0 && r.receivable_paid !== "완료")) return false;
-      if (quickFilter === "unreturned" && !(r.voucher && String(r.voucher).trim() !== "" && r.voucher_returned !== "유")) return false;
-      if (bundleFilter && r.bundle !== "Y") return false;
-      if (noOfferFilter && (r.custom_fields as any)?.has_offer !== false) return false;
       if (sq) {
         const name = (r.customer_name ?? "").toLowerCase();
         const phone = (r.phone ?? "").replace(/[^0-9]/g, "");
@@ -791,43 +808,42 @@ const SalesLedgerPage = () => {
   const animOffer = useAnimatedNumber(dbSummary.totalOffer);
   const animProfit = useAnimatedNumber(dbSummary.totalProfit);
 
-  const hasActiveFilter =
-    statusFilter.length > 0 ||
-    quickFilter !== null ||
-    managerFilter !== "all" ||
-    storeFilter !== "all" ||
-    productFilter !== "all" ||
-    saleTypeFilter !== "all" ||
-    returnFilter !== "all" ||
-    inspectionFilter !== "all" ||
-    moyoFilter !== "all" ||
-    bundleFilter ||
-    noOfferFilter;
-
-  const resetAllFilters = () => {
-    setStatusFilter([]);
-    setQuickFilter(null);
-    setManagerFilter("all");
-    setStoreFilter("all");
-    setProductFilter("all");
-    setSaleTypeFilter("all");
-    setReturnFilter("all");
-    setInspectionFilter("all");
-    setMoyoFilter("all");
-    setBundleFilter(false);
-    setNoOfferFilter(false);
-  };
-
-  const toggleStatus = (s: string) => {
-    setStatusFilter((prev) =>
-      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s],
-    );
-  };
+  const hasActiveFilter = COL_KEYS.some((k) => colFilters[k].length > 0);
+  const resetAllFilters = clearAllColFilters;
 
   const fallbackStatuses = ["청약완료", "택배발송", "개통완료", "예약", "보류", "취소"];
   const statusList = statusOptions.length > 0 ? statusOptions : fallbackStatuses;
 
-  const showFilterBody = !isMobile || filterOpen;
+  // === 컬럼별 옵션 빌더 (엑셀형 필터 드롭다운용) ===
+  const fallbackSaleTypes = ["신규", "MNP", "USIM MNP", "기변", "기변(재가입)"];
+  const buildOptions = (colKey: ColKey, fromRows: (r: SaleRow) => string | null | undefined, presets: string[] = []): string[] => {
+    const set = new Set<string>();
+    presets.forEach((v) => v && set.add(v));
+    rows.forEach((r) => {
+      const v = (fromRows(r) ?? "").toString().trim();
+      if (v) set.add(v);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "ko"));
+  };
+  const channelFilterOptions = useMemo(() => buildOptions("channel", (r) => r.channel, channelOptions), [rows, channelOptions]);
+  const statusFilterOptions = useMemo(() => buildOptions("status", (r) => r.status, statusList), [rows, statusList]);
+  const productFilterOptions = useMemo(() => buildOptions("product", (r) => r.product, productOptions), [rows, productOptions]);
+  const saleTypeFilterOptions = useMemo(() => buildOptions("sale_type", (r) => r.sale_type, fallbackSaleTypes), [rows]);
+  const managerFilterOptions = useMemo(() => {
+    const set = new Set<string>();
+    staffList.forEach((s) => { if (s.display_name) set.add(s.display_name); });
+    rows.forEach((r) => {
+      const m = (r.manager ?? "").trim();
+      if (!m) return;
+      if (UUID_RE.test(m)) {
+        const nm = managerNameMap[m];
+        if (nm) set.add(nm);
+      } else {
+        set.add(m);
+      }
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "ko"));
+  }, [rows, staffList, managerNameMap]);
 
   return (
     <>
@@ -838,229 +854,41 @@ const SalesLedgerPage = () => {
         showPeriodFilter
       />
 
-      {/* 필터 바 */}
-      <section className="glass rounded-2xl p-4 mb-4 shadow-card-elevated">
-        <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <Filter className="size-4 text-primary" />
-          <span className="text-sm font-semibold">스마트 필터</span>
-          {hasActiveFilter && (
-            <Badge variant="outline" className="h-6 px-2 text-[10px] border-primary/40 text-primary">
-              필터 적용중
-            </Badge>
-          )}
-          {hasActiveFilter && (
+      {/* 검색 바 + 필터 상태 — 스마트 필터 제거, 컬럼 헤더 필터로 통합됨 */}
+      <section className="mb-4 flex items-center gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[220px] max-w-lg">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
+            value={searchQ}
+            onChange={(e) => setSearchQ(e.target.value)}
+            placeholder="고객명·연락처 뒷자리·모델명 검색…"
+            className="h-10 pl-9 pr-9 bg-input/60 border-border/60"
+          />
+          {searching ? (
+            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground animate-spin" />
+          ) : searchQ ? (
             <button
-              onClick={resetAllFilters}
-              className="ml-1 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+              type="button"
+              onClick={() => setSearchQ("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded"
+              aria-label="검색어 지우기"
             >
-              <X className="size-3" /> 초기화
+              <X className="size-4" />
             </button>
-          )}
-
-          {/* 통합 검색 — 항상 보임 */}
-          <div className="relative flex-1 min-w-[200px] max-w-md ml-auto">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              value={searchQ}
-              onChange={(e) => setSearchQ(e.target.value)}
-              placeholder="고객명·연락처 뒷자리·모델명 검색…"
-              className="h-9 pl-9 pr-9 bg-input/60"
-            />
-            {searching ? (
-              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground animate-spin" />
-            ) : searchQ ? (
-              <button
-                type="button"
-                onClick={() => setSearchQ("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded"
-                aria-label="검색어 지우기"
-              >
-                <X className="size-4" />
-              </button>
-            ) : null}
-          </div>
-
-          {isMobile && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 gap-1"
-              onClick={() => setFilterOpen((v) => !v)}
-            >
-              필터 상세 {filterOpen ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
-            </Button>
-          )}
+          ) : null}
         </div>
-
-        {showFilterBody && (
-          <>
-            <div className="flex flex-wrap items-center gap-2">
-              {/* 판매유형 세그먼트 — 시인성 강한 버튼형 */}
-              <div className="inline-flex rounded-lg border border-border/60 bg-muted/40 p-0.5 shadow-sm">
-                {([
-                  { v: "all", label: "전체", cls: "bg-foreground text-background" },
-                  { v: "신규", label: "신규", cls: "bg-blue-600 text-white" },
-                  { v: "MNP", label: "MNP", cls: "bg-emerald-600 text-white" },
-                  { v: "기변", label: "기변", cls: "bg-orange-600 text-white" },
-                ] as const).map((opt) => {
-                  const active = saleTypeFilter === opt.v;
-                  return (
-                    <button
-                      key={opt.v}
-                      type="button"
-                      onClick={() => { setSaleTypeFilter(opt.v as any); setSaleTypeOverride(null); }}
-                      className={cn(
-                        "px-3 h-8 rounded-md text-xs font-semibold transition-all",
-                        active ? `${opt.cls} shadow` : "text-foreground/70 hover:text-foreground hover:bg-background/60",
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* 매장(채널) 필터 */}
-              <Select value={storeFilter} onValueChange={setStoreFilter}>
-                <SelectTrigger className="h-9 md:w-[150px]">
-                  <SelectValue placeholder="매장 전체" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[300px]">
-                  <SelectItem value="all">매장 전체</SelectItem>
-                  {channelOptions.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* 상품 필터 */}
-              <Select value={productFilter} onValueChange={(v) => { setProductFilter(v); setProductsOverride(null); }}>
-                <SelectTrigger className="h-9 md:w-[140px]">
-                  <SelectValue placeholder="상품 전체" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">상품 전체</SelectItem>
-                  {productOptions.map((p) => (
-                    <SelectItem key={p} value={p}>{p}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* 직원 필터 */}
-              <Select value={managerFilter} onValueChange={setManagerFilter}>
-                <SelectTrigger className="h-9 md:w-[140px]">
-                  <SelectValue placeholder="직원 전체" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">직원 전체</SelectItem>
-                  <SelectItem value="__none__">⚠ 담당자 없음</SelectItem>
-                  {managers.map((m) => (
-                    <SelectItem key={m} value={m}>{UUID_RE.test(m) && managerNameMap[m] ? managerNameMap[m] : m}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* 반납 필터 */}
-              <Select value={returnFilter} onValueChange={(v) => setReturnFilter(v as any)}>
-                <SelectTrigger className="h-9 md:w-[140px]">
-                  <SelectValue placeholder="반납 전체" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">반납 전체</SelectItem>
-                  <SelectItem value="returned">반납완료</SelectItem>
-                  <SelectItem value="unreturned">미반납</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* 모요 적용 구분 필터 */}
-              <Select value={moyoFilter} onValueChange={(v) => setMoyoFilter(v as any)}>
-                <SelectTrigger className="h-9 md:w-[150px]">
-                  <SelectValue placeholder="모요 전체" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">모요 전체</SelectItem>
-                  <SelectItem value="applied">모요 적용</SelectItem>
-                  <SelectItem value="excluded">모요 미적용</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* 상태 멀티셀렉트 (칩) */}
-            <div className="flex flex-wrap items-center gap-1.5 mt-3">
-              <span className="text-[11px] text-muted-foreground mr-1">상태:</span>
-              {statusList.map((s) => {
-                const active = statusFilter.includes(s);
-                return (
-                  <Badge
-                    key={s}
-                    variant="outline"
-                    className={cn(
-                      "cursor-pointer transition-colors h-7 px-2.5",
-                      active
-                        ? "border-primary/60 text-primary bg-primary/15"
-                        : "border-border/40 text-muted-foreground hover:bg-muted/40",
-                    )}
-                    onClick={() => toggleStatus(s)}
-                  >
-                    {s}
-                  </Badge>
-                );
-              })}
-            </div>
-
-            {/* 빠른 필터 */}
-            <div className="flex flex-wrap items-center gap-1.5 mt-2">
-              <span className="text-[11px] text-muted-foreground mr-1">빠른:</span>
-              <Badge
-                variant="outline"
-                className={cn(
-                  "gap-1 cursor-pointer transition-colors h-7 px-2.5",
-                  quickFilter === "unpaid"
-                    ? "border-destructive/60 text-destructive bg-destructive/15"
-                    : "border-border/40 text-muted-foreground hover:bg-muted/40",
-                )}
-                onClick={() => setQuickFilter(quickFilter === "unpaid" ? null : "unpaid")}
-              >
-                💰 미수금 {unpaidCount > 0 && `(${unpaidCount})`}
-              </Badge>
-              <Badge
-                variant="outline"
-                className={cn(
-                  "gap-1 cursor-pointer transition-colors h-7 px-2.5",
-                  quickFilter === "unreturned"
-                    ? "border-destructive/60 text-destructive bg-destructive/15"
-                    : "border-border/40 text-muted-foreground hover:bg-muted/40",
-                )}
-                onClick={() => setQuickFilter(quickFilter === "unreturned" ? null : "unreturned")}
-              >
-                🎫 상품권 미반납 {unreturnedCount > 0 && `(${unreturnedCount})`}
-              </Badge>
-              <Badge
-                variant="outline"
-                className={cn(
-                  "gap-1 cursor-pointer transition-colors h-7 px-2.5",
-                  bundleFilter
-                    ? "border-primary/60 text-primary bg-primary/15"
-                    : "border-border/40 text-muted-foreground hover:bg-muted/40",
-                )}
-                onClick={() => setBundleFilter(!bundleFilter)}
-              >
-                📦 동판 건만
-              </Badge>
-              <Badge
-                variant="outline"
-                className={cn(
-                  "gap-1 cursor-pointer transition-colors h-7 px-2.5",
-                  noOfferFilter
-                    ? "border-primary/60 text-primary bg-primary/15"
-                    : "border-border/40 text-muted-foreground hover:bg-muted/40",
-                )}
-                onClick={() => setNoOfferFilter(!noOfferFilter)}
-              >
-                🚫 무오퍼 건만
-              </Badge>
-            </div>
-          </>
+        {hasActiveFilter && (
+          <Badge variant="outline" className="h-7 px-2 text-[11px] border-primary/40 text-primary gap-1">
+            <Filter className="size-3" /> 컬럼 필터 적용중
+          </Badge>
+        )}
+        {hasActiveFilter && (
+          <button
+            onClick={resetAllFilters}
+            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 px-2 py-1 rounded hover:bg-muted/50"
+          >
+            <X className="size-3" /> 모든 필터 초기화
+          </button>
         )}
       </section>
 
