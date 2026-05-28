@@ -29,6 +29,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserCheck, PhoneCall, CheckCircle2, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 
@@ -84,6 +85,7 @@ export default function LeadsPage() {
   const [productFilter, setProductFilter] = useState<string>("all");
   const [carrierFilter, setCarrierFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru">("meta");
   const [openLead, setOpenLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState<LeadNote[]>([]);
   const [newNote, setNewNote] = useState("");
@@ -171,6 +173,9 @@ export default function LeadsPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
+      const isDogmaru = r.campaign_name === "도그마루_홈캠";
+      if (sourceTab === "dogmaru" && !isDogmaru) return false;
+      if (sourceTab === "meta" && isDogmaru) return false;
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (productFilter !== "all" && r.desired_product !== productFilter) return false;
       if (carrierFilter !== "all" && r.current_carrier !== carrierFilter) return false;
@@ -180,7 +185,17 @@ export default function LeadsPage() {
       }
       return true;
     });
-  }, [rows, statusFilter, productFilter, carrierFilter, search]);
+  }, [rows, statusFilter, productFilter, carrierFilter, search, sourceTab]);
+
+  const sourceCounts = useMemo(() => {
+    let dogmaru = 0;
+    let meta = 0;
+    for (const r of rows) {
+      if (r.campaign_name === "도그마루_홈캠") dogmaru++;
+      else meta++;
+    }
+    return { meta, dogmaru };
+  }, [rows]);
 
   const stats = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -381,7 +396,19 @@ export default function LeadsPage() {
       </Card>
 
       {/* Table */}
-      <Card className="overflow-hidden border-border">
+      <Tabs value={sourceTab} onValueChange={(v) => setSourceTab(v as "meta" | "dogmaru")}>
+        <TabsList className="grid grid-cols-2 w-full max-w-xl h-12 bg-muted/60 mb-3">
+          <TabsTrigger value="meta" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
+            메타광고
+            <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.meta}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="dogmaru" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
+            도그마루 시트
+            <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.dogmaru}</Badge>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+      <Card key={sourceTab} className="overflow-hidden border-border animate-fade-in">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/60 border-b-2 border-border hover:bg-muted/60">
