@@ -118,8 +118,31 @@ export default function LeadsPage() {
       .channel("leads-rt")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "leads" },
-        () => load(),
+        { event: "INSERT", schema: "public", table: "leads" },
+        (payload) => {
+          const row = payload.new as Lead;
+          setRows((prev) => {
+            if (prev.some((r) => r.id === row.id)) return prev;
+            return [row, ...prev];
+          });
+          toast.success(`신규 리드 인입: ${row.name ?? "(이름 없음)"}`);
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "leads" },
+        (payload) => {
+          const row = payload.new as Lead;
+          setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, ...row } : r)));
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "leads" },
+        (payload) => {
+          const oldRow = payload.old as { id: string };
+          setRows((prev) => prev.filter((r) => r.id !== oldRow.id));
+        },
       )
       .subscribe();
     return () => {
