@@ -408,6 +408,24 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
     return Number.isFinite(n) ? n : 0;
   };
 
+  // ===== 실시간 필수값 유효성 검사 =====
+  // 정산에 직접 영향을 주는 핵심 필드 5종. 비어있거나 형식이 어긋나면 빨간 테두리 + 안내문구.
+  const phoneDigits = (form.phone ?? "").replace(/\D+/g, "");
+  const phoneValid = phoneDigits.length === 0 || (phoneDigits.length >= 10 && phoneDigits.length <= 11);
+  const subscriptionDigits = (customFields.subscription_no ?? "").toString().replace(/\D+/g, "");
+  const subscriptionValid =
+    !customFields.subscription_no || subscriptionDigits === String(customFields.subscription_no);
+  const requiredErrors: Record<string, string | null> = {
+    customer_name: (form.customer_name ?? "").trim() ? null : "고객명을 입력해주세요",
+    phone: !phoneDigits ? "연락처를 입력해주세요" : !phoneValid ? "숫자 10~11자리로 입력해주세요" : null,
+    product: form.product ? null : "가입상품을 선택해주세요",
+    rate_plan: form.rate_plan ? null : "요금제를 선택해주세요",
+    device_model: form.device_model && form.device_model.trim() ? null : "단말기를 선택해주세요",
+  };
+  const subscriptionError = subscriptionValid ? null : "숫자만 입력해주세요";
+  const isFormValid =
+    Object.values(requiredErrors).every((e) => !e) && subscriptionValid;
+
   const reset = () => {
     if (saleId) {
       // controlled by parent — let parent decide
