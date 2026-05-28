@@ -49,7 +49,7 @@ const STATUS_COLOR: Record<string, string> = {
   "신규 접수": "bg-background text-red-700 border border-red-600 font-bold dark:text-red-300 dark:border-red-400",
   "케어중": "bg-background text-blue-700 border border-blue-600 font-bold dark:text-blue-300 dark:border-blue-400",
   "부재 중": "bg-background text-orange-700 border border-orange-600 font-bold dark:text-orange-300 dark:border-orange-400",
-  "재케어": "bg-background text-zinc-700 border border-zinc-500 font-bold dark:text-zinc-200 dark:border-zinc-400",
+  "재케어": "bg-background text-violet-700 border border-violet-600 font-bold dark:text-violet-300 dark:border-violet-400",
   "개통 완료": "bg-background text-emerald-700 border border-emerald-600 font-bold dark:text-emerald-300 dark:border-emerald-400",
   "취소": "bg-background text-rose-700 border border-rose-600 font-bold dark:text-rose-300 dark:border-rose-400",
 };
@@ -706,9 +706,10 @@ export default function LeadsPage() {
                       {item.activation_status ? (
                         <Badge
                           className={
-                            isActivated
-                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
-                              : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                            "bg-background border font-bold " +
+                            (isActivated
+                              ? "text-emerald-700 border-emerald-600 dark:text-emerald-300 dark:border-emerald-400"
+                              : "text-zinc-700 border-zinc-500 dark:text-zinc-200 dark:border-zinc-400")
                           }
                         >
                           {item.activation_status}
@@ -719,7 +720,7 @@ export default function LeadsPage() {
                     </TableCell>
                     <TableCell>
                       {isCancelled ? (
-                        <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
+                        <Badge className="bg-background text-rose-700 border border-rose-600 font-bold dark:text-rose-300 dark:border-rose-400">
                           {item.cancellation_status}
                         </Badge>
                       ) : (
@@ -747,12 +748,12 @@ export default function LeadsPage() {
               <TableHead className="text-foreground font-bold">고객명</TableHead>
               <TableHead className="text-foreground font-bold">연락처</TableHead>
               <TableHead className="text-foreground font-bold">현재 통신사</TableHead>
-              <TableHead className="text-foreground font-bold w-20 text-xs">희망 기종</TableHead>
-              <TableHead className="text-foreground font-bold w-20 text-xs">희망 상품</TableHead>
-              <TableHead className="text-foreground font-bold w-20 text-xs">캠페인</TableHead>
-              <TableHead className="text-foreground font-bold w-40">담당자</TableHead>
-              <TableHead className="text-foreground font-bold w-36">상담 상태</TableHead>
-              <TableHead className="text-foreground font-bold min-w-[360px]">메모</TableHead>
+              <TableHead className="text-foreground font-bold w-16 text-xs">희망 기종</TableHead>
+              <TableHead className="text-foreground font-bold w-16 text-xs">희망 상품</TableHead>
+              <TableHead className="text-foreground font-bold w-16 text-xs">캠페인</TableHead>
+              <TableHead className="text-foreground font-bold w-32">담당자</TableHead>
+              <TableHead className="text-foreground font-bold w-28">상담 상태</TableHead>
+              <TableHead className="text-foreground font-bold min-w-[440px]">메모</TableHead>
               <TableHead className="text-foreground font-bold w-20 text-center">관리</TableHead>
             </TableRow>
           </TableHeader>
@@ -788,9 +789,9 @@ export default function LeadsPage() {
                 <TableCell className="font-bold text-foreground">{r.name ?? "-"}</TableCell>
                 <TableCell className="tabular-nums text-foreground font-medium">{r.phone ?? "-"}</TableCell>
                 <TableCell className="text-foreground">{r.current_carrier ?? "-"}</TableCell>
-                <TableCell className="text-foreground/80 text-xs truncate max-w-[80px]" title={r.desired_device ?? ""}>{r.desired_device ?? "-"}</TableCell>
-                <TableCell className="text-foreground/80 text-xs truncate max-w-[80px]" title={r.desired_product ?? ""}>{r.desired_product ?? "-"}</TableCell>
-                <TableCell className="text-xs text-foreground/60 truncate max-w-[80px]" title={r.campaign_name ?? ""}>
+                <TableCell className="text-foreground/80 text-xs truncate max-w-[64px]" title={r.desired_device ?? ""}>{r.desired_device ?? "-"}</TableCell>
+                <TableCell className="text-foreground/80 text-xs truncate max-w-[64px]" title={r.desired_product ?? ""}>{r.desired_product ?? "-"}</TableCell>
+                <TableCell className="text-xs text-foreground/60 truncate max-w-[64px]" title={r.campaign_name ?? ""}>
                   {r.campaign_name ?? "-"}
                 </TableCell>
                 <TableCell onClick={(e) => e.stopPropagation()}>
@@ -831,7 +832,7 @@ export default function LeadsPage() {
                   </Select>
                 </TableCell>
                 <TableCell
-                  className="min-w-[360px] text-xs text-foreground whitespace-normal break-words leading-relaxed"
+                  className="min-w-[440px] text-xs text-foreground whitespace-normal break-words leading-relaxed"
                   onClick={(e) => {
                     e.stopPropagation();
                     setOpenLead(r);
