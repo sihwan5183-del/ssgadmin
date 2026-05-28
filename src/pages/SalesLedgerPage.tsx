@@ -1061,12 +1061,23 @@ const SalesLedgerPage = () => {
                 )}
                 {/* 그룹 A: 기본정보 */}
                 <th className="text-center font-bold w-[52px]">개통일</th>
-                <th className="text-center font-bold w-[88px]">경로</th>
-                <th className="text-center font-bold w-[78px]">최종상태</th>
-                <th className="text-center font-bold w-[64px]">담당</th>
-                <th className="text-center font-bold w-[56px]">상품</th>
+                <th className="text-center font-bold w-[88px]">
+                  <span className="inline-flex items-center">경로<ColumnFilter label="경로" options={channelFilterOptions} selected={colFilters.channel} onChange={(v) => setColFilter("channel", v)} /></span>
+                </th>
+                <th className="text-center font-bold w-[78px]">
+                  <span className="inline-flex items-center">최종상태<ColumnFilter label="최종상태" options={statusFilterOptions} selected={colFilters.status} onChange={(v) => setColFilter("status", v)} /></span>
+                </th>
+                <th className="text-center font-bold w-[64px]">
+                  <span className="inline-flex items-center">담당<ColumnFilter label="담당" options={managerFilterOptions} selected={colFilters.manager} onChange={(v) => setColFilter("manager", v)} /></span>
+                </th>
+                <th className="text-center font-bold w-[56px]">
+                  <span className="inline-flex items-center">상품<ColumnFilter label="상품" options={productFilterOptions} selected={colFilters.product} onChange={(v) => setColFilter("product", v)} /></span>
+                </th>
                 <th className="text-left font-bold w-[88px] whitespace-nowrap">고객</th>
-                <th className="text-left font-bold w-[56px] whitespace-nowrap">판매유형</th>
+                <th className="text-center font-bold w-[120px] whitespace-nowrap">가입번호</th>
+                <th className="text-left font-bold w-[56px] whitespace-nowrap">
+                  <span className="inline-flex items-center">판매유형<ColumnFilter label="판매유형" options={saleTypeFilterOptions} selected={colFilters.sale_type} onChange={(v) => setColFilter("sale_type", v)} /></span>
+                </th>
                 <th className="text-center font-bold w-[110px] border-r border-border/40">연락처</th>
                 {/* 그룹 B: 가입내용 */}
                 <th className="text-left font-bold min-w-[110px] max-w-[160px]">단말</th>
@@ -1194,6 +1205,14 @@ const SalesLedgerPage = () => {
                         )}
                       </div>
                     </td>
+                    <td className="text-center text-foreground/90 tabular-nums text-[11px] font-mono tracking-tight">
+                      {(() => {
+                        const an = ((r as any).activation_number ?? r.phone ?? "").toString().trim();
+                        if (!an) return <span className="text-muted-foreground/50">-</span>;
+                        const formatted = /^\d+$/.test(an) ? formatPhone(an) : an;
+                        return <span>{formatted}</span>;
+                      })()}
+                    </td>
                     <td className="text-left text-foreground whitespace-nowrap">
                       {(() => {
                         const st = (r.sale_type ?? "").trim();
@@ -1287,7 +1306,7 @@ const SalesLedgerPage = () => {
                 );
               })}
               {filteredRows.length === 0 && (
-                <tr><td colSpan={isAdmin ? 17 : 16} className="text-center py-10 text-muted-foreground">
+                <tr><td colSpan={isAdmin ? 18 : 17} className="text-center py-10 text-muted-foreground">
                   {searchQ ? "검색 결과가 없습니다." : "선택한 기간에 데이터가 없습니다."}
                 </td></tr>
               )}
