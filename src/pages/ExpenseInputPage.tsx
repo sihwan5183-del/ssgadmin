@@ -642,7 +642,7 @@ export default function ExpenseInputPage() {
               을 사용했습니다 <span className="text-muted-foreground text-xs">· {periodLabel} 누적</span>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3 text-right">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-right">
             <div>
               <div className="text-[11px] text-muted-foreground">광고비</div>
               <div className="text-base font-semibold tabular-nums">{formatKRW(periodTotals.adTotal)}</div>
@@ -654,6 +654,12 @@ export default function ExpenseInputPage() {
             <div>
               <div className="text-[11px] text-muted-foreground">고정지출</div>
               <div className="text-base font-semibold tabular-nums">{formatKRW(periodTotals.fixedTotal)}</div>
+            </div>
+            <div>
+              <div className="text-[11px] text-muted-foreground flex items-center gap-1 justify-end">
+                <CreditCard className="size-3" /> 법인카드
+              </div>
+              <div className="text-base font-semibold tabular-nums text-primary-glow">{formatKRW(periodTotals.cardTotal)}</div>
             </div>
           </div>
         </div>
