@@ -249,29 +249,27 @@ const SalesLedgerPage = () => {
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   // 담당자 필터가 표시명(이름)인 경우, sales.manager 컬럼에 UUID/이름 둘 다 저장될 수 있어
   // 매칭되는 user_id 들을 함께 IN 절로 넣어줘야 누락 없이 검색됨.
+  // 담당자 컬럼 필터에 표시명이 선택된 경우, sales.manager 에는 UUID/이름 둘 다 저장될 수 있어
+  // 대응되는 user_id 까지 함께 IN 절로 넣어줘야 누락 없이 검색됨.
   const [managerValues, setManagerValues] = useState<string[] | null>(null);
   useEffect(() => {
     let alive = true;
-    if (managerFilter === "all" || managerFilter === "__none__") {
-      setManagerValues(null);
-      return;
-    }
-    if (UUID_RE.test(managerFilter)) {
-      setManagerValues([managerFilter]);
-      return;
-    }
+    const sel = colFilters.manager.filter((v) => v && v !== "__none__");
+    if (sel.length === 0) { setManagerValues(null); return; }
+    const names = sel.filter((v) => !UUID_RE.test(v));
+    if (names.length === 0) { setManagerValues(sel); return; }
     (async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("user_id")
-        .eq("display_name", managerFilter);
+        .select("user_id, display_name")
+        .in("display_name", names);
       if (!alive) return;
       const uids = (data ?? []).map((p: any) => p.user_id).filter(Boolean);
-      setManagerValues([managerFilter, ...uids]);
+      setManagerValues(Array.from(new Set([...sel, ...uids])));
     })();
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [managerFilter]);
+  }, [colFilters.manager]);
   const resolveManager = useCallback(
     (raw: string | null | undefined, fallbackUid?: string | null) => {
       const v = (raw ?? "").trim();
