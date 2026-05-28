@@ -793,229 +793,41 @@ const SalesLedgerPage = () => {
         showPeriodFilter
       />
 
-      {/* 필터 바 */}
-      <section className="glass rounded-2xl p-4 mb-4 shadow-card-elevated">
-        <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <Filter className="size-4 text-primary" />
-          <span className="text-sm font-semibold">스마트 필터</span>
-          {hasActiveFilter && (
-            <Badge variant="outline" className="h-6 px-2 text-[10px] border-primary/40 text-primary">
-              필터 적용중
-            </Badge>
-          )}
-          {hasActiveFilter && (
+      {/* 검색 바 + 필터 상태 — 스마트 필터 제거, 컬럼 헤더 필터로 통합됨 */}
+      <section className="mb-4 flex items-center gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[220px] max-w-lg">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
+            value={searchQ}
+            onChange={(e) => setSearchQ(e.target.value)}
+            placeholder="고객명·연락처 뒷자리·모델명 검색…"
+            className="h-10 pl-9 pr-9 bg-input/60 border-border/60"
+          />
+          {searching ? (
+            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground animate-spin" />
+          ) : searchQ ? (
             <button
-              onClick={resetAllFilters}
-              className="ml-1 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+              type="button"
+              onClick={() => setSearchQ("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded"
+              aria-label="검색어 지우기"
             >
-              <X className="size-3" /> 초기화
+              <X className="size-4" />
             </button>
-          )}
-
-          {/* 통합 검색 — 항상 보임 */}
-          <div className="relative flex-1 min-w-[200px] max-w-md ml-auto">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              value={searchQ}
-              onChange={(e) => setSearchQ(e.target.value)}
-              placeholder="고객명·연락처 뒷자리·모델명 검색…"
-              className="h-9 pl-9 pr-9 bg-input/60"
-            />
-            {searching ? (
-              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground animate-spin" />
-            ) : searchQ ? (
-              <button
-                type="button"
-                onClick={() => setSearchQ("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded"
-                aria-label="검색어 지우기"
-              >
-                <X className="size-4" />
-              </button>
-            ) : null}
-          </div>
-
-          {isMobile && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 gap-1"
-              onClick={() => setFilterOpen((v) => !v)}
-            >
-              필터 상세 {filterOpen ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
-            </Button>
-          )}
+          ) : null}
         </div>
-
-        {showFilterBody && (
-          <>
-            <div className="flex flex-wrap items-center gap-2">
-              {/* 판매유형 세그먼트 — 시인성 강한 버튼형 */}
-              <div className="inline-flex rounded-lg border border-border/60 bg-muted/40 p-0.5 shadow-sm">
-                {([
-                  { v: "all", label: "전체", cls: "bg-foreground text-background" },
-                  { v: "신규", label: "신규", cls: "bg-blue-600 text-white" },
-                  { v: "MNP", label: "MNP", cls: "bg-emerald-600 text-white" },
-                  { v: "기변", label: "기변", cls: "bg-orange-600 text-white" },
-                ] as const).map((opt) => {
-                  const active = saleTypeFilter === opt.v;
-                  return (
-                    <button
-                      key={opt.v}
-                      type="button"
-                      onClick={() => { setSaleTypeFilter(opt.v as any); setSaleTypeOverride(null); }}
-                      className={cn(
-                        "px-3 h-8 rounded-md text-xs font-semibold transition-all",
-                        active ? `${opt.cls} shadow` : "text-foreground/70 hover:text-foreground hover:bg-background/60",
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* 매장(채널) 필터 */}
-              <Select value={storeFilter} onValueChange={setStoreFilter}>
-                <SelectTrigger className="h-9 md:w-[150px]">
-                  <SelectValue placeholder="매장 전체" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[300px]">
-                  <SelectItem value="all">매장 전체</SelectItem>
-                  {channelOptions.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* 상품 필터 */}
-              <Select value={productFilter} onValueChange={(v) => { setProductFilter(v); setProductsOverride(null); }}>
-                <SelectTrigger className="h-9 md:w-[140px]">
-                  <SelectValue placeholder="상품 전체" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">상품 전체</SelectItem>
-                  {productOptions.map((p) => (
-                    <SelectItem key={p} value={p}>{p}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* 직원 필터 */}
-              <Select value={managerFilter} onValueChange={setManagerFilter}>
-                <SelectTrigger className="h-9 md:w-[140px]">
-                  <SelectValue placeholder="직원 전체" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">직원 전체</SelectItem>
-                  <SelectItem value="__none__">⚠ 담당자 없음</SelectItem>
-                  {managers.map((m) => (
-                    <SelectItem key={m} value={m}>{UUID_RE.test(m) && managerNameMap[m] ? managerNameMap[m] : m}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* 반납 필터 */}
-              <Select value={returnFilter} onValueChange={(v) => setReturnFilter(v as any)}>
-                <SelectTrigger className="h-9 md:w-[140px]">
-                  <SelectValue placeholder="반납 전체" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">반납 전체</SelectItem>
-                  <SelectItem value="returned">반납완료</SelectItem>
-                  <SelectItem value="unreturned">미반납</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* 모요 적용 구분 필터 */}
-              <Select value={moyoFilter} onValueChange={(v) => setMoyoFilter(v as any)}>
-                <SelectTrigger className="h-9 md:w-[150px]">
-                  <SelectValue placeholder="모요 전체" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">모요 전체</SelectItem>
-                  <SelectItem value="applied">모요 적용</SelectItem>
-                  <SelectItem value="excluded">모요 미적용</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* 상태 멀티셀렉트 (칩) */}
-            <div className="flex flex-wrap items-center gap-1.5 mt-3">
-              <span className="text-[11px] text-muted-foreground mr-1">상태:</span>
-              {statusList.map((s) => {
-                const active = statusFilter.includes(s);
-                return (
-                  <Badge
-                    key={s}
-                    variant="outline"
-                    className={cn(
-                      "cursor-pointer transition-colors h-7 px-2.5",
-                      active
-                        ? "border-primary/60 text-primary bg-primary/15"
-                        : "border-border/40 text-muted-foreground hover:bg-muted/40",
-                    )}
-                    onClick={() => toggleStatus(s)}
-                  >
-                    {s}
-                  </Badge>
-                );
-              })}
-            </div>
-
-            {/* 빠른 필터 */}
-            <div className="flex flex-wrap items-center gap-1.5 mt-2">
-              <span className="text-[11px] text-muted-foreground mr-1">빠른:</span>
-              <Badge
-                variant="outline"
-                className={cn(
-                  "gap-1 cursor-pointer transition-colors h-7 px-2.5",
-                  quickFilter === "unpaid"
-                    ? "border-destructive/60 text-destructive bg-destructive/15"
-                    : "border-border/40 text-muted-foreground hover:bg-muted/40",
-                )}
-                onClick={() => setQuickFilter(quickFilter === "unpaid" ? null : "unpaid")}
-              >
-                💰 미수금 {unpaidCount > 0 && `(${unpaidCount})`}
-              </Badge>
-              <Badge
-                variant="outline"
-                className={cn(
-                  "gap-1 cursor-pointer transition-colors h-7 px-2.5",
-                  quickFilter === "unreturned"
-                    ? "border-destructive/60 text-destructive bg-destructive/15"
-                    : "border-border/40 text-muted-foreground hover:bg-muted/40",
-                )}
-                onClick={() => setQuickFilter(quickFilter === "unreturned" ? null : "unreturned")}
-              >
-                🎫 상품권 미반납 {unreturnedCount > 0 && `(${unreturnedCount})`}
-              </Badge>
-              <Badge
-                variant="outline"
-                className={cn(
-                  "gap-1 cursor-pointer transition-colors h-7 px-2.5",
-                  bundleFilter
-                    ? "border-primary/60 text-primary bg-primary/15"
-                    : "border-border/40 text-muted-foreground hover:bg-muted/40",
-                )}
-                onClick={() => setBundleFilter(!bundleFilter)}
-              >
-                📦 동판 건만
-              </Badge>
-              <Badge
-                variant="outline"
-                className={cn(
-                  "gap-1 cursor-pointer transition-colors h-7 px-2.5",
-                  noOfferFilter
-                    ? "border-primary/60 text-primary bg-primary/15"
-                    : "border-border/40 text-muted-foreground hover:bg-muted/40",
-                )}
-                onClick={() => setNoOfferFilter(!noOfferFilter)}
-              >
-                🚫 무오퍼 건만
-              </Badge>
-            </div>
-          </>
+        {hasActiveFilter && (
+          <Badge variant="outline" className="h-7 px-2 text-[11px] border-primary/40 text-primary gap-1">
+            <Filter className="size-3" /> 컬럼 필터 적용중
+          </Badge>
+        )}
+        {hasActiveFilter && (
+          <button
+            onClick={resetAllFilters}
+            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 px-2 py-1 rounded hover:bg-muted/50"
+          >
+            <X className="size-3" /> 모든 필터 초기화
+          </button>
         )}
       </section>
 
