@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ListPlus, BarChart3, ShieldAlert, RefreshCw, AlertCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ListPlus, BarChart3, ShieldAlert, RefreshCw, AlertCircle, Megaphone, Home } from "lucide-react";
 import { useInquiries } from "@/hooks/useInquiries";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { useRole } from "@/hooks/useRole";
@@ -15,6 +16,16 @@ export const InquirySection = () => {
   const { rows, loading, error, refresh } = useInquiries({ startDate, endDate });
   const { isAdmin } = useRole();
   const [purgeOpen, setPurgeOpen] = useState(false);
+  const [sourceTab, setSourceTab] = useState("meta");
+
+  const metaRows = useMemo(
+    () => rows.filter((r) => r.campaign_name !== "도그마루_홈캠"),
+    [rows]
+  );
+  const dogmaruRows = useMemo(
+    () => rows.filter((r) => r.campaign_name === "도그마루_홈캠"),
+    [rows]
+  );
 
   return (
     <Tabs defaultValue="list" className="space-y-3">
