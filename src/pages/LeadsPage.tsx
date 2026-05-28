@@ -492,7 +492,11 @@ export default function LeadsPage() {
       </Tabs>
       {sourceTab === "other" ? (
         <div key="other-intake" className="animate-fade-in">
-          <ChannelIntakePage embedded />
+          <ChannelIntakePage
+            embedded
+            formOpen={intakeFormOpen}
+            onFormOpenChange={setIntakeFormOpen}
+          />
         </div>
       ) : (
       <Card key={sourceTab} className="overflow-hidden border-border animate-fade-in">
