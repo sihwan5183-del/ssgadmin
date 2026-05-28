@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -207,7 +208,20 @@ function TimelineDialog({
 }
 
 // ── Main Page ──
-const ChannelIntakePage = ({ embedded = false }: { embedded?: boolean } = {}) => {
+interface ChannelIntakePageProps {
+  embedded?: boolean;
+  formOpen?: boolean;
+  onFormOpenChange?: (open: boolean) => void;
+}
+
+const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: ChannelIntakePageProps = {}) => {
+  // 내부 형태로도 동작하도록 controlled/uncontrolled 동시 지원
+  const [internalFormOpen, setInternalFormOpen] = useState(false);
+  const isFormOpen = formOpen !== undefined ? formOpen : internalFormOpen;
+  const setFormOpen = (v: boolean) => {
+    if (onFormOpenChange) onFormOpenChange(v);
+    else setInternalFormOpen(v);
+  };
   const { startDate, endDate } = usePeriod();
   const { user } = useAuth();
   const { statuses: CRM_STATUSES, refresh: refreshStatuses } = useInquiryStatuses();
