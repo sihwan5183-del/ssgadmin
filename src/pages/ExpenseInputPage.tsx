@@ -896,6 +896,7 @@ export default function ExpenseInputPage() {
                   <SelectTrigger><SelectValue placeholder="선택 (신용카드/체크/이체/현금)" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="신용카드">신용카드</SelectItem>
+                    <SelectItem value="법인카드">법인카드</SelectItem>
                     <SelectItem value="체크카드">체크카드</SelectItem>
                     <SelectItem value="계좌이체">계좌이체</SelectItem>
                     <SelectItem value="현금">현금</SelectItem>
@@ -965,6 +966,7 @@ export default function ExpenseInputPage() {
                   <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="신용카드">신용카드</SelectItem>
+                    <SelectItem value="법인카드">법인카드</SelectItem>
                     <SelectItem value="체크카드">체크카드</SelectItem>
                     <SelectItem value="계좌이체">계좌이체</SelectItem>
                     <SelectItem value="현금">현금</SelectItem>
@@ -1044,6 +1046,7 @@ export default function ExpenseInputPage() {
                   <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="신용카드">신용카드</SelectItem>
+                    <SelectItem value="법인카드">법인카드</SelectItem>
                     <SelectItem value="체크카드">체크카드</SelectItem>
                     <SelectItem value="계좌이체">계좌이체</SelectItem>
                     <SelectItem value="현금">현금</SelectItem>
@@ -1451,6 +1454,7 @@ export default function ExpenseInputPage() {
                 <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="신용카드">신용카드</SelectItem>
+                    <SelectItem value="법인카드">법인카드</SelectItem>
                   <SelectItem value="체크카드">체크카드</SelectItem>
                   <SelectItem value="계좌이체">계좌이체</SelectItem>
                   <SelectItem value="자동이체">자동이체</SelectItem>
