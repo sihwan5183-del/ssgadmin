@@ -95,6 +95,25 @@ const toDogmaruItem = (item: Lead) => ({
   activation_number: cleanText(item.activation_number),
 });
 
+type LeadDraft = {
+  name: string;
+  phone: string;
+  current_carrier: string;
+  desired_device: string;
+  desired_product: string;
+  campaign_name: string;
+  memo: string;
+};
+
+const DRAFT_FIELDS: Array<{ key: keyof LeadDraft; label: string }> = [
+  { key: "name", label: "고객명" },
+  { key: "phone", label: "연락처" },
+  { key: "current_carrier", label: "현재 통신사" },
+  { key: "desired_device", label: "희망 기종" },
+  { key: "desired_product", label: "희망 상품" },
+  { key: "campaign_name", label: "캠페인명" },
+];
+
 type Lead = {
   id: string;
   created_at: string;
@@ -143,7 +162,7 @@ export default function LeadsPage() {
   const [memoDraft, setMemoDraft] = useState("");
 
   const [showCreate, setShowCreate] = useState(false);
-  const [draft, setDraft] = useState({
+  const [draft, setDraft] = useState<LeadDraft>({
     name: "",
     phone: "",
     current_carrier: "",
@@ -161,7 +180,7 @@ export default function LeadsPage() {
       .order("created_at", { ascending: false })
       .limit(1000);
     if (error) toast.error(error.message);
-    setRows(((data ?? []) as any) as Lead[]);
+    setRows((data ?? []) as Lead[]);
     setLoading(false);
   }
 
@@ -217,7 +236,7 @@ export default function LeadsPage() {
         .select("*")
         .eq("lead_id", openLead.id)
         .order("created_at", { ascending: false });
-      setNotes(((data ?? []) as any) as LeadNote[]);
+      setNotes((data ?? []) as LeadNote[]);
     })();
   }, [openLead?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
