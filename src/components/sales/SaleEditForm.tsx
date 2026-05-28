@@ -27,6 +27,7 @@ import { ModelAutocomplete } from "@/components/ui/model-autocomplete";
 import { useDeviceModels } from "@/hooks/useDeviceModels";
 import { formatPhone } from "@/lib/phoneFormat";
 import { verifyLoadedSale, findMissingBoundKeys } from "@/components/sales/saleFormLoader";
+import { MultiSelectChips } from "@/components/ui/multi-select-chips";
 
 export type SaleRow = {
   id: string;
@@ -212,10 +213,31 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   const { options: OPEN_METHODS } = useFieldOptions("open_method");
   const { options: STATUSES } = useFieldOptions("status");
   const { options: RATE_PLANS } = useFieldOptions("rate_plan");
+  const { options: USIM_MODELS } = useFieldOptions("usim_model");
   const { mappings, getPlansForProduct, getDefaultsForProduct, getAllowedSaleTypes } = useProductRatePlans();
   const { getByCategory: getEquipmentByCategory } = useEquipmentCatalog();
   const { options: DELIVERY_TYPES } = useFieldOptions("delivery_type");
   const { options: BANKS } = useFieldOptions("bank");
+  // 부가서비스 마스터 (어드민 [부가서비스 유지기간] 화면에서 관리)
+  const [addonMaster, setAddonMaster] = useState<string[]>([]);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { data } = await supabase
+        .from("addon_retention_rules" as any)
+        .select("addon_name, active")
+        .eq("active", true)
+        .order("addon_name", { ascending: true });
+      if (!alive) return;
+      const names = Array.from(
+        new Set(((data ?? []) as Array<{ addon_name: string }>).map((d) => d.addon_name).filter(Boolean)),
+      );
+      setAddonMaster(names);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [form, setForm] = useState<Partial<SaleRow>>(emptyForm);
   const [customFields, setCustomFields] = useState<Record<string, any>>({});
   const [loadingSale, setLoadingSale] = useState<boolean>(!!saleId || !!initialEditId);
