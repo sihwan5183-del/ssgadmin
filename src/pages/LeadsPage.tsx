@@ -320,9 +320,10 @@ export default function LeadsPage() {
       if (period === "month") return iso.slice(0, 7) === month;
       return iso.slice(0, 10) === today;
     };
-    const meta = { total: 0, today: 0, done: 0 };
-    const dogmaru = { total: 0, today: 0, done: 0 };
-    const other = { total: 0, today: 0, done: 0 };
+    const empty = () => ({ total: 0, today: 0, done: 0, recare: 0, absent: 0, fail: 0 });
+    const meta = empty();
+    const dogmaru = empty();
+    const other = empty();
 
     for (const r of rows) {
       if (!inRange(r.created_at)) continue;
@@ -330,12 +331,18 @@ export default function LeadsPage() {
       bucket.total += 1;
       if (r.created_at.slice(0, 10) === today) bucket.today += 1;
       if (r.status === "개통 완료") bucket.done += 1;
+      if (r.status === "재케어") bucket.recare += 1;
+      if (r.status === "부재 중") bucket.absent += 1;
+      if (r.status === "실패" || r.status === "취소") bucket.fail += 1;
     }
     for (const r of inquiryRows) {
       if (!inRange(r.created_at)) continue;
       other.total += 1;
       if (r.created_at.slice(0, 10) === today) other.today += 1;
       if (r.status === "개통완료") other.done += 1;
+      if (r.status === "재케어") other.recare += 1;
+      if (r.status === "부재") other.absent += 1;
+      if (r.status === "실패" || r.status === "취소") other.fail += 1;
     }
     return { meta, dogmaru, other };
   }, [rows, inquiryRows, period]);
