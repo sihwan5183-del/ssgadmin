@@ -396,7 +396,19 @@ export default function LeadsPage() {
       </Card>
 
       {/* Table */}
-      <Card className="overflow-hidden border-border">
+      <Tabs value={sourceTab} onValueChange={(v) => setSourceTab(v as "meta" | "dogmaru")}>
+        <TabsList className="grid grid-cols-2 w-full max-w-xl h-12 bg-muted/60 mb-3">
+          <TabsTrigger value="meta" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
+            메타광고
+            <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.meta}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="dogmaru" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
+            도그마루 시트
+            <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.dogmaru}</Badge>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+      <Card key={sourceTab} className="overflow-hidden border-border animate-fade-in">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/60 border-b-2 border-border hover:bg-muted/60">
