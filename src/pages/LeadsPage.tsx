@@ -165,6 +165,8 @@ export default function LeadsPage() {
 
   const [showCreate, setShowCreate] = useState(false);
   const [intakeFormOpen, setIntakeFormOpen] = useState(false);
+  const [inquiryRows, setInquiryRows] = useState<{ created_at: string; status: string | null }[]>([]);
+  const [period, setPeriod] = useState<"all" | "month" | "day">("all");
   const [draft, setDraft] = useState<LeadDraft>({
     name: "",
     phone: "",
@@ -189,6 +191,15 @@ export default function LeadsPage() {
 
   useEffect(() => {
     load();
+    // 기타 인입(inquiries) 경량 집계 데이터 — 매트릭스 보드용
+    (async () => {
+      const { data } = await supabase
+        .from("inquiries")
+        .select("created_at,status")
+        .order("created_at", { ascending: false })
+        .limit(5000);
+      setInquiryRows((data ?? []) as { created_at: string; status: string | null }[]);
+    })();
     const ch = supabase
       .channel("leads-rt")
       .on(
@@ -220,8 +231,27 @@ export default function LeadsPage() {
         },
       )
       .subscribe();
+    const ich = supabase
+      .channel("inquiries-matrix-rt")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "inquiries" },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const r = payload.new as any;
+            setInquiryRows((prev) => [{ created_at: r.created_at, status: r.status }, ...prev]);
+          } else if (payload.eventType === "UPDATE") {
+            const r = payload.new as any;
+            setInquiryRows((prev) =>
+              prev.map((x) => (x.created_at === r.created_at ? { ...x, status: r.status } : x)),
+            );
+          }
+        },
+      )
+      .subscribe();
     return () => {
       supabase.removeChannel(ch);
+      supabase.removeChannel(ich);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
