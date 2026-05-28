@@ -1283,6 +1283,55 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
           })()}
 
           {/* 자동이체 정보 */}
+          </FormSection>
+
+          <FormSection title="📱 섹션 3 · 단말 / 유심 및 자동이체">
+          <Grid cols={4}>
+            <Field label="단말기 *">
+              <ModelAutocomplete
+                value={form.device_model ?? ""}
+                onChange={(v) => set("device_model", v)}
+                placeholder="942 / S26 / SM-S942N 등"
+              />
+              {requiredErrors.device_model && (
+                <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
+                  <AlertTriangle className="size-3" /> {requiredErrors.device_model}
+                </p>
+              )}
+            </Field>
+            <Field label="단말 일련번호">
+              <div className="flex gap-1.5">
+                <Input value={form.device_serial ?? ""} onChange={(e) => set("device_serial", e.target.value)} className="h-9 bg-input/60 text-xs flex-1 border-border/60" inputMode="text" />
+                <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0 lg:hidden" onClick={() => toast.info("카메라 스캔은 네이티브 앱에서 지원됩니다")}>
+                  <Camera className="size-4" />
+                </Button>
+              </div>
+            </Field>
+            <Field label="USIM">
+              <Select value={form.usim_model ?? ""} onValueChange={(v) => set("usim_model", v)}>
+                <SelectTrigger className="h-9 bg-input/60 text-xs border-border/60">
+                  <SelectValue placeholder={USIM_MODELS.length === 0 ? "어드민 [필드옵션]에서 등록" : "선택"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {/* 기존 자유 입력값이 있으면 보존 노출 */}
+                  {form.usim_model && !USIM_MODELS.includes(form.usim_model) && (
+                    <SelectItem value={form.usim_model}>{form.usim_model} <span className="text-[10px] text-muted-foreground">(기존값)</span></SelectItem>
+                  )}
+                  {USIM_MODELS.map((u) => (
+                    <SelectItem key={u} value={u}>{u}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="USIM 일련번호">
+              <div className="flex gap-1.5">
+                <Input value={form.usim_serial ?? ""} onChange={(e) => set("usim_serial", e.target.value)} className="h-9 bg-input/60 text-xs flex-1 border-border/60" inputMode="text" />
+                <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0 lg:hidden" onClick={() => toast.info("카메라 스캔은 네이티브 앱에서 지원됩니다")}>
+                  <Camera className="size-4" />
+                </Button>
+              </div>
+            </Field>
+          </Grid>
           {(() => {
             const method: "account" | "card" =
               customFields.autopay_method === "card" ? "card" : "account";
