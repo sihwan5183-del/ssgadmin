@@ -732,6 +732,13 @@ export default function ExpenseInputPage() {
           <div className="mt-2 text-2xl font-bold text-foreground">{formatKRW(periodTotals.fixedTotal)}</div>
           <div className="text-[11px] text-muted-foreground mt-1">SaaS · 렌탈 · 구독 등 매월 반복</div>
         </Card>
+        <Card className="p-5 glass border-primary/30 bg-primary/5">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <CreditCard className="size-3.5 text-primary-glow" /> 법인카드 결제
+          </div>
+          <div className="mt-2 text-2xl font-bold text-primary-glow tabular-nums">{formatKRW(periodTotals.cardTotal)}</div>
+          <div className="text-[11px] text-muted-foreground mt-1">법인카드로 집행된 총 지출 합산</div>
+        </Card>
         <Card className="p-5 glass border-expense/20">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Building2 className="size-3.5" /> 유통망 지원금 (지출)
