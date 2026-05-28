@@ -379,50 +379,19 @@ const SalesLedgerPage = () => {
         `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
         `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
       );
-    if (statusFilter.length > 0) {
-      query = query.in("status", statusFilter);
-    }
-    if (managerFilter === "__none__") {
-      query = query.or("manager.is.null,manager.eq.");
-    } else if (managerFilter !== "all") {
-      if (managerValues && managerValues.length > 1) {
-        query = query.in("manager", managerValues);
-      } else {
-        query = query.eq("manager", managerFilter);
+    // === 엑셀형 컬럼 필터 적용 (서버 사이드) ===
+    if (colFilters.status.length > 0) query = query.in("status", colFilters.status);
+    if (colFilters.channel.length > 0) query = query.in("channel", colFilters.channel);
+    if (colFilters.product.length > 0) query = query.in("product", colFilters.product);
+    if (colFilters.sale_type.length > 0) query = query.in("sale_type", colFilters.sale_type);
+    if (colFilters.manager.length > 0) {
+      const hasNone = colFilters.manager.includes("__none__");
+      const realVals = managerValues ?? colFilters.manager.filter((v) => v !== "__none__");
+      if (hasNone && realVals.length === 0) {
+        query = query.or("manager.is.null,manager.eq.");
+      } else if (realVals.length > 0) {
+        query = query.in("manager", realVals);
       }
-    }
-    if (storeFilter !== "all") {
-      query = query.eq("channel", storeFilter);
-    }
-    if (productFilter !== "all") {
-      query = query.eq("product", productFilter);
-    } else if (productsOverride && productsOverride.length > 0) {
-      query = query.in("product", productsOverride);
-    }
-    if (saleTypeOverride) {
-      query = query.eq("sale_type", saleTypeOverride);
-    } else if (saleTypeFilter !== "all") {
-      const list = saleTypeFilter === "MNP"
-        ? ["MNP", "USIM MNP"]
-        : saleTypeFilter === "기변"
-          ? ["기변", "기변(재가입)"]
-          : ["신규"];
-      query = query.in("sale_type", list);
-    }
-    if (returnFilter === "returned") {
-      query = query.eq("voucher_returned", "유");
-    } else if (returnFilter === "unreturned") {
-      query = query.not("voucher", "is", null).neq("voucher", "").neq("voucher_returned", "유");
-    }
-    if (inspectionFilter === "inspected") {
-      query = query.eq("approval_status", "확정");
-    } else if (inspectionFilter === "uninspected") {
-      query = query.neq("approval_status", "확정");
-    }
-    if (moyoFilter === "applied") {
-      query = query.eq("channel", "모요").eq("product", "모바일").or("moyo_excluded.is.null,moyo_excluded.eq.false");
-    } else if (moyoFilter === "excluded") {
-      query = query.eq("channel", "모요").eq("product", "모바일").eq("moyo_excluded", true);
     }
     const sq = debouncedSearchQ.trim();
     if (sq) {
@@ -449,7 +418,7 @@ const SalesLedgerPage = () => {
     setRows((data ?? []) as SaleRow[]);
     setTotal(count ?? 0);
     setSearching(false);
-  }, [page, startDate, endDate, statusFilter, managerFilter, managerValues, storeFilter, productFilter, productsOverride, saleTypeFilter, saleTypeOverride, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
+  }, [page, startDate, endDate, colFilters, managerValues, debouncedSearchQ]);
 
   const loadSummary = useCallback(async () => {
     // 정책: 저장된 모든 실적은 즉시 합계에 반영. (status·approval_status·검수상태와 무관)
@@ -461,28 +430,15 @@ const SalesLedgerPage = () => {
         `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
         `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
       );
-    if (managerFilter === "__none__") q = q.or("manager.is.null,manager.eq.");
-    else if (managerFilter !== "all") {
-      if (managerValues && managerValues.length > 1) q = q.in("manager", managerValues);
-      else q = q.eq("manager", managerFilter);
-    }
-    if (storeFilter !== "all") q = q.eq("channel", storeFilter);
-    if (productFilter !== "all") q = q.eq("product", productFilter);
-    else if (productsOverride && productsOverride.length > 0) q = q.in("product", productsOverride);
-    if (saleTypeOverride) {
-      q = q.eq("sale_type", saleTypeOverride);
-    } else if (saleTypeFilter !== "all") {
-      const list = saleTypeFilter === "MNP"
-        ? ["MNP", "USIM MNP"]
-        : saleTypeFilter === "기변"
-          ? ["기변", "기변(재가입)"]
-          : ["신규"];
-      q = q.in("sale_type", list);
-    }
-    if (moyoFilter === "applied") {
-      q = q.eq("channel", "모요").eq("product", "모바일").or("moyo_excluded.is.null,moyo_excluded.eq.false");
-    } else if (moyoFilter === "excluded") {
-      q = q.eq("channel", "모요").eq("product", "모바일").eq("moyo_excluded", true);
+    if (colFilters.status.length > 0) q = q.in("status", colFilters.status);
+    if (colFilters.channel.length > 0) q = q.in("channel", colFilters.channel);
+    if (colFilters.product.length > 0) q = q.in("product", colFilters.product);
+    if (colFilters.sale_type.length > 0) q = q.in("sale_type", colFilters.sale_type);
+    if (colFilters.manager.length > 0) {
+      const hasNone = colFilters.manager.includes("__none__");
+      const realVals = managerValues ?? colFilters.manager.filter((v) => v !== "__none__");
+      if (hasNone && realVals.length === 0) q = q.or("manager.is.null,manager.eq.");
+      else if (realVals.length > 0) q = q.in("manager", realVals);
     }
     const { data } = await q;
     const all = data ?? [];
@@ -547,15 +503,15 @@ const SalesLedgerPage = () => {
       .not("voucher", "is", null)
       .neq("voucher_returned", "유");
     setUnreturnedCount(urc ?? 0);
-  }, [startDate, endDate, managerFilter, managerValues, storeFilter, productFilter, productsOverride, saleTypeFilter, saleTypeOverride, moyoFilter]);
+  }, [startDate, endDate, colFilters, managerValues]);
 
   useEffect(() => {
     load();
     loadSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, startDate, endDate, statusFilter, managerFilter, managerValues, storeFilter, productFilter, productsOverride, saleTypeOverride, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
+  }, [page, startDate, endDate, colFilters, managerValues, debouncedSearchQ]);
 
-  useEffect(() => { setPage(0); }, [startDate, endDate, statusFilter, managerFilter, managerValues, storeFilter, productFilter, productsOverride, saleTypeFilter, saleTypeOverride, returnFilter, inspectionFilter, moyoFilter, debouncedSearchQ]);
+  useEffect(() => { setPage(0); }, [startDate, endDate, colFilters, managerValues, debouncedSearchQ]);
 
   // 실적 입력 후 navigate로 진입 시 즉시 강제 리로드 (캐시 우회)
   useEffect(() => {
