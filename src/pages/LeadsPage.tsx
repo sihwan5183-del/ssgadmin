@@ -686,6 +686,7 @@ export default function LeadsPage() {
         </Table>
         )}
       </Card>
+      )}
 
       {/* Detail Sheet */}
       <Sheet open={!!openLead} onOpenChange={(o) => !o && setOpenLead(null)}>
