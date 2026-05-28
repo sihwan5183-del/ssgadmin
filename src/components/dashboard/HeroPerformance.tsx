@@ -7,6 +7,8 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { applyActivationFilter, EXCLUDED_ACTIVATION_STATUSES } from "@/lib/salesFilter";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Segment = "all" | "모바일" | "USIM MNP" | "2nd" | "홈" | "TV프리" | "스마트홈" | "대명" | "맞춤제안" | "기타";
 
@@ -54,31 +56,28 @@ const countAll = (rows: { product: string | null }[]): SegMap => {
   return m;
 };
 
-const SegBadges = ({ counts, onSelect, active }: { counts: SegMap; onSelect: (s: Segment) => void; active: Segment }) => {
+/** 카드 hover 시 노출되는 세부 유형 breakdown — 시각적 피로 제거를 위해 툴팁으로 숨김 */
+const SegBreakdownTooltip = ({ counts }: { counts: SegMap }) => {
   const items = PRODUCT_BADGES.filter((b) => b.key !== "all" && counts[b.key] > 0);
   if (items.length === 0) return null;
   return (
-    <div className="flex flex-wrap items-center gap-1 mt-1">
+    <div className="grid grid-cols-2 gap-x-3 gap-y-1 min-w-[160px]">
       {items.map((b) => (
-        <button
-          key={b.key}
-          onClick={(e) => { e.stopPropagation(); onSelect(active === b.key ? "all" : b.key); }}
-          className={cn(
-            "inline-flex items-center gap-0.5 text-[9px] font-semibold px-1 py-0.5 rounded border transition-all",
-            active === b.key
-              ? "bg-primary/15 border-primary/30 text-primary"
-              : "bg-muted/40 border-transparent hover:border-border",
-            b.color
-          )}
-          title={b.label}
-        >
-          <b.icon className="size-2" />
-          {b.short}:{counts[b.key]}
-        </button>
+        <div key={b.key} className="flex items-center justify-between gap-2 text-[11px]">
+          <span className={cn("inline-flex items-center gap-1 font-medium", b.color)}>
+            <b.icon className="size-3" />
+            {b.label}
+          </span>
+          <span className="font-bold tabular-nums">{counts[b.key]}</span>
+        </div>
       ))}
     </div>
   );
 };
+
+/** 메인 탭에 항상 노출할 4개 + 나머지는 드롭다운 */
+const MAIN_TABS: Segment[] = ["all", "모바일", "홈", "2nd"];
+const MAIN_TAB_LABEL: Record<string, string> = { "all": "전체", "모바일": "모바일", "홈": "홈", "2nd": "2nd 디바이스" };
 
 const Delta = ({ value, label }: { value: number; label: string }) => {
   const positive = value >= 0;
@@ -202,108 +201,155 @@ export const HeroPerformance = () => {
   const prevLabel = month === 0 ? "전년 대비" : "전월 대비";
   const hasPending = filtered.pend > 0;
 
+  const detailBadges = PRODUCT_BADGES.filter((b) => !MAIN_TABS.includes(b.key));
+  const detailActive = !MAIN_TABS.includes(segment);
+  const detailLabel = detailActive
+    ? PRODUCT_BADGES.find((b) => b.key === segment)?.label ?? "세부 필터"
+    : "세부 필터";
+
   return (
-    <section className="h-full flex flex-col gap-1.5">
-      {/* Segment tabs */}
-      <div className="flex items-center gap-0.5 bg-muted/50 rounded-lg p-0.5 w-fit flex-wrap">
-        {PRODUCT_BADGES.map((s) => {
-          const isActive = segment === s.key;
-          return (
-            <button
-              key={s.key}
-              onClick={() => setSegment(s.key)}
-              className={cn(
-                "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-medium transition-all",
-                isActive
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <s.icon className="size-3" />
-              {s.short === s.label ? s.label : s.label}
-            </button>
-          );
-        })}
+    <TooltipProvider delayDuration={150}>
+    <section className="h-full flex flex-col gap-2">
+      {/* 메인 탭 (4개) + 세부 필터 드롭다운 */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="inline-flex items-center gap-0.5 bg-muted/50 rounded-lg p-0.5">
+          {MAIN_TABS.map((key) => {
+            const isActive = segment === key;
+            return (
+              <button
+                key={key}
+                onClick={() => setSegment(key)}
+                className={cn(
+                  "px-2.5 py-1 rounded-md text-xs font-semibold transition-all whitespace-nowrap",
+                  isActive ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {MAIN_TAB_LABEL[key]}
+              </button>
+            );
+          })}
+        </div>
+        <Select
+          value={detailActive ? segment : "__none"}
+          onValueChange={(v) => setSegment((v === "__none" ? "all" : v) as Segment)}
+        >
+          <SelectTrigger
+            className={cn(
+              "h-7 w-auto min-w-[120px] text-xs font-semibold",
+              detailActive && "border-primary/40 bg-primary/5 text-primary"
+            )}
+          >
+            <SelectValue placeholder="세부 필터" >{detailLabel}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none">세부 필터 해제</SelectItem>
+            {detailBadges.map((b) => (
+              <SelectItem key={b.key} value={b.key}>
+                {b.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5 flex-1">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1">
         {/* 오늘의 개통 */}
-        <Card className="p-2.5 glass relative overflow-hidden">
-          <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-            <Sun className="size-3 text-warning" />
-            오늘의 개통
-          </div>
-          <div className="mt-1 flex items-baseline gap-1.5">
-            <span className="text-3xl font-bold text-foreground tabular-nums leading-none">{filtered.tod}</span>
-            <span className="text-sm text-muted-foreground">건</span>
-          </div>
-          <SegBadges counts={todaySeg} onSelect={setSegment} active={segment} />
-          <div className="mt-1">
-            <Delta value={todayDelta} label="전일 대비" />
-          </div>
-        </Card>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card className="p-3 glass relative overflow-hidden cursor-default">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <Sun className="size-3.5 text-warning" />
+                오늘의 개통
+              </div>
+              <div className="mt-1.5 flex items-baseline gap-1.5">
+                <span className="text-3xl font-bold text-foreground tabular-nums leading-none">{filtered.tod}</span>
+                <span className="text-sm text-muted-foreground">건</span>
+              </div>
+              <div className="mt-2">
+                <Delta value={todayDelta} label="전일 대비" />
+              </div>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="bg-popover">
+            <div className="text-[11px] font-semibold mb-1.5 text-muted-foreground">오늘 가입 유형별</div>
+            <SegBreakdownTooltip counts={todaySeg} />
+          </TooltipContent>
+        </Tooltip>
 
         {/* 개통 대기 */}
-        <Card
-          className={cn(
-            "p-2.5 glass relative overflow-hidden cursor-pointer transition-all hover:shadow-glow",
-            hasPending && "border-warning/40"
-          )}
-          onClick={() => navigate("/sales-ledger?status=" + encodeURIComponent("택배발송,청약완료"))}
-        >
-          <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-            <Clock className={cn("size-3", hasPending ? "text-warning" : "text-muted-foreground")} />
-            개통 대기
-          </div>
-          <div className="mt-1 flex items-baseline gap-1.5">
-            <span className={cn("text-3xl font-bold tabular-nums leading-none", hasPending ? "text-warning" : "text-muted-foreground")}>
-              {filtered.pend}
-            </span>
-            <span className="text-sm text-muted-foreground">건</span>
-          </div>
-          <SegBadges counts={pendSeg} onSelect={setSegment} active={segment} />
-          <div className="mt-1">
-            {filtered.urgent > 0 ? (
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md text-destructive bg-destructive/10 border border-destructive/20">
-                <AlertTriangle className="size-2.5" />
-                긴급 {filtered.urgent}건
-              </span>
-            ) : (
-              <span className="text-[10px] text-muted-foreground">긴급 대기 없음</span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card
+              className={cn(
+                "p-3 glass relative overflow-hidden cursor-pointer transition-all hover:shadow-glow",
+                hasPending && "border-warning/40"
+              )}
+              onClick={() => navigate("/sales-ledger?status=" + encodeURIComponent("택배발송,청약완료"))}
+            >
+              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <Clock className={cn("size-3.5", hasPending ? "text-warning" : "text-muted-foreground")} />
+                개통 대기
+              </div>
+              <div className="mt-1.5 flex items-baseline gap-1.5">
+                <span className={cn("text-3xl font-bold tabular-nums leading-none", hasPending ? "text-warning" : "text-muted-foreground")}>
+                  {filtered.pend}
+                </span>
+                <span className="text-sm text-muted-foreground">건</span>
+              </div>
+              <div className="mt-2">
+                {filtered.urgent > 0 ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md text-destructive bg-destructive/10 border border-destructive/20">
+                    <AlertTriangle className="size-2.5" />
+                    긴급 {filtered.urgent}건
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-muted-foreground">긴급 대기 없음</span>
+                )}
+              </div>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="bg-popover">
+            <div className="text-[11px] font-semibold mb-1.5 text-muted-foreground">대기 가입 유형별</div>
+            <SegBreakdownTooltip counts={pendSeg} />
+            {(mobilePendingTypes.신규 + mobilePendingTypes.MNP + mobilePendingTypes.기변) > 0 && (
+              <div className="mt-2 pt-2 border-t border-border/40 flex items-center gap-1 text-[10px]">
+                <span className="font-semibold text-muted-foreground">모바일</span>
+                <span className="px-1 py-0.5 rounded bg-primary/10 text-primary font-semibold">신규 {mobilePendingTypes.신규}</span>
+                <span className="px-1 py-0.5 rounded bg-chart-1/10 text-chart-1 font-semibold">MNP {mobilePendingTypes.MNP}</span>
+                <span className="px-1 py-0.5 rounded bg-chart-2/10 text-chart-2 font-semibold">기변 {mobilePendingTypes.기변}</span>
+              </div>
             )}
-          </div>
-          {(mobilePendingTypes.신규 + mobilePendingTypes.MNP + mobilePendingTypes.기변) > 0 && (
-            <div className="mt-1 flex flex-wrap items-center gap-1 text-[10px]">
-              <span className="inline-flex items-center gap-0.5 font-semibold text-muted-foreground">
-                <Smartphone className="size-2.5 text-primary" />M
-              </span>
-              <span className="px-1 py-0.5 rounded bg-primary/10 text-primary font-semibold">신규 {mobilePendingTypes.신규}</span>
-              <span className="px-1 py-0.5 rounded bg-chart-1/10 text-chart-1 font-semibold">MNP {mobilePendingTypes.MNP}</span>
-              <span className="px-1 py-0.5 rounded bg-chart-2/10 text-chart-2 font-semibold">기변 {mobilePendingTypes.기변}</span>
-            </div>
-          )}
-        </Card>
+          </TooltipContent>
+        </Tooltip>
 
         {/* 누적 개통 */}
-        <Card className="p-2.5 glass relative overflow-hidden">
-          <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-            <TrendingUp className="size-3 text-success" />
-            누적 개통 ({label})
-          </div>
-          <div className="mt-1 flex items-baseline gap-1.5">
-            <span className="text-3xl font-bold text-foreground tabular-nums leading-none">{filtered.cur}</span>
-            <span className="text-sm text-muted-foreground">건</span>
-          </div>
-          <SegBadges counts={curSeg} onSelect={setSegment} active={segment} />
-          <div className="mt-1">
-            <Delta value={periodDelta} label={prevLabel} />
-          </div>
-          <div className="text-[10px] text-muted-foreground">
-            이전 동기간 {filtered.prev.toLocaleString()}건
-          </div>
-        </Card>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card className="p-3 glass relative overflow-hidden cursor-default">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <TrendingUp className="size-3.5 text-success" />
+                누적 개통 ({label})
+              </div>
+              <div className="mt-1.5 flex items-baseline gap-1.5">
+                <span className="text-3xl font-bold text-foreground tabular-nums leading-none">{filtered.cur}</span>
+                <span className="text-sm text-muted-foreground">건</span>
+              </div>
+              <div className="mt-2">
+                <Delta value={periodDelta} label={prevLabel} />
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-0.5">
+                이전 동기간 {filtered.prev.toLocaleString()}건
+              </div>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="bg-popover">
+            <div className="text-[11px] font-semibold mb-1.5 text-muted-foreground">누적 가입 유형별</div>
+            <SegBreakdownTooltip counts={curSeg} />
+          </TooltipContent>
+        </Tooltip>
       </div>
     </section>
+    </TooltipProvider>
   );
 };
