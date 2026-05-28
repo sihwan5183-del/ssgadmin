@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDashboardStaff } from "@/hooks/useDashboardStaff";
@@ -68,6 +68,33 @@ const STATUS_COLOR: Record<Status, string> = {
   "실패/취소": "bg-rose-100 text-rose-700 border-rose-200",
 };
 
+// 드롭다운 옵션 — 좌측 리스트와 우측 폼 양쪽에서 100% 동일 라벨 사용
+const CARRIER_OPTIONS = ["SKT", "KT", "LGU+", "알뜰폰"] as const;
+const CHANNEL_OPTIONS = [
+  "메타 광고",
+  "도그마루",
+  "유닥",
+  "모요",
+  "당근",
+  "오프라인",
+  "전화 문의",
+  "기타",
+] as const;
+
+// 기기 정보 — DB에는 desired_device 단일 컬럼만 있으므로
+// "모델 | 용량 | 색상" 포맷으로 직렬화/역직렬화한다.
+const DEVICE_SEP = " | ";
+function parseDevice(raw: string | null | undefined) {
+  const [model = "", capacity = "", color = ""] = (raw ?? "").split(DEVICE_SEP);
+  return { model: model.trim(), capacity: capacity.trim(), color: color.trim() };
+}
+function joinDevice(model: string, capacity: string, color: string) {
+  const parts = [model.trim(), capacity.trim(), color.trim()];
+  // 모두 비어있으면 null 저장을 위해 빈 문자열 리턴
+  if (parts.every((p) => !p)) return "";
+  return parts.join(DEVICE_SEP);
+}
+
 // 구 상태값 호환 매핑 (DB에 남아있는 옛 라벨 → 신 라벨)
 const normalizeStatus = (s: string | null | undefined): Status => {
   const v = (s ?? "").replace(/\s+/g, "");
@@ -109,8 +136,12 @@ const emptyDraft = {
   phone: "",
   current_carrier: "",
   desired_device: "",
+  device_model: "",
+  device_capacity: "",
+  device_color: "",
   desired_product: "",
   campaign_name: "",
+  source: "",
   memo: "",
   status: "신규접수" as Status,
   assigned_to: "" as string,
@@ -144,33 +175,52 @@ export default function LeadsPage() {
   );
 
   // 선택된 리드 → draft 동기화 (편집 가능)
+  // - rows 가 늦게 로드돼도 selectedId 와 매칭되는 row 가 보이는 즉시 1회 바인딩
+  // - 같은 선택 id 에 대해 중복 바인딩하지 않아 사용자 편집을 덮어쓰지 않음
+  const lastBoundIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (createMode) return;
-    if (!selected) {
+    if (!selectedId) {
+      lastBoundIdRef.current = null;
       setDraft(emptyDraft);
       setNotes([]);
+      setNewNote("");
       return;
     }
+    if (lastBoundIdRef.current === selectedId) return;
+    const sel = rows.find((r) => r.id === selectedId);
+    if (!sel) return; // rows 가 아직 도착 전이면 다음 렌더에서 다시 시도
+    lastBoundIdRef.current = selectedId;
+    const dev = parseDevice(sel.desired_device);
     setDraft({
-      name: selected.name ?? "",
-      phone: selected.phone ?? "",
-      current_carrier: selected.current_carrier ?? "",
-      desired_device: selected.desired_device ?? "",
-      desired_product: selected.desired_product ?? "",
-      campaign_name: selected.campaign_name ?? "",
-      memo: selected.memo ?? "",
-      status: normalizeStatus(selected.status),
-      assigned_to: selected.assigned_to ?? "",
+      name: sel.name ?? "",
+      phone: sel.phone ?? "",
+      current_carrier: sel.current_carrier ?? "",
+      desired_device: sel.desired_device ?? "",
+      device_model: dev.model,
+      device_capacity: dev.capacity,
+      device_color: dev.color,
+      desired_product: sel.desired_product ?? "",
+      campaign_name: sel.campaign_name ?? "",
+      source: sel.source ?? "",
+      memo: sel.memo ?? "",
+      status: normalizeStatus(sel.status),
+      assigned_to: sel.assigned_to ?? "",
     });
+    setNewNote("");
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("lead_notes")
         .select("*")
-        .eq("lead_id", selected.id)
+        .eq("lead_id", sel.id)
         .order("created_at", { ascending: false });
+      if (error) {
+        setNotes([]);
+        return;
+      }
       setNotes(((data ?? []) as any) as LeadNote[]);
     })();
-  }, [selectedId, createMode]); // eslint-disable-line
+  }, [selectedId, createMode, rows]);
 
   async function load() {
     setLoading(true);
@@ -265,13 +315,19 @@ export default function LeadsPage() {
   }
 
   async function saveDraft() {
+    const deviceSerialized = joinDevice(
+      draft.device_model,
+      draft.device_capacity,
+      draft.device_color,
+    );
     const payload: any = {
       name: draft.name || null,
       phone: draft.phone || null,
       current_carrier: draft.current_carrier || null,
-      desired_device: draft.desired_device || null,
+      desired_device: deviceSerialized || null,
       desired_product: draft.desired_product || null,
       campaign_name: draft.campaign_name || null,
+      source: draft.source || null,
       memo: draft.memo || null,
       status: draft.status,
       assigned_to: draft.assigned_to || null,
@@ -281,7 +337,7 @@ export default function LeadsPage() {
       if (!payload.name && !payload.phone) {
         return toast.error("고객명 또는 연락처는 필수입니다");
       }
-      payload.source = "manual";
+      if (!payload.source) payload.source = "manual";
       const { data, error } = await supabase
         .from("leads")
         .insert(payload)
@@ -292,6 +348,7 @@ export default function LeadsPage() {
       setRows((prev) => [data as Lead, ...prev]);
       setCreateMode(false);
       setSelectedId((data as Lead).id);
+      lastBoundIdRef.current = null; // 새 id 로 재바인딩 허용
     } else if (selected) {
       const { error } = await supabase
         .from("leads")
