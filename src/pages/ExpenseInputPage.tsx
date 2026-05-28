@@ -265,10 +265,11 @@ export default function ExpenseInputPage() {
     etcTotal: number;
     fixedTotal: number;
     total: number;
+    cardTotal: number;
     byMedia: Record<string, number>;
     byType: Record<string, number>;
     byFixed: Record<string, number>;
-  }>({ adTotal: 0, etcTotal: 0, fixedTotal: 0, total: 0, byMedia: {}, byType: {}, byFixed: {} });
+  }>({ adTotal: 0, etcTotal: 0, fixedTotal: 0, total: 0, cardTotal: 0, byMedia: {}, byType: {}, byFixed: {} });
 
   // 일자별 합계 (누적 계산용) — 기간 내 모든 행을 일자별로 합산
   const [dailySums, setDailySums] = useState<{ date: string; amount: number }[]>([]);
@@ -293,7 +294,7 @@ export default function ExpenseInputPage() {
     // 페이지네이션과 무관하게 기간 내 전체 행을 합산
     const { data, error } = await supabase
       .from("ad_spend")
-      .select("category, media, expense_type, amount, spend_date")
+      .select("category, media, expense_type, amount, spend_date, payment_method")
       .gte("spend_date", startDate)
       .lte("spend_date", endDate);
     if (error) return;
@@ -302,6 +303,7 @@ export default function ExpenseInputPage() {
       etcTotal: 0,
       fixedTotal: 0,
       total: 0,
+      cardTotal: 0,
       byMedia: {} as Record<string, number>,
       byType: {} as Record<string, number>,
       byFixed: {} as Record<string, number>,
@@ -311,6 +313,7 @@ export default function ExpenseInputPage() {
     (data ?? []).forEach((r: any) => {
       const amt = Number(r.amount || 0);
       acc.total += amt;
+      if (r.payment_method === "법인카드") acc.cardTotal += amt;
       if (r.spend_date) {
         dailyMap.set(r.spend_date, (dailyMap.get(r.spend_date) ?? 0) + amt);
         if (!latest || r.spend_date > latest) latest = r.spend_date;
