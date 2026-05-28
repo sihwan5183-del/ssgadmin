@@ -1207,10 +1207,9 @@ const SalesLedgerPage = () => {
                     </td>
                     <td className="text-center text-foreground/90 tabular-nums text-[11px] font-mono tracking-tight">
                       {(() => {
-                        const an = ((r as any).activation_number ?? r.phone ?? "").toString().trim();
+                        const an = ((r as any).activation_number ?? "").toString().trim();
                         if (!an) return <span className="text-muted-foreground/50">-</span>;
-                        const formatted = /^\d+$/.test(an) ? formatPhone(an) : an;
-                        return <span>{formatted}</span>;
+                        return <span>{an}</span>;
                       })()}
                     </td>
                     <td className="text-left text-foreground whitespace-nowrap">
