@@ -671,9 +671,106 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
               </div>
             </Field>
           </Grid>
+          <Grid cols={5}>
+            <Field label="고객명 *">
+              <Input
+                value={form.customer_name ?? ""}
+                onChange={(e) => set("customer_name", e.target.value)}
+                className={cn(
+                  "h-9 bg-input/60 text-xs border-border/60 hover:border-border",
+                  requiredErrors.customer_name && "border-destructive focus-visible:ring-destructive/40",
+                )}
+                required
+              />
+              {requiredErrors.customer_name && (
+                <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
+                  <AlertTriangle className="size-3" /> {requiredErrors.customer_name}
+                </p>
+              )}
+            </Field>
+            <Field label="생년월일">
+              <Input value={form.birth_date ?? ""} onChange={(e) => set("birth_date", e.target.value)} placeholder="900101" className="h-9 bg-input/60 text-xs border-border/60" />
+            </Field>
+            <Field label="연락처 *">
+              <Input
+                value={form.phone ?? ""}
+                onChange={(e) => set("phone", formatPhone(e.target.value))}
+                placeholder="010-0000-0000"
+                className={cn(
+                  "h-9 bg-input/60 text-xs border-border/60 hover:border-border",
+                  requiredErrors.phone && "border-destructive focus-visible:ring-destructive/40",
+                )}
+                inputMode="numeric"
+                type="tel"
+                maxLength={13}
+              />
+              {requiredErrors.phone && (
+                <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
+                  <AlertTriangle className="size-3" /> {requiredErrors.phone}
+                </p>
+              )}
+            </Field>
+            <Field label="가입 번호">
+              <Input
+                value={customFields.subscription_no ?? ""}
+                onChange={(e) => setCustomFields((f) => ({ ...f, subscription_no: e.target.value.replace(/\D+/g, "").slice(0, 12) }))}
+                placeholder="숫자만 입력 (최대 12자리)"
+                className={cn(
+                  "h-9 bg-input/60 text-xs border-border/60",
+                  subscriptionError && "border-destructive focus-visible:ring-destructive/40",
+                )}
+                inputMode="numeric"
+                maxLength={12}
+              />
+              {subscriptionError && (
+                <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
+                  <AlertTriangle className="size-3" /> {subscriptionError}
+                </p>
+              )}
+            </Field>
+            <Field label="간단 메모">
+              <Input
+                value={customFields.quick_memo ?? ""}
+                onChange={(e) => setCustomFields((f) => ({ ...f, quick_memo: e.target.value }))}
+                placeholder="메모 입력"
+                className="h-9 bg-input/60 text-xs border-border/60"
+                maxLength={100}
+              />
+            </Field>
+          </Grid>
+          {/* 분류 토큰 — 기변타겟C / 청소년 */}
+          <div className="flex flex-wrap items-center gap-2 px-1">
+            <span className="text-[11px] text-muted-foreground font-medium mr-1">분류:</span>
+            <button
+              type="button"
+              onClick={() => setCustomFields((f) => ({ ...f, target_c: !f.target_c }))}
+              className={cn(
+                "px-3 py-1.5 rounded-full border text-[11px] font-medium transition-all",
+                customFields.target_c
+                  ? "border-primary bg-primary/15 text-primary shadow-sm"
+                  : "border-border/40 text-muted-foreground hover:border-primary/40",
+              )}
+              aria-pressed={!!customFields.target_c}
+            >
+              {customFields.target_c ? "✓ " : ""}기변타겟C
+            </button>
+            <button
+              type="button"
+              onClick={() => setCustomFields((f) => ({ ...f, is_youth: !f.is_youth }))}
+              className={cn(
+                "px-3 py-1.5 rounded-full border text-[11px] font-medium transition-all",
+                customFields.is_youth
+                  ? "border-amber-400 bg-amber-50 text-amber-700 shadow-sm"
+                  : "border-border/40 text-muted-foreground hover:border-amber-400/60",
+              )}
+              aria-pressed={!!customFields.is_youth}
+            >
+              {customFields.is_youth ? "✓ " : ""}청소년/시니어
+            </button>
+          </div>
         </FormSection>
 
-        <FormSection title="가입 및 기기 정보">
+        <FormSection title="📋 섹션 2 · 개통 정책 및 요금제 정보">
           <Grid cols={6}>
             <Field label="가입상품 *">
               <Select
