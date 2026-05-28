@@ -747,43 +747,42 @@ const SalesLedgerPage = () => {
   const animOffer = useAnimatedNumber(dbSummary.totalOffer);
   const animProfit = useAnimatedNumber(dbSummary.totalProfit);
 
-  const hasActiveFilter =
-    statusFilter.length > 0 ||
-    quickFilter !== null ||
-    managerFilter !== "all" ||
-    storeFilter !== "all" ||
-    productFilter !== "all" ||
-    saleTypeFilter !== "all" ||
-    returnFilter !== "all" ||
-    inspectionFilter !== "all" ||
-    moyoFilter !== "all" ||
-    bundleFilter ||
-    noOfferFilter;
-
-  const resetAllFilters = () => {
-    setStatusFilter([]);
-    setQuickFilter(null);
-    setManagerFilter("all");
-    setStoreFilter("all");
-    setProductFilter("all");
-    setSaleTypeFilter("all");
-    setReturnFilter("all");
-    setInspectionFilter("all");
-    setMoyoFilter("all");
-    setBundleFilter(false);
-    setNoOfferFilter(false);
-  };
-
-  const toggleStatus = (s: string) => {
-    setStatusFilter((prev) =>
-      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s],
-    );
-  };
+  const hasActiveFilter = COL_KEYS.some((k) => colFilters[k].length > 0);
+  const resetAllFilters = clearAllColFilters;
 
   const fallbackStatuses = ["청약완료", "택배발송", "개통완료", "예약", "보류", "취소"];
   const statusList = statusOptions.length > 0 ? statusOptions : fallbackStatuses;
 
-  const showFilterBody = !isMobile || filterOpen;
+  // === 컬럼별 옵션 빌더 (엑셀형 필터 드롭다운용) ===
+  const fallbackSaleTypes = ["신규", "MNP", "USIM MNP", "기변", "기변(재가입)"];
+  const buildOptions = (colKey: ColKey, fromRows: (r: SaleRow) => string | null | undefined, presets: string[] = []): string[] => {
+    const set = new Set<string>();
+    presets.forEach((v) => v && set.add(v));
+    rows.forEach((r) => {
+      const v = (fromRows(r) ?? "").toString().trim();
+      if (v) set.add(v);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "ko"));
+  };
+  const channelFilterOptions = useMemo(() => buildOptions("channel", (r) => r.channel, channelOptions), [rows, channelOptions]);
+  const statusFilterOptions = useMemo(() => buildOptions("status", (r) => r.status, statusList), [rows, statusList]);
+  const productFilterOptions = useMemo(() => buildOptions("product", (r) => r.product, productOptions), [rows, productOptions]);
+  const saleTypeFilterOptions = useMemo(() => buildOptions("sale_type", (r) => r.sale_type, fallbackSaleTypes), [rows]);
+  const managerFilterOptions = useMemo(() => {
+    const set = new Set<string>();
+    staffList.forEach((s) => { if (s.display_name) set.add(s.display_name); });
+    rows.forEach((r) => {
+      const m = (r.manager ?? "").trim();
+      if (!m) return;
+      if (UUID_RE.test(m)) {
+        const nm = managerNameMap[m];
+        if (nm) set.add(nm);
+      } else {
+        set.add(m);
+      }
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "ko"));
+  }, [rows, staffList, managerNameMap]);
 
   return (
     <>
