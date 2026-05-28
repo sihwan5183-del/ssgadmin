@@ -728,16 +728,16 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
                       aria-label="전체 선택"
                     />
                   </th>
-                  <th className="text-left px-3 py-2 w-[88px]">날짜</th>
-                  <th className="text-left px-3 py-2 w-[88px]">채널</th>
-                  <th className="text-left px-3 py-2 w-[80px]">통신사</th>
-                  <th className="text-left px-3 py-2 w-[110px]">고객명</th>
-                  <th className="text-left px-3 py-2 w-[100px]">생년월일</th>
-                  <th className="text-left px-3 py-2 w-[130px]">연락처</th>
-                  <th className="text-left px-3 py-2 w-[180px]">상담모델</th>
-                  <th className="text-left px-3 py-2 w-[100px]">최종상태</th>
-                  <th className="text-left px-3 py-2 w-[110px]">최종액션</th>
-                  <th className="text-left px-3 py-2">
+                  <th className="text-left px-3 py-2 w-[80px]">날짜</th>
+                  <th className="text-left px-3 py-2 w-[72px]">채널</th>
+                  <th className="text-left px-3 py-2 w-[64px]">통신사</th>
+                  <th className="text-left px-3 py-2 w-[96px]">고객명</th>
+                  <th className="text-left px-3 py-2 w-[88px]">생년월일</th>
+                  <th className="text-left px-3 py-2 w-[120px]">연락처</th>
+                  <th className="text-left px-3 py-2 w-[140px]">상담모델</th>
+                  <th className="text-left px-3 py-2 w-[96px]">최종상태</th>
+                  <th className="text-left px-3 py-2 w-[96px]">최종액션</th>
+                  <th className="text-left px-3 py-2 min-w-[440px]">
                     <button
                       type="button"
                       onClick={() => setSortMode((m) => (m === "recent_log" ? "default" : "recent_log"))}
@@ -751,7 +751,7 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
                       <ChevronRight className={cn("size-3 rotate-90 transition-transform", sortMode === "recent_log" && "text-primary")} />
                     </button>
                   </th>
-                  <th className="text-left px-3 py-2 w-[90px]">담당자</th>
+                  <th className="text-left px-3 py-2 w-[80px]">담당자</th>
                 </tr>
               </thead>
               <tbody>
@@ -851,7 +851,7 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
                             ? formatTime(lastLog.created_at)
                             : formatTime(r.last_action_at)}
                         </td>
-                        <td className="px-3 py-3 text-xs align-middle max-w-[280px]">
+                        <td className="px-3 py-3 text-xs align-middle min-w-[440px] whitespace-normal break-words leading-relaxed">
                           {(lastSummary || consultDevice) ? (
                             <TooltipProvider delayDuration={150}>
                               <UITooltip>
@@ -859,7 +859,7 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
                                   <div className="cursor-help">
                                     {lastSummary && (
                                       <span
-                                        className="block text-foreground/80 truncate"
+                                        className="block text-foreground/90"
                                       >
                                         {lastSummary}
                                       </span>
@@ -889,7 +889,7 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
                             <span className="text-muted-foreground">-</span>
                           )}
                         </td>
-                        <td className="px-3 py-3 text-xs align-middle">{r.manager ?? "-"}</td>
+                        <td className="px-3 py-3 text-xs align-middle whitespace-nowrap">{r.manager ? r.manager.split(/\s*[·•]\s*/)[0] : "-"}</td>
                       </tr>
                     );
                   })
