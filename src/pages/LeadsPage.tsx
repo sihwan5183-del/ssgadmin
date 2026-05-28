@@ -310,6 +310,36 @@ export default function LeadsPage() {
     };
   }, [rows]);
 
+  // ── 경로별 성과 매트릭스 (메타 / 도그마루 / 기타) ──
+  const matrix = useMemo(() => {
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const month = today.slice(0, 7);
+    const inRange = (iso: string) => {
+      if (period === "all") return true;
+      if (period === "month") return iso.slice(0, 7) === month;
+      return iso.slice(0, 10) === today;
+    };
+    const meta = { total: 0, today: 0, done: 0 };
+    const dogmaru = { total: 0, today: 0, done: 0 };
+    const other = { total: 0, today: 0, done: 0 };
+
+    for (const r of rows) {
+      if (!inRange(r.created_at)) continue;
+      const bucket = r.campaign_name === DOGMARU_CAMPAIGN ? dogmaru : meta;
+      bucket.total += 1;
+      if (r.created_at.slice(0, 10) === today) bucket.today += 1;
+      if (r.status === "개통 완료") bucket.done += 1;
+    }
+    for (const r of inquiryRows) {
+      if (!inRange(r.created_at)) continue;
+      other.total += 1;
+      if (r.created_at.slice(0, 10) === today) other.today += 1;
+      if (r.status === "개통완료") other.done += 1;
+    }
+    return { meta, dogmaru, other };
+  }, [rows, inquiryRows, period]);
+
   const productOptions = useMemo(
     () => Array.from(new Set(rows.map((r) => r.desired_product).filter(Boolean))) as string[],
     [rows],
