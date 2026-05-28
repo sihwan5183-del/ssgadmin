@@ -17,7 +17,8 @@ export type FieldKey =
   | "carrier"
   | "inquiry_status"
   | "inquiry_quick_memo"
-  | "apartment_result";
+  | "apartment_result"
+  | "usim_model";
 
 export interface FieldOption {
   id: string;

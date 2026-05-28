@@ -27,6 +27,7 @@ import { ModelAutocomplete } from "@/components/ui/model-autocomplete";
 import { useDeviceModels } from "@/hooks/useDeviceModels";
 import { formatPhone } from "@/lib/phoneFormat";
 import { verifyLoadedSale, findMissingBoundKeys } from "@/components/sales/saleFormLoader";
+import { MultiSelectChips } from "@/components/ui/multi-select-chips";
 
 export type SaleRow = {
   id: string;
@@ -212,10 +213,30 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   const { options: OPEN_METHODS } = useFieldOptions("open_method");
   const { options: STATUSES } = useFieldOptions("status");
   const { options: RATE_PLANS } = useFieldOptions("rate_plan");
+  const { options: USIM_MODELS } = useFieldOptions("usim_model");
   const { mappings, getPlansForProduct, getDefaultsForProduct, getAllowedSaleTypes } = useProductRatePlans();
   const { getByCategory: getEquipmentByCategory } = useEquipmentCatalog();
   const { options: DELIVERY_TYPES } = useFieldOptions("delivery_type");
   const { options: BANKS } = useFieldOptions("bank");
+  // 부가서비스 마스터 (어드민 [부가서비스 유지기간] 화면에서 관리)
+  const [addonMaster, setAddonMaster] = useState<string[]>([]);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { data } = await supabase
+        .from("addon_retention_rules" as any)
+        .select("addon_name, active")
+        .eq("active", true)
+        .order("addon_name", { ascending: true });
+      if (!alive) return;
+      const rows = (data ?? []) as unknown as Array<{ addon_name: string }>;
+      const names = Array.from(new Set(rows.map((d) => d.addon_name).filter(Boolean)));
+      setAddonMaster(names);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [form, setForm] = useState<Partial<SaleRow>>(emptyForm);
   const [customFields, setCustomFields] = useState<Record<string, any>>({});
   const [loadingSale, setLoadingSale] = useState<boolean>(!!saleId || !!initialEditId);
@@ -386,6 +407,24 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
     const n = Number(String(v).replace(/[^\d.-]/g, ""));
     return Number.isFinite(n) ? n : 0;
   };
+
+  // ===== 실시간 필수값 유효성 검사 =====
+  // 정산에 직접 영향을 주는 핵심 필드 5종. 비어있거나 형식이 어긋나면 빨간 테두리 + 안내문구.
+  const phoneDigits = (form.phone ?? "").replace(/\D+/g, "");
+  const phoneValid = phoneDigits.length === 0 || (phoneDigits.length >= 10 && phoneDigits.length <= 11);
+  const subscriptionDigits = (customFields.subscription_no ?? "").toString().replace(/\D+/g, "");
+  const subscriptionValid =
+    !customFields.subscription_no || subscriptionDigits === String(customFields.subscription_no);
+  const requiredErrors: Record<string, string | null> = {
+    customer_name: (form.customer_name ?? "").trim() ? null : "고객명을 입력해주세요",
+    phone: !phoneDigits ? "연락처를 입력해주세요" : !phoneValid ? "숫자 10~11자리로 입력해주세요" : null,
+    product: form.product ? null : "가입상품을 선택해주세요",
+    rate_plan: form.rate_plan ? null : "요금제를 선택해주세요",
+    device_model: form.device_model && form.device_model.trim() ? null : "단말기를 선택해주세요",
+  };
+  const subscriptionError = subscriptionValid ? null : "숫자만 입력해주세요";
+  const isFormValid =
+    Object.values(requiredErrors).every((e) => !e) && subscriptionValid;
 
   const reset = () => {
     if (saleId) {
@@ -574,11 +613,13 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   return (
     <>
       <form onSubmit={onSubmit} className="space-y-3 pb-8">
-        <FormSection title="기본 정보" icon={<Zap className="size-3" />}>
+        <FormSection title="👤 섹션 1 · 고객 및 인입 정보" icon={<Zap className="size-3" />}>
           <Grid cols={5}>
             <Field label="인입경로 *">
               <Select value={form.channel ?? ""} onValueChange={(v) => set("channel", v)}>
-                <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectTrigger className={cn("h-9 bg-input/60 text-xs border-border/60 hover:border-border", !form.channel && "border-destructive/70")}>
+                  <SelectValue placeholder="선택" />
+                </SelectTrigger>
                 <SelectContent>
                   {CHANNELS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                 </SelectContent>
@@ -630,9 +671,106 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
               </div>
             </Field>
           </Grid>
+          <Grid cols={5}>
+            <Field label="고객명 *">
+              <Input
+                value={form.customer_name ?? ""}
+                onChange={(e) => set("customer_name", e.target.value)}
+                className={cn(
+                  "h-9 bg-input/60 text-xs border-border/60 hover:border-border",
+                  requiredErrors.customer_name && "border-destructive focus-visible:ring-destructive/40",
+                )}
+                required
+              />
+              {requiredErrors.customer_name && (
+                <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
+                  <AlertTriangle className="size-3" /> {requiredErrors.customer_name}
+                </p>
+              )}
+            </Field>
+            <Field label="생년월일">
+              <Input value={form.birth_date ?? ""} onChange={(e) => set("birth_date", e.target.value)} placeholder="900101" className="h-9 bg-input/60 text-xs border-border/60" />
+            </Field>
+            <Field label="연락처 *">
+              <Input
+                value={form.phone ?? ""}
+                onChange={(e) => set("phone", formatPhone(e.target.value))}
+                placeholder="010-0000-0000"
+                className={cn(
+                  "h-9 bg-input/60 text-xs border-border/60 hover:border-border",
+                  requiredErrors.phone && "border-destructive focus-visible:ring-destructive/40",
+                )}
+                inputMode="numeric"
+                type="tel"
+                maxLength={13}
+              />
+              {requiredErrors.phone && (
+                <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
+                  <AlertTriangle className="size-3" /> {requiredErrors.phone}
+                </p>
+              )}
+            </Field>
+            <Field label="가입 번호">
+              <Input
+                value={customFields.subscription_no ?? ""}
+                onChange={(e) => setCustomFields((f) => ({ ...f, subscription_no: e.target.value.replace(/\D+/g, "").slice(0, 12) }))}
+                placeholder="숫자만 입력 (최대 12자리)"
+                className={cn(
+                  "h-9 bg-input/60 text-xs border-border/60",
+                  subscriptionError && "border-destructive focus-visible:ring-destructive/40",
+                )}
+                inputMode="numeric"
+                maxLength={12}
+              />
+              {subscriptionError && (
+                <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
+                  <AlertTriangle className="size-3" /> {subscriptionError}
+                </p>
+              )}
+            </Field>
+            <Field label="간단 메모">
+              <Input
+                value={customFields.quick_memo ?? ""}
+                onChange={(e) => setCustomFields((f) => ({ ...f, quick_memo: e.target.value }))}
+                placeholder="메모 입력"
+                className="h-9 bg-input/60 text-xs border-border/60"
+                maxLength={100}
+              />
+            </Field>
+          </Grid>
+          {/* 분류 토큰 — 기변타겟C / 청소년 */}
+          <div className="flex flex-wrap items-center gap-2 px-1">
+            <span className="text-[11px] text-muted-foreground font-medium mr-1">분류:</span>
+            <button
+              type="button"
+              onClick={() => setCustomFields((f) => ({ ...f, target_c: !f.target_c }))}
+              className={cn(
+                "px-3 py-1.5 rounded-full border text-[11px] font-medium transition-all",
+                customFields.target_c
+                  ? "border-primary bg-primary/15 text-primary shadow-sm"
+                  : "border-border/40 text-muted-foreground hover:border-primary/40",
+              )}
+              aria-pressed={!!customFields.target_c}
+            >
+              {customFields.target_c ? "✓ " : ""}기변타겟C
+            </button>
+            <button
+              type="button"
+              onClick={() => setCustomFields((f) => ({ ...f, is_youth: !f.is_youth }))}
+              className={cn(
+                "px-3 py-1.5 rounded-full border text-[11px] font-medium transition-all",
+                customFields.is_youth
+                  ? "border-amber-400 bg-amber-50 text-amber-700 shadow-sm"
+                  : "border-border/40 text-muted-foreground hover:border-amber-400/60",
+              )}
+              aria-pressed={!!customFields.is_youth}
+            >
+              {customFields.is_youth ? "✓ " : ""}청소년/시니어
+            </button>
+          </div>
         </FormSection>
 
-        <FormSection title="가입 및 기기 정보">
+        <FormSection title="📋 섹션 2 · 개통 정책 및 요금제 정보">
           <Grid cols={6}>
             <Field label="가입상품 *">
               <Select
@@ -741,94 +879,6 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
               )}
             </Field>
           </Grid>
-          <Grid cols={5}>
-            <Field label="고객명 *">
-              <Input value={form.customer_name ?? ""} onChange={(e) => set("customer_name", e.target.value)} className="h-9 bg-input/60 text-xs" required />
-            </Field>
-            <Field label="생년월일">
-              <Input value={form.birth_date ?? ""} onChange={(e) => set("birth_date", e.target.value)} placeholder="900101" className="h-9 bg-input/60 text-xs" />
-            </Field>
-            <Field label="연락처">
-              <Input value={form.phone ?? ""} onChange={(e) => set("phone", formatPhone(e.target.value))} placeholder="010-0000-0000" className="h-9 bg-input/60 text-xs" inputMode="numeric" type="tel" maxLength={13} />
-            </Field>
-            <Field label="가입 번호">
-              <Input
-                value={customFields.subscription_no ?? ""}
-                onChange={(e) => setCustomFields((f) => ({ ...f, subscription_no: e.target.value.replace(/\D+/g, "").slice(0, 12) }))}
-                placeholder="숫자만 입력 (최대 12자리)"
-                className="h-9 bg-input/60 text-xs" inputMode="numeric"
-                maxLength={12}
-              />
-            </Field>
-            <Field label="간단 메모">
-              <Input
-                value={customFields.quick_memo ?? ""}
-                onChange={(e) => setCustomFields((f) => ({ ...f, quick_memo: e.target.value }))}
-                placeholder="메모 입력"
-                className="h-9 bg-input/60 text-xs"
-                maxLength={100}
-              />
-            </Field>
-          </Grid>
-          {/* 분류 토큰 — 기변타겟C / 청소년 */}
-          <div className="flex flex-wrap items-center gap-2 px-1">
-            <span className="text-[11px] text-muted-foreground font-medium mr-1">분류:</span>
-            <button
-              type="button"
-              onClick={() => setCustomFields((f) => ({ ...f, target_c: !f.target_c }))}
-              className={cn(
-                "px-3 py-1.5 rounded-full border text-[11px] font-medium transition-all",
-                customFields.target_c
-                  ? "border-primary bg-primary/15 text-primary shadow-sm"
-                  : "border-border/40 text-muted-foreground hover:border-primary/40",
-              )}
-              aria-pressed={!!customFields.target_c}
-            >
-              {customFields.target_c ? "✓ " : ""}기변타겟C
-            </button>
-            <button
-              type="button"
-              onClick={() => setCustomFields((f) => ({ ...f, is_youth: !f.is_youth }))}
-              className={cn(
-                "px-3 py-1.5 rounded-full border text-[11px] font-medium transition-all",
-                customFields.is_youth
-                  ? "border-amber-400 bg-amber-50 text-amber-700 shadow-sm"
-                  : "border-border/40 text-muted-foreground hover:border-amber-400/60",
-              )}
-              aria-pressed={!!customFields.is_youth}
-            >
-              {customFields.is_youth ? "✓ " : ""}청소년/시니어
-            </button>
-          </div>
-          <div className="border-t border-border/30 pt-3 mt-1" />
-          <Grid cols={4}>
-            <Field label="단말기">
-              <ModelAutocomplete
-                value={form.device_model ?? ""}
-                onChange={(v) => set("device_model", v)}
-                placeholder="942 / S26 / SM-S942N 등"
-              />
-            </Field>
-            <Field label="단말 일련번호">
-              <div className="flex gap-1.5">
-                <Input value={form.device_serial ?? ""} onChange={(e) => set("device_serial", e.target.value)} className="h-9 bg-input/60 text-xs flex-1" inputMode="text" />
-                <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0 lg:hidden" onClick={() => toast.info("카메라 스캔은 네이티브 앱에서 지원됩니다")}>
-                  <Camera className="size-4" />
-                </Button>
-              </div>
-            </Field>
-            <Field label="USIM">
-              <Input value={form.usim_model ?? ""} onChange={(e) => set("usim_model", e.target.value)} className="h-9 bg-input/60 text-xs" />
-            </Field>
-            <Field label="USIM 일련번호">
-              <div className="flex gap-1.5">
-                <Input value={form.usim_serial ?? ""} onChange={(e) => set("usim_serial", e.target.value)} className="h-9 bg-input/60 text-xs flex-1" inputMode="text" />
-                <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0 lg:hidden" onClick={() => toast.info("카메라 스캔은 네이티브 앱에서 지원됩니다")}>
-                  <Camera className="size-4" />
-                </Button>
-              </div>
-            </Field>
-          </Grid>
           {/* 개통요금제 / 할부 / 동판·번들 / 약정 - 한 줄 슬림 배치 */}
           <div className="grid grid-cols-12 gap-2 items-end">
             <div className="col-span-12 md:col-span-5">
@@ -842,16 +892,26 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                     ? "전체 요금제 (매핑 미설정)"
                     : "선택";
                 return (
-                  <Select value={form.rate_plan ?? ""} onValueChange={(v) => set("rate_plan", v)}>
-                    <SelectTrigger className="h-9 bg-input/60 text-xs">
-                      <SelectValue placeholder={placeholder} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {plans.map((p) => (
-                        <SelectItem key={p} value={p}>{p}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <>
+                    <Select value={form.rate_plan ?? ""} onValueChange={(v) => set("rate_plan", v)} disabled={!form.product}>
+                      <SelectTrigger className={cn(
+                        "h-9 bg-input/60 text-xs border-border/60 hover:border-border",
+                        requiredErrors.rate_plan && "border-destructive focus-visible:ring-destructive/40",
+                      )}>
+                        <SelectValue placeholder={placeholder} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {plans.map((p) => (
+                          <SelectItem key={p} value={p}>{p}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {requiredErrors.rate_plan && form.product && (
+                      <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
+                        <AlertTriangle className="size-3" /> {requiredErrors.rate_plan}
+                      </p>
+                    )}
+                  </>
                 );
               })()}
               </Field>
@@ -989,13 +1049,16 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                     </Field>
                   </div>
                   <div className="col-span-12 md:col-span-4">
-                    <Field label="부가서비스 2 (선택)">
-                      <Input
-                        value={form.vas2 ?? ""}
-                        onChange={(e) => set("vas2", e.target.value || null)}
-                        placeholder="여러 개는 쉼표(,)로 구분"
-                        className="h-9 bg-input/60 text-xs"
-                        maxLength={200}
+                    <Field label="부가서비스 2 (다중 선택)">
+                      <MultiSelectChips
+                        options={addonMaster}
+                        value={(form.vas2 ?? "")
+                          .split(/[,，]\s*/)
+                          .map((s) => s.trim())
+                          .filter(Boolean)}
+                        onChange={(next) => set("vas2", next.length > 0 ? next.join(", ") : null)}
+                        placeholder="마스터에서 선택…"
+                        emptyHint="어드민 [부가서비스 유지기간]에서 등록하세요"
                       />
                     </Field>
                   </div>
@@ -1220,6 +1283,55 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
           })()}
 
           {/* 자동이체 정보 */}
+          </FormSection>
+
+          <FormSection title="📱 섹션 3 · 단말 / 유심 및 자동이체">
+          <Grid cols={4}>
+            <Field label="단말기 *">
+              <ModelAutocomplete
+                value={form.device_model ?? ""}
+                onChange={(v) => set("device_model", v)}
+                placeholder="942 / S26 / SM-S942N 등"
+              />
+              {requiredErrors.device_model && (
+                <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
+                  <AlertTriangle className="size-3" /> {requiredErrors.device_model}
+                </p>
+              )}
+            </Field>
+            <Field label="단말 일련번호">
+              <div className="flex gap-1.5">
+                <Input value={form.device_serial ?? ""} onChange={(e) => set("device_serial", e.target.value)} className="h-9 bg-input/60 text-xs flex-1 border-border/60" inputMode="text" />
+                <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0 lg:hidden" onClick={() => toast.info("카메라 스캔은 네이티브 앱에서 지원됩니다")}>
+                  <Camera className="size-4" />
+                </Button>
+              </div>
+            </Field>
+            <Field label="USIM">
+              <Select value={form.usim_model ?? ""} onValueChange={(v) => set("usim_model", v)}>
+                <SelectTrigger className="h-9 bg-input/60 text-xs border-border/60">
+                  <SelectValue placeholder={USIM_MODELS.length === 0 ? "어드민 [필드옵션]에서 등록" : "선택"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {/* 기존 자유 입력값이 있으면 보존 노출 */}
+                  {form.usim_model && !USIM_MODELS.includes(form.usim_model) && (
+                    <SelectItem value={form.usim_model}>{form.usim_model} <span className="text-[10px] text-muted-foreground">(기존값)</span></SelectItem>
+                  )}
+                  {USIM_MODELS.map((u) => (
+                    <SelectItem key={u} value={u}>{u}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="USIM 일련번호">
+              <div className="flex gap-1.5">
+                <Input value={form.usim_serial ?? ""} onChange={(e) => set("usim_serial", e.target.value)} className="h-9 bg-input/60 text-xs flex-1 border-border/60" inputMode="text" />
+                <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0 lg:hidden" onClick={() => toast.info("카메라 스캔은 네이티브 앱에서 지원됩니다")}>
+                  <Camera className="size-4" />
+                </Button>
+              </div>
+            </Field>
+          </Grid>
           {(() => {
             const method: "account" | "card" =
               customFields.autopay_method === "card" ? "card" : "account";
@@ -1941,8 +2053,13 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                 <X className="size-4 mr-2" /> 취소
               </Button>
             )}
-            <Button type="submit" disabled={busy || loadingSale} className="flex-1 h-10 bg-gradient-primary shadow-glow rounded-2xl text-sm font-semibold">
-              <Check className="size-4 mr-2" /> {loadingSale ? "불러오는 중…" : (editingId ? "수정 저장" : "판매 1건 저장")}
+            <Button
+              type="submit"
+              disabled={busy || loadingSale || !isFormValid}
+              className="flex-1 h-10 bg-gradient-primary shadow-glow rounded-2xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              title={!isFormValid ? "필수 항목을 모두 채워주세요" : undefined}
+            >
+              <Check className="size-4 mr-2" /> {loadingSale ? "불러오는 중…" : (editingId ? "수정 저장" : !isFormValid ? "필수 항목 확인" : "판매 1건 저장")}
             </Button>
           </div>
         )}
