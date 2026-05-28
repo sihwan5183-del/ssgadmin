@@ -30,7 +30,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserCheck, PhoneCall, CheckCircle2, Plus, Search } from "lucide-react";
+import { UserCheck, PhoneCall, CheckCircle2, Plus, Search, RotateCw, Ban, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import ChannelIntakePage from "@/pages/ChannelIntakePage";
 
@@ -502,6 +502,9 @@ export default function LeadsPage() {
                 { label: "전체 접수", icon: UserCheck, key: "total" as const, tone: "text-primary" },
                 { label: "오늘 신규", icon: PhoneCall, key: "today" as const, tone: "text-orange-600 dark:text-orange-400" },
                 { label: "개통 완료", icon: CheckCircle2, key: "done" as const, tone: "text-emerald-600 dark:text-emerald-400" },
+                { label: "재케어", icon: RotateCw, key: "recare" as const, tone: "text-zinc-600 dark:text-zinc-300" },
+                { label: "부재", icon: Ban, key: "absent" as const, tone: "text-orange-600 dark:text-orange-400" },
+                { label: "실패", icon: XCircle, key: "fail" as const, tone: "text-rose-600 dark:text-rose-400" },
               ]).map((row) => {
                 const Icon = row.icon;
                 const m = matrix.meta[row.key];
@@ -510,16 +513,16 @@ export default function LeadsPage() {
                 const sum = m + d + o;
                 return (
                   <tr key={row.key} className="border-b border-border/40 last:border-0">
-                    <td className="py-2.5 px-2">
+                    <td className="py-1.5 px-2">
                       <div className="flex items-center gap-2">
                         <Icon className={"size-4 " + row.tone} />
                         <span className="font-medium">{row.label}</span>
                       </div>
                     </td>
-                    <td className="text-right py-2.5 px-2">{m.toLocaleString()}</td>
-                    <td className="text-right py-2.5 px-2">{d.toLocaleString()}</td>
-                    <td className="text-right py-2.5 px-2">{o.toLocaleString()}</td>
-                    <td className="text-right py-2.5 px-2 font-bold text-base">{sum.toLocaleString()}</td>
+                    <td className="text-right py-1.5 px-2">{m.toLocaleString()}</td>
+                    <td className="text-right py-1.5 px-2">{d.toLocaleString()}</td>
+                    <td className="text-right py-1.5 px-2">{o.toLocaleString()}</td>
+                    <td className="text-right py-1.5 px-2 font-bold text-base">{sum.toLocaleString()}</td>
                   </tr>
                 );
               })}
@@ -533,6 +536,9 @@ export default function LeadsPage() {
             { label: "전체 접수", icon: UserCheck, key: "total" as const, tone: "text-primary" },
             { label: "오늘 신규", icon: PhoneCall, key: "today" as const, tone: "text-orange-600 dark:text-orange-400" },
             { label: "개통 완료", icon: CheckCircle2, key: "done" as const, tone: "text-emerald-600 dark:text-emerald-400" },
+            { label: "재케어", icon: RotateCw, key: "recare" as const, tone: "text-zinc-600 dark:text-zinc-300" },
+            { label: "부재", icon: Ban, key: "absent" as const, tone: "text-orange-600 dark:text-orange-400" },
+            { label: "실패", icon: XCircle, key: "fail" as const, tone: "text-rose-600 dark:text-rose-400" },
           ]).map((row) => {
             const Icon = row.icon;
             const m = matrix.meta[row.key];
