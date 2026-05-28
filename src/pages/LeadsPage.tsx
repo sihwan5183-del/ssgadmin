@@ -574,12 +574,12 @@ export default function LeadsPage() {
               <TableHead className="text-foreground font-bold">고객명</TableHead>
               <TableHead className="text-foreground font-bold">연락처</TableHead>
               <TableHead className="text-foreground font-bold">현재 통신사</TableHead>
-              <TableHead className="text-foreground font-bold">희망 기종</TableHead>
-              <TableHead className="text-foreground font-bold">희망 상품</TableHead>
-              <TableHead className="text-foreground font-bold">캠페인</TableHead>
+              <TableHead className="text-foreground font-bold w-20 text-xs">희망 기종</TableHead>
+              <TableHead className="text-foreground font-bold w-20 text-xs">희망 상품</TableHead>
+              <TableHead className="text-foreground font-bold w-20 text-xs">캠페인</TableHead>
               <TableHead className="text-foreground font-bold w-40">담당자</TableHead>
               <TableHead className="text-foreground font-bold w-36">상담 상태</TableHead>
-              <TableHead className="text-foreground font-bold">메모</TableHead>
+              <TableHead className="text-foreground font-bold min-w-[360px]">메모</TableHead>
               <TableHead className="text-foreground font-bold w-20 text-center">관리</TableHead>
             </TableRow>
           </TableHeader>
@@ -615,9 +615,9 @@ export default function LeadsPage() {
                 <TableCell className="font-bold text-foreground">{r.name ?? "-"}</TableCell>
                 <TableCell className="tabular-nums text-foreground font-medium">{r.phone ?? "-"}</TableCell>
                 <TableCell className="text-foreground">{r.current_carrier ?? "-"}</TableCell>
-                <TableCell className="text-foreground">{r.desired_device ?? "-"}</TableCell>
-                <TableCell className="text-foreground">{r.desired_product ?? "-"}</TableCell>
-                <TableCell className="text-xs text-foreground/70">
+                <TableCell className="text-foreground/80 text-xs truncate max-w-[80px]" title={r.desired_device ?? ""}>{r.desired_device ?? "-"}</TableCell>
+                <TableCell className="text-foreground/80 text-xs truncate max-w-[80px]" title={r.desired_product ?? ""}>{r.desired_product ?? "-"}</TableCell>
+                <TableCell className="text-xs text-foreground/60 truncate max-w-[80px]" title={r.campaign_name ?? ""}>
                   {r.campaign_name ?? "-"}
                 </TableCell>
                 <TableCell onClick={(e) => e.stopPropagation()}>
@@ -633,7 +633,6 @@ export default function LeadsPage() {
                       {staff.map((s) => (
                         <SelectItem key={s.user_id} value={s.user_id}>
                           {s.display_name}
-                          {s.position ? ` · ${s.position}` : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -645,7 +644,7 @@ export default function LeadsPage() {
                     onValueChange={(v) => updateStatus(r.id, v)}
                   >
                     <SelectTrigger
-                      className={`h-8 text-xs font-medium border-0 ${STATUS_COLOR[r.status] ?? ""}`}
+                      className={`h-8 text-xs ${STATUS_COLOR[r.status] ?? ""}`}
                     >
                       <SelectValue />
                     </SelectTrigger>
@@ -659,7 +658,7 @@ export default function LeadsPage() {
                   </Select>
                 </TableCell>
                 <TableCell
-                  className="max-w-[220px] truncate text-xs text-foreground/80"
+                  className="min-w-[360px] text-xs text-foreground whitespace-normal break-words leading-relaxed"
                   onClick={(e) => {
                     e.stopPropagation();
                     setOpenLead(r);
