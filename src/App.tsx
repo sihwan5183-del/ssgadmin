@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -152,7 +152,7 @@ const App = () => {
                         <Route path="/device-models" element={<AdminOnlyRoute><DeviceModelsPage /></AdminOnlyRoute>} />
                         <Route path="/incentive-rates" element={<AdminOnlyRoute><IncentiveRatesPage /></AdminOnlyRoute>} />
                         <Route path="/downloads" element={<AdminOnlyRoute><DownloadsPage /></AdminOnlyRoute>} />
-                        <Route path="/channel-intake" element={<ChannelIntakePage />} />
+                        <Route path="/channel-intake" element={<Navigate to="/leads" replace />} />
                         <Route path="/budget-categories" element={<AdminOnlyRoute><BudgetCategoriesPage /></AdminOnlyRoute>} />
                         <Route path="/my" element={<MyPage />} />
                         <Route path="/sales-ledger" element={<SalesLedgerPage />} />

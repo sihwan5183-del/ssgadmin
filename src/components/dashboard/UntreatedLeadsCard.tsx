@@ -32,7 +32,7 @@ export const UntreatedLeadsCard = () => {
   }, []);
 
   return (
-    <Link to="/channel-intake" className="block">
+    <Link to="/leads" className="block">
       <Card className="glass border-border/40 p-3 hover:bg-accent/30 transition-colors h-full">
         <div className="flex items-center gap-2 mb-1">
           <div className="size-7 rounded-lg bg-orange-100 dark:bg-orange-900/30 grid place-items-center">

@@ -32,6 +32,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserCheck, PhoneCall, CheckCircle2, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
+import ChannelIntakePage from "@/pages/ChannelIntakePage";
 
 const STATUS_OPTIONS = [
   "신규 접수",
@@ -156,7 +157,7 @@ export default function LeadsPage() {
   const [productFilter, setProductFilter] = useState<string>("all");
   const [carrierFilter, setCarrierFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
-  const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru">("meta");
+  const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru" | "other">("meta");
   const [openLead, setOpenLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState<LeadNote[]>([]);
   const [newNote, setNewNote] = useState("");
@@ -467,8 +468,8 @@ export default function LeadsPage() {
       </Card>
 
       {/* Table */}
-      <Tabs value={sourceTab} onValueChange={(v) => setSourceTab(v as "meta" | "dogmaru")}>
-        <TabsList className="grid grid-cols-2 w-full max-w-xl h-12 bg-muted/60 mb-3">
+      <Tabs value={sourceTab} onValueChange={(v) => setSourceTab(v as "meta" | "dogmaru" | "other")}>
+        <TabsList className="grid grid-cols-3 w-full max-w-2xl h-12 bg-muted/60 mb-3">
           <TabsTrigger value="meta" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
             메타광고
             <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.meta}</Badge>
@@ -477,8 +478,16 @@ export default function LeadsPage() {
             도그마루 시트
             <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.dogmaru}</Badge>
           </TabsTrigger>
+          <TabsTrigger value="other" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
+            기타 인입
+          </TabsTrigger>
         </TabsList>
       </Tabs>
+      {sourceTab === "other" ? (
+        <div key="other-intake" className="animate-fade-in">
+          <ChannelIntakePage embedded />
+        </div>
+      ) : (
       <Card key={sourceTab} className="overflow-hidden border-border animate-fade-in">
         {sourceTab === "dogmaru" ? (
           <Table>
@@ -677,6 +686,7 @@ export default function LeadsPage() {
         </Table>
         )}
       </Card>
+      )}
 
       {/* Detail Sheet */}
       <Sheet open={!!openLead} onOpenChange={(o) => !o && setOpenLead(null)}>

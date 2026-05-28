@@ -144,7 +144,7 @@ export function GlobalSearch({ className }: { className?: string }) {
     if (r.type === "sale") {
       navigate(`/activities?sale=${r.id}`);
     } else {
-      navigate(`/channel-intake?inquiry=${r.id}`);
+      navigate(`/leads?inquiry=${r.id}`);
     }
   };
 

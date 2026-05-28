@@ -332,7 +332,7 @@ function TimelineDialog({
 }
 
 // ── Main Page ──
-const ChannelIntakePage = () => {
+const ChannelIntakePage = ({ embedded = false }: { embedded?: boolean } = {}) => {
   const { startDate, endDate } = usePeriod();
   const { user } = useAuth();
   const { statuses: CRM_STATUSES, refresh: refreshStatuses } = useInquiryStatuses();
@@ -717,7 +717,9 @@ const ChannelIntakePage = () => {
 
   return (
     <>
-      <Header title="채널별 인입 정리" subtitle="인입 현황판 · 고객 관리 · CRM" />
+      {!embedded && (
+        <Header title="채널별 인입 정리" subtitle="인입 현황판 · 고객 관리 · CRM" />
+      )}
 
       <div className="space-y-5">
         <SummaryCards rows={rows} />
