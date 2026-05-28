@@ -229,9 +229,8 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
         .eq("active", true)
         .order("addon_name", { ascending: true });
       if (!alive) return;
-      const names = Array.from(
-        new Set(((data ?? []) as Array<{ addon_name: string }>).map((d) => d.addon_name).filter(Boolean)),
-      );
+      const rows = (data ?? []) as unknown as Array<{ addon_name: string }>;
+      const names = Array.from(new Set(rows.map((d) => d.addon_name).filter(Boolean)));
       setAddonMaster(names);
     })();
     return () => {
