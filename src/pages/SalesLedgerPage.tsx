@@ -42,6 +42,67 @@ import { useDashboardStaff } from "@/hooks/useDashboardStaff";
 
 const PAGE_SIZE = 25;
 
+// ============= 엑셀형 컬럼 필터 (체크박스 다중선택) =============
+function ColumnFilter({
+  label, options, selected, onChange,
+}: {
+  label: string;
+  options: string[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const active = selected.length > 0;
+  const filtered = useMemo(
+    () => options.filter((o) => o.toLowerCase().includes(q.toLowerCase())),
+    [options, q],
+  );
+  const toggle = (v: string) => {
+    onChange(selected.includes(v) ? selected.filter((x) => x !== v) : [...selected, v]);
+  };
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`${label} 필터`}
+          className={cn(
+            "ml-1 inline-flex items-center justify-center size-4 rounded transition-colors",
+            active ? "text-primary bg-primary/15" : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/60",
+          )}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <ChevronDown className="size-3" strokeWidth={2.5} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-60 p-2" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-semibold">{label} 필터</span>
+          {active && (
+            <button onClick={() => onChange([])} className="text-[10px] text-muted-foreground hover:text-foreground">초기화</button>
+          )}
+        </div>
+        <Input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="검색…"
+          className="h-7 text-xs mb-2"
+        />
+        <div className="max-h-56 overflow-y-auto space-y-0.5">
+          {filtered.length === 0 && <div className="text-[11px] text-muted-foreground py-2 text-center">항목 없음</div>}
+          {filtered.map((o) => (
+            <label key={o} className="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-muted/60 cursor-pointer text-xs">
+              <Checkbox checked={selected.includes(o)} onCheckedChange={() => toggle(o)} />
+              <span className="truncate">{o || "(빈값)"}</span>
+            </label>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function useAnimatedNumber(target: number, duration = 400) {
   const [display, setDisplay] = useState(target);
   const rafRef = useRef<number>(0);
