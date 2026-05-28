@@ -332,7 +332,7 @@ function TimelineDialog({
 }
 
 // ── Main Page ──
-const ChannelIntakePage = () => {
+const ChannelIntakePage = ({ embedded = false }: { embedded?: boolean } = {}) => {
   const { startDate, endDate } = usePeriod();
   const { user } = useAuth();
   const { statuses: CRM_STATUSES, refresh: refreshStatuses } = useInquiryStatuses();
