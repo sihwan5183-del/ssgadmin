@@ -720,7 +720,6 @@ export default function LeadsPage() {
                         {staff.map((s) => (
                           <SelectItem key={s.user_id} value={s.user_id}>
                             {s.display_name}
-                            {s.position ? ` · ${s.position}` : ""}
                           </SelectItem>
                         ))}
                       </SelectContent>
