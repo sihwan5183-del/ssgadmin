@@ -273,6 +273,11 @@ const IndexInner = () => {
       {/* ========================================================
           [1] 최상단 — 핵심 요약 (목표 달성률 + 오늘/실적 KPI)
          ======================================================== */}
+      {/* 6대 핵심 상품 성과 보드 — 캘린더가 비워준 명당자리 */}
+      <section className="mb-4">
+        <TopProductScoreboard />
+      </section>
+
       {(isVisible("goal_gauge") || isVisible("hero_performance")) && (
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4 mb-4">
           {isVisible("goal_gauge") && <RadialGoalGauge />}
