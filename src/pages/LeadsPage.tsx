@@ -65,6 +65,14 @@ type Lead = {
   memo: string | null;
   source: string | null;
   assigned_to: string | null;
+  // 도그마루 시트 연동 필드
+  registration_date: string | null;
+  customer_name: string | null;
+  customer_phone: string | null;
+  branch_name: string | null;
+  activation_status: string | null;
+  cancellation_status: string | null;
+  activation_number: string | null;
 };
 
 type LeadNote = {
