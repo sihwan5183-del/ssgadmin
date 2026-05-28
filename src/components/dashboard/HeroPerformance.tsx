@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { applyActivationFilter, EXCLUDED_ACTIVATION_STATUSES } from "@/lib/salesFilter";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useProductScope, type ProductScope as Scope6 } from "@/contexts/ProductScopeContext";
 
 type Segment = "all" | "모바일" | "USIM MNP" | "2nd" | "홈" | "TV프리" | "스마트홈" | "대명" | "맞춤제안" | "기타";
 
@@ -75,9 +75,19 @@ const SegBreakdownTooltip = ({ counts }: { counts: SegMap }) => {
   );
 };
 
-/** 메인 탭에 항상 노출할 4개 + 나머지는 드롭다운 */
-const MAIN_TABS: Segment[] = ["all", "모바일", "홈", "2nd"];
-const MAIN_TAB_LABEL: Record<string, string> = { "all": "전체", "모바일": "모바일", "홈": "홈", "2nd": "2nd 디바이스" };
+/** ProductScope (6대 카드) → HeroPerformance 내부 Segment 매핑 */
+const scopeToSegment = (s: Scope6): Segment => {
+  switch (s) {
+    case "all": return "all";
+    case "모바일": return "모바일";
+    case "인터넷": return "홈";
+    case "TV프리": return "TV프리";
+    case "스마트홈": return "스마트홈";
+    case "대명": return "대명";
+    case "업셀": return "맞춤제안";
+    default: return "all";
+  }
+};
 
 const Delta = ({ value, label }: { value: number; label: string }) => {
   const positive = value >= 0;
@@ -103,8 +113,8 @@ const Delta = ({ value, label }: { value: number; label: string }) => {
 export const HeroPerformance = () => {
   const { startDate, endDate, prevStartDate, prevEndDate, label, month } = usePeriod();
   const { monthlyTarget } = useAppSettings();
-
-  const [segment, setSegment] = useState<Segment>("all");
+  const { scope } = useProductScope();
+  const segment: Segment = scopeToSegment(scope);
   const [todayRows, setTodayRows] = useState<{ product: string | null }[]>([]);
   const [ydayRows, setYdayRows] = useState<{ product: string | null }[]>([]);
   const [currentRows, setCurrentRows] = useState<{ product: string | null }[]>([]);
@@ -200,56 +210,27 @@ export const HeroPerformance = () => {
   const todayDelta = filtered.yd === 0 ? (filtered.tod > 0 ? 100 : 0) : ((filtered.tod - filtered.yd) / filtered.yd) * 100;
   const prevLabel = month === 0 ? "전년 대비" : "전월 대비";
   const hasPending = filtered.pend > 0;
-
-  const detailBadges = PRODUCT_BADGES.filter((b) => !MAIN_TABS.includes(b.key));
-  const detailActive = !MAIN_TABS.includes(segment);
-  const detailLabel = detailActive
-    ? PRODUCT_BADGES.find((b) => b.key === segment)?.label ?? "세부 필터"
-    : "세부 필터";
+  const activeLabel = PRODUCT_BADGES.find((b) => b.key === segment)?.label ?? "전체";
 
   return (
     <TooltipProvider delayDuration={150}>
     <section className="h-full flex flex-col gap-2">
-      {/* 메인 탭 (4개) + 세부 필터 드롭다운 */}
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <div className="inline-flex items-center gap-0.5 bg-muted/50 rounded-lg p-0.5">
-          {MAIN_TABS.map((key) => {
-            const isActive = segment === key;
-            return (
-              <button
-                key={key}
-                onClick={() => setSegment(key)}
-                className={cn(
-                  "px-2.5 py-1 rounded-md text-xs font-semibold transition-all whitespace-nowrap",
-                  isActive ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {MAIN_TAB_LABEL[key]}
-              </button>
-            );
-          })}
-        </div>
-        <Select
-          value={detailActive ? segment : "__none"}
-          onValueChange={(v) => setSegment((v === "__none" ? "all" : v) as Segment)}
+      {/* 현재 필터 표시 — 탭 UI는 상단 '핵심 상품 성과 보드' 카드로 일원화 */}
+      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <span>현재 필터:</span>
+        <span
+          className={cn(
+            "inline-flex items-center px-2 py-0.5 rounded-md font-semibold",
+            segment === "all"
+              ? "bg-muted/60 text-foreground"
+              : "bg-primary/15 text-primary-glow border border-primary/30",
+          )}
         >
-          <SelectTrigger
-            className={cn(
-              "h-7 w-auto min-w-[120px] text-xs font-semibold",
-              detailActive && "border-primary/40 bg-primary/5 text-primary"
-            )}
-          >
-            <SelectValue placeholder="세부 필터" >{detailLabel}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none">세부 필터 해제</SelectItem>
-            {detailBadges.map((b) => (
-              <SelectItem key={b.key} value={b.key}>
-                {b.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          {activeLabel}
+        </span>
+        {segment !== "all" && (
+          <span className="text-[10px] text-muted-foreground/80">· 상단 카드로 변경</span>
+        )}
       </div>
 
       {/* Cards */}

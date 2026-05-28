@@ -1,0 +1,158 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Smartphone, Wifi, Tv, Home, Star, Lightbulb, RotateCcw } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { usePeriod } from "@/contexts/PeriodContext";
+import {
+  PRODUCT_SCOPE_ITEMS,
+  matchProductScope,
+  useProductScope,
+  type ProductScope,
+} from "@/contexts/ProductScopeContext";
+import { applyActivationFilter } from "@/lib/salesFilter";
+import { cn } from "@/lib/utils";
+
+const ICONS: Record<Exclude<ProductScope, "all">, typeof Smartphone> = {
+  "모바일": Smartphone,
+  "인터넷": Wifi,
+  "TV프리": Tv,
+  "스마트홈": Home,
+  "대명": Star,
+  "업셀": Lightbulb,
+};
+
+const ACCENT: Record<Exclude<ProductScope, "all">, string> = {
+  "모바일": "text-primary",
+  "인터넷": "text-chart-1",
+  "TV프리": "text-chart-4",
+  "스마트홈": "text-chart-5",
+  "대명": "text-warning",
+  "업셀": "text-success",
+};
+
+type Row = { product: string | null; sale_type: string | null; open_date: string | null };
+
+export const TopProductScoreboard = () => {
+  const { startDate, endDate, label } = usePeriod();
+  const { scope, setScope } = useProductScope();
+  const [rows, setRows] = useState<Row[]>([]);
+  const [todayRows, setTodayRows] = useState<Row[]>([]);
+  const [ydayRows, setYdayRows] = useState<Row[]>([]);
+
+  const load = useCallback(async () => {
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const yDate = new Date();
+    yDate.setDate(yDate.getDate() - 1);
+    const ydayISO = yDate.toISOString().slice(0, 10);
+    const [a, b, c] = await Promise.all([
+      applyActivationFilter(
+        supabase.from("sales").select("product, sale_type, open_date"),
+        startDate,
+        endDate,
+      ).limit(10000),
+      applyActivationFilter(
+        supabase.from("sales").select("product, sale_type, open_date"),
+        todayISO,
+        todayISO,
+      ).limit(5000),
+      applyActivationFilter(
+        supabase.from("sales").select("product, sale_type, open_date"),
+        ydayISO,
+        ydayISO,
+      ).limit(5000),
+    ]);
+    setRows((a.data ?? []) as Row[]);
+    setTodayRows((b.data ?? []) as Row[]);
+    setYdayRows((c.data ?? []) as Row[]);
+  }, [startDate, endDate]);
+
+  useEffect(() => {
+    load();
+    const ch = supabase
+      .channel("top-product-scoreboard-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, () => load())
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [load]);
+
+  const stats = useMemo(
+    () =>
+      PRODUCT_SCOPE_ITEMS.map((it) => ({
+        ...it,
+        total: rows.filter((r) => matchProductScope(r.product, it.key, { saleType: r.sale_type })).length,
+        today: todayRows.filter((r) => matchProductScope(r.product, it.key, { saleType: r.sale_type })).length,
+        yday: ydayRows.filter((r) => matchProductScope(r.product, it.key, { saleType: r.sale_type })).length,
+      })),
+    [rows, todayRows, ydayRows],
+  );
+
+  return (
+    <div className="relative">
+      <div className="flex items-center justify-between mb-2 px-0.5">
+        <div className="flex items-baseline gap-2">
+          <h2 className="text-sm font-bold tracking-tight">핵심 상품 성과 보드</h2>
+          <span className="text-[10px] text-muted-foreground">{label} 누적 · 카드 클릭 시 하단 위젯 필터</span>
+        </div>
+        {scope !== "all" && (
+          <button
+            onClick={() => setScope("all")}
+            className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+          >
+            <RotateCcw className="size-3" />
+            필터 해제
+          </button>
+        )}
+      </div>
+
+      {/* PC/태블릿 6열 그리드 · 모바일 가로 스와이프 칩 리스트 */}
+      <div className="-mx-1 px-1 overflow-x-auto md:overflow-visible scrollbar-hide snap-x snap-mandatory md:snap-none">
+        <div className="flex md:grid md:grid-cols-6 gap-2 md:gap-3 min-w-max md:min-w-0 pb-1 md:pb-0">
+          {stats.map((s) => {
+            const Icon = ICONS[s.key];
+            const active = scope === s.key;
+            const delta = s.today - s.yday;
+            const deltaSign = delta > 0 ? "+" : "";
+            return (
+              <button
+                key={s.key}
+                onClick={() => setScope(active ? "all" : s.key)}
+                className={cn(
+                  "snap-start shrink-0 w-[148px] md:w-auto text-left px-3 py-2.5 rounded-2xl border transition-all glass group",
+                  active
+                    ? "border-primary/60 bg-primary/10 shadow-glow ring-1 ring-primary/40"
+                    : "border-border/40 hover:border-primary/40 hover:-translate-y-0.5",
+                )}
+              >
+                <div className={cn("flex items-center gap-1.5 text-[11px] font-semibold", ACCENT[s.key])}>
+                  <Icon className="size-3.5" />
+                  <span>{s.label}</span>
+                </div>
+                <div className="mt-1.5 flex items-baseline gap-1">
+                  <span className="text-2xl md:text-[26px] font-black tabular-nums leading-none text-foreground">
+                    {s.total.toLocaleString()}
+                  </span>
+                  <span className="text-[10px] font-bold text-muted-foreground">건</span>
+                </div>
+                <div
+                  className={cn(
+                    "mt-1.5 text-[10px] font-semibold tabular-nums",
+                    delta > 0
+                      ? "text-success"
+                      : delta < 0
+                        ? "text-destructive"
+                        : "text-muted-foreground",
+                  )}
+                >
+                  {s.today === 0 && s.yday === 0
+                    ? "오늘 0건"
+                    : `${deltaSign}${delta} 오늘 (${s.today}건)`}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useRole } from "@/hooks/useRole";
 import { Badge } from "@/components/ui/badge";
 import { EXCLUDED_ACTIVATION_STATUSES } from "@/lib/salesFilter";
+import { useProductScope, matchProductScope } from "@/contexts/ProductScopeContext";
 
 /* ── 가입상품 카테고리 설정 ── */
 type ProductCategoryConfig = {
@@ -63,6 +64,7 @@ const PRODUCT_SETTINGS_KEY = "channel_product_categories";
 export const ChannelActivationBreakdown = () => {
   const { startDate, endDate } = usePeriod();
   const { isAdmin } = useRole();
+  const { scope } = useProductScope();
   const [raw, setRaw] = useState<{ channel: string; product: string | null; open_date: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const [channelConfig, setChannelConfig] = useState<ChannelConfig[]>([]);
@@ -177,6 +179,8 @@ export const ChannelActivationBreakdown = () => {
     raw.forEach((r) => {
       const ch = r.channel || "기타";
       if (hiddenChannels.has(ch)) return;
+      // 상단 6대 카드 ProductScope 필터를 항상 추가 적용
+      if (!matchProductScope(r.product, scope)) return;
       // Apply product filter
       if (selectedProductFilter !== "전체") {
         const cat = productCategories.find((c) => c.label === selectedProductFilter);
@@ -192,7 +196,7 @@ export const ChannelActivationBreakdown = () => {
     return Array.from(map.entries())
       .map(([channel, v]) => ({ channel, ...v }))
       .sort((a, b) => (orderMap.get(a.channel) ?? 999) - (orderMap.get(b.channel) ?? 999));
-  }, [raw, selectedProductFilter, hiddenChannels, mergedConfig, productCategories]);
+  }, [raw, selectedProductFilter, hiddenChannels, mergedConfig, productCategories, scope]);
 
   const totalMonthly = useMemo(() => rows.reduce((s, r) => s + r.monthly, 0), [rows]);
   const totalToday = useMemo(() => rows.reduce((s, r) => s + r.today, 0), [rows]);

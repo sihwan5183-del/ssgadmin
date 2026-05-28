@@ -3,7 +3,61 @@ import { PeriodFilter } from "./PeriodFilter";
 import { NotificationBell } from "./NotificationBell";
 import { GlobalSearch } from "./GlobalSearch";
 import { usePeriod } from "@/contexts/PeriodContext";
-import { CalendarRange } from "lucide-react";
+import { CalendarRange, CalendarDays } from "lucide-react";
+import { useState } from "react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+/** 평소엔 닫혀있다가 버튼을 누르면 캘린더 설정을 펼치는 통합 기간 필터 */
+const PeriodFilterToggle = () => {
+  const { label } = usePeriod();
+  const isMobile = useIsMobile();
+  const [open, setOpen] = useState(false);
+
+  const triggerNode = (
+    <Button
+      variant="outline"
+      size="sm"
+      className="h-8 gap-1.5 rounded-xl border-border/50 bg-muted/30 hover:bg-muted/60 font-semibold"
+    >
+      <CalendarDays className="size-3.5 text-primary-glow" />
+      <span className="text-xs">📅 기간 선택</span>
+      <span className="hidden sm:inline text-[10px] text-muted-foreground font-medium ml-1 max-w-[140px] truncate">
+        {label}
+      </span>
+    </Button>
+  );
+
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger asChild>{triggerNode}</SheetTrigger>
+        <SheetContent side="bottom" className="rounded-t-2xl pb-8">
+          <SheetHeader className="text-left">
+            <SheetTitle className="text-base">📅 기간 선택</SheetTitle>
+          </SheetHeader>
+          <div className="mt-4 flex justify-center">
+            <PeriodFilter />
+          </div>
+          <p className="mt-3 text-[11px] text-muted-foreground text-center">
+            현재: <span className="font-semibold text-foreground">{label}</span>
+          </p>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>{triggerNode}</PopoverTrigger>
+      <PopoverContent align="end" className="w-auto p-3">
+        <PeriodFilter />
+      </PopoverContent>
+    </Popover>
+  );
+};
 
 interface HeaderProps {
   title: string;
@@ -43,7 +97,7 @@ export const Header = ({
 
       <div className="flex items-center gap-2 flex-wrap">
         <GlobalSearch className="w-52 hidden md:block" />
-        {showPeriodFilter && <PeriodFilter />}
+        {showPeriodFilter && <PeriodFilterToggle />}
         {showScopeToggle && <ScopeToggle />}
         {rightSlot}
         {/* 모바일에선 NotificationBell이 MobileTopBar에 이미 있으므로 숨김 */}
