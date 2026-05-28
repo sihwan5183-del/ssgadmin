@@ -513,49 +513,44 @@ export const ChannelActivationBreakdown = () => {
         ) : rows.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground text-sm font-medium">선택한 기간 내 데이터가 없습니다</div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
-            {rows.map((row, idx) => {
+          <div className="space-y-1.5">
+            {[...rows].sort((a, b) => b.monthly - a.monthly).map((row, idx) => {
               const ratio = (row.monthly / maxMonthly) * 100;
               const color = colorFor(row.channel, idx);
-              const isTop = row.monthly === maxMonthly && row.monthly > 0;
+              const isTop = idx === 0 && row.monthly > 0;
               return (
                 <div
                   key={row.channel}
                   className={cn(
-                    "p-3.5 rounded-xl border transition-colors min-h-[112px]",
+                    "grid grid-cols-[28px_minmax(0,1fr)_minmax(0,2fr)_auto] items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 rounded-lg border transition-colors",
                     isTop
-                      ? "border-primary/40 bg-primary/5 shadow-sm"
-                      : "border-border/60 bg-card hover:bg-accent/30"
+                      ? "border-primary/40 bg-primary/5"
+                      : "border-border/50 bg-card hover:bg-accent/30"
                   )}
                 >
-                  <div className="flex items-center justify-between mb-2 gap-1">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="size-3 rounded-full shrink-0 ring-1 ring-white/20" style={{ background: color }} />
-                      <span className="text-sm font-bold truncate leading-tight">{row.channel}</span>
-                    </div>
-                    {selectedProductFilter !== "전체" && (
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[9px] font-semibold shrink-0">
-                        <Filter className="size-2.5" />
-                        {selectedProductFilter}
-                      </span>
-                    )}
+                  <span className={cn(
+                    "text-xs font-black tabular-nums text-center",
+                    isTop ? "text-primary" : "text-muted-foreground"
+                  )}>
+                    {idx + 1}
+                  </span>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="size-2.5 rounded-full shrink-0" style={{ background: color }} />
+                    <span className="text-sm font-bold truncate">{row.channel}</span>
                   </div>
-                  <div className="flex items-baseline gap-1 leading-none">
+                  <div className="h-2 rounded-full bg-muted/80 overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${ratio}%`, background: color }} />
+                  </div>
+                  <div className="flex items-baseline gap-2 sm:gap-3 justify-end tabular-nums whitespace-nowrap">
+                    <span className="text-xs text-muted-foreground hidden sm:inline">오늘 <span className="font-bold text-primary">+{row.today}</span></span>
+                    <span className="text-xs text-primary sm:hidden font-bold">+{row.today}</span>
                     <span className={cn(
-                      "text-2xl font-black tabular-nums tracking-tight",
+                      "text-base sm:text-lg font-black tracking-tight min-w-[2.5rem] text-right",
                       isTop ? "text-primary" : "text-foreground"
-                    )}>{row.monthly}</span>
-                    <span className="text-[11px] font-bold text-muted-foreground">건</span>
-                  </div>
-                  <div className="mt-1.5 flex items-baseline gap-1 leading-none">
-                    <span className="text-base font-extrabold tabular-nums text-primary">+{row.today}</span>
-                    <span className="text-[11px] font-semibold text-muted-foreground">오늘</span>
-                  </div>
-                  <div className="mt-2 h-1.5 rounded-full bg-muted/80 overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{ width: `${ratio}%`, background: color }}
-                    />
+                    )}>
+                      {row.monthly}
+                    </span>
+                    <span className="text-[10px] font-semibold text-muted-foreground">건</span>
                   </div>
                 </div>
               );
