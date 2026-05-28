@@ -448,36 +448,116 @@ export default function LeadsPage() {
         )}
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="p-4 flex items-center gap-3">
-          <div className="size-10 rounded-xl bg-primary/10 grid place-items-center">
-            <UserCheck className="size-5 text-primary" />
-          </div>
+      {/* 종합 리드 성과 보드 — 경로별/기간별 매트릭스 */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
           <div>
-            <div className="text-xs text-muted-foreground">전체 접수</div>
-            <div className="text-2xl font-bold">{stats.total}</div>
+            <div className="text-sm font-semibold text-foreground">종합 리드 성과 보드</div>
+            <div className="text-xs text-muted-foreground">경로별 · 기간별 접수/개통 매트릭스</div>
           </div>
-        </Card>
-        <Card className="p-4 flex items-center gap-3">
-          <div className="size-10 rounded-xl bg-orange-100 dark:bg-orange-900/30 grid place-items-center">
-            <PhoneCall className="size-5 text-orange-600 dark:text-orange-400" />
+          <div className="inline-flex rounded-md border border-border bg-muted/40 p-0.5">
+            {([
+              { k: "all", l: "누적" },
+              { k: "month", l: "월별" },
+              { k: "day", l: "일별" },
+            ] as const).map((opt) => (
+              <button
+                key={opt.k}
+                type="button"
+                onClick={() => setPeriod(opt.k)}
+                className={
+                  "px-3 py-1.5 text-xs font-semibold rounded transition-colors " +
+                  (period === opt.k
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground")
+                }
+              >
+                {opt.l}
+              </button>
+            ))}
           </div>
-          <div>
-            <div className="text-xs text-muted-foreground">오늘 신규</div>
-            <div className="text-2xl font-bold">{stats.todayNew}</div>
-          </div>
-        </Card>
-        <Card className="p-4 flex items-center gap-3">
-          <div className="size-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 grid place-items-center">
-            <CheckCircle2 className="size-5 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          <div>
-            <div className="text-xs text-muted-foreground">개통 완료</div>
-            <div className="text-2xl font-bold">{stats.completed}</div>
-          </div>
-        </Card>
-      </div>
+        </div>
+
+        {/* Desktop/Tablet: 격자 매트릭스 */}
+        <div className="hidden sm:block overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="text-xs text-muted-foreground border-b border-border">
+                <th className="text-left font-medium py-2 px-2 w-32">지표</th>
+                <th className="text-right font-medium py-2 px-2">메타</th>
+                <th className="text-right font-medium py-2 px-2">도그마루</th>
+                <th className="text-right font-medium py-2 px-2">기타</th>
+                <th className="text-right font-semibold py-2 px-2 text-foreground">총합</th>
+              </tr>
+            </thead>
+            <tbody className="tabular-nums">
+              {([
+                { label: "전체 접수", icon: UserCheck, key: "total" as const, tone: "text-primary" },
+                { label: "오늘 신규", icon: PhoneCall, key: "today" as const, tone: "text-orange-600 dark:text-orange-400" },
+                { label: "개통 완료", icon: CheckCircle2, key: "done" as const, tone: "text-emerald-600 dark:text-emerald-400" },
+              ]).map((row) => {
+                const Icon = row.icon;
+                const m = matrix.meta[row.key];
+                const d = matrix.dogmaru[row.key];
+                const o = matrix.other[row.key];
+                const sum = m + d + o;
+                return (
+                  <tr key={row.key} className="border-b border-border/40 last:border-0">
+                    <td className="py-2.5 px-2">
+                      <div className="flex items-center gap-2">
+                        <Icon className={"size-4 " + row.tone} />
+                        <span className="font-medium">{row.label}</span>
+                      </div>
+                    </td>
+                    <td className="text-right py-2.5 px-2">{m.toLocaleString()}</td>
+                    <td className="text-right py-2.5 px-2">{d.toLocaleString()}</td>
+                    <td className="text-right py-2.5 px-2">{o.toLocaleString()}</td>
+                    <td className="text-right py-2.5 px-2 font-bold text-base">{sum.toLocaleString()}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile: 세로형 스택 */}
+        <div className="sm:hidden space-y-3">
+          {([
+            { label: "전체 접수", icon: UserCheck, key: "total" as const, tone: "text-primary" },
+            { label: "오늘 신규", icon: PhoneCall, key: "today" as const, tone: "text-orange-600 dark:text-orange-400" },
+            { label: "개통 완료", icon: CheckCircle2, key: "done" as const, tone: "text-emerald-600 dark:text-emerald-400" },
+          ]).map((row) => {
+            const Icon = row.icon;
+            const m = matrix.meta[row.key];
+            const d = matrix.dogmaru[row.key];
+            const o = matrix.other[row.key];
+            const sum = m + d + o;
+            return (
+              <div key={row.key} className="rounded-lg border border-border bg-background p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Icon className={"size-4 " + row.tone} />
+                    <span className="text-sm font-semibold">{row.label}</span>
+                  </div>
+                  <span className="text-lg font-bold tabular-nums">{sum.toLocaleString()}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  {[
+                    { k: "메타", v: m },
+                    { k: "도그마루", v: d },
+                    { k: "기타", v: o },
+                  ].map((c) => (
+                    <div key={c.k} className="rounded-md bg-muted/50 py-1.5">
+                      <div className="text-[10px] text-muted-foreground">{c.k}</div>
+                      <div className="text-sm font-semibold tabular-nums">{c.v.toLocaleString()}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
 
       {/* Filters */}
       <Card className="p-3 flex flex-wrap items-center gap-2">
