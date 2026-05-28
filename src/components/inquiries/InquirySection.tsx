@@ -47,20 +47,59 @@ export const InquirySection = () => {
       </div>
       <TabsContent value="list" className="space-y-3">
         <InquiryForm onSaved={refresh} />
-        {error ? (
-          <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 flex items-center gap-3">
-            <AlertCircle className="size-5 text-destructive shrink-0" />
-            <div className="flex-1 text-sm">
-              <div className="font-medium text-destructive">데이터를 불러오지 못했습니다.</div>
-              <div className="text-xs text-muted-foreground mt-0.5">잠시 후 다시 시도해주세요. ({error})</div>
-            </div>
-            <Button size="sm" variant="outline" onClick={() => refresh()}>
-              <RefreshCw className="size-4 mr-1" /> 새로고침
-            </Button>
-          </div>
-        ) : (
-          <InquiryList rows={rows} loading={loading} onChange={refresh} />
-        )}
+
+        <Tabs value={sourceTab} onValueChange={setSourceTab} className="space-y-3">
+          <TabsList className="h-11 p-1.5 gap-1">
+            <TabsTrigger value="meta" className="gap-2 text-sm font-semibold px-4">
+              <Megaphone className="size-4" />
+              메타광고 인입
+              <Badge variant="secondary" className="ml-1 text-[11px] font-bold tabular-nums bg-muted-foreground/10">
+                {metaRows.length}건
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger value="dogmaru" className="gap-2 text-sm font-semibold px-4">
+              <Home className="size-4" />
+              도그마루 홈캠
+              <Badge variant="secondary" className="ml-1 text-[11px] font-bold tabular-nums bg-muted-foreground/10">
+                {dogmaruRows.length}건
+              </Badge>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="meta" className="mt-0">
+            {error ? (
+              <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 flex items-center gap-3">
+                <AlertCircle className="size-5 text-destructive shrink-0" />
+                <div className="flex-1 text-sm">
+                  <div className="font-medium text-destructive">데이터를 불러오지 못했습니다.</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">잠시 후 다시 시도해주세요. ({error})</div>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => refresh()}>
+                  <RefreshCw className="size-4 mr-1" /> 새로고침
+                </Button>
+              </div>
+            ) : (
+              <InquiryList rows={metaRows} loading={loading} onChange={refresh} />
+            )}
+          </TabsContent>
+
+          <TabsContent value="dogmaru" className="mt-0">
+            {error ? (
+              <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 flex items-center gap-3">
+                <AlertCircle className="size-5 text-destructive shrink-0" />
+                <div className="flex-1 text-sm">
+                  <div className="font-medium text-destructive">데이터를 불러오지 못했습니다.</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">잠시 후 다시 시도해주세요. ({error})</div>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => refresh()}>
+                  <RefreshCw className="size-4 mr-1" /> 새로고침
+                </Button>
+              </div>
+            ) : (
+              <InquiryList rows={dogmaruRows} loading={loading} onChange={refresh} />
+            )}
+          </TabsContent>
+        </Tabs>
       </TabsContent>
       <TabsContent value="dashboard">
         <InquiryDashboard rows={rows} />
