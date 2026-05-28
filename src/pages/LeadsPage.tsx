@@ -30,15 +30,15 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserCheck, PhoneCall, CheckCircle2, Plus, Search } from "lucide-react";
+import { UserCheck, PhoneCall, CheckCircle2, Plus, Search, RotateCw, Ban, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import ChannelIntakePage from "@/pages/ChannelIntakePage";
 
 const STATUS_OPTIONS = [
   "신규 접수",
-  "통화 중",
+  "케어중",
   "부재 중",
-  "보류",
+  "재케어",
   "개통 완료",
   "취소",
 ] as const;
@@ -47,9 +47,9 @@ type Status = (typeof STATUS_OPTIONS)[number];
 // 파스텔 배경 제거: 흰 배경 + 진한 텍스트/테두리로 명도 대비 확보
 const STATUS_COLOR: Record<string, string> = {
   "신규 접수": "bg-background text-red-700 border border-red-600 font-bold dark:text-red-300 dark:border-red-400",
-  "통화 중": "bg-background text-blue-700 border border-blue-600 font-bold dark:text-blue-300 dark:border-blue-400",
+  "케어중": "bg-background text-blue-700 border border-blue-600 font-bold dark:text-blue-300 dark:border-blue-400",
   "부재 중": "bg-background text-orange-700 border border-orange-600 font-bold dark:text-orange-300 dark:border-orange-400",
-  "보류": "bg-background text-zinc-700 border border-zinc-500 font-bold dark:text-zinc-200 dark:border-zinc-400",
+  "재케어": "bg-background text-zinc-700 border border-zinc-500 font-bold dark:text-zinc-200 dark:border-zinc-400",
   "개통 완료": "bg-background text-emerald-700 border border-emerald-600 font-bold dark:text-emerald-300 dark:border-emerald-400",
   "취소": "bg-background text-rose-700 border border-rose-600 font-bold dark:text-rose-300 dark:border-rose-400",
 };
@@ -320,9 +320,10 @@ export default function LeadsPage() {
       if (period === "month") return iso.slice(0, 7) === month;
       return iso.slice(0, 10) === today;
     };
-    const meta = { total: 0, today: 0, done: 0 };
-    const dogmaru = { total: 0, today: 0, done: 0 };
-    const other = { total: 0, today: 0, done: 0 };
+    const empty = () => ({ total: 0, today: 0, done: 0, recare: 0, absent: 0, fail: 0 });
+    const meta = empty();
+    const dogmaru = empty();
+    const other = empty();
 
     for (const r of rows) {
       if (!inRange(r.created_at)) continue;
@@ -330,12 +331,18 @@ export default function LeadsPage() {
       bucket.total += 1;
       if (r.created_at.slice(0, 10) === today) bucket.today += 1;
       if (r.status === "개통 완료") bucket.done += 1;
+      if (r.status === "재케어") bucket.recare += 1;
+      if (r.status === "부재 중") bucket.absent += 1;
+      if (r.status === "실패" || r.status === "취소") bucket.fail += 1;
     }
     for (const r of inquiryRows) {
       if (!inRange(r.created_at)) continue;
       other.total += 1;
       if (r.created_at.slice(0, 10) === today) other.today += 1;
       if (r.status === "개통완료") other.done += 1;
+      if (r.status === "재케어") other.recare += 1;
+      if (r.status === "부재") other.absent += 1;
+      if (r.status === "실패" || r.status === "취소") other.fail += 1;
     }
     return { meta, dogmaru, other };
   }, [rows, inquiryRows, period]);
@@ -495,6 +502,9 @@ export default function LeadsPage() {
                 { label: "전체 접수", icon: UserCheck, key: "total" as const, tone: "text-primary" },
                 { label: "오늘 신규", icon: PhoneCall, key: "today" as const, tone: "text-orange-600 dark:text-orange-400" },
                 { label: "개통 완료", icon: CheckCircle2, key: "done" as const, tone: "text-emerald-600 dark:text-emerald-400" },
+                { label: "재케어", icon: RotateCw, key: "recare" as const, tone: "text-zinc-600 dark:text-zinc-300" },
+                { label: "부재", icon: Ban, key: "absent" as const, tone: "text-orange-600 dark:text-orange-400" },
+                { label: "실패", icon: XCircle, key: "fail" as const, tone: "text-rose-600 dark:text-rose-400" },
               ]).map((row) => {
                 const Icon = row.icon;
                 const m = matrix.meta[row.key];
@@ -503,16 +513,16 @@ export default function LeadsPage() {
                 const sum = m + d + o;
                 return (
                   <tr key={row.key} className="border-b border-border/40 last:border-0">
-                    <td className="py-2.5 px-2">
+                    <td className="py-1.5 px-2">
                       <div className="flex items-center gap-2">
                         <Icon className={"size-4 " + row.tone} />
                         <span className="font-medium">{row.label}</span>
                       </div>
                     </td>
-                    <td className="text-right py-2.5 px-2">{m.toLocaleString()}</td>
-                    <td className="text-right py-2.5 px-2">{d.toLocaleString()}</td>
-                    <td className="text-right py-2.5 px-2">{o.toLocaleString()}</td>
-                    <td className="text-right py-2.5 px-2 font-bold text-base">{sum.toLocaleString()}</td>
+                    <td className="text-right py-1.5 px-2">{m.toLocaleString()}</td>
+                    <td className="text-right py-1.5 px-2">{d.toLocaleString()}</td>
+                    <td className="text-right py-1.5 px-2">{o.toLocaleString()}</td>
+                    <td className="text-right py-1.5 px-2 font-bold text-base">{sum.toLocaleString()}</td>
                   </tr>
                 );
               })}
@@ -526,6 +536,9 @@ export default function LeadsPage() {
             { label: "전체 접수", icon: UserCheck, key: "total" as const, tone: "text-primary" },
             { label: "오늘 신규", icon: PhoneCall, key: "today" as const, tone: "text-orange-600 dark:text-orange-400" },
             { label: "개통 완료", icon: CheckCircle2, key: "done" as const, tone: "text-emerald-600 dark:text-emerald-400" },
+            { label: "재케어", icon: RotateCw, key: "recare" as const, tone: "text-zinc-600 dark:text-zinc-300" },
+            { label: "부재", icon: Ban, key: "absent" as const, tone: "text-orange-600 dark:text-orange-400" },
+            { label: "실패", icon: XCircle, key: "fail" as const, tone: "text-rose-600 dark:text-rose-400" },
           ]).map((row) => {
             const Icon = row.icon;
             const m = matrix.meta[row.key];
