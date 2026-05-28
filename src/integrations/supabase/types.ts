@@ -1244,6 +1244,7 @@ export type Database = {
       inquiries: {
         Row: {
           birth_date: string | null
+          campaign_name: string | null
           channel: string
           content: string | null
           converted_sale_id: string | null
@@ -1264,6 +1265,7 @@ export type Database = {
         }
         Insert: {
           birth_date?: string | null
+          campaign_name?: string | null
           channel: string
           content?: string | null
           converted_sale_id?: string | null
@@ -1284,6 +1286,7 @@ export type Database = {
         }
         Update: {
           birth_date?: string | null
+          campaign_name?: string | null
           channel?: string
           content?: string | null
           converted_sale_id?: string | null
