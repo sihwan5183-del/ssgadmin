@@ -613,11 +613,13 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
   return (
     <>
       <form onSubmit={onSubmit} className="space-y-3 pb-8">
-        <FormSection title="기본 정보" icon={<Zap className="size-3" />}>
+        <FormSection title="👤 섹션 1 · 고객 및 인입 정보" icon={<Zap className="size-3" />}>
           <Grid cols={5}>
             <Field label="인입경로 *">
               <Select value={form.channel ?? ""} onValueChange={(v) => set("channel", v)}>
-                <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectTrigger className={cn("h-9 bg-input/60 text-xs border-border/60 hover:border-border", !form.channel && "border-destructive/70")}>
+                  <SelectValue placeholder="선택" />
+                </SelectTrigger>
                 <SelectContent>
                   {CHANNELS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                 </SelectContent>
