@@ -54,6 +54,13 @@ Deno.serve(async (req) => {
     memo: str(body.memo) ?? null,
     status: '신규 접수',
     source: str(body.source) ?? 'webhook',
+    registration_date: str(body.registration_date),
+    customer_name: str(body.customer_name),
+    customer_phone: str(body.customer_phone),
+    branch_name: str(body.branch_name),
+    activation_status: str(body.activation_status),
+    cancellation_status: str(body.cancellation_status),
+    activation_number: str(body.activation_number),
   }
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE)
