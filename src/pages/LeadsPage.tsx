@@ -807,19 +807,12 @@ export default function LeadsPage() {
             <SheetTitle>리드 수동 추가</SheetTitle>
           </SheetHeader>
           <div className="mt-4 space-y-3">
-            {[
-              ["name", "고객명"],
-              ["phone", "연락처"],
-              ["current_carrier", "현재 통신사"],
-              ["desired_device", "희망 기종"],
-              ["desired_product", "희망 상품"],
-              ["campaign_name", "캠페인명"],
-            ].map(([k, label]) => (
-              <div key={k} className="space-y-1">
+            {DRAFT_FIELDS.map(({ key, label }) => (
+              <div key={key} className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">{label}</label>
                 <Input
-                  value={(draft as any)[k]}
-                  onChange={(e) => setDraft({ ...draft, [k]: e.target.value })}
+                  value={draft[key]}
+                  onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
                 />
               </div>
             ))}
