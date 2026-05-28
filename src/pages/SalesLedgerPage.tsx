@@ -1205,6 +1205,14 @@ const SalesLedgerPage = () => {
                         )}
                       </div>
                     </td>
+                    <td className="text-center text-foreground/90 tabular-nums text-[11px] font-mono tracking-tight">
+                      {(() => {
+                        const an = ((r as any).activation_number ?? r.phone ?? "").toString().trim();
+                        if (!an) return <span className="text-muted-foreground/50">-</span>;
+                        const formatted = /^\d+$/.test(an) ? formatPhone(an) : an;
+                        return <span>{formatted}</span>;
+                      })()}
+                    </td>
                     <td className="text-left text-foreground whitespace-nowrap">
                       {(() => {
                         const st = (r.sale_type ?? "").trim();
@@ -1298,7 +1306,7 @@ const SalesLedgerPage = () => {
                 );
               })}
               {filteredRows.length === 0 && (
-                <tr><td colSpan={isAdmin ? 17 : 16} className="text-center py-10 text-muted-foreground">
+                <tr><td colSpan={isAdmin ? 18 : 17} className="text-center py-10 text-muted-foreground">
                   {searchQ ? "검색 결과가 없습니다." : "선택한 기간에 데이터가 없습니다."}
                 </td></tr>
               )}
