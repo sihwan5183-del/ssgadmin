@@ -651,8 +651,30 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
           </div>
         </div>
 
-        {/* Input form (collapsible) */}
-        <InquiryForm onSaved={refresh} />
+        {/* Input form — hidden by default; opens as a right-side drawer when triggered */}
+        {!embedded && (
+          <div className="flex justify-end">
+            <Button size="sm" className="h-9 gap-1.5" onClick={() => setFormOpen(true)}>
+              <Plus className="size-3.5" /> 인입 등록
+            </Button>
+          </div>
+        )}
+        <Sheet open={isFormOpen} onOpenChange={setFormOpen}>
+          <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>인입 등록</SheetTitle>
+              <SheetDescription>고객 정보와 상담 기기 정보를 입력하세요. 저장하면 자동으로 닫힙니다.</SheetDescription>
+            </SheetHeader>
+            <div className="mt-4">
+              <InquiryForm
+                onSaved={() => {
+                  refresh();
+                  setFormOpen(false);
+                }}
+              />
+            </div>
+          </SheetContent>
+        </Sheet>
 
         {/* List */}
         <Card className="glass border-border/40 overflow-hidden">
