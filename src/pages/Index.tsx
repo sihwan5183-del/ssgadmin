@@ -41,9 +41,7 @@ import { useFinanceData } from "@/hooks/useFinanceData";
 import { RevenueComposition } from "@/components/finance/RevenueComposition";
 import { CategoryBreakdownChart } from "@/components/finance/CategoryBreakdownChart";
 import { usePeriod } from "@/contexts/PeriodContext";
-import { CalendarDays, Calendar as CalendarIcon, CalendarRange } from "lucide-react";
 import { useEffect } from "react";
-import { cn } from "@/lib/utils";
 
 const isoToday = () => {
   const d = new Date();
@@ -58,45 +56,6 @@ const pctChange = (cur: number, prev: number): number | undefined => {
     return undefined; // 직전이 0이면 비교 의미 없음 — 표시 생략
   }
   return ((cur - prev) / Math.abs(prev)) * 100;
-};
-
-/** 대시보드 상단의 [월간 현황 / 일간 현황] 큰 전환 토글 */
-const ScopeBigToggle = () => {
-  const { mode, setMode, setSingleDay, customStart } = usePeriod();
-  const isDayMode = mode === "day";
-  const isMonthMode = mode === "month";
-  const items = [
-    { key: "month" as const, label: "월간 현황", icon: CalendarDays, hint: "선택한 월 1일~말일 누적" },
-    { key: "day" as const, label: "일간 현황", icon: CalendarIcon, hint: "선택한 하루 단일 실적" },
-  ];
-  return (
-    <div className="inline-flex p-1 rounded-2xl bg-muted/40 border border-border/40">
-      {items.map((it) => {
-        const Icon = it.icon;
-        const active =
-          (it.key === "month" && isMonthMode) || (it.key === "day" && isDayMode);
-        return (
-          <button
-            key={it.key}
-            onClick={() => {
-              if (it.key === "month") setMode("month");
-              else setSingleDay(customStart ?? isoToday());
-            }}
-            className={cn(
-              "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-300 whitespace-nowrap",
-              active
-                ? "bg-gradient-primary text-primary-foreground shadow-glow"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-            title={it.hint}
-          >
-            <Icon className="size-3.5" />
-            {it.label}
-          </button>
-        );
-      })}
-    </div>
-  );
 };
 
 const Index = () => {
@@ -133,21 +92,9 @@ const IndexInner = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 이번 달인지 / 전체 기간(연 단위)인지 판정
   const now = new Date();
   const isThisMonth = mode === "month" && year === now.getFullYear() && month === now.getMonth() + 1;
   const isAllYear = mode === "month" && month === 0;
-
-  const setThisMonth = () => {
-    setMode("month");
-    setYear(now.getFullYear());
-    setMonth(now.getMonth() + 1);
-  };
-  const setAllYear = () => {
-    setMode("month");
-    setYear(now.getFullYear());
-    setMonth(0);
-  };
 
   // 헤더 부제: 현재 어떤 기간을 보고 있는지 명시
   const headerSubtitle = isThisMonth
@@ -186,51 +133,6 @@ const IndexInner = () => {
           />
         ) : undefined}
       />
-
-      {/* 대시보드 기간 범위: [이번 달 / 전체 기간] + [월간 현황 / 일간 현황] 한 줄 */}
-      <div className="mb-2 flex items-center gap-2 flex-wrap">
-        <div className="inline-flex p-1 rounded-2xl bg-muted/40 border border-border/40">
-          <button
-            onClick={setThisMonth}
-            className={cn(
-              "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-300 whitespace-nowrap",
-              isThisMonth
-                ? "bg-gradient-primary text-primary-foreground shadow-glow"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-            title={`${now.getFullYear()}년 ${now.getMonth() + 1}월 1일 ~ 오늘`}
-          >
-            <CalendarDays className="size-3.5" /> 이번 달 ({now.getMonth() + 1}월)
-          </button>
-          <button
-            onClick={setAllYear}
-            className={cn(
-              "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-300 whitespace-nowrap",
-              isAllYear
-                ? "bg-gradient-primary text-primary-foreground shadow-glow"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-            title={`${year}년 전체 누적`}
-          >
-            <CalendarRange className="size-3.5" /> 전체 기간 ({year}년)
-          </button>
-        </div>
-
-        <ScopeBigToggle />
-
-        <span className="text-xs text-muted-foreground">
-          기준: <span className="font-semibold text-foreground">{periodLabel}</span>
-          {!isThisMonth && (
-            <button
-              onClick={setThisMonth}
-              className="ml-2 text-primary hover:underline"
-              title="이번 달로 되돌리기"
-            >
-              [이번 달로 초기화]
-            </button>
-          )}
-        </span>
-      </div>
 
       {/* === 본인 검수 피드백 (반려/수정요청) === */}
       {isVisible("review_alerts") && <MyReviewAlerts />}
