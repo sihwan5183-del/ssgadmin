@@ -52,6 +52,68 @@ const STATUS_COLOR: Record<string, string> = {
   "취소": "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
 };
 
+const DOGMARU_CAMPAIGN = "도그마루_홈캠";
+
+const LEADS_SELECT = `
+  id,
+  created_at,
+  name,
+  phone,
+  current_carrier,
+  desired_device,
+  desired_product,
+  campaign_name,
+  status,
+  memo,
+  source,
+  assigned_to,
+  registration_date,
+  customer_name,
+  customer_phone,
+  branch_name,
+  activation_status,
+  cancellation_status,
+  activation_number
+`;
+
+const cleanText = (value: unknown) => {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  return value == null ? null : String(value);
+};
+
+const toDogmaruItem = (item: Lead) => ({
+  ...item,
+  registration_date: cleanText(item.registration_date),
+  customer_name: cleanText(item.customer_name),
+  customer_phone: cleanText(item.customer_phone),
+  branch_name: cleanText(item.branch_name),
+  activation_status: cleanText(item.activation_status),
+  cancellation_status: cleanText(item.cancellation_status),
+  activation_number: cleanText(item.activation_number),
+});
+
+type LeadDraft = {
+  name: string;
+  phone: string;
+  current_carrier: string;
+  desired_device: string;
+  desired_product: string;
+  campaign_name: string;
+  memo: string;
+};
+
+const DRAFT_FIELDS: Array<{ key: keyof LeadDraft; label: string }> = [
+  { key: "name", label: "고객명" },
+  { key: "phone", label: "연락처" },
+  { key: "current_carrier", label: "현재 통신사" },
+  { key: "desired_device", label: "희망 기종" },
+  { key: "desired_product", label: "희망 상품" },
+  { key: "campaign_name", label: "캠페인명" },
+];
+
 type Lead = {
   id: string;
   created_at: string;
@@ -100,7 +162,7 @@ export default function LeadsPage() {
   const [memoDraft, setMemoDraft] = useState("");
 
   const [showCreate, setShowCreate] = useState(false);
-  const [draft, setDraft] = useState({
+  const [draft, setDraft] = useState<LeadDraft>({
     name: "",
     phone: "",
     current_carrier: "",
@@ -114,11 +176,11 @@ export default function LeadsPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from("leads")
-      .select("*")
+      .select(LEADS_SELECT)
       .order("created_at", { ascending: false })
       .limit(1000);
     if (error) toast.error(error.message);
-    setRows(((data ?? []) as any) as Lead[]);
+    setRows((data ?? []) as Lead[]);
     setLoading(false);
   }
 
@@ -174,21 +236,21 @@ export default function LeadsPage() {
         .select("*")
         .eq("lead_id", openLead.id)
         .order("created_at", { ascending: false });
-      setNotes(((data ?? []) as any) as LeadNote[]);
+      setNotes((data ?? []) as LeadNote[]);
     })();
   }, [openLead?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
-      const isDogmaru = r.campaign_name === "도그마루_홈캠";
+      const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
       if (sourceTab === "dogmaru" && !isDogmaru) return false;
       if (sourceTab === "meta" && isDogmaru) return false;
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (productFilter !== "all" && r.desired_product !== productFilter) return false;
       if (carrierFilter !== "all" && r.current_carrier !== carrierFilter) return false;
       if (q) {
-        const hay = `${r.name ?? ""} ${r.phone ?? ""} ${r.campaign_name ?? ""} ${r.desired_device ?? ""}`.toLowerCase();
+        const hay = `${r.name ?? ""} ${r.phone ?? ""} ${r.campaign_name ?? ""} ${r.desired_device ?? ""} ${r.registration_date ?? ""} ${r.customer_name ?? ""} ${r.customer_phone ?? ""} ${r.branch_name ?? ""} ${r.activation_status ?? ""} ${r.cancellation_status ?? ""} ${r.activation_number ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -199,7 +261,7 @@ export default function LeadsPage() {
     let dogmaru = 0;
     let meta = 0;
     for (const r of rows) {
-      if (r.campaign_name === "도그마루_홈캠") dogmaru++;
+      if (r.campaign_name === DOGMARU_CAMPAIGN) dogmaru++;
       else meta++;
     }
     return { meta, dogmaru };
@@ -447,26 +509,27 @@ export default function LeadsPage() {
                 </TableRow>
               )}
               {filtered.map((r) => {
-                const isCancelled = !!r.cancellation_status && r.cancellation_status.trim() !== "";
-                const isActivated = (r.activation_status ?? "").includes("개통완료");
+                const item = toDogmaruItem(r);
+                const isCancelled = !!item.cancellation_status;
+                const isActivated = (item.activation_status ?? "").includes("개통완료");
                 return (
                   <TableRow
-                    key={r.id}
+                    key={item.id}
                     className="cursor-pointer border-b border-border hover:bg-muted/40"
-                    onClick={() => setOpenLead(r)}
+                    onClick={() => setOpenLead(item)}
                   >
                     <TableCell className="tabular-nums text-foreground font-medium">
-                      {r.registration_date ?? "-"}
+                      {item.registration_date ?? "-"}
                     </TableCell>
                     <TableCell className="font-bold text-foreground">
-                      {r.customer_name ?? r.name ?? "-"}
+                      {item.customer_name ?? "-"}
                     </TableCell>
                     <TableCell className="tabular-nums text-foreground font-medium">
-                      {r.customer_phone ?? r.phone ?? "-"}
+                      {item.customer_phone ?? "-"}
                     </TableCell>
-                    <TableCell className="text-foreground">{r.branch_name ?? "-"}</TableCell>
+                    <TableCell className="text-foreground">{item.branch_name ?? "-"}</TableCell>
                     <TableCell>
-                      {r.activation_status ? (
+                      {item.activation_status ? (
                         <Badge
                           className={
                             isActivated
@@ -474,7 +537,7 @@ export default function LeadsPage() {
                               : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
                           }
                         >
-                          {r.activation_status}
+                          {item.activation_status}
                         </Badge>
                       ) : (
                         <span className="text-foreground/40">-</span>
@@ -483,17 +546,17 @@ export default function LeadsPage() {
                     <TableCell>
                       {isCancelled ? (
                         <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
-                          {r.cancellation_status}
+                          {item.cancellation_status}
                         </Badge>
                       ) : (
                         <span className="text-foreground/40">-</span>
                       )}
                     </TableCell>
                     <TableCell className="tabular-nums text-foreground/80">
-                      {r.activation_number ?? "-"}
+                      {item.activation_number ?? "-"}
                     </TableCell>
                     <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                      <Button size="sm" variant="ghost" onClick={() => setOpenLead(r)}>
+                      <Button size="sm" variant="ghost" onClick={() => setOpenLead(item)}>
                         상세
                       </Button>
                     </TableCell>
@@ -744,19 +807,12 @@ export default function LeadsPage() {
             <SheetTitle>리드 수동 추가</SheetTitle>
           </SheetHeader>
           <div className="mt-4 space-y-3">
-            {[
-              ["name", "고객명"],
-              ["phone", "연락처"],
-              ["current_carrier", "현재 통신사"],
-              ["desired_device", "희망 기종"],
-              ["desired_product", "희망 상품"],
-              ["campaign_name", "캠페인명"],
-            ].map(([k, label]) => (
-              <div key={k} className="space-y-1">
+            {DRAFT_FIELDS.map(({ key, label }) => (
+              <div key={key} className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">{label}</label>
                 <Input
-                  value={(draft as any)[k]}
-                  onChange={(e) => setDraft({ ...draft, [k]: e.target.value })}
+                  value={draft[key]}
+                  onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
                 />
               </div>
             ))}

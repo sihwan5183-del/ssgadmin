@@ -41,26 +41,55 @@ Deno.serve(async (req) => {
     })
   }
 
-  const str = (v: unknown) =>
-    typeof v === 'string' ? v.trim() : v == null ? null : String(v)
+  const str = (v: unknown) => {
+    if (typeof v === 'string') {
+      const trimmed = v.trim()
+      return trimmed.length > 0 ? trimmed : null
+    }
+    return v == null ? null : String(v)
+  }
+
+  const normalizeKey = (key: string) =>
+    key.toLowerCase().replace(/[\s_\-().:[\]{}]/g, '')
+
+  const pick = (...keys: string[]) => {
+    const sources = [body, body?.data, body?.record, body?.fields, body?.values, body?.payload]
+    const normalizedKeys = keys.map(normalizeKey)
+    for (const source of sources) {
+      if (!source || typeof source !== 'object') continue
+      for (const key of keys) {
+        const value = str((source as Record<string, unknown>)[key])
+        if (value) return value
+      }
+      for (const [sourceKey, sourceValue] of Object.entries(source as Record<string, unknown>)) {
+        if (normalizedKeys.includes(normalizeKey(sourceKey))) {
+          const value = str(sourceValue)
+          if (value) return value
+        }
+      }
+    }
+    return null
+  }
+
+  const campaignName = pick('campaign_name', 'campaign name', '캠페인명')
 
   const row = {
-    name: str(body.name),
-    phone: str(body.phone),
-    current_carrier: str(body.current_carrier),
-    desired_device: str(body.desired_device),
-    desired_product: str(body.desired_product),
-    campaign_name: str(body.campaign_name),
-    memo: str(body.memo) ?? null,
+    name: pick('name', 'customer_name', '고객 성명', '성명'),
+    phone: pick('phone', 'customer_phone', '연락처', '고객 전화번호'),
+    current_carrier: pick('current_carrier'),
+    desired_device: pick('desired_device'),
+    desired_product: pick('desired_product'),
+    campaign_name: campaignName,
+    memo: pick('memo') ?? null,
     status: '신규 접수',
-    source: str(body.source) ?? 'webhook',
-    registration_date: str(body.registration_date),
-    customer_name: str(body.customer_name),
-    customer_phone: str(body.customer_phone),
-    branch_name: str(body.branch_name),
-    activation_status: str(body.activation_status),
-    cancellation_status: str(body.cancellation_status),
-    activation_number: str(body.activation_number),
+    source: pick('source') ?? 'webhook',
+    registration_date: pick('registration_date', '접수 일자', '접수일자'),
+    customer_name: pick('customer_name', 'name', '고객 성명', '성명'),
+    customer_phone: pick('customer_phone', 'phone', '연락처', '고객 전화번호'),
+    branch_name: pick('branch_name', '접수 지점명', '지점명'),
+    activation_status: pick('activation_status', '개통 상태', '개통상태'),
+    cancellation_status: pick('cancellation_status', '해지 및 철회', '해지및철회'),
+    activation_number: pick('activation_number', '가입번호'),
   }
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE)
