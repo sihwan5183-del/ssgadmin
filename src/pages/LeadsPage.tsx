@@ -650,16 +650,22 @@ function RightPane({
           <Input value={draft.phone} onChange={(e) => update("phone", e.target.value)} />
         </FormField>
         <FormField label="현재 통신사">
-          <Input
-            value={draft.current_carrier}
-            onChange={(e) => update("current_carrier", e.target.value)}
-          />
-        </FormField>
-        <FormField label="희망 기종">
-          <Input
-            value={draft.desired_device}
-            onChange={(e) => update("desired_device", e.target.value)}
-          />
+          <Select
+            value={draft.current_carrier || "none"}
+            onValueChange={(v) => update("current_carrier", v === "none" ? "" : v)}
+          >
+            <SelectTrigger className="h-9">
+              <SelectValue placeholder="통신사 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">선택 안 함</SelectItem>
+              {CARRIER_OPTIONS.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </FormField>
         <FormField label="희망 상품">
           <Input
@@ -667,10 +673,29 @@ function RightPane({
             onChange={(e) => update("desired_product", e.target.value)}
           />
         </FormField>
-        <FormField label="인입 경로(캠페인)">
+        <FormField label="인입 채널">
+          <Select
+            value={draft.source || "none"}
+            onValueChange={(v) => update("source", v === "none" ? "" : v)}
+          >
+            <SelectTrigger className="h-9">
+              <SelectValue placeholder="채널 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">미지정</SelectItem>
+              {CHANNEL_OPTIONS.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormField>
+        <FormField label="캠페인명">
           <Input
             value={draft.campaign_name}
             onChange={(e) => update("campaign_name", e.target.value)}
+            placeholder="(선택)"
           />
         </FormField>
         <FormField label="담당자">
@@ -714,6 +739,34 @@ function RightPane({
             </SelectContent>
           </Select>
         </FormField>
+      </div>
+
+      {/* 상담 기기 정보 — 모델/용량/색상 분리 */}
+      <div className="px-4 pb-2">
+        <div className="text-[11px] font-bold text-foreground/70 mb-2">상담 기기 정보</div>
+        <div className="grid grid-cols-3 gap-3">
+          <FormField label="모델명">
+            <Input
+              value={draft.device_model}
+              onChange={(e) => update("device_model", e.target.value)}
+              placeholder="갤럭시 S25"
+            />
+          </FormField>
+          <FormField label="용량">
+            <Input
+              value={draft.device_capacity}
+              onChange={(e) => update("device_capacity", e.target.value)}
+              placeholder="256GB"
+            />
+          </FormField>
+          <FormField label="색상">
+            <Input
+              value={draft.device_color}
+              onChange={(e) => update("device_color", e.target.value)}
+              placeholder="티타늄 블루"
+            />
+          </FormField>
+        </div>
       </div>
 
       <div className="px-4 pb-4">
