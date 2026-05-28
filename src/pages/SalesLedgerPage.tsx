@@ -128,6 +128,7 @@ const SalesLedgerPage = () => {
   const { startDate, endDate, label: periodLabel, setMode, setYear, setMonth } = usePeriod();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const quickExport = useQuickExport();
   const resignedIds = useResignedUsers();
   const { staff: dashboardStaff, isDashboardStaff } = useDashboardStaff();
@@ -135,28 +136,31 @@ const SalesLedgerPage = () => {
   const [rows, setRows] = useState<SaleRow[]>([]);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
-  const [searchQ, setSearchQ] = useState("");
-  const [debouncedSearchQ, setDebouncedSearchQ] = useState("");
+  const [searchQ, setSearchQ] = useState(() => searchParams.get("q") ?? "");
+  const [debouncedSearchQ, setDebouncedSearchQ] = useState(() => searchParams.get("q") ?? "");
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
-  const [quickFilter, setQuickFilter] = useState<"unpaid" | "unreturned" | null>(null);
-  const [bundleFilter, setBundleFilter] = useState(false);
-  const [noOfferFilter, setNoOfferFilter] = useState(false);
-  const [managerFilter, setManagerFilter] = useState<string>("all");
-  const [storeFilter, setStoreFilter] = useState<string>("all");
-  const [productFilter, setProductFilter] = useState<string>("all");
-  const [saleTypeFilter, setSaleTypeFilter] = useState<"all" | "신규" | "MNP" | "기변">("all");
-  // 대시보드 딥링크 전용 오버라이드 — 사용자가 직접 product/saleType 필터를 바꾸면 해제
-  const [productsOverride, setProductsOverride] = useState<string[] | null>(null);
-  const [saleTypeOverride, setSaleTypeOverride] = useState<string | null>(null);
-  // 반납/검수 필터
-  // returnFilter: all | returned(반납완료) | unreturned(미반납)
-  // inspectionFilter: all | inspected(검수완료=확정) | uninspected(미검수)
-  const [returnFilter, setReturnFilter] = useState<"all" | "returned" | "unreturned">("all");
-  const [inspectionFilter, setInspectionFilter] = useState<"all" | "inspected" | "uninspected">("all");
-  // 모요 적용 구분: all | applied(모요+토글OFF) | excluded(모요+토글ON)
-  const [moyoFilter, setMoyoFilter] = useState<"all" | "applied" | "excluded">("all");
+
+  // === 엑셀형 컬럼 필터 (체크박스 다중 선택) ===
+  type ColKey = "channel" | "status" | "manager" | "product" | "sale_type";
+  const COL_KEYS: ColKey[] = ["channel", "status", "manager", "product", "sale_type"];
+  const readColFromUrl = (k: ColKey): string[] => {
+    const v = searchParams.get(`f_${k}`);
+    if (!v) return [];
+    return v.split("||").filter(Boolean);
+  };
+  const [colFilters, setColFilters] = useState<Record<ColKey, string[]>>(() => ({
+    channel: readColFromUrl("channel"),
+    status: readColFromUrl("status"),
+    manager: readColFromUrl("manager"),
+    product: readColFromUrl("product"),
+    sale_type: readColFromUrl("sale_type"),
+  }));
+  const setColFilter = (k: ColKey, vals: string[]) =>
+    setColFilters((prev) => ({ ...prev, [k]: vals }));
+  const clearColFilter = (k: ColKey) => setColFilter(k, []);
+  const clearAllColFilters = () =>
+    setColFilters({ channel: [], status: [], manager: [], product: [], sale_type: [] });
 
   // URL 쿼리 파라미터로 진입 시 초기 필터 적용 (직원별 현황 → 비중 차트 클릭 등)
   useEffect(() => {
@@ -167,8 +171,8 @@ const SalesLedgerPage = () => {
     const ps = sp.get("products");
     const stOverride = sp.get("sale_type");
     const fromDash = sp.get("from_dashboard") === "1";
-    if (p) setProductFilter(p);
-    if (m) setManagerFilter(m);
+    if (p) setColFilter("product", [p]);
+    if (m) setColFilter("manager", [m]);
     // 대시보드(staffName/manager)로 진입한 경우: 항상 이번 달 강제
     if (sp.get("staffName")) {
       const now = new Date();
@@ -178,12 +182,9 @@ const SalesLedgerPage = () => {
     }
     if (ps) {
       const list = ps.split(",").map((s) => s.trim()).filter(Boolean);
-      if (list.length > 0) {
-        setProductsOverride(list);
-        setProductFilter("all"); // 단일 필터 UI는 비우고 오버라이드를 우선
-      }
+      if (list.length > 0) setColFilter("product", list);
     }
-    if (stOverride) setSaleTypeOverride(stOverride);
+    if (stOverride) setColFilter("sale_type", [stOverride]);
     // 대시보드 진입: 항상 이번 달 기준으로 강제
     if (fromDash) {
       const now = new Date();
@@ -194,7 +195,7 @@ const SalesLedgerPage = () => {
     const st = sp.get("status");
     if (st) {
       const list = st.split(",").map((s) => s.trim()).filter(Boolean);
-      if (list.length > 0) setStatusFilter(list);
+      if (list.length > 0) setColFilter("status", list);
       // 대시보드 [개통 대기]에서 진입 시: 항상 이번 달 기준으로 강제
       const now = new Date();
       setMode("month");
@@ -206,8 +207,22 @@ const SalesLedgerPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // === 필터/검색 상태 → URL 동기화 (상세 진입 후 복귀 시 그대로 유지) ===
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    // 기존 dashboard deep-link 키는 유지
+    const q = searchQ.trim();
+    if (q) next.set("q", q); else next.delete("q");
+    COL_KEYS.forEach((k) => {
+      const v = colFilters[k];
+      if (v && v.length > 0) next.set(`f_${k}`, v.join("||"));
+      else next.delete(`f_${k}`);
+    });
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQ, colFilters]);
+
   const isMobile = useIsMobile();
-  const [filterOpen, setFilterOpen] = useState(false);
 
   const { options: channelOptions } = useFieldOptions("channel");
   const { options: productOptions } = useFieldOptions("product");
