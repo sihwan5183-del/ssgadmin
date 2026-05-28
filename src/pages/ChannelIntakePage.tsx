@@ -597,17 +597,6 @@ const ChannelIntakePage = ({ embedded = false }: { embedded?: boolean } = {}) =>
       )}
 
       <div className="space-y-5">
-        <SummaryCards rows={rows} />
-        <IntakeFunnel rows={rows} />
-
-        {/* 실패 사유 분석 + 인입 경로별 성공률 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <FailureAnalysisChart rows={rows} />
-          <LeadSourceChart rows={rows} />
-        </div>
-
-        {/* 담당자별 상세 리포트 */}
-        <StaffTimelinePanel rows={rows as any} />
 
         {/* Toolbar: Search + Bulk actions (responsive) */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
