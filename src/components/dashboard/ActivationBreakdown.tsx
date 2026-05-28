@@ -162,18 +162,24 @@ export const ActivationBreakdown = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-4">
             {strategyStats.map((row) => {
-              const ratio = (row.count / maxStrategy) * 100;
+              const pct = totalStrategy > 0 ? (row.count / totalStrategy) * 100 : 0;
               return (
-                <div key={row.name} className="p-3 rounded-xl border border-border/50 bg-background/40">
-                  <div className="text-xs text-muted-foreground">{row.name}</div>
-                  <div className="flex items-baseline gap-1 mt-1">
-                    <span className="text-2xl font-bold tabular-nums">{row.count}</span>
-                    <span className="text-[11px] text-muted-foreground">건</span>
+                <div key={row.name}>
+                  <div className="flex items-baseline justify-between mb-1.5">
+                    <span className="text-sm font-medium flex items-center gap-1.5">
+                      <span className="size-2 rounded-full" style={{ background: row.color }} />
+                      {row.name}
+                    </span>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-lg font-bold tabular-nums">{row.count}</span>
+                      <span className="text-[11px] text-muted-foreground">건</span>
+                      <span className="text-xs text-success tabular-nums w-12 text-right">{pct.toFixed(1)}%</span>
+                    </div>
                   </div>
-                  <div className="mt-2 h-1.5 rounded-full bg-muted overflow-hidden">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${ratio}%`, background: row.color }} />
+                  <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: row.color }} />
                   </div>
                 </div>
               );
