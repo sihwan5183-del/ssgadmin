@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -36,7 +36,7 @@ import RecentActivitiesPage from "./pages/RecentActivitiesPage.tsx";
 import MenuManagerPage from "./pages/MenuManagerPage.tsx";
 import DownloadsPage from "./pages/DownloadsPage.tsx";
 import NotFound from "./pages/NotFound.tsx";
-import ChannelIntakePage from "./pages/ChannelIntakePage.tsx";
+// /channel-intake 는 통합 CRM(/leads)으로 합쳐졌습니다 — 옛 페이지는 더 이상 라우팅하지 않습니다.
 import BudgetCategoriesPage from "./pages/BudgetCategoriesPage.tsx";
 import MyPage from "./pages/MyPage.tsx";
 import SalesLedgerPage from "./pages/SalesLedgerPage.tsx";
@@ -152,7 +152,7 @@ const App = () => {
                         <Route path="/device-models" element={<AdminOnlyRoute><DeviceModelsPage /></AdminOnlyRoute>} />
                         <Route path="/incentive-rates" element={<AdminOnlyRoute><IncentiveRatesPage /></AdminOnlyRoute>} />
                         <Route path="/downloads" element={<AdminOnlyRoute><DownloadsPage /></AdminOnlyRoute>} />
-                        <Route path="/channel-intake" element={<ChannelIntakePage />} />
+                        <Route path="/channel-intake" element={<Navigate to="/leads" replace />} />
                         <Route path="/budget-categories" element={<AdminOnlyRoute><BudgetCategoriesPage /></AdminOnlyRoute>} />
                         <Route path="/my" element={<MyPage />} />
                         <Route path="/sales-ledger" element={<SalesLedgerPage />} />
