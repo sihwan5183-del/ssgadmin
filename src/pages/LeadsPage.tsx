@@ -85,6 +85,7 @@ export default function LeadsPage() {
   const [productFilter, setProductFilter] = useState<string>("all");
   const [carrierFilter, setCarrierFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru">("meta");
   const [openLead, setOpenLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState<LeadNote[]>([]);
   const [newNote, setNewNote] = useState("");
@@ -172,6 +173,9 @@ export default function LeadsPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
+      const isDogmaru = r.campaign_name === "도그마루_홈캠";
+      if (sourceTab === "dogmaru" && !isDogmaru) return false;
+      if (sourceTab === "meta" && isDogmaru) return false;
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (productFilter !== "all" && r.desired_product !== productFilter) return false;
       if (carrierFilter !== "all" && r.current_carrier !== carrierFilter) return false;
@@ -181,7 +185,17 @@ export default function LeadsPage() {
       }
       return true;
     });
-  }, [rows, statusFilter, productFilter, carrierFilter, search]);
+  }, [rows, statusFilter, productFilter, carrierFilter, search, sourceTab]);
+
+  const sourceCounts = useMemo(() => {
+    let dogmaru = 0;
+    let meta = 0;
+    for (const r of rows) {
+      if (r.campaign_name === "도그마루_홈캠") dogmaru++;
+      else meta++;
+    }
+    return { meta, dogmaru };
+  }, [rows]);
 
   const stats = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
