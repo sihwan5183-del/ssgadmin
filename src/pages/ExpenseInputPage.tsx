@@ -1107,7 +1107,11 @@ export default function ExpenseInputPage() {
                     매월 자동 등록 (템플릿 저장)
                   </span>
                 </label>
-                <Button type="submit" disabled={saving} className="gap-2">
+                <Button
+                  type="submit"
+                  disabled={saving}
+                  className="gap-2 rounded-xl px-6 h-11 bg-gradient-to-r from-primary to-primary-glow text-primary-foreground shadow-md hover:shadow-glow hover:-translate-y-0.5 transition-all duration-200"
+                >
                   <PlusCircle className="size-4" />
                   {saving ? "저장 중..." : "고정지출 저장"}
                 </Button>
