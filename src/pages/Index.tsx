@@ -44,6 +44,7 @@ import { usePeriod } from "@/contexts/PeriodContext";
 import { CalendarDays, Calendar as CalendarIcon, CalendarRange } from "lucide-react";
 import { useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { DashboardGrid, type GridWidget } from "@/components/dashboard/DashboardGrid";
 
 const isoToday = () => {
   const d = new Date();
