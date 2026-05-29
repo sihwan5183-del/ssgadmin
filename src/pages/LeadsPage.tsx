@@ -97,16 +97,6 @@ function fmtCompactDate(iso: string) {
   if (hh === 0) hh = 12;
   const hStr = String(hh).padStart(2, "0");
   const min = String(d.getMinutes()).padStart(2, "0");
-function fmtCompactDate(iso: string) {
-  const d = new Date(iso);
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  let hh = d.getHours();
-  const ampm = hh < 12 ? "오전" : "오후";
-  hh = hh % 12;
-  if (hh === 0) hh = 12;
-  const hStr = String(hh).padStart(2, "0");
-  const min = String(d.getMinutes()).padStart(2, "0");
   return `${mm}-${dd} ${ampm} ${hStr}:${min}`;
 }
 
@@ -120,6 +110,14 @@ const toDogmaruItem = (item: Lead) => ({
   cancellation_status: cleanText(item.cancellation_status),
   activation_number: cleanText(item.activation_number),
 });
+
+type LeadDraft = {
+  name: string;
+  phone: string;
+  current_carrier: string;
+  desired_device: string;
+  desired_product: string;
+  campaign_name: string;
   memo: string;
 };
 
