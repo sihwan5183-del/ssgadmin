@@ -363,6 +363,46 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
     };
   }, []);
 
+  // 실시간: inquiries 자체의 INSERT/UPDATE/DELETE 동기화
+  // (신규 인입 / 상태 변경이 모든 직원 화면에 새로고침 없이 반영되도록)
+  useEffect(() => {
+    const channel = supabase
+      .channel("realtime:inquiries:list")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "inquiries" },
+        (payload) => {
+          const r = payload.new as InquiryRow;
+          if (!r) return;
+          // 현재 기간 범위 안의 인입만 머지
+          if (r.inquiry_date && (r.inquiry_date < startDate || r.inquiry_date > endDate)) return;
+          setRows((prev) => (prev.some((x) => x.id === r.id) ? prev : [r, ...prev]));
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "inquiries" },
+        (payload) => {
+          const r = payload.new as InquiryRow;
+          if (!r) return;
+          setRows((prev) => prev.map((x) => (x.id === r.id ? { ...x, ...r } : x)));
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "inquiries" },
+        (payload) => {
+          const old = payload.old as { id?: string };
+          if (!old?.id) return;
+          setRows((prev) => prev.filter((x) => x.id !== old.id));
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [startDate, endDate]);
+
   const filtered = useMemo(() => {
     let list = rows;
     // "미처리" 필터는 isNewLead 로직 적용
