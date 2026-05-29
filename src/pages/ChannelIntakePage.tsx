@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   PhoneOff, RefreshCw, XCircle, Phone, Search, Clock, AlertTriangle,
-  MessageSquare, Plus, BarChart3, ListPlus, ChevronRight, Pencil, Trash2, History, Download, Smartphone,
+  MessageSquare, Plus, BarChart3, ListPlus, ChevronRight, Pencil, Trash2, History, Download, Smartphone, Siren,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPhone } from "@/lib/phoneFormat";
@@ -89,10 +89,11 @@ const isNewLead = (r: InquiryRow): boolean => {
   return false;
 };
 
-// ── 방치 감지: 24시간 초과 ──
-const isAbandoned = (lastAction: string | null) => {
+// ── 케어 필요 감지: 재케어/부재 상태이면서 48시간 이상 변경 이력 없음 ──
+const needsCare = (status: string, lastAction: string | null) => {
+  if (!["재케어", "부재"].includes(status)) return false;
   if (!lastAction) return true;
-  return Date.now() - new Date(lastAction).getTime() > 24 * 60 * 60 * 1000;
+  return Date.now() - new Date(lastAction).getTime() > 48 * 60 * 60 * 1000;
 };
 
 const formatTime = (iso: string | null) => {
@@ -762,7 +763,7 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
                 ) : (
                   filtered.map((r) => {
                     const newLead = isNewLead(r);
-                    const abandoned = !newLead && isAbandoned(r.last_action_at) && !["개통완료", "실패", "종료"].includes(r.status);
+                    const careNeeded = !newLead && needsCare(r.status, r.last_action_at);
                     const displayStatus = newLead ? "미처리" : r.status;
                     const lastLog = lastLogs[r.id];
                     const lastSummary = lastLog
@@ -779,7 +780,6 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
                         className={cn(
                           "border-t border-border/30 hover:bg-muted/40 transition-colors cursor-pointer",
                           newLead && "bg-orange-50 dark:bg-orange-950/20",
-                          abandoned && !newLead && "bg-destructive/5",
                           recentlyUpdatedId === r.id && "ring-2 ring-primary/60 ring-inset bg-primary/10 animate-pulse",
                         )}
                         onClick={(e) => {
@@ -796,46 +796,46 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
                             aria-label="선택"
                           />
                         </td>
-                        <td className="px-3 py-3 text-xs tabular-nums align-middle">{r.inquiry_date}</td>
-                        <td className="px-3 py-3 align-middle">
-                          <Badge variant="outline" className="text-[10px]">{r.channel}</Badge>
+                        <td className="px-3 py-3 text-xs tabular-nums align-middle whitespace-nowrap text-foreground">{r.inquiry_date}</td>
+                        <td className="px-3 py-3 align-middle whitespace-nowrap text-xs text-foreground">
+                          {r.channel}
                         </td>
-                        <td className="px-3 py-3 align-middle">
-                          {carrier ? (
-                            <Badge variant="secondary" className="text-[10px]">{carrier}</Badge>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">-</span>
-                          )}
+                        <td className="px-3 py-3 align-middle whitespace-nowrap text-xs text-foreground">
+                          {carrier ? carrier : <span className="text-muted-foreground">-</span>}
                         </td>
-                        <td className="px-3 py-3 text-xs font-medium align-middle">
-                          <div className="flex items-center gap-1.5 flex-wrap">
+                        <td className="px-3 py-3 text-xs font-medium align-middle whitespace-nowrap text-foreground">
+                          <div className="inline-flex items-center gap-1.5">
                             <span>{r.customer_name ?? "-"}</span>
                             {newLead && (
                               <Badge variant="outline" className={cn("text-[9px] h-4 px-1", inquiryStatusClass("미처리"))}>
                                 미처리
                               </Badge>
                             )}
-                            {abandoned && !newLead && (
-                              <Badge variant="destructive" className="text-[9px] h-4 px-1 animate-pulse">방치</Badge>
+                            {careNeeded && (
+                              <span
+                                title="48시간 이상 변경 이력 없음 — 케어 필요"
+                                className="inline-flex items-center gap-0.5 text-[10px] font-bold animate-pulse"
+                                style={{ color: "hsl(0 90% 55%)", textShadow: "0 0 6px hsl(0 90% 55% / 0.55)" }}
+                              >
+                                <Siren className="size-3" />
+                                케어 필요
+                              </span>
                             )}
                           </div>
                         </td>
-                        <td className="px-3 py-3 text-xs tabular-nums text-muted-foreground align-middle">{r.birth_date ?? "-"}</td>
-                        <td className="px-3 py-3 text-xs align-middle">
+                        <td className="px-3 py-3 text-xs tabular-nums align-middle whitespace-nowrap text-foreground">{r.birth_date ?? "-"}</td>
+                        <td className="px-3 py-3 text-xs align-middle whitespace-nowrap text-foreground">
                           {r.phone ? (
-                            <a href={`tel:${r.phone}`} className="flex items-center gap-1 text-foreground/80 hover:text-foreground">
-                              <Phone className="size-3" /> {formatPhone(r.phone)}
+                            <a href={`tel:${r.phone}`} className="text-foreground hover:underline tabular-nums">
+                              {formatPhone(r.phone)}
                             </a>
                           ) : "-"}
                         </td>
-                        <td className="px-3 py-3 align-middle">
+                        <td className="px-3 py-3 align-middle whitespace-nowrap text-xs text-foreground">
                           {consultDevice ? (
-                            <div className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary text-[10px] px-2 py-0.5 max-w-full overflow-hidden">
-                              <Smartphone className="size-2.5 shrink-0" />
-                              <span className="truncate" title={consultDevice}>{consultDevice}</span>
-                            </div>
+                            <span className="truncate inline-block max-w-[140px] align-middle" title={consultDevice}>{consultDevice}</span>
                           ) : (
-                            <span className="text-xs text-muted-foreground">-</span>
+                            <span className="text-muted-foreground">-</span>
                           )}
                         </td>
                         <td className="px-3 py-3 align-middle">
@@ -846,21 +846,19 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
                             {displayStatus || "-"}
                           </Badge>
                         </td>
-                        <td className="px-3 py-3 text-[11px] tabular-nums text-muted-foreground align-middle">
+                        <td className="px-3 py-3 text-[11px] tabular-nums align-middle whitespace-nowrap text-foreground">
                           {lastLog?.created_at
                             ? formatTime(lastLog.created_at)
                             : formatTime(r.last_action_at)}
                         </td>
-                        <td className="px-3 py-3 text-xs align-middle min-w-[440px] whitespace-normal break-words leading-relaxed">
+                        <td className="px-3 py-3 text-xs align-middle min-w-[440px] max-w-[520px] whitespace-nowrap overflow-hidden text-ellipsis text-foreground">
                           {(lastSummary || consultDevice) ? (
                             <TooltipProvider delayDuration={150}>
                               <UITooltip>
                                 <TooltipTrigger asChild>
-                                  <div className="cursor-help">
+                                  <div className="cursor-help truncate">
                                     {lastSummary && (
-                                      <span
-                                        className="block text-foreground/90"
-                                      >
+                                      <span className="block truncate text-foreground">
                                         {lastSummary}
                                       </span>
                                     )}
@@ -889,7 +887,7 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
                             <span className="text-muted-foreground">-</span>
                           )}
                         </td>
-                        <td className="px-3 py-3 text-xs align-middle whitespace-nowrap">{r.manager ? r.manager.split(/\s*[·•]\s*/)[0] : "-"}</td>
+                        <td className="px-3 py-3 text-xs align-middle whitespace-nowrap text-foreground">{r.manager ? r.manager.split(/\s*[·•]\s*/)[0] : "-"}</td>
                       </tr>
                     );
                   })
