@@ -584,7 +584,7 @@ export default function LeadsPage() {
                     { k: "기타", v: o },
                   ].map((c) => (
                     <div key={c.k} className="rounded-md bg-muted/50 py-1.5">
-                      <div className="text-[10px] text-muted-foreground">{c.k}</div>
+                      <div className="text-[10px] text-muted-foreground whitespace-pre-line leading-tight">{c.k}</div>
                       <div className="text-sm font-semibold tabular-nums">{c.v.toLocaleString()}</div>
                     </div>
                   ))}
