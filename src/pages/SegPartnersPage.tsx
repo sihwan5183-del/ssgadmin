@@ -13,6 +13,10 @@ import { ApartmentPostingQuickDialog } from "@/components/seg/ApartmentPostingQu
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
@@ -90,8 +94,9 @@ export default function SegPartnersPage() {
       p.contract_date && isWithinInterval(parseISO(p.contract_date), { start: monthStart, end: monthEnd })
     ).length;
     const active = partners.filter((p) => p.status === "active").length;
-    const upcoming = activities.filter((a) => !a.is_completed && a.next_action_date && a.next_action_date >= today).length;
-    const overdue = activities.filter((a) => !a.is_completed && a.next_action_date && a.next_action_date < today).length;
+    const isCancelled = (a: SegActivity) => !!(a.custom_fields as any)?.cancelled;
+    const upcoming = activities.filter((a) => !a.is_completed && !isCancelled(a) && a.next_action_date && a.next_action_date >= today).length;
+    const overdue = activities.filter((a) => !a.is_completed && !isCancelled(a) && a.next_action_date && a.next_action_date < today).length;
     return { newThisMonth, active, upcoming, overdue, total: partners.length };
   }, [partners, activities]);
 
