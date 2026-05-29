@@ -154,9 +154,6 @@ export default function LeadsPage() {
   const { staff } = useDashboardStaff();
   const [rows, setRows] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [productFilter, setProductFilter] = useState<string>("all");
-  const [carrierFilter, setCarrierFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru" | "other">("meta");
   const [openLead, setOpenLead] = useState<Lead | null>(null);
@@ -366,15 +363,6 @@ export default function LeadsPage() {
     }
     return { meta, dogmaru, other };
   }, [rows, inquiryRows, period]);
-
-  const productOptions = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.desired_product).filter(Boolean))) as string[],
-    [rows],
-  );
-  const carrierOptions = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.current_carrier).filter(Boolean))) as string[],
-    [rows],
-  );
 
   // ── 엑셀형 헤더 필터에 들어갈 고유값 (탭별로 분리해 메타↔도그마루 섞이지 않게) ──
   const metaRows = useMemo(() => rows.filter((r) => r.campaign_name !== DOGMARU_CAMPAIGN), [rows]);
