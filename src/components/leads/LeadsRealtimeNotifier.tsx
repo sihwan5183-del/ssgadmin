@@ -7,8 +7,25 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const DOGMARU_CAMPAIGN = "도그마루_홈캠";
 
+export const LEADS_NOTIFY_KEYS = {
+  meta: "leads_notify_meta",
+  dogmaru: "leads_notify_dogmaru",
+} as const;
+
+export function isLeadsNotifyEnabled(channel: "meta" | "dogmaru"): boolean {
+  if (typeof window === "undefined") return true;
+  const v = window.localStorage.getItem(LEADS_NOTIFY_KEYS[channel]);
+  // default ON
+  return v === null ? true : v === "1" || v === "true";
+}
+
+export function setLeadsNotifyEnabled(channel: "meta" | "dogmaru", on: boolean) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(LEADS_NOTIFY_KEYS[channel], on ? "1" : "0");
+}
+
 /** 짧고 맑은 알림 차임을 WebAudio 로 즉시 생성 (오디오 파일 의존성 0) */
-function playChime() {
+export function playChime() {
   try {
     const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
     if (!Ctx) return;
