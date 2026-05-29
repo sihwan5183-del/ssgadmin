@@ -90,6 +90,22 @@ export interface FinanceData {
   // 데이터 검증
   hasSales: boolean;
   hasSpend: boolean;
+  // 상품군(모바일/인터넷/기타)별 수익·지출 분해
+  byProduct: {
+    mobile: ProductSegmentTotals;
+    internet: ProductSegmentTotals;
+    etc: ProductSegmentTotals;
+  };
+}
+
+export interface ProductSegmentTotals {
+  revenue: number;       // 해당 상품군 매출 (단가표 + 부가 + 미수 + 상품권 + 중고폰)
+  expense: number;       // 해당 상품군 지출 합 (분배+현금+오퍼+고객+법인+모요)
+  distributor: number;   // 유통망 지원금
+  cashOpen: number;      // 현금개통 금액
+  corpCard: number;      // 5번 법인카드 결제금액
+  customerDeposit: number; // 고객입금 금액 (receivable_amount)
+  successCount: number;
 }
 
 const PRODUCT_PALETTE: Record<string, string> = {
