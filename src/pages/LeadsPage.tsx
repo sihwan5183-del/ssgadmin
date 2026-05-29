@@ -624,7 +624,7 @@ export default function LeadsPage() {
             <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.meta}</Badge>
           </TabsTrigger>
           <TabsTrigger value="dogmaru" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
-            도그마루 시트
+            도그마루{"\n"}214
             <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.dogmaru}</Badge>
           </TabsTrigger>
           <TabsTrigger value="other" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
