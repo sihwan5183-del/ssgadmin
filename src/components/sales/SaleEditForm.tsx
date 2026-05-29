@@ -435,7 +435,7 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
     status: (form.status ?? "").trim() ? null : "최종상태를 선택해주세요",
     product: form.product ? null : "가입상품을 선택해주세요",
     rate_plan: form.rate_plan ? null : "요금제를 선택해주세요",
-    device_model: form.device_model && form.device_model.trim() ? null : "단말기를 선택해주세요",
+    device_model: isDeviceRequiredProduct(form.product) && (!form.device_model || !form.device_model.trim()) ? "단말기를 선택해주세요" : null,
   };
   const subscriptionError = subscriptionValid ? null : "숫자만 입력해주세요";
   const isFormValid =
