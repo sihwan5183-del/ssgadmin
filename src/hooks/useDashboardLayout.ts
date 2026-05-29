@@ -34,6 +34,9 @@ export const WIDGET_REGISTRY: { id: string; label: string }[] = [
   { id: "ad_schedule", label: "광고 일정" },
   { id: "ranking_panel", label: "랭킹 패널" },
   { id: "my_incentive", label: "나의 예상 인센티브" },
+  { id: "top_product", label: "핵심 상품 성과 보드" },
+  { id: "pending_product", label: "미개통 대기 상품 보드" },
+  { id: "unified_calendar", label: "일별 판매실적 캘린더" },
 ];
 
 // 깔끔한 첫 진입을 위해 기본값을 OFF 로 두는 헤비 위젯
