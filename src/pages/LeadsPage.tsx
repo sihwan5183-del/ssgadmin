@@ -661,9 +661,15 @@ export default function LeadsPage() {
                 <TableHead className="text-foreground font-bold">접수 일자</TableHead>
                 <TableHead className="text-foreground font-bold">고객 성명</TableHead>
                 <TableHead className="text-foreground font-bold">연락처</TableHead>
-                <TableHead className="text-foreground font-bold">접수 지점명</TableHead>
-                <TableHead className="text-foreground font-bold">개통 상태</TableHead>
-                <TableHead className="text-foreground font-bold">해지 및 철회</TableHead>
+                <TableHead className="text-foreground font-bold">
+                  <ColumnFilter label="접수 지점명" values={valBranch} selected={fBranch} onChange={setFBranch} />
+                </TableHead>
+                <TableHead className="text-foreground font-bold">
+                  <ColumnFilter label="개통 상태" values={valActivation} selected={fActivation} onChange={setFActivation} />
+                </TableHead>
+                <TableHead className="text-foreground font-bold">
+                  <ColumnFilter label="해지 및 철회" values={valCancellation} selected={fCancellation} onChange={setFCancellation} />
+                </TableHead>
                 <TableHead className="text-foreground font-bold">가입번호</TableHead>
                 <TableHead className="text-foreground font-bold w-20 text-center">관리</TableHead>
               </TableRow>
@@ -748,12 +754,22 @@ export default function LeadsPage() {
               <TableHead className="text-foreground font-bold">접수 일시</TableHead>
               <TableHead className="text-foreground font-bold">고객명</TableHead>
               <TableHead className="text-foreground font-bold">연락처</TableHead>
-              <TableHead className="text-foreground font-bold">현재 통신사</TableHead>
+              <TableHead className="text-foreground font-bold">
+                <ColumnFilter label="현재 통신사" values={valCarrier} selected={fCarrier} onChange={setFCarrier} />
+              </TableHead>
               <TableHead className="text-foreground font-bold w-16 text-xs">희망 기종</TableHead>
-              <TableHead className="text-foreground font-bold w-16 text-xs">희망 상품</TableHead>
-              <TableHead className="text-foreground font-bold w-16 text-xs">캠페인</TableHead>
-              <TableHead className="text-foreground font-bold w-32">담당자</TableHead>
-              <TableHead className="text-foreground font-bold w-28">상담 상태</TableHead>
+              <TableHead className="text-foreground font-bold w-16 text-xs">
+                <ColumnFilter label="희망 상품" values={valProduct} selected={fProduct} onChange={setFProduct} />
+              </TableHead>
+              <TableHead className="text-foreground font-bold w-16 text-xs">
+                <ColumnFilter label="캠페인" values={valCampaign} selected={fCampaign} onChange={setFCampaign} />
+              </TableHead>
+              <TableHead className="text-foreground font-bold w-32">
+                <ColumnFilter label="담당자" values={valAssignee} selected={fAssignee} onChange={setFAssignee} />
+              </TableHead>
+              <TableHead className="text-foreground font-bold w-28">
+                <ColumnFilter label="상담 상태" values={valStatus} selected={fStatus} onChange={setFStatus} />
+              </TableHead>
               <TableHead className="text-foreground font-bold min-w-[440px]">메모</TableHead>
               <TableHead className="text-foreground font-bold w-20 text-center">관리</TableHead>
             </TableRow>
