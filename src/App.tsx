@@ -156,8 +156,9 @@ const App = () => {
                         <Route path="/my" element={<MyPage />} />
                         <Route path="/sales-ledger" element={<SalesLedgerPage />} />
                         <Route path="/seg-partners" element={<SegPartnersPage />} />
-                        <Route path="/seg-calendar" element={<SegCalendarPage />} />
-                        <Route path="/apartment" element={<ApartmentPage />} />
+                        {/* SEG 활동 관리 단일 화면으로 통합 — 기존 딥링크는 리다이렉트 */}
+                        <Route path="/seg-calendar" element={<Navigate to="/seg-partners?tab=partners" replace />} />
+                        <Route path="/apartment" element={<Navigate to="/seg-partners?tab=apartment" replace />} />
                         <Route path="/file-vault" element={<FileVaultPage />} />
                         <Route path="/admin/file-approvals" element={<AdminOnlyRoute><FileApprovalsPage /></AdminOnlyRoute>} />
                         <Route path="/custom-proposals" element={<CustomProposalsPage />} />
