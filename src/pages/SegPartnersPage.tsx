@@ -372,7 +372,6 @@ function StorefrontResultDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const open = !!activity;
-  const cf = (activity?.custom_fields ?? {}) as Record<string, any>;
   const [regulars, setRegulars] = useState<string>("");
   const [mobile, setMobile] = useState<string>("");
   const [internet, setInternet] = useState<string>("");
