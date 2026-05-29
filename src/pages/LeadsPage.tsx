@@ -796,20 +796,15 @@ export default function LeadsPage() {
                 className="cursor-pointer border-b border-border hover:bg-muted/40"
                 onClick={() => setOpenLead(r)}
               >
-                <TableCell className="tabular-nums text-xs text-foreground font-medium">
-                  {new Date(r.created_at).toLocaleString("ko-KR", {
-                    month: "2-digit",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                <TableCell className="tabular-nums text-xs text-foreground font-medium whitespace-nowrap py-1.5">
+                  {fmtCompactDate(r.created_at)}
                 </TableCell>
-                <TableCell className="font-bold text-foreground">{r.name ?? "-"}</TableCell>
-                <TableCell className="tabular-nums text-foreground font-medium">{r.phone ?? "-"}</TableCell>
-                <TableCell className="text-foreground">{r.current_carrier ?? "-"}</TableCell>
-                <TableCell className="text-foreground text-xs whitespace-nowrap" title={r.desired_device ?? ""}>{r.desired_device ?? "-"}</TableCell>
-                <TableCell className="text-foreground text-xs whitespace-nowrap" title={r.desired_product ?? ""}>{r.desired_product ?? "-"}</TableCell>
-                <TableCell className="text-xs text-foreground whitespace-nowrap" title={r.campaign_name ?? ""}>
+                <TableCell className="font-bold text-foreground py-1.5">{r.name ?? "-"}</TableCell>
+                <TableCell className="tabular-nums text-foreground font-medium py-1.5">{r.phone ?? "-"}</TableCell>
+                <TableCell className="text-foreground py-1.5">{r.current_carrier ?? "-"}</TableCell>
+                <TableCell className="text-foreground text-xs whitespace-nowrap py-1.5" title={r.desired_device ?? ""}>{r.desired_device ?? "-"}</TableCell>
+                <TableCell className="text-foreground text-xs whitespace-nowrap py-1.5" title={r.desired_product ?? ""}>{r.desired_product ?? "-"}</TableCell>
+                <TableCell className="text-xs text-foreground whitespace-nowrap py-1.5" title={r.campaign_name ?? ""}>
                   {r.campaign_name ?? "-"}
                 </TableCell>
                 <TableCell onClick={(e) => e.stopPropagation()}>
