@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ExternalLink, Plus, Pencil, Trash2, Link2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Link2 } from "lucide-react";
 import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
 import { resolveIcon } from "@/lib/menuIcons";
@@ -23,15 +23,6 @@ const LinkIcon = ({ name }: { name?: string }) => {
   const Icon = resolveIcon(name || "ExternalLink");
   return <Icon className="size-6 text-slate-700" />;
 };
-
-interface QuickLink {
-  id: string;
-  label: string;
-  url: string;
-  icon: string;
-  sort_order: number;
-  active: boolean;
-}
 
 export const QuickLinksWidget = () => {
   const { isAdmin } = useRole();
@@ -75,6 +66,20 @@ export const QuickLinksWidget = () => {
       });
       if (error) { toast.error(error.message); return; }
     }
+    toast.success("저장 완료");
+    setEditItem(null);
+    load();
+  };
+
+  const deleteItem = async (id: string) => {
+    if (!confirm("삭제하시겠습니까?")) return;
+    await supabase.from("quick_links").delete().eq("id", id);
+    toast.success("삭제 완료");
+    load();
+  };
+
+  if (links.length === 0 && !isAdmin) return null;
+
   return (
     <Card className="h-full w-full flex flex-col bg-card border-border/60 shadow-sm rounded-2xl p-4">
       <div className="flex items-center justify-between mb-4">
@@ -132,21 +137,6 @@ export const QuickLinksWidget = () => {
                 <button
                   onClick={() => deleteItem(link.id)}
                   className="size-5 rounded-full bg-destructive text-destructive-foreground grid place-items-center text-[9px] shadow-sm"
-                >
-                  <Trash2 className="size-2.5" />
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
-        {links.length === 0 && (
-          <div className="col-span-full text-center text-xs text-muted-foreground py-4">
-            바로가기가 없습니다. 관리자가 추가해주세요.
-          </div>
-        )}
-      </div>
-                  onClick={() => deleteItem(link.id)}
-                  className="size-5 rounded-full bg-destructive text-destructive-foreground grid place-items-center text-[9px]"
                 >
                   <Trash2 className="size-2.5" />
                 </button>
