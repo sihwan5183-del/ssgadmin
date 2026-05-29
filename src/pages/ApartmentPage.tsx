@@ -254,7 +254,7 @@ export default function ApartmentPage() {
 
         {/* === Postings === */}
         <TabsContent value="postings">
-          <Card className="p-5 glass">
+          <Card className="p-3">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold">게시 활동 목록</h3>
               <Button onClick={openCreatePosting}>
@@ -362,7 +362,7 @@ export default function ApartmentPage() {
 
         {/* === Leads === */}
         <TabsContent value="leads">
-          <Card className="p-5 glass">
+          <Card className="p-3">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold">인입 고객 목록</h3>
               <Button onClick={openCreateLead}>
