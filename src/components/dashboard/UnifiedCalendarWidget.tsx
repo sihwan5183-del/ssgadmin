@@ -117,13 +117,12 @@ export function UnifiedCalendarWidget({ onDayClick, showTabs = true }: { onDayCl
     const dow = d.getDay(); // 0=일, 6=토
 
     let badge: React.ReactNode = null;
-    if (tab === "sales") {
       const v = salesByDay.get(iso);
       if (v && v.total > 0) {
         badge = (
-          <div className="mt-0.5 text-[10px] leading-tight text-black">
-            <div className="font-semibold">총 {v.total}</div>
-            <div className="text-[9px]">M{v.mnp}·기{v.chg}·신{v.nw}</div>
+          <div className="mt-1 text-sm leading-snug text-black">
+            <div className="font-bold text-black">총 {v.total}건</div>
+            <div className="text-xs text-black mt-0.5">M{v.mnp}·기{v.chg}·신{v.nw}</div>
           </div>
         );
       }
@@ -177,10 +176,11 @@ export function UnifiedCalendarWidget({ onDayClick, showTabs = true }: { onDayCl
         key={iso}
         onClick={() => { setSelected(iso); onDayClick?.(iso); }}
         className={cn(
-          "min-h-[72px] text-left p-1.5 bg-card transition-colors hover:bg-[#FAFAFA] focus:outline-none",
+          "min-h-[84px] text-left p-2 bg-card transition-colors hover:bg-[#FAFAFA] focus:outline-none",
           !inMonth && "opacity-40",
           isSel && "bg-[#FFF1F8]",
         )}
+      >
       >
         <div className="flex items-center justify-between text-[11px] font-medium">
           {isToday ? (
@@ -215,11 +215,7 @@ export function UnifiedCalendarWidget({ onDayClick, showTabs = true }: { onDayCl
   };
   const goToday = () => { setYear(now.getFullYear()); setMonth0(now.getMonth()); setSelected(todayIso()); };
 
-  const detailTitle = (() => {
-    const d = new Date(selected + "T00:00:00");
-    const wd = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
-    return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} (${wd})`;
-  })();
+  const detailLink: Record<TabKey, { to: string; label: string }> = {
 
   const detailLink: Record<TabKey, { to: string; label: string }> = {
     sales: { to: "/sales-ledger", label: "판매원장 →" },
@@ -303,29 +299,13 @@ export function UnifiedCalendarWidget({ onDayClick, showTabs = true }: { onDayCl
       </div>
 
       {/* Calendar grid */}
+      {/* Calendar grid */}
       <div className="grid grid-cols-7 gap-px bg-[#F0F0F0] rounded-lg overflow-hidden border border-[#F0F0F0]">
         {days.map(renderCell)}
       </div>
-
-      {/* Detail list */}
-      <div className="mt-4 border-t border-[#F0F0F0] pt-4">
-        <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#1A1A1A]">
-          <span className="inline-block w-1 h-4 rounded-full" style={{ backgroundColor: MAGENTA }} />
-          {detailTitle} 상세
-        </div>
-        {detailList.length === 0 ? (
-          <div className="text-xs text-muted-foreground">선택한 날짜에 데이터가 없습니다.</div>
-        ) : (
-          <ul className="space-y-1.5">
-            {detailList.map((r, i) => (
-              <li key={i} className="flex items-start gap-3 text-xs text-[#1A1A1A] border-b border-[#F0F0F0] pb-1.5 last:border-0">
-                <span className="min-w-[110px] text-neutral-500">{r.k}</span>
-                <span className="flex-1">{r.v}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+    </div>
+  );
+}
     </div>
   );
 }
