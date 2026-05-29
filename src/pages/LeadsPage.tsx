@@ -399,6 +399,50 @@ export default function LeadsPage() {
     return { meta, dogmaru, other };
   }, [rows, inquiryRows, period]);
 
+  // ── 직원별 성과 매트릭스 (담당자/매니저 단위 집계) ──
+  const staffMatrix = useMemo(() => {
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const month = today.slice(0, 7);
+    const inRange = (iso: string) => {
+      if (period === "all") return true;
+      if (period === "month") return iso.slice(0, 7) === month;
+      return iso.slice(0, 10) === today;
+    };
+    const empty = () => ({ total: 0, today: 0, done: 0, recare: 0, absent: 0, fail: 0 });
+    const map = new Map<string, ReturnType<typeof empty>>();
+    const bump = (name: string) => {
+      let b = map.get(name);
+      if (!b) { b = empty(); map.set(name, b); }
+      return b;
+    };
+    for (const r of rows) {
+      if (!inRange(r.created_at)) continue;
+      const name = r.assigned_to ? (staff.find((s) => s.user_id === r.assigned_to)?.display_name ?? "(미지정)") : "(미지정)";
+      const b = bump(name);
+      b.total += 1;
+      if (r.created_at.slice(0, 10) === today) b.today += 1;
+      if (r.status === "개통 완료") b.done += 1;
+      if (r.status === "재케어") b.recare += 1;
+      if (r.status === "부재 중") b.absent += 1;
+      if (r.status === "실패" || r.status === "취소") b.fail += 1;
+    }
+    for (const r of inquiryRows) {
+      if (!inRange(r.created_at)) continue;
+      const name = (r.manager && r.manager.trim()) ? r.manager.trim() : "(미지정)";
+      const b = bump(name);
+      b.total += 1;
+      if (r.created_at.slice(0, 10) === today) b.today += 1;
+      if (r.status === "개통완료") b.done += 1;
+      if (r.status === "재케어") b.recare += 1;
+      if (r.status === "부재") b.absent += 1;
+      if (r.status === "실패" || r.status === "취소") b.fail += 1;
+    }
+    return Array.from(map.entries())
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => b.total - a.total);
+  }, [rows, inquiryRows, period, staff]);
+
   // ── 엑셀형 헤더 필터에 들어갈 고유값 (탭별로 분리해 메타↔도그마루 섞이지 않게) ──
   const metaRows = useMemo(() => rows.filter((r) => r.campaign_name !== DOGMARU_CAMPAIGN), [rows]);
   const dogmaruRows = useMemo(() => rows.filter((r) => r.campaign_name === DOGMARU_CAMPAIGN), [rows]);
