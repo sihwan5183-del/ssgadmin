@@ -44,7 +44,7 @@ const normalizeSaleType = (t: string | null): "MNP" | "기변" | "신규" | "기
   return "기타";
 };
 
-export function UnifiedCalendarWidget() {
+export function UnifiedCalendarWidget({ onDayClick }: { onDayClick?: (iso: string) => void } = {}) {
   const [tab, setTab] = useState<TabKey>("sales");
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -191,7 +191,7 @@ export function UnifiedCalendarWidget() {
     return (
       <button
         key={iso}
-        onClick={() => setSelected(iso)}
+        onClick={() => { setSelected(iso); onDayClick?.(iso); }}
         className={cn(
           "min-h-[72px] text-left p-1.5 bg-card transition-colors hover:bg-[#FAFAFA] focus:outline-none",
           !inMonth && "opacity-40",

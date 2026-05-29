@@ -39,6 +39,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { calcDashboardProfit } from "@/lib/profit";
 import { useDashboardStaff } from "@/hooks/useDashboardStaff";
+import { UnifiedCalendarWidget } from "@/components/dashboard/UnifiedCalendarWidget";
 
 const PAGE_SIZE = 25;
 
@@ -197,6 +198,7 @@ const SalesLedgerPage = () => {
   const [rows, setRows] = useState<SaleRow[]>([]);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
+  const [dayFilter, setDayFilter] = useState<string | null>(null);
   const [searchQ, setSearchQ] = useState(() => searchParams.get("q") ?? "");
   const [debouncedSearchQ, setDebouncedSearchQ] = useState(() => searchParams.get("q") ?? "");
   const [searching, setSearching] = useState(false);
@@ -650,7 +652,10 @@ const SalesLedgerPage = () => {
 
   const filteredRows = useMemo(() => {
     const q = debouncedSearchQ.trim().toLowerCase().replace(/\s+/g, "");
-    const result = rows;
+    let result = rows;
+    if (dayFilter) {
+      result = result.filter((r) => r.open_date === dayFilter);
+    }
     if (!q) return result;
     const qDigits = q.replace(/[^0-9]/g, "");
     return result.filter((r) => {
@@ -663,7 +668,7 @@ const SalesLedgerPage = () => {
       if (qDigits && phone.includes(qDigits)) return true;
       return false;
     });
-  }, [rows, debouncedSearchQ]);
+  }, [rows, debouncedSearchQ, dayFilter]);
 
   const allSelected = filteredRows.length > 0 && filteredRows.every((r) => selected.has(r.id));
   const toggleAll = () => {
@@ -892,59 +897,22 @@ const SalesLedgerPage = () => {
         )}
       </section>
 
-      {/* 요약 카드 */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
-        <SummaryCard icon={Hash} label="총 판매 건수" value={`${animCount.toLocaleString()}건`} accent="primary" />
-        <SummaryCard
-          icon={WalletIcon}
-          label="총 리베이트"
-          value={`${animRebate.toLocaleString("ko-KR")}원`}
-          accent="secondary"
-          tooltip={`= 단가표 수수료 + 부가서비스 수수료\n(모요 수수료 미포함 · 순수 영업 수치)`}
-        />
-        <SummaryCard
-          icon={Gift}
-          label="총 오퍼(지원금)"
-          value={`${animOffer.toLocaleString("ko-KR")}원`}
-          accent="warning"
-          tooltip={`= 유통망지원금 + 현금개통 + 추가지원금\n  + 고객지원금 + 법인카드 결제\n(모요 수수료 별도 관리 · 미포함)`}
-        />
-        <SummaryCard
-          icon={TrendingUp}
-          label="총 최종 수익"
-          value={`${animProfit.toLocaleString("ko-KR")}원`}
-          accent={animProfit >= 0 ? "success" : "destructive"}
-          tooltip={`= (총 리베이트 + 미수금 + 상품권 + 중고폰)\n   − 총 오퍼(지원금)\n   − 모요 수수료 합계\n\n모요 수수료는 마지막 단계에서만 차감됩니다.`}
-        />
-        <SummaryCard
-          icon={Banknote}
-          label="미수금 건"
-          value={`${unpaidCount}건`}
-          accent={unpaidCount > 0 ? "destructive" : "primary"}
-          tooltip={`수급 미완료 미수금 건수\n(수수료와 무관 · 순수 미수 액수 관리)`}
-        />
-        <SummaryCard
-          icon={Gift}
-          label="상품권 미반납"
-          value={`${unreturnedCount}건`}
-          accent={unreturnedCount > 0 ? "destructive" : "primary"}
-          tooltip={`반납 미완료 상품권 건수\n(수수료와 무관 · 순수 미반납 관리)`}
-        />
-      </div>
-      {/* 모요 정산 정보 (별도 라인) */}
-      <div className="-mt-2 mb-5 rounded-xl border border-primary bg-primary px-4 py-2.5 flex flex-wrap items-center gap-x-6 gap-y-1.5 shadow-sm">
-        <div className="flex items-center gap-2 text-xs font-semibold text-primary-foreground">
-          <Filter className="size-3.5" /> 모요 정산 정보 (별도 지출 관리)
-        </div>
-        <div className="text-xs text-primary-foreground/90">
-          모요 정산 대상: <span className="font-bold tabular-nums text-primary-foreground">{dbSummary.moyoCount.toLocaleString()}건</span>
-        </div>
-        <div className="text-xs text-primary-foreground/90">
-          모요 수수료 합계: <span className="font-bold tabular-nums text-primary-foreground">{dbSummary.moyoFeeTotal.toLocaleString("ko-KR")}원</span>
-        </div>
-        <div className="text-[10px] text-primary-foreground/80 ml-auto">
-          ※ 모바일 상품 한정 · 토글 OFF 건만 합산 · 최종 수익에서만 차감
-        </div>
+      {/* 일별 판매실적 캘린더 (최상단) */}
+      <div className="mb-5">
+        <UnifiedCalendarWidget onDayClick={(iso) => setDayFilter((cur) => (cur === iso ? null : iso))} />
+        {dayFilter && (
+          <div className="mt-2 flex items-center gap-2 text-[12px] text-foreground">
+            <Badge variant="outline" className="h-7 px-2 border-primary/40 text-primary gap-1">
+              <Filter className="size-3" /> {dayFilter} 개통건만 표시
+            </Badge>
+            <button
+              onClick={() => setDayFilter(null)}
+              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 px-2 py-1 rounded hover:bg-muted/50"
+            >
+              <X className="size-3" /> 날짜 필터 해제 (당월 전체 보기)
+            </button>
+          </div>
+        )}
       </div>
       {dbSummary.excludedCount > 0 && (
         <div className="-mt-3 mb-4 text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
