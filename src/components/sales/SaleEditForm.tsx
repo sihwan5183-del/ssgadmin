@@ -417,7 +417,13 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
     !customFields.subscription_no || subscriptionDigits === String(customFields.subscription_no);
   const requiredErrors: Record<string, string | null> = {
     customer_name: (form.customer_name ?? "").trim() ? null : "고객명을 입력해주세요",
+    birth_date: (form.birth_date ?? "").trim() ? null : "생년월일을 입력해주세요",
     phone: !phoneDigits ? "연락처를 입력해주세요" : !phoneValid ? "숫자 10~11자리로 입력해주세요" : null,
+    subscription_no: (customFields.subscription_no ?? "").toString().trim()
+      ? null
+      : "가입 번호를 입력해주세요",
+    open_method: (form.open_method ?? "").trim() ? null : "개통방식을 선택해주세요",
+    status: (form.status ?? "").trim() ? null : "최종상태를 선택해주세요",
     product: form.product ? null : "가입상품을 선택해주세요",
     rate_plan: form.rate_plan ? null : "요금제를 선택해주세요",
     device_model: form.device_model && form.device_model.trim() ? null : "단말기를 선택해주세요",
