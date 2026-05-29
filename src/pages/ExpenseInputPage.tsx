@@ -940,8 +940,12 @@ export default function ExpenseInputPage() {
                   value={adForm.note}
                   onChange={(e) => setAdForm({ ...adForm, note: e.target.value })} />
               </div>
-              <div className="md:col-span-2 lg:col-span-3 flex justify-end">
-                <Button type="submit" disabled={saving} className="gap-2">
+              <div className="md:col-span-2 lg:col-span-3 flex justify-end pt-2 border-t border-slate-100">
+                <Button
+                  type="submit"
+                  disabled={saving}
+                  className="gap-2 rounded-xl px-6 h-11 bg-gradient-to-r from-primary to-primary-glow text-primary-foreground shadow-md hover:shadow-glow hover:-translate-y-0.5 transition-all duration-200"
+                >
                   <PlusCircle className="size-4" />
                   {saving ? "저장 중..." : "광고비 저장"}
                 </Button>
@@ -1010,8 +1014,12 @@ export default function ExpenseInputPage() {
                   value={etcForm.note}
                   onChange={(e) => setEtcForm({ ...etcForm, note: e.target.value })} />
               </div>
-              <div className="md:col-span-2 lg:col-span-3 flex justify-end">
-                <Button type="submit" disabled={saving} className="gap-2">
+              <div className="md:col-span-2 lg:col-span-3 flex justify-end pt-2 border-t border-slate-100">
+                <Button
+                  type="submit"
+                  disabled={saving}
+                  className="gap-2 rounded-xl px-6 h-11 bg-gradient-to-r from-primary to-primary-glow text-primary-foreground shadow-md hover:shadow-glow hover:-translate-y-0.5 transition-all duration-200"
+                >
                   <PlusCircle className="size-4" />
                   {saving ? "저장 중..." : "지출 저장"}
                 </Button>
