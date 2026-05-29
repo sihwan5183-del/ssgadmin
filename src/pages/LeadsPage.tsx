@@ -1,5 +1,6 @@
 import { lazy, memo, startTransition, Suspense, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDashboardStaff } from "@/hooks/useDashboardStaff";
 import { Card } from "@/components/ui/card";
@@ -186,6 +187,7 @@ type LeadNote = {
 export default function LeadsPage() {
   const { user } = useAuth();
   const { staff } = useDashboardStaff();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [rows, setRows] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -200,6 +202,7 @@ export default function LeadsPage() {
   const [inquiryRows, setInquiryRows] = useState<{ created_at: string; status: string | null; manager: string | null }[]>([]);
   const [period, setPeriod] = useState<"all" | "month" | "day">("all");
   const [personalView, setPersonalView] = useState(false);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
   // 엑셀형 컬럼 필터 (메타/도그마루 공통 + 각자 고유)
   const [fStatus, setFStatus] = useState<FilterSelection>(null);
   const [fCarrier, setFCarrier] = useState<FilterSelection>(null);
@@ -253,7 +256,7 @@ export default function LeadsPage() {
             if (prev.some((r) => r.id === row.id)) return prev;
             return [row, ...prev];
           });
-          toast.success(`신규 리드 인입: ${row.name ?? "(이름 없음)"}`);
+          // 전역 LeadsRealtimeNotifier 가 토스트/사운드를 단일 채널로 처리하므로 여기서는 데이터만 동기화.
         },
       )
       .on(
@@ -314,6 +317,33 @@ export default function LeadsPage() {
       setNotes((data ?? []) as LeadNote[]);
     })();
   }, [openLead?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── 전역 토스트 알림 클릭 시 진입하는 ?tab=meta|dogmaru&highlight=<id> 동기화 ──
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "meta" || tab === "dogmaru" || tab === "other") {
+      setSourceTab(tab as "meta" | "dogmaru" | "other");
+    }
+    const hid = searchParams.get("highlight");
+    if (hid) {
+      setHighlightId(hid);
+      const t = setTimeout(() => {
+        setHighlightId(null);
+        // URL 정리: 깜빡임이 끝나면 highlight 파라미터 제거
+        const next = new URLSearchParams(searchParams);
+        next.delete("highlight");
+        setSearchParams(next, { replace: true });
+      }, 6000);
+      // 스크롤 포커스
+      requestAnimationFrame(() => {
+        const el = document.querySelector(`[data-lead-row="${hid}"]`);
+        if (el && "scrollIntoView" in el) {
+          (el as HTMLElement).scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      });
+      return () => clearTimeout(t);
+    }
+  }, [searchParams, setSearchParams]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -828,7 +858,11 @@ export default function LeadsPage() {
                 return (
                   <TableRow
                     key={item.id}
-                    className="cursor-pointer border-b border-border hover:bg-muted/40"
+                    data-lead-row={item.id}
+                    className={
+                      "cursor-pointer border-b border-border hover:bg-muted/40 transition-colors " +
+                      (highlightId === item.id ? "bg-amber-50 ring-2 ring-amber-400 animate-pulse" : "")
+                    }
                     onClick={() => setOpenLead(item)}
                   >
                     <TableCell className="tabular-nums text-foreground font-medium py-1.5">
@@ -924,7 +958,11 @@ export default function LeadsPage() {
             {filtered.map((r) => (
               <TableRow
                 key={r.id}
-                className="cursor-pointer border-b border-border hover:bg-muted/40"
+                data-lead-row={r.id}
+                className={
+                  "cursor-pointer border-b border-border hover:bg-muted/40 transition-colors " +
+                  (highlightId === r.id ? "bg-amber-50 ring-2 ring-amber-400 animate-pulse" : "")
+                }
                 onClick={() => setOpenLead(r)}
               >
                 <TableCell className="tabular-nums text-xs text-foreground font-medium whitespace-nowrap py-1.5">
