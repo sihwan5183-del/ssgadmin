@@ -32,12 +32,6 @@ export default function SegPartnersPage() {
   const [aptFormOpen, setAptFormOpen] = useState(false);
   const [storefrontOpen, setStorefrontOpen] = useState(false);
   const [selected, setSelected] = useState<SegPartner | null>(null);
-  const headerCta = (() => {
-    if (tab === "apartment") return { label: "아파트게시 등록", onClick: () => setAptFormOpen(true) };
-    if (tab === "storefront") return { label: "점두활동 등록", onClick: () => setStorefrontOpen(true) };
-    return { label: "제휴업체 등록", onClick: () => setFormOpen(true) };
-  })();
-
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
@@ -52,6 +46,12 @@ export default function SegPartnersPage() {
     sp.set("tab", next);
     setSearchParams(sp, { replace: true });
   };
+  const headerCta =
+    tab === "apartment"
+      ? { label: "아파트게시 등록", onClick: () => setAptFormOpen(true) }
+      : tab === "storefront"
+      ? { label: "점두활동 등록", onClick: () => setStorefrontOpen(true) }
+      : { label: "제휴업체 등록", onClick: () => setFormOpen(true) };
 
   const filtered = useMemo(() => {
     return partners.filter((p) => {
