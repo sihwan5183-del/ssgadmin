@@ -1,15 +1,22 @@
-import { useMemo, useState, lazy, Suspense } from "react";
+import { useMemo, useState, useEffect, lazy, Suspense } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Plus, Search, TrendingUp, Calendar as CalIcon, Users, AlertTriangle } from "lucide-react";
+import { Building2, Plus, Search, TrendingUp, Calendar as CalIcon, Users, AlertTriangle, Pencil } from "lucide-react";
 import { useSegPartners, useSegActivities, type SegPartner, type SegActivity } from "@/hooks/useSegPartners";
 import { PartnerFormDialog } from "@/components/seg/PartnerFormDialog";
 import { PartnerDetailDrawer } from "@/components/seg/PartnerDetailDrawer";
 import { QuickScheduleDialog } from "@/components/seg/QuickScheduleDialog";
 import { ApartmentPostingQuickDialog } from "@/components/seg/ApartmentPostingQuickDialog";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
 import { useSearchParams } from "react-router-dom";
 
@@ -287,6 +294,8 @@ function StorefrontActivityTable({
     });
   }, [activities, partnerMap]);
 
+  const [editing, setEditing] = useState<SegActivity | null>(null);
+
   return (
     <Card className="overflow-hidden border-slate-200">
       <div className="overflow-x-auto">
@@ -294,38 +303,52 @@ function StorefrontActivityTable({
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr className="text-left text-slate-700">
               <th className="px-3 py-2 font-semibold whitespace-nowrap">활동일자</th>
-              <th className="px-3 py-2 font-semibold whitespace-nowrap">시간</th>
               <th className="px-3 py-2 font-semibold whitespace-nowrap">업체/매장</th>
               <th className="px-3 py-2 font-semibold whitespace-nowrap">행사 유형</th>
               <th className="px-3 py-2 font-semibold whitespace-nowrap">제목</th>
-              <th className="px-3 py-2 font-semibold whitespace-nowrap">장소</th>
               <th className="px-3 py-2 font-semibold whitespace-nowrap">담당자</th>
               <th className="px-3 py-2 font-semibold whitespace-nowrap">진행상태</th>
+              <th className="px-3 py-2 font-semibold whitespace-nowrap text-right">관리</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-10 text-center text-sm text-muted-foreground">
+                <td colSpan={7} className="px-3 py-10 text-center text-sm text-muted-foreground">
                   등록된 점두 활동이 없습니다. 제휴업체 상세에서 활동을 [자체 점두행사] 분류로 기록하면 자동 집계됩니다.
                 </td>
               </tr>
             )}
             {rows.map((a) => {
               const partner = partnerMap.get(a.partner_id);
+              const cf = (a.custom_fields ?? {}) as Record<string, any>;
+              const hasResult =
+                cf.regulars_count != null || cf.mobile_count != null || cf.internet_count != null;
               return (
                 <tr key={a.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 transition-colors text-slate-900">
                   <td className="px-3 py-2 whitespace-nowrap tabular-nums">{a.activity_date}</td>
-                  <td className="px-3 py-2 whitespace-nowrap tabular-nums">{a.activity_time ?? "-"}</td>
                   <td className="px-3 py-2 whitespace-nowrap font-semibold">{partner?.company_name ?? "-"}</td>
                   <td className="px-3 py-2 whitespace-nowrap">{a.activity_type ?? "-"}</td>
                   <td className="px-3 py-2 whitespace-nowrap">{a.title ?? "-"}</td>
-                  <td className="px-3 py-2 whitespace-nowrap">{a.location ?? "-"}</td>
                   <td className="px-3 py-2 whitespace-nowrap">{a.assignee_name ?? "-"}</td>
                   <td className="px-3 py-2 whitespace-nowrap">
                     <span className="text-slate-900 font-medium">
                       {a.is_completed ? "완료" : "진행중"}
                     </span>
+                    {hasResult && (
+                      <span className="ml-2 text-[11px] text-slate-600 tabular-nums">
+                        단골 {cf.regulars_count ?? 0} · 모바일 {cf.mobile_count ?? 0} · 인터넷 {cf.internet_count ?? 0}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap text-right">
+                    <Button
+                      size="sm"
+                      onClick={() => setEditing(a)}
+                      className="h-8 bg-slate-900 hover:bg-slate-800 text-white"
+                    >
+                      <Pencil className="size-3.5 mr-1" /> 수정
+                    </Button>
                   </td>
                 </tr>
               );
@@ -333,7 +356,112 @@ function StorefrontActivityTable({
           </tbody>
         </table>
       </div>
+      <StorefrontResultDialog
+        activity={editing}
+        onOpenChange={(open) => { if (!open) setEditing(null); }}
+      />
     </Card>
+  );
+}
+
+function StorefrontResultDialog({
+  activity,
+  onOpenChange,
+}: {
+  activity: SegActivity | null;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const open = !!activity;
+  const [regulars, setRegulars] = useState<string>("");
+  const [mobile, setMobile] = useState<string>("");
+  const [internet, setInternet] = useState<string>("");
+  const [memo, setMemo] = useState<string>("");
+  const [saving, setSaving] = useState(false);
+
+  // sync when activity changes
+  useEffect(() => {
+    if (activity) {
+      const c = (activity.custom_fields ?? {}) as Record<string, any>;
+      setRegulars(c.regulars_count?.toString() ?? "");
+      setMobile(c.mobile_count?.toString() ?? "");
+      setInternet(c.internet_count?.toString() ?? "");
+      setMemo(c.result_memo ?? "");
+    }
+  }, [activity?.id]);
+
+  const save = async () => {
+    if (!activity) return;
+    setSaving(true);
+    const nextCf = {
+      ...(activity.custom_fields ?? {}),
+      regulars_count: regulars === "" ? null : regulars,
+      mobile_count: mobile === "" ? null : mobile,
+      internet_count: internet === "" ? null : internet,
+      result_memo: memo || null,
+    };
+    const { error } = await (supabase as any)
+      .from("seg_activities")
+      .update({ custom_fields: nextCf })
+      .eq("id", activity.id);
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success("최종 활동 내역이 저장되었습니다");
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-slate-900">최종 활동 내역 입력</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label className="text-slate-900 text-sm">단골고객등록 건</Label>
+            <Input
+              value={regulars}
+              onChange={(e) => setRegulars(e.target.value)}
+              placeholder="자유 입력 (예: 12)"
+              className="text-slate-900"
+            />
+          </div>
+          <div>
+            <Label className="text-slate-900 text-sm">모바일 실적 건수</Label>
+            <Input
+              value={mobile}
+              onChange={(e) => setMobile(e.target.value)}
+              placeholder="자유 입력 (예: 5)"
+              className="text-slate-900"
+            />
+          </div>
+          <div>
+            <Label className="text-slate-900 text-sm">인터넷 실적 건수</Label>
+            <Input
+              value={internet}
+              onChange={(e) => setInternet(e.target.value)}
+              placeholder="자유 입력 (예: 3)"
+              className="text-slate-900"
+            />
+          </div>
+          <div>
+            <Label className="text-slate-900 text-sm">메모</Label>
+            <Textarea
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+              placeholder="현장 분위기, 특이사항, 후속 액션 등 자유 기재"
+              rows={5}
+              className="text-slate-900"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>취소</Button>
+          <Button onClick={save} disabled={saving} className="bg-slate-900 hover:bg-slate-800 text-white">
+            {saving ? "저장중..." : "저장"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
