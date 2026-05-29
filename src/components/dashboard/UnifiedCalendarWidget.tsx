@@ -108,23 +108,6 @@ export function UnifiedCalendarWidget({ onDayClick, showTabs = true }: { onDayCl
 
   const inRange = (d: string, r: RangeRow) => d >= r.start && d <= r.end;
 
-  const detailList = useMemo(() => {
-    if (tab === "sales") {
-      const v = salesByDay.get(selected);
-      if (!v) return [];
-      return [
-        { k: "전체 개통", v: `${v.total}건` },
-        { k: "MNP", v: `${v.mnp}건` },
-        { k: "기변", v: `${v.chg}건` },
-        { k: "신규", v: `${v.nw}건` },
-      ];
-    }
-    if (tab === "seg") {
-      return (segByDay.get(selected) || []).map((r) => ({ k: r.activity_type || "활동", v: `${r.title || "-"}${r.assignee_name ? ` · ${r.assignee_name}` : ""}` }));
-    }
-    const list = (tab === "apt" ? apt : ads).filter((r) => inRange(selected, r));
-    return list.map((r) => ({ k: `${r.start} ~ ${r.end}`, v: `${r.title}${r.sub ? ` · ${r.sub}` : ""}` }));
-  }, [tab, selected, salesByDay, segByDay, apt, ads]);
 
   const renderCell = (d: Date) => {
     const iso = isoOf(d);
