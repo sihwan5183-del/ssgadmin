@@ -580,7 +580,7 @@ export default function LeadsPage() {
                 <div className="grid grid-cols-3 gap-2 text-center">
                   {[
                     { k: "메타", v: m },
-                    { k: "도그마루", v: d },
+                    { k: "도그마루\n214", v: d },
                     { k: "기타", v: o },
                   ].map((c) => (
                     <div key={c.k} className="rounded-md bg-muted/50 py-1.5">
