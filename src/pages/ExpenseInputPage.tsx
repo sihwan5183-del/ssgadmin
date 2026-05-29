@@ -762,21 +762,39 @@ export default function ExpenseInputPage() {
         </Card>
       </div>
 
-      <Card className="p-6 glass mb-6">
-        <Tabs value={tab} onValueChange={(v) => setTab(v as "광고비" | "기타지출" | "고정지출")}>
-          <TabsList className="mb-5">
-            <TabsTrigger value="광고비" className="gap-2">
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "광고비" | "기타지출" | "고정지출")}>
+        {/* ── 장표 조회 필터 바 ── */}
+        <div className="mb-4 bg-white border border-slate-100 shadow-sm rounded-2xl px-4 py-3 flex flex-row items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="size-2 rounded-full bg-primary animate-pulse" />
+            <span className="text-sm font-semibold text-slate-900">장표 조회 필터</span>
+          </div>
+          <span className="text-xs text-slate-500">
+            기준 기간 <span className="font-semibold text-slate-900">{periodLabel}</span>
+          </span>
+          <TabsList className="ml-auto bg-slate-100/70">
+            <TabsTrigger value="광고비" className="gap-1.5 text-slate-900 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
               <Megaphone className="size-4" /> 광고비
             </TabsTrigger>
-            <TabsTrigger value="기타지출" className="gap-2">
+            <TabsTrigger value="기타지출" className="gap-1.5 text-slate-900 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
               <Receipt className="size-4" /> 기타 지출
             </TabsTrigger>
-            <TabsTrigger value="고정지출" className="gap-2">
+            <TabsTrigger value="고정지출" className="gap-1.5 text-slate-900 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
               <Repeat className="size-4" /> 고정지출
             </TabsTrigger>
           </TabsList>
+        </div>
 
-          <TabsContent value="광고비">
+        {/* ── 신규 등록 카드 ── */}
+        <Card className="bg-white border border-slate-100 shadow-sm rounded-2xl p-6 mb-6 [&_label]:text-slate-900 [&_label]:font-medium">
+          <div className="mb-4 flex items-center gap-2">
+            <PlusCircle className="size-4 text-primary" />
+            <h3 className="text-base font-bold text-slate-900">
+              {tab === "광고비" ? "광고비 신규 등록" : tab === "기타지출" ? "기타 지출 신규 등록" : "고정지출 신규 등록"}
+            </h3>
+          </div>
+
+          <TabsContent value="광고비" className="mt-0">
             <form onSubmit={submitAd} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <Label>집행일 (시작) *</Label>
@@ -1141,8 +1159,8 @@ export default function ExpenseInputPage() {
               )}
             </div>
           </TabsContent>
-        </Tabs>
-      </Card>
+        </Card>
+      </Tabs>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
         <Card className="p-5 glass">
