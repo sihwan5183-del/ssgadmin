@@ -493,8 +493,10 @@ export default function LeadsPage() {
         )}
       </div>
 
-      {/* 종합 리드 성과 보드 — 경로별/기간별 매트릭스 */}
-      <Card className="p-4">
+      {/* 종합 리드 성과 보드 — matrix/period 변경 시에만 리렌더 (탭 전환에는 영향 X) */}
+      <PerformanceMatrixBoard matrix={matrix} period={period} setPeriod={setPeriod} />
+      {/* legacy inline board removed → 동일 마크업을 PerformanceMatrixBoard 로 추출 */}
+      <Card className="hidden p-4">
         <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
           <div>
             <div className="text-sm font-semibold text-foreground">종합 리드 성과 보드</div>
