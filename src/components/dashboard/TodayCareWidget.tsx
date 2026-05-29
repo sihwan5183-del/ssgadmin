@@ -59,11 +59,11 @@ export const TodayCareWidget = () => {
   const total = plans.length + addons.length;
 
   return (
-    <Card className="p-4 glass">
+    <Card className="h-full w-full flex flex-col p-4 bg-card border-border/60 shadow-sm rounded-xl">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <CalendarClock className="size-4 text-primary" />
-          <h3 className="font-semibold text-sm">오늘의 관리 고객</h3>
+          <CalendarClock className="size-4 text-foreground" />
+          <h3 className="font-bold text-sm text-foreground">오늘의 관리 고객</h3>
           <Badge variant="outline" className="text-[10px]">
             {loading ? "…" : `${total}건`}
           </Badge>
@@ -84,36 +84,36 @@ export const TodayCareWidget = () => {
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 @container [&]:gap-3 flex-1 min-h-0" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
         {plans.length > 0 && (
-          <div>
-            <div className="text-[11px] font-semibold text-muted-foreground mb-1.5 flex items-center gap-1">
+          <div className="min-h-0 flex flex-col">
+            <div className="text-[11px] font-bold text-foreground/80 mb-1.5 flex items-center gap-1">
               <CalendarClock className="size-3" /> 요금제 변경 대상 ({plans.length})
             </div>
-            <div className="space-y-1 max-h-56 overflow-y-auto pr-1">
+            <div className="space-y-1 overflow-y-auto pr-1 flex-1 min-h-0">
               {plans.map((r) => (
-                <div key={r.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-background/40 border border-border/40 text-xs">
-                  <span className="font-medium flex-1 truncate">{r.customer_name ?? "-"}</span>
+                <div key={r.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-background border border-border/60 text-xs text-foreground">
+                  <span className="font-semibold flex-1 truncate">{r.customer_name ?? "-"}</span>
                   <Badge variant="outline" className="text-[10px]">{r.sale_type ?? "-"}</Badge>
-                  {r.phone && <a href={`tel:${r.phone}`} className="text-muted-foreground hover:text-primary"><Phone className="size-3" /></a>}
-                  <span className="text-[10px] text-muted-foreground font-mono">{r.plan_change_due_date}</span>
+                  {r.phone && <a href={`tel:${r.phone}`} className="text-foreground/60 hover:text-foreground"><Phone className="size-3" /></a>}
+                  <span className="text-[10px] text-foreground/60 font-mono">{r.plan_change_due_date}</span>
                 </div>
               ))}
             </div>
           </div>
         )}
         {addons.length > 0 && (
-          <div>
-            <div className="text-[11px] font-semibold text-muted-foreground mb-1.5 flex items-center gap-1">
+          <div className="min-h-0 flex flex-col">
+            <div className="text-[11px] font-bold text-foreground/80 mb-1.5 flex items-center gap-1">
               <ShieldAlert className="size-3" /> 부가서비스 해지 대상 ({addons.length})
             </div>
-            <div className="space-y-1 max-h-56 overflow-y-auto pr-1">
+            <div className="space-y-1 overflow-y-auto pr-1 flex-1 min-h-0">
               {addons.map((t) => (
-                <div key={t.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-background/40 border border-border/40 text-xs">
-                  <span className="font-medium flex-1 truncate">{t.sales?.customer_name ?? "-"}</span>
+                <div key={t.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-background border border-border/60 text-xs text-foreground">
+                  <span className="font-semibold flex-1 truncate">{t.sales?.customer_name ?? "-"}</span>
                   <Badge variant="outline" className="text-[10px] font-mono">{t.addon_name}</Badge>
-                  {t.sales?.phone && <a href={`tel:${t.sales.phone}`} className="text-muted-foreground hover:text-primary"><Phone className="size-3" /></a>}
-                  <span className="text-[10px] text-muted-foreground font-mono">{t.due_date}</span>
+                  {t.sales?.phone && <a href={`tel:${t.sales.phone}`} className="text-foreground/60 hover:text-foreground"><Phone className="size-3" /></a>}
+                  <span className="text-[10px] text-foreground/60 font-mono">{t.due_date}</span>
                 </div>
               ))}
             </div>

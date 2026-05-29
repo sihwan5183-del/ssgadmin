@@ -88,11 +88,11 @@ export const TopProductScoreboard = () => {
   );
 
   return (
-    <div className="relative">
-      <div className="flex items-center justify-between mb-2 px-0.5">
+    <div className="relative h-full w-full flex flex-col bg-card border border-border/60 shadow-sm rounded-xl p-4">
+      <div className="flex items-center justify-between mb-3 px-0.5">
         <div className="flex items-baseline gap-2">
-          <h2 className="text-sm font-bold tracking-tight">핵심 상품 성과 보드</h2>
-          <span className="text-[10px] text-muted-foreground">{label} 누적 · 카드 클릭 시 하단 위젯 필터</span>
+          <h2 className="text-sm font-bold tracking-tight text-foreground">핵심 상품 성과 보드</h2>
+          <span className="text-[10px] text-foreground/60">{label} 누적 · 카드 클릭 시 하단 위젯 필터</span>
         </div>
         {scope !== "all" && (
           <button
@@ -105,11 +105,11 @@ export const TopProductScoreboard = () => {
         )}
       </div>
 
-      {/* 컨테이너 가로폭에 맞춰 자동 리플로우되는 반응형 그리드 (auto-fill) */}
-      <div className="-mx-1 px-1">
+      {/* 컨테이너 가로폭에 맞춰 자동 리플로우되는 반응형 그리드 (auto-fit, 모바일 2열) */}
+      <div className="-mx-1 px-1 flex-1 min-h-0">
         <div
-          className="grid gap-2 md:gap-3"
-          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))" }}
+          className="grid gap-2 md:gap-3 h-full"
+          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, 45%), 1fr))" }}
         >
           {stats.map((s) => {
             const Icon = ICONS[s.key];
@@ -121,30 +121,30 @@ export const TopProductScoreboard = () => {
                 key={s.key}
                 onClick={() => setScope(active ? "all" : s.key)}
                 className={cn(
-                  "text-left px-3 py-2.5 rounded-2xl border transition-all glass group",
+                  "text-left px-3 py-2.5 rounded-xl border bg-card transition-all group",
                   active
-                    ? "border-primary/60 bg-primary/10 shadow-glow ring-1 ring-primary/40"
-                    : "border-border/40 hover:border-primary/40 hover:-translate-y-0.5",
+                    ? "border-foreground/70 bg-foreground/5 shadow-sm ring-1 ring-foreground/20"
+                    : "border-border/60 hover:border-foreground/40 hover:-translate-y-0.5",
                 )}
               >
-                <div className={cn("flex items-center gap-1.5 text-[11px] font-semibold", ACCENT[s.key])}>
+                <div className={cn("flex items-center gap-1.5 text-[11px] font-bold", ACCENT[s.key])}>
                   <Icon className="size-3.5" />
                   <span className="truncate">{s.label}</span>
                 </div>
                 <div className="mt-1.5 flex items-baseline gap-1">
-                  <span className="text-xl xl:text-2xl font-black tabular-nums leading-none text-foreground">
+                  <span className="text-2xl xl:text-3xl font-black tabular-nums leading-none text-foreground">
                     {s.total.toLocaleString()}
                   </span>
-                  <span className="text-[10px] font-bold text-muted-foreground">건</span>
+                  <span className="text-[10px] font-bold text-foreground/60">건</span>
                 </div>
                 <div
                   className={cn(
-                    "mt-1.5 text-[10px] font-semibold tabular-nums",
+                    "mt-1.5 text-[11px] font-bold tabular-nums",
                     delta > 0
-                      ? "text-success"
+                      ? "text-[hsl(0_85%_55%)]"
                       : delta < 0
-                        ? "text-destructive"
-                        : "text-muted-foreground",
+                        ? "text-[hsl(215_90%_55%)]"
+                        : "text-foreground/50",
                   )}
                 >
                   {s.today === 0 && s.yday === 0
