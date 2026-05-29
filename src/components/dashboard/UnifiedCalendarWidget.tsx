@@ -108,24 +108,6 @@ export function UnifiedCalendarWidget({ onDayClick, showTabs = true }: { onDayCl
 
   const inRange = (d: string, r: RangeRow) => d >= r.start && d <= r.end;
 
-  const detailList = useMemo(() => {
-    if (tab === "sales") {
-      const v = salesByDay.get(selected);
-      if (!v) return [];
-      return [
-        { k: "전체 개통", v: `${v.total}건` },
-        { k: "MNP", v: `${v.mnp}건` },
-        { k: "기변", v: `${v.chg}건` },
-        { k: "신규", v: `${v.nw}건` },
-      ];
-    }
-    if (tab === "seg") {
-      return (segByDay.get(selected) || []).map((r) => ({ k: r.activity_type || "활동", v: `${r.title || "-"}${r.assignee_name ? ` · ${r.assignee_name}` : ""}` }));
-    }
-    const list = (tab === "apt" ? apt : ads).filter((r) => inRange(selected, r));
-    return list.map((r) => ({ k: `${r.start} ~ ${r.end}`, v: `${r.title}${r.sub ? ` · ${r.sub}` : ""}` }));
-  }, [tab, selected, salesByDay, segByDay, apt, ads]);
-
   const renderCell = (d: Date) => {
     const iso = isoOf(d);
     const inMonth = d.getMonth() === month0;
@@ -138,9 +120,9 @@ export function UnifiedCalendarWidget({ onDayClick, showTabs = true }: { onDayCl
       const v = salesByDay.get(iso);
       if (v && v.total > 0) {
         badge = (
-          <div className="mt-0.5 text-[10px] leading-tight text-black">
-            <div className="font-semibold">총 {v.total}</div>
-            <div className="text-[9px]">M{v.mnp}·기{v.chg}·신{v.nw}</div>
+          <div className="mt-1 text-sm leading-snug text-black">
+            <div className="font-bold text-black">총 {v.total}건</div>
+            <div className="text-xs text-black mt-0.5">M{v.mnp}·기{v.chg}·신{v.nw}</div>
           </div>
         );
       }
@@ -194,7 +176,7 @@ export function UnifiedCalendarWidget({ onDayClick, showTabs = true }: { onDayCl
         key={iso}
         onClick={() => { setSelected(iso); onDayClick?.(iso); }}
         className={cn(
-          "min-h-[72px] text-left p-1.5 bg-card transition-colors hover:bg-[#FAFAFA] focus:outline-none",
+          "min-h-[84px] text-left p-2 bg-card transition-colors hover:bg-[#FAFAFA] focus:outline-none",
           !inMonth && "opacity-40",
           isSel && "bg-[#FFF1F8]",
         )}
@@ -231,12 +213,6 @@ export function UnifiedCalendarWidget({ onDayClick, showTabs = true }: { onDayCl
     if (m > 11) { setYear(year + 1); setMonth0(0); } else setMonth0(m);
   };
   const goToday = () => { setYear(now.getFullYear()); setMonth0(now.getMonth()); setSelected(todayIso()); };
-
-  const detailTitle = (() => {
-    const d = new Date(selected + "T00:00:00");
-    const wd = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
-    return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} (${wd})`;
-  })();
 
   const detailLink: Record<TabKey, { to: string; label: string }> = {
     sales: { to: "/sales-ledger", label: "판매원장 →" },
@@ -322,26 +298,6 @@ export function UnifiedCalendarWidget({ onDayClick, showTabs = true }: { onDayCl
       {/* Calendar grid */}
       <div className="grid grid-cols-7 gap-px bg-[#F0F0F0] rounded-lg overflow-hidden border border-[#F0F0F0]">
         {days.map(renderCell)}
-      </div>
-
-      {/* Detail list */}
-      <div className="mt-4 border-t border-[#F0F0F0] pt-4">
-        <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#1A1A1A]">
-          <span className="inline-block w-1 h-4 rounded-full" style={{ backgroundColor: MAGENTA }} />
-          {detailTitle} 상세
-        </div>
-        {detailList.length === 0 ? (
-          <div className="text-xs text-muted-foreground">선택한 날짜에 데이터가 없습니다.</div>
-        ) : (
-          <ul className="space-y-1.5">
-            {detailList.map((r, i) => (
-              <li key={i} className="flex items-start gap-3 text-xs text-[#1A1A1A] border-b border-[#F0F0F0] pb-1.5 last:border-0">
-                <span className="min-w-[110px] text-neutral-500">{r.k}</span>
-                <span className="flex-1">{r.v}</span>
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
     </div>
   );
