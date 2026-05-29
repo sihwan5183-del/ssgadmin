@@ -77,7 +77,7 @@ export function LeadsNotifierSettings() {
     setSubscribing(false);
     setPerm(getPerm());
     if (r.ok) toast.success("이 기기에 푸시 알림이 구독되었습니다. 화면을 꺼도 알림이 전송됩니다.");
-    else toast.error(r.reason);
+    else toast.error((r as { ok: false; reason: string }).reason);
   };
 
   const permBadge = (() => {
