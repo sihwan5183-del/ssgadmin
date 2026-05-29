@@ -652,7 +652,10 @@ const SalesLedgerPage = () => {
 
   const filteredRows = useMemo(() => {
     const q = debouncedSearchQ.trim().toLowerCase().replace(/\s+/g, "");
-    const result = rows;
+    let result = rows;
+    if (dayFilter) {
+      result = result.filter((r) => r.open_date === dayFilter);
+    }
     if (!q) return result;
     const qDigits = q.replace(/[^0-9]/g, "");
     return result.filter((r) => {
@@ -665,7 +668,7 @@ const SalesLedgerPage = () => {
       if (qDigits && phone.includes(qDigits)) return true;
       return false;
     });
-  }, [rows, debouncedSearchQ]);
+  }, [rows, debouncedSearchQ, dayFilter]);
 
   const allSelected = filteredRows.length > 0 && filteredRows.every((r) => selected.has(r.id));
   const toggleAll = () => {
