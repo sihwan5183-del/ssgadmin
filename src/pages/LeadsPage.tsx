@@ -515,7 +515,7 @@ export default function LeadsPage() {
               <tr className="text-xs text-muted-foreground border-b border-border">
                 <th className="text-left font-medium py-2 px-2 w-32">지표</th>
                 <th className="text-right font-medium py-2 px-2">메타</th>
-                <th className="text-right font-medium py-2 px-2">도그마루</th>
+                <th className="text-right font-medium py-2 px-2 whitespace-pre-line">도그마루{"\n"}214</th>
                 <th className="text-right font-medium py-2 px-2">기타</th>
                 <th className="text-right font-semibold py-2 px-2 text-foreground">총합</th>
               </tr>
