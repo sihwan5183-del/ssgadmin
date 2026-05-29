@@ -87,7 +87,10 @@ export const RadialGoalGauge = () => {
   const offset = circumference * (1 - pct / 100);
 
   return (
-    <div className="h-full w-full flex flex-col bg-card rounded-xl border border-border/60 shadow-sm p-4 relative overflow-hidden">
+    <div
+      className="h-full w-full flex flex-col bg-card rounded-xl border border-border/60 shadow-sm p-4 relative overflow-hidden"
+      style={{ containerType: "inline-size" }}
+    >
       <div className="absolute -right-10 -top-10 size-40 rounded-full opacity-20 blur-2xl" style={{ background: color }} />
 
       <div className="flex items-center gap-1.5 text-[11px] font-semibold text-foreground/80">
