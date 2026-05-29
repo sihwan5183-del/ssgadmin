@@ -37,6 +37,7 @@ import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { inquiryStatusClass } from "@/lib/inquiryStatus";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { ColumnFilter, matchesFilter, type FilterSelection } from "@/components/common/ColumnFilter";
 
 const FAIL_REASONS = [
   "가격(지원금) 불만",
@@ -258,6 +259,12 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
   const [bulkDeleting, setBulkDeleting] = useState(false);
   // 정렬 모드: 기본(미처리 우선) | 최신 상담 순
   const [sortMode, setSortMode] = useState<"default" | "recent_log">("default");
+  // 엑셀형 컬럼 필터
+  const [filterChannel, setFilterChannel] = useState<FilterSelection>(null);
+  const [filterCarrier, setFilterCarrier] = useState<FilterSelection>(null);
+  const [filterStatus, setFilterStatus] = useState<FilterSelection>(null);
+  const [filterManager, setFilterManager] = useState<FilterSelection>(null);
+  const [filterDate, setFilterDate] = useState<FilterSelection>(null);
   // 최근 수정된 행 (하이라이트용)
   const [recentlyUpdatedId, setRecentlyUpdatedId] = useState<string | null>(null);
   const flashRow = useCallback((id: string) => {
@@ -372,6 +379,19 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
           .some((v) => String(v).toLowerCase().includes(q))
       );
     }
+    // 엑셀형 헤더 필터 적용
+    list = list.filter((r) => {
+      if (!matchesFilter(r.inquiry_date, filterDate)) return false;
+      if (!matchesFilter(r.channel, filterChannel)) return false;
+      const icf = ((r as any).custom_fields ?? {}) as Record<string, any>;
+      const carrier = (icf.carrier ?? icf.telecom ?? icf.통신사 ?? "") as string;
+      if (!matchesFilter(carrier, filterCarrier)) return false;
+      const display = isNewLead(r) ? "미처리" : r.status;
+      if (!matchesFilter(display, filterStatus)) return false;
+      const mgr = r.manager ? r.manager.split(/\s*[·•]\s*/)[0] : "";
+      if (!matchesFilter(mgr, filterManager)) return false;
+      return true;
+    });
     if (sortMode === "recent_log") {
       // 최신 상담 기록 순 (기록 없는 건은 last_action_at, 그것도 없으면 created_at)
       list = [...list].sort((a, b) => {
@@ -388,7 +408,27 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
       });
     }
     return list;
-  }, [rows, statusFilter, search, sortMode, lastLogs]);
+  }, [rows, statusFilter, search, sortMode, lastLogs, filterChannel, filterCarrier, filterStatus, filterManager, filterDate]);
+
+  // 필터 드롭다운에 들어갈 고유값 (전체 rows 기준)
+  const allChannels = useMemo(() => rows.map((r) => r.channel ?? ""), [rows]);
+  const allCarriers = useMemo(
+    () =>
+      rows.map((r) => {
+        const icf = ((r as any).custom_fields ?? {}) as Record<string, any>;
+        return (icf.carrier ?? icf.telecom ?? icf.통신사 ?? "") as string;
+      }),
+    [rows],
+  );
+  const allStatuses = useMemo(
+    () => rows.map((r) => (isNewLead(r) ? "미처리" : r.status ?? "")),
+    [rows],
+  );
+  const allManagers = useMemo(
+    () => rows.map((r) => (r.manager ? r.manager.split(/\s*[·•]\s*/)[0] : "")),
+    [rows],
+  );
+  const allDates = useMemo(() => rows.map((r) => r.inquiry_date ?? ""), [rows]);
 
   const openStatusEditor = (row: InquiryRow) => {
     setEditingRow(row);
@@ -719,26 +759,34 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm table-fixed">
               <thead className="bg-muted/40 text-xs text-muted-foreground">
                 <tr>
-                  <th className="text-left px-3 py-2 w-10">
+                  <th className="text-left px-2 py-2 w-8">
                     <Checkbox
                       checked={allVisibleSelected}
                       onCheckedChange={(c) => toggleAllVisible(!!c)}
                       aria-label="전체 선택"
                     />
                   </th>
-                  <th className="text-left px-3 py-2 w-[80px]">날짜</th>
-                  <th className="text-left px-3 py-2 w-[72px]">채널</th>
-                  <th className="text-left px-3 py-2 w-[64px]">통신사</th>
-                  <th className="text-left px-3 py-2 w-[96px]">고객명</th>
-                  <th className="text-left px-3 py-2 w-[88px]">생년월일</th>
-                  <th className="text-left px-3 py-2 w-[120px]">연락처</th>
-                  <th className="text-left px-3 py-2 w-[140px]">상담모델</th>
-                  <th className="text-left px-3 py-2 w-[96px]">최종상태</th>
-                  <th className="text-left px-3 py-2 w-[96px]">최종액션</th>
-                  <th className="text-left px-3 py-2 min-w-[440px]">
+                  <th className="text-left px-2 py-2 w-[82px]">
+                    <ColumnFilter label="날짜" values={allDates} selected={filterDate} onChange={setFilterDate} />
+                  </th>
+                  <th className="text-left px-2 py-2 w-[64px]">
+                    <ColumnFilter label="채널" values={allChannels} selected={filterChannel} onChange={setFilterChannel} />
+                  </th>
+                  <th className="text-left px-2 py-2 w-[56px]">
+                    <ColumnFilter label="통신사" values={allCarriers} selected={filterCarrier} onChange={setFilterCarrier} />
+                  </th>
+                  <th className="text-left px-2 py-2 w-[84px]">고객명</th>
+                  <th className="text-left px-2 py-2 w-[76px]">생년월일</th>
+                  <th className="text-left px-2 py-2 w-[108px]">연락처</th>
+                  <th className="text-left px-2 py-2 w-[120px]">상담모델</th>
+                  <th className="text-left px-2 py-2 w-[84px]">
+                    <ColumnFilter label="최종상태" values={allStatuses} selected={filterStatus} onChange={setFilterStatus} />
+                  </th>
+                  <th className="text-left px-2 py-2 w-[72px]">최종액션</th>
+                  <th className="text-left px-2 py-2">
                     <button
                       type="button"
                       onClick={() => setSortMode((m) => (m === "recent_log" ? "default" : "recent_log"))}
@@ -752,7 +800,9 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
                       <ChevronRight className={cn("size-3 rotate-90 transition-transform", sortMode === "recent_log" && "text-primary")} />
                     </button>
                   </th>
-                  <th className="text-left px-3 py-2 w-[80px]">담당자</th>
+                  <th className="text-left px-2 py-2 w-[78px]">
+                    <ColumnFilter label="담당자" values={allManagers} selected={filterManager} onChange={setFilterManager} />
+                  </th>
                 </tr>
               </thead>
               <tbody>
