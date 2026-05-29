@@ -560,33 +560,89 @@ export default function LeadsPage() {
       {/* 종합 리드 성과 보드 — 경로별/기간별 매트릭스 */}
       <Card className="p-4">
         <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-          <div>
-            <div className="text-sm font-semibold text-foreground">종합 리드 성과 보드</div>
-            <div className="text-xs text-muted-foreground">경로별 · 기간별 접수/개통 매트릭스</div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="inline-flex rounded-md border border-border bg-muted/40 p-0.5">
+              {([
+                { k: "all", l: "누적" },
+                { k: "month", l: "월별" },
+                { k: "day", l: "일별" },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.k}
+                  type="button"
+                  onClick={() => startTransition(() => setPeriod(opt.k))}
+                  className={
+                    "px-3 py-1.5 text-xs font-semibold rounded transition-colors " +
+                    (period === opt.k
+                      ? "bg-background text-slate-900 shadow-sm"
+                      : "text-muted-foreground hover:text-foreground")
+                  }
+                >
+                  {opt.l}
+                </button>
+              ))}
+            </div>
+            <div className="hidden sm:block">
+              <div className="text-sm font-semibold text-slate-900">종합 리드 성과 보드</div>
+              <div className="text-xs text-muted-foreground">
+                {personalView ? "직원별 · 기간별 처리 현황" : "경로별 · 기간별 접수/개통 매트릭스"}
+              </div>
+            </div>
           </div>
-          <div className="inline-flex rounded-md border border-border bg-muted/40 p-0.5">
-            {([
-              { k: "all", l: "누적" },
-              { k: "month", l: "월별" },
-              { k: "day", l: "일별" },
-            ] as const).map((opt) => (
-              <button
-                key={opt.k}
-                type="button"
-                onClick={() => setPeriod(opt.k)}
-                className={
-                  "px-3 py-1.5 text-xs font-semibold rounded transition-colors " +
-                  (period === opt.k
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground")
-                }
-              >
-                {opt.l}
-              </button>
-            ))}
-          </div>
+          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+            <span className="text-xs font-semibold text-slate-700">개인별 보기</span>
+            <Switch
+              checked={personalView}
+              onCheckedChange={(v) => startTransition(() => setPersonalView(!!v))}
+            />
+          </label>
         </div>
 
+        {loading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 w-full" />
+            ))}
+          </div>
+        ) : personalView ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="text-xs text-muted-foreground border-b border-border">
+                  <th className="text-left font-medium py-2 px-2 min-w-[140px]">담당자</th>
+                  <th className="text-right font-medium py-2 px-2">전체 접수</th>
+                  <th className="text-right font-medium py-2 px-2">오늘 신규</th>
+                  <th className="text-right font-medium py-2 px-2">개통 완료</th>
+                  <th className="text-right font-medium py-2 px-2">재케어</th>
+                  <th className="text-right font-medium py-2 px-2">부재</th>
+                  <th className="text-right font-medium py-2 px-2">실패</th>
+                </tr>
+              </thead>
+              <tbody className="tabular-nums text-slate-900">
+                {staffMatrix.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-6 text-muted-foreground text-xs">
+                      해당 기간에 처리된 리드가 없습니다.
+                    </td>
+                  </tr>
+                ) : (
+                  staffMatrix.map((s) => (
+                    <tr key={s.name} className="border-b border-border/40 last:border-0 hover:bg-muted/30">
+                      <td className="py-1.5 px-2 font-semibold">{s.name}</td>
+                      <td className="text-right py-1.5 px-2">{s.total.toLocaleString()}</td>
+                      <td className="text-right py-1.5 px-2 text-orange-700">{s.today.toLocaleString()}</td>
+                      <td className="text-right py-1.5 px-2 text-emerald-700 font-semibold">{s.done.toLocaleString()}</td>
+                      <td className="text-right py-1.5 px-2">{s.recare.toLocaleString()}</td>
+                      <td className="text-right py-1.5 px-2">{s.absent.toLocaleString()}</td>
+                      <td className="text-right py-1.5 px-2 text-rose-600">{s.fail.toLocaleString()}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <>
         {/* Desktop/Tablet: 격자 매트릭스 */}
         <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-sm border-collapse">
@@ -672,6 +728,8 @@ export default function LeadsPage() {
             );
           })}
         </div>
+          </>
+        )}
       </Card>
 
       {/* Filters */}
