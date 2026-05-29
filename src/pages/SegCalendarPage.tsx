@@ -17,6 +17,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -63,6 +66,7 @@ export default function SegCalendarPage() {
   const { isAdmin } = useRole();
   const navigate = useNavigate();
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [dayModalOpen, setDayModalOpen] = useState(false);
   const [drawerPartner, setDrawerPartner] = useState<any>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
@@ -110,31 +114,18 @@ export default function SegCalendarPage() {
   const today = new Date();
   const dayActs = selectedDay ? (byDate.get(format(selectedDay, "yyyy-MM-dd")) ?? []) : [];
 
-  // 하단 종합 리스트: 선택 날짜가 있으면 그 날만, 없으면 현재 월 전체
+  // 선택한 날짜의 일정만 (팝업 모달용)
   const listActs = useMemo(() => {
-    let base: SegActivity[];
-    if (selectedDay) {
-      const key = format(selectedDay, "yyyy-MM-dd");
-      base = filteredActs.filter((a) => a.activity_date === key);
-    } else {
-      const ms = startOfMonth(cursor);
-      const me = endOfMonth(cursor);
-      base = filteredActs.filter((a) => {
-        const d = new Date(a.activity_date + "T00:00:00");
-        return d >= ms && d <= me;
-      });
-    }
+    if (!selectedDay) return [];
+    const key = format(selectedDay, "yyyy-MM-dd");
+    let base = filteredActs.filter((a) => a.activity_date === key);
     if (statusFilter === "scheduled") base = base.filter((a) => !a.is_completed);
     else if (statusFilter === "done") base = base.filter((a) => a.is_completed);
     if (listSort === "recent") {
       return [...base].sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
     }
-    return [...base].sort((a, b) => {
-      const k = (a.activity_date ?? "").localeCompare(b.activity_date ?? "");
-      if (k !== 0) return k;
-      return (a.activity_time ?? "").localeCompare(b.activity_time ?? "");
-    });
-  }, [filteredActs, selectedDay, cursor, listSort, statusFilter]);
+    return [...base].sort((a, b) => (a.activity_time ?? "").localeCompare(b.activity_time ?? ""));
+  }, [filteredActs, selectedDay, listSort, statusFilter]);
 
   const openQuickFor = (d: Date) => {
     setEditingAct(null);
@@ -172,7 +163,7 @@ export default function SegCalendarPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 max-w-7xl mx-auto">
+    <div className="p-3 sm:p-4 space-y-3 max-w-7xl mx-auto">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/seg-partners")}>
@@ -222,7 +213,7 @@ export default function SegCalendarPage() {
             return (
               <div
                 key={key}
-                onClick={() => setSelectedDay(d)}
+                onClick={() => { setSelectedDay(d); setDayModalOpen(true); }}
                 onDoubleClick={() => openQuickFor(d)}
                 className={cn(
                   "group relative min-h-[96px] p-1.5 rounded-lg border text-left cursor-pointer transition-colors",
@@ -266,41 +257,52 @@ export default function SegCalendarPage() {
         </div>
       </Card>
 
-      {/* 하단: 종합 리스트 */}
-      <Card className="p-4 border-slate-200 dark:border-slate-800">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <div className="font-semibold flex items-center gap-2">
-            {selectedDay ? (
-              <>
-                <span>{format(selectedDay, "yyyy년 M월 d일 (eee)", { locale: ko })}</span>
-                <span className="text-xs font-medium border border-foreground/30 px-1.5 py-0.5 rounded">{listActs.length}건</span>
-                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setSelectedDay(null)}>전체 보기</Button>
-              </>
-            ) : (
-              <>
-                <span>{format(cursor, "yyyy년 M월", { locale: ko })} 전체 일정</span>
-                <span className="text-xs font-medium border border-foreground/30 px-1.5 py-0.5 rounded">{listActs.length}건</span>
-              </>
-            )}
+      {/* 날짜 클릭 → 상세 팝업 모달 */}
+      <Dialog
+        open={dayModalOpen}
+        onOpenChange={(v) => {
+          setDayModalOpen(v);
+          if (!v) setSelectedDay(null);
+        }}
+      >
+        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900 flex items-center gap-2">
+              {selectedDay && (
+                <>
+                  <span>{format(selectedDay, "yyyy년 M월 d일 (eee)", { locale: ko })}</span>
+                  <span className="text-xs font-medium border border-foreground/30 px-1.5 py-0.5 rounded">{listActs.length}건</span>
+                </>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div className="flex gap-2">
+              <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+                <SelectTrigger className="w-[110px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">전체 상태</SelectItem>
+                  <SelectItem value="scheduled">예정</SelectItem>
+                  <SelectItem value="done">완료</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={listSort} onValueChange={(v: any) => setListSort(v)}>
+                <SelectTrigger className="w-[110px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date">시간순</SelectItem>
+                  <SelectItem value="recent">최신 등록순</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => { if (selectedDay) openQuickFor(selectedDay); }}
+              disabled={!selectedDay}
+            >
+              <Plus className="size-4 mr-1" /> 이 날짜에 일정 추가
+            </Button>
           </div>
-          <div className="flex gap-2">
-            <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
-              <SelectTrigger className="w-[110px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">전체 상태</SelectItem>
-                <SelectItem value="scheduled">예정</SelectItem>
-                <SelectItem value="done">완료</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={listSort} onValueChange={(v: any) => setListSort(v)}>
-              <SelectTrigger className="w-[110px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="date">날짜순</SelectItem>
-                <SelectItem value="recent">최신 등록순</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
 
         {listActs.length === 0 ? (
           <div className="py-10 text-center text-sm text-muted-foreground">등록된 일정이 없습니다.</div>
@@ -409,7 +411,8 @@ export default function SegCalendarPage() {
             </table>
           </div>
         )}
-      </Card>
+        </DialogContent>
+      </Dialog>
 
       <PartnerDetailDrawer open={drawerOpen} onOpenChange={setDrawerOpen} partner={drawerPartner} />
       <QuickScheduleDialog

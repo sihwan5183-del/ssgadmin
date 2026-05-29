@@ -8,6 +8,8 @@ import { Building2, Plus, Search, TrendingUp, Calendar as CalIcon, Users, AlertT
 import { useSegPartners, useSegActivities, type SegPartner, type SegActivity } from "@/hooks/useSegPartners";
 import { PartnerFormDialog } from "@/components/seg/PartnerFormDialog";
 import { PartnerDetailDrawer } from "@/components/seg/PartnerDetailDrawer";
+import { QuickScheduleDialog } from "@/components/seg/QuickScheduleDialog";
+import { ApartmentPostingQuickDialog } from "@/components/seg/ApartmentPostingQuickDialog";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
 import { useSearchParams } from "react-router-dom";
 
@@ -21,12 +23,14 @@ const CLEAN_STATUS_CLS = "text-foreground text-[11px] font-medium";
 
 export default function SegPartnersPage() {
   const { partners } = useSegPartners();
-  const { activities } = useSegActivities();
+  const { activities, refresh: refreshActivities } = useSegActivities();
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [contractFilter, setContractFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [formOpen, setFormOpen] = useState(false);
+  const [aptFormOpen, setAptFormOpen] = useState(false);
+  const [storefrontOpen, setStorefrontOpen] = useState(false);
   const [selected, setSelected] = useState<SegPartner | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -42,6 +46,12 @@ export default function SegPartnersPage() {
     sp.set("tab", next);
     setSearchParams(sp, { replace: true });
   };
+  const headerCta =
+    tab === "apartment"
+      ? { label: "아파트게시 등록", onClick: () => setAptFormOpen(true) }
+      : tab === "storefront"
+      ? { label: "점두활동 등록", onClick: () => setStorefrontOpen(true) }
+      : { label: "제휴업체 등록", onClick: () => setFormOpen(true) };
 
   const filtered = useMemo(() => {
     return partners.filter((p) => {
@@ -94,7 +104,7 @@ export default function SegPartnersPage() {
   }, [partners]);
 
   return (
-    <div className="p-4 sm:p-6 space-y-5 max-w-7xl mx-auto">
+    <div className="p-3 sm:p-5 space-y-3 max-w-7xl mx-auto">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="size-11 rounded-2xl bg-gradient-primary grid place-items-center shadow-glow">
@@ -106,8 +116,8 @@ export default function SegPartnersPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setFormOpen(true)}>
-            <Plus className="size-4 mr-1" /> 신규 업체
+          <Button onClick={headerCta.onClick} className="shadow-sm">
+            <Plus className="size-4 mr-1" /> {headerCta.label}
           </Button>
         </div>
       </header>
@@ -241,6 +251,14 @@ export default function SegPartnersPage() {
 
       <PartnerFormDialog open={formOpen} onOpenChange={setFormOpen} />
       <PartnerDetailDrawer open={drawerOpen} onOpenChange={setDrawerOpen} partner={selected} />
+      <ApartmentPostingQuickDialog open={aptFormOpen} onOpenChange={setAptFormOpen} />
+      <QuickScheduleDialog
+        open={storefrontOpen}
+        onOpenChange={setStorefrontOpen}
+        defaultDate={format(new Date(), "yyyy-MM-dd")}
+        editing={null}
+        onSaved={refreshActivities}
+      />
     </div>
   );
 }
