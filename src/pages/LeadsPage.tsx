@@ -187,6 +187,7 @@ type LeadNote = {
 export default function LeadsPage() {
   const { user } = useAuth();
   const { staff } = useDashboardStaff();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [rows, setRows] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -201,6 +202,7 @@ export default function LeadsPage() {
   const [inquiryRows, setInquiryRows] = useState<{ created_at: string; status: string | null; manager: string | null }[]>([]);
   const [period, setPeriod] = useState<"all" | "month" | "day">("all");
   const [personalView, setPersonalView] = useState(false);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
   // 엑셀형 컬럼 필터 (메타/도그마루 공통 + 각자 고유)
   const [fStatus, setFStatus] = useState<FilterSelection>(null);
   const [fCarrier, setFCarrier] = useState<FilterSelection>(null);
