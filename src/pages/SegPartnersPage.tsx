@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Building2, Plus, Search, TrendingUp, Calendar as CalIcon, Users, AlertTriangle } from "lucide-react";
-import { useSegPartners, useSegActivities, type SegPartner } from "@/hooks/useSegPartners";
+import { useSegPartners, useSegActivities, type SegPartner, type SegActivity } from "@/hooks/useSegPartners";
 import { PartnerFormDialog } from "@/components/seg/PartnerFormDialog";
 import { PartnerDetailDrawer } from "@/components/seg/PartnerDetailDrawer";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
@@ -249,7 +249,7 @@ function StorefrontActivityTable({
   activities,
   partners,
 }: {
-  activities: ReturnType<typeof useSegActivities>["activities"];
+  activities: SegActivity[];
   partners: SegPartner[];
 }) {
   const partnerMap = useMemo(() => {
