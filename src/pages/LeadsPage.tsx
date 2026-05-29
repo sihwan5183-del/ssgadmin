@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, memo, startTransition, Suspense, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDashboardStaff } from "@/hooks/useDashboardStaff";
@@ -32,7 +32,26 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserCheck, PhoneCall, CheckCircle2, Plus, Search, RotateCw, Ban, XCircle } from "lucide-react";
 import { toast } from "sonner";
-import ChannelIntakePage from "@/pages/ChannelIntakePage";
+// 무거운(1k+ LOC) 페이지 — 사용자가 [기타인입] 탭을 처음 클릭할 때만 로드해서
+// 메타/도그마루 탭의 초기 진입과 탭 전환 응답성을 잡아준다.
+const ChannelIntakePage = lazy(() => import("@/pages/ChannelIntakePage"));
+
+/** 탭 전환 직후 lazy chunk를 로드하는 동안 화면이 굳어 보이지 않도록
+ *  shadcn 스타일과 어울리는 스켈레톤 행을 표시한다. */
+const IntakeSkeleton = memo(function IntakeSkeleton() {
+  return (
+    <div className="space-y-2.5 p-4">
+      <div className="h-10 rounded-md bg-muted/70 animate-pulse" />
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div
+          key={i}
+          className="h-9 rounded-md bg-muted/40 animate-pulse"
+          style={{ animationDelay: `${i * 40}ms` }}
+        />
+      ))}
+    </div>
+  );
+});
 import { ColumnFilter, matchesFilter, type FilterSelection } from "@/components/common/ColumnFilter";
 
 const STATUS_OPTIONS = [
@@ -630,7 +649,12 @@ export default function LeadsPage() {
       )}
 
       {/* Table */}
-      <Tabs value={sourceTab} onValueChange={(v) => setSourceTab(v as "meta" | "dogmaru" | "other")}>
+      <Tabs
+        value={sourceTab}
+        onValueChange={(v) =>
+          startTransition(() => setSourceTab(v as "meta" | "dogmaru" | "other"))
+        }
+      >
         <TabsList className="grid grid-cols-3 w-full max-w-2xl h-12 bg-muted/60 mb-3">
           <TabsTrigger value="meta" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
             메타광고
@@ -647,11 +671,13 @@ export default function LeadsPage() {
       </Tabs>
       {sourceTab === "other" ? (
         <div key="other-intake" className="animate-fade-in">
-          <ChannelIntakePage
-            embedded
-            formOpen={intakeFormOpen}
-            onFormOpenChange={setIntakeFormOpen}
-          />
+          <Suspense fallback={<IntakeSkeleton />}>
+            <ChannelIntakePage
+              embedded
+              formOpen={intakeFormOpen}
+              onFormOpenChange={setIntakeFormOpen}
+            />
+          </Suspense>
         </div>
       ) : (
       <Card key={sourceTab} className="overflow-hidden border-border animate-fade-in">
