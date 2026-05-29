@@ -32,7 +32,7 @@ import AuthPage from "./pages/AuthPage.tsx";
 import MagicLinkPage from "./pages/MagicLinkPage.tsx";
 import MissingDocsPage from "./pages/MissingDocsPage.tsx";
 import StaffStatusPage from "./pages/StaffStatusPage.tsx";
-import RecentActivitiesPage from "./pages/RecentActivitiesPage.tsx";
+// import RecentActivitiesPage from "./pages/RecentActivitiesPage.tsx"; // 컴포넌트 보관 중 — 추후 대시보드 위젯 재사용 예정
 import MenuManagerPage from "./pages/MenuManagerPage.tsx";
 import DownloadsPage from "./pages/DownloadsPage.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -103,7 +103,7 @@ const App = () => {
                         <Route path="/" element={<Index />} />
                         <Route path="/input" element={<InputPage />} />
                         <Route path="/activities" element={<ActivitiesPage />} />
-                        <Route path="/recent-activities" element={<RecentActivitiesPage />} />
+                        <Route path="/recent-activities" element={<Navigate to="/activities" replace />} />
                         <Route path="/missing-docs" element={<MissingDocsPage />} />
                         <Route path="/regular-input" element={<RegularInputPage />} />
                         <Route path="/regulars" element={<RegularsPage />} />
