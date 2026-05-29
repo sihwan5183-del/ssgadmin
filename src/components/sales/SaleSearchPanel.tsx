@@ -204,6 +204,8 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
   const [purgeOpen, setPurgeOpen] = useState(false);
   // 개통/설치 완료 처리 중인 행(부드러운 사라짐 애니메이션용)
   const [completingIds, setCompletingIds] = useState<Set<string>>(new Set());
+  // 정방향 완료(택배발송→개통완료 / 청약완료→설치완료) 시 개통일자 지정 모달
+  const [completionPrompt, setCompletionPrompt] = useState<{ row: SaleHit } | null>(null);
 
   // 직원 목록 — 담당자 선택을 UUID 대신 실명 드롭다운으로 표시
   const [staffList, setStaffList] = useState<{ user_id: string; display_name: string }[]>([]);
