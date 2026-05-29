@@ -798,6 +798,13 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
           검수는 관리자만 수행할 수 있습니다.
         </div>
       ) : null}
+      <CompletionDateDialog
+        open={completionDateOpen}
+        targetStatus={completionTarget}
+        customerName={sale.customer_name}
+        onConfirm={confirmCompletionWithDate}
+        onCancel={() => setCompletionDateOpen(false)}
+      />
     </div>
   );
 }
