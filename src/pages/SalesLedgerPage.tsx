@@ -860,7 +860,6 @@ const SalesLedgerPage = () => {
       />
 
       <div className="mb-3">
-      <div className="mb-5">
         <UnifiedCalendarWidget onDayClick={(iso) => setDayFilter((cur) => (cur === iso ? null : iso))} showTabs={false} />
         {dayFilter && (
           <div className="mt-2 flex items-center gap-2 text-[12px] text-foreground">
