@@ -22,6 +22,7 @@ self.addEventListener('push', (event) => {
     tag: data.tag || 'ssg-notification',
     data: { url: data.url || '/' },
     requireInteraction: false,
+    vibrate: data.vibrate || [200, 100, 200],
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });
