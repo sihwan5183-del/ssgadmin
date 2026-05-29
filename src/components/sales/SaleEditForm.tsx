@@ -122,6 +122,16 @@ const isContractProduct = (product: string | null | undefined): boolean => {
   return false;
 };
 
+/** 단말기/일련번호 입력 대상 상품 판별. 모바일 및 2nd(세컨)에서만 활성화한다. */
+const isDeviceRequiredProduct = (product: string | null | undefined): boolean => {
+  if (!product) return false;
+  const p = String(product).toUpperCase();
+  if (p === "2ND") return true;
+  if (p.includes("세컨") || p.includes("2ND")) return true;
+  if (product.includes("모바일")) return true;
+  return false;
+};
+
 /** 최종상태가 완료 계열일 때만 개통일 입력을 허용한다. */
 const COMPLETED_STATUSES = ["개통완료", "설치완료"] as const;
 const isOpenDateAllowed = (status: string | null | undefined): boolean =>
