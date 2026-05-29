@@ -117,7 +117,7 @@ export const DashboardGrid = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemsKey]);
 
-  const { ref: widthRef, width } = useContainerWidth();
+  const { containerRef, width, mounted } = useContainerWidth();
 
   const onLayoutChange = useCallback(
     (_current: Layout, all: ResponsiveLayouts<Bp>) => {
@@ -138,8 +138,8 @@ export const DashboardGrid = ({
   if (items.length === 0) return null;
 
   return (
-    <div ref={widthRef} className="w-full">
-      {width > 0 && (
+    <div ref={containerRef} className="w-full">
+      {mounted && width > 0 && (
         <ResponsiveGridLayout<Bp>
           width={width}
           layouts={layouts}
