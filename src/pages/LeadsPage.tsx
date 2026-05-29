@@ -198,7 +198,7 @@ export default function LeadsPage() {
 
   useEffect(() => {
     load();
-    // 기타 인입(inquiries) 경량 집계 데이터 — 매트릭스 보드용
+    // 기타인입(inquiries) 경량 집계 데이터 — 매트릭스 보드용
     (async () => {
       const { data } = await supabase
         .from("inquiries")
