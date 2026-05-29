@@ -1342,6 +1342,14 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
         filter={purgeFilter}
         onDone={() => { refreshCounts(); search(); }}
       />
+
+      <CompletionDateDialog
+        open={!!completionPrompt}
+        targetStatus={completionPrompt ? completionStatusFor(completionPrompt.row.product) : "개통완료"}
+        customerName={completionPrompt?.row.customer_name}
+        onConfirm={confirmCompletionWithDate}
+        onCancel={() => setCompletionPrompt(null)}
+      />
     </Card>
   );
 };
