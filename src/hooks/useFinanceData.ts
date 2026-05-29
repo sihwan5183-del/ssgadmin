@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { useBudgetCategories, type BudgetCategory } from "./useBudgetCategories";
 import { calcDashboardProfit } from "@/lib/profit";
+import { groupChannel } from "@/lib/channelGroup";
 
 /**
  * 지출/ROI 화면 전용 통합 집계 훅
@@ -420,7 +421,8 @@ export function useFinanceData(): FinanceData {
       return channelMap.get(name)!;
     };
     for (const r of settledSalesRows) {
-      const ch = (r.channel ?? "기타").toString().trim() || "기타";
+      const ch = groupChannel(r.channel);
+      if (!ch) continue;
       const row = ensure(ch);
       const p = calcDashboardProfit(r);
       row.successCount += 1;
@@ -428,7 +430,8 @@ export function useFinanceData(): FinanceData {
       row.offer += p.expense;
     }
     for (const r of effectiveSpendRows) {
-      const ch = (r.channel ?? r.media ?? "기타").toString().trim() || "기타";
+      const ch = groupChannel(r.channel ?? r.media);
+      if (!ch) continue;
       ensure(ch).spend += Number(r.amount ?? 0);
     }
     const channels: FinanceChannelRow[] = Array.from(channelMap.entries())
@@ -502,7 +505,8 @@ export function useFinanceData(): FinanceData {
     for (const r of settledSalesRows) {
       if (!r.open_date) continue;
       const wk = isoWeekKey(r.open_date);
-      const ch = (r.channel ?? "기타").toString();
+      const ch = groupChannel(r.channel);
+      if (!ch) continue;
       if (!offerMap.has(wk)) offerMap.set(wk, new Map());
       const w = offerMap.get(wk)!;
       if (!w.has(ch)) w.set(ch, { sum: 0, cnt: 0 });

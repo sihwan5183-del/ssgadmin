@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { useDeviceModels } from "./useDeviceModels";
+import { groupChannel } from "@/lib/channelGroup";
 
 /** Strip capacity / color suffixes to get the series name (e.g. "S942-256" → "S942") */
 export function seriesName(pet: string): string {
@@ -106,7 +107,9 @@ export function useModelAnalysis() {
       if (product && product !== "모바일") continue;
 
       const model = (r.device_model ?? "기타").toString().trim() || "기타";
-      const channel = (r.channel ?? "기타").toString().trim() || "기타";
+      // 채널 5대 그룹 정규화 (5개에 해당하지 않는 건은 제외)
+      const channel = groupChannel(r.channel);
+      if (!channel) continue;
       const price = Number(r.unit_price ?? 0);
 
       // overall

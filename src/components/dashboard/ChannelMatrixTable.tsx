@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
+import { groupChannel } from "@/lib/channelGroup";
 
 type Row = { channel: string; inflow: number; success: number; mobile: number; strategy: number };
 
@@ -31,14 +32,16 @@ export const ChannelMatrixTable = () => {
     );
 
     const map = new Map<string, Row>();
-    const get = (ch: string) => {
-      const key = ch || "(미지정)";
+    const get = (rawCh: string) => {
+      const key = groupChannel(rawCh);
+      if (!key) return null;
       if (!map.has(key)) map.set(key, { channel: key, inflow: 0, success: 0, mobile: 0, strategy: 0 });
       return map.get(key)!;
     };
 
     (inqRes.data ?? []).forEach((r: any) => {
       const row = get(r.channel ?? "");
+      if (!row) return;
       row.inflow += 1;
       const s = (r.status ?? "").trim();
       if (s === "성공" || s === "개통완료" || s === "개통 완료") row.success += 1;
@@ -46,6 +49,7 @@ export const ChannelMatrixTable = () => {
 
     (salesRes.data ?? []).forEach((r: any) => {
       const row = get(r.channel ?? "");
+      if (!row) return;
       if ((r.product ?? "") === "모바일") row.mobile += 1;
       const dm = String(r.device_model ?? "").toLowerCase();
       if (dm && strategySet.has(dm)) row.strategy += 1;
