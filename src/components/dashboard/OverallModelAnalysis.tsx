@@ -34,8 +34,8 @@ export const OverallModelAnalysis = () => {
   const topModel = stats[0];
 
   return (
-    <section className="glass-strong rounded-2xl p-5 md:p-6 shadow-card-elevated">
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-5">
+    <section className="glass-strong rounded-2xl p-3 md:p-4 shadow-card-elevated h-full flex flex-col">
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-3">
         <div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="size-1.5 rounded-full bg-secondary animate-pulse" />
@@ -64,9 +64,9 @@ export const OverallModelAnalysis = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 flex-1 min-h-0">
         {/* Bar — 모델별 총 판매 (채널별 차트와 동일한 스타일) */}
-        <div className="lg:col-span-3 glass rounded-2xl p-4">
+        <div className="lg:col-span-3 glass rounded-2xl p-3 flex flex-col min-h-0">
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-sm font-semibold tracking-tight">모델별 총 판매 비중</h4>
             <div className="flex items-center gap-1">
@@ -88,14 +88,14 @@ export const OverallModelAnalysis = () => {
           {(() => {
             const paged = stats.slice(chartPage * CHART_PAGE_SIZE, (chartPage + 1) * CHART_PAGE_SIZE);
             return (
-          <div className="h-64">
+          <div className="flex-1 min-h-[240px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={paged} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                 <XAxis
                   dataKey="petName"
                   stroke="hsl(var(--muted-foreground))"
-                  fontSize={10}
+                  fontSize={11}
                   tickLine={false}
                   axisLine={false}
                   interval={0}
@@ -103,7 +103,7 @@ export const OverallModelAnalysis = () => {
                     const label = String(payload.value);
                     const short = label.length > 10 ? label.slice(0, 9) + "…" : label;
                     return (
-                      <text x={x} y={(y as number) + 12} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize={10}>
+                      <text x={x} y={(y as number) + 14} textAnchor="middle" fill="hsl(var(--foreground))" fontSize={11} fontWeight={700}>
                         {short}
                       </text>
                     );
@@ -139,7 +139,7 @@ export const OverallModelAnalysis = () => {
         </div>
 
         {/* 모델 랭킹 리스트 */}
-        <div className="lg:col-span-2 glass rounded-2xl p-4">
+        <div className="lg:col-span-2 glass rounded-2xl p-3 flex flex-col min-h-0">
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-sm font-semibold tracking-tight flex items-center gap-1.5">
               <Trophy className="size-3.5 text-primary-glow" />

@@ -101,38 +101,38 @@ export const ActivationBreakdown = () => {
 
   return (
     <>
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        <Card className="p-6 glass">
-          <div className="flex items-center justify-between mb-5">
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <Card className="p-4 glass">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <div className="size-9 rounded-xl bg-primary/10 grid place-items-center">
                 <Smartphone className="size-4 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold text-sm">모바일 유형별 건수</h3>
+                <h3 className="font-bold text-base text-foreground">모바일 유형별 건수</h3>
                 <p className="text-[11px] text-muted-foreground">MNP · 신규 · 기변 · 2nd</p>
               </div>
             </div>
             <div className="text-right">
               <div className="text-xs text-muted-foreground">합계</div>
-              <div className="font-bold tabular-nums">{(totalMobile + secondDeviceCount).toLocaleString()}건</div>
+              <div className="font-black tabular-nums text-lg text-foreground">{(totalMobile + secondDeviceCount).toLocaleString()}건</div>
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {mobileStats.map((row) => {
               const pct = totalMobile > 0 ? (row.count / totalMobile) * 100 : 0;
               return (
                 <div key={row.label}>
                   <div className="flex items-baseline justify-between mb-1.5">
-                    <span className="text-sm font-medium">{row.label}</span>
+                    <span className="text-sm font-bold text-foreground">{row.label}</span>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-lg font-bold tabular-nums">{row.count}</span>
+                      <span className="text-xl font-black tabular-nums text-foreground">{row.count}</span>
                       <span className="text-[11px] text-muted-foreground">건</span>
-                      <span className="text-xs text-primary tabular-nums w-12 text-right">{pct.toFixed(1)}%</span>
+                      <span className="text-sm font-bold text-primary tabular-nums w-14 text-right">{pct.toFixed(1)}%</span>
                     </div>
                   </div>
-                  <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div className="h-2.5 rounded-full bg-muted overflow-hidden">
                     <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: row.color }} />
                   </div>
                 </div>
@@ -153,40 +153,40 @@ export const ActivationBreakdown = () => {
           </div>
         </Card>
 
-        <Card className="p-6 glass">
-          <div className="flex items-center justify-between mb-5">
+        <Card className="p-4 glass">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <div className="size-9 rounded-xl bg-success/10 grid place-items-center">
                 <Sparkles className="size-4 text-success" />
               </div>
               <div>
-                <h3 className="font-semibold text-sm">전략 상품 건수</h3>
+                <h3 className="font-bold text-base text-foreground">전략 상품 건수</h3>
                 <p className="text-[11px] text-muted-foreground">{strategyStats.map((s) => s.name).join(" · ")}</p>
               </div>
             </div>
             <div className="text-right">
               <div className="text-xs text-muted-foreground">합계</div>
-              <div className="font-bold tabular-nums">{totalStrategy}건</div>
+              <div className="font-black tabular-nums text-lg text-foreground">{totalStrategy}건</div>
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {strategyStats.map((row) => {
               const pct = totalStrategy > 0 ? (row.count / totalStrategy) * 100 : 0;
               return (
                 <div key={row.name}>
                   <div className="flex items-baseline justify-between mb-1.5">
-                    <span className="text-sm font-medium flex items-center gap-1.5">
+                    <span className="text-sm font-bold text-foreground flex items-center gap-1.5">
                       <span className="size-2 rounded-full" style={{ background: row.color }} />
                       {row.name}
                     </span>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-lg font-bold tabular-nums">{row.count}</span>
+                      <span className="text-xl font-black tabular-nums text-foreground">{row.count}</span>
                       <span className="text-[11px] text-muted-foreground">건</span>
-                      <span className="text-xs text-success tabular-nums w-12 text-right">{pct.toFixed(1)}%</span>
+                      <span className="text-sm font-bold text-success tabular-nums w-14 text-right">{pct.toFixed(1)}%</span>
                     </div>
                   </div>
-                  <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div className="h-2.5 rounded-full bg-muted overflow-hidden">
                     <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: row.color }} />
                   </div>
                 </div>
