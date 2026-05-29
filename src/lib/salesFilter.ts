@@ -40,6 +40,10 @@ export function applyActivationFilter<T extends any>(
 
 /**
  * 미개통 대기(택배발송/청약완료) 화이트리스트 필터 — 실적 미인정 분류용
+ *
+ * NOTE: '택배발송' / '청약완료' 상태는 아직 개통이 되지 않은 상태라
+ * open_date 가 NULL 인 경우가 대부분이다. (개통 시점에 비로소 open_date 가 채워짐)
+ * 따라서 period 필터는 created_at(등록일자) 기준으로 적용한다.
  */
 export function applyPendingActivationFilter<T extends any>(
   query: T,
@@ -47,7 +51,8 @@ export function applyPendingActivationFilter<T extends any>(
   endDate: string,
 ): T {
   let q: any = query;
-  q = q.gte("open_date", startDate).lte("open_date", endDate);
   q = q.in("status", PENDING_ACTIVATION_STATUSES);
+  // 등록일자 기준 기간 (yyyy-mm-dd) → created_at 의 해당 일자 범위
+  q = q.gte("created_at", `${startDate}T00:00:00`).lte("created_at", `${endDate}T23:59:59.999`);
   return q as T;
 }
