@@ -762,21 +762,39 @@ export default function ExpenseInputPage() {
         </Card>
       </div>
 
-      <Card className="p-6 glass mb-6">
-        <Tabs value={tab} onValueChange={(v) => setTab(v as "광고비" | "기타지출" | "고정지출")}>
-          <TabsList className="mb-5">
-            <TabsTrigger value="광고비" className="gap-2">
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "광고비" | "기타지출" | "고정지출")}>
+        {/* ── 장표 조회 필터 바 ── */}
+        <div className="mb-4 bg-white border border-slate-100 shadow-sm rounded-2xl px-4 py-3 flex flex-row items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="size-2 rounded-full bg-primary animate-pulse" />
+            <span className="text-sm font-semibold text-slate-900">장표 조회 필터</span>
+          </div>
+          <span className="text-xs text-slate-500">
+            기준 기간 <span className="font-semibold text-slate-900">{periodLabel}</span>
+          </span>
+          <TabsList className="ml-auto bg-slate-100/70">
+            <TabsTrigger value="광고비" className="gap-1.5 text-slate-900 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
               <Megaphone className="size-4" /> 광고비
             </TabsTrigger>
-            <TabsTrigger value="기타지출" className="gap-2">
+            <TabsTrigger value="기타지출" className="gap-1.5 text-slate-900 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
               <Receipt className="size-4" /> 기타 지출
             </TabsTrigger>
-            <TabsTrigger value="고정지출" className="gap-2">
+            <TabsTrigger value="고정지출" className="gap-1.5 text-slate-900 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
               <Repeat className="size-4" /> 고정지출
             </TabsTrigger>
           </TabsList>
+        </div>
 
-          <TabsContent value="광고비">
+        {/* ── 신규 등록 카드 ── */}
+        <Card className="bg-white border border-slate-100 shadow-sm rounded-2xl p-6 mb-6 [&_label]:text-slate-900 [&_label]:font-medium">
+          <div className="mb-4 flex items-center gap-2">
+            <PlusCircle className="size-4 text-primary" />
+            <h3 className="text-base font-bold text-slate-900">
+              {tab === "광고비" ? "광고비 신규 등록" : tab === "기타지출" ? "기타 지출 신규 등록" : "고정지출 신규 등록"}
+            </h3>
+          </div>
+
+          <TabsContent value="광고비" className="mt-0">
             <form onSubmit={submitAd} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <Label>집행일 (시작) *</Label>
@@ -826,9 +844,13 @@ export default function ExpenseInputPage() {
                 <Label>
                   {adForm.amount_mode === "daily" ? "일별 소진 금액 (₩) *" : "최종 합산 금액 (₩) *"}
                 </Label>
-                <Input inputMode="numeric" placeholder="예: 500000"
-                  value={adForm.amount}
-                  onChange={(e) => setAdForm({ ...adForm, amount: e.target.value })} />
+                <Input
+                  inputMode="numeric"
+                  placeholder="예: 500,000"
+                  className="text-right tabular-nums font-medium text-slate-900"
+                  value={adForm.amount ? Number(adForm.amount.replace(/\D/g, "") || 0).toLocaleString("ko-KR") : ""}
+                  onChange={(e) => setAdForm({ ...adForm, amount: e.target.value.replace(/\D/g, "") })}
+                />
                 {(() => {
                   const start = new Date(adForm.spend_date + "T00:00:00");
                   const end = new Date((adForm.end_date || adForm.spend_date) + "T00:00:00");
@@ -864,8 +886,9 @@ export default function ExpenseInputPage() {
                     <Input
                       inputMode="numeric"
                       placeholder="자동 계산"
-                      value={displayValue}
-                      onChange={(e) => setAdForm({ ...adForm, total_override: e.target.value, total_overridden: true })}
+                      className="text-right tabular-nums font-medium text-slate-900"
+                      value={displayValue ? Number(String(displayValue).replace(/\D/g, "") || 0).toLocaleString("ko-KR") : ""}
+                      onChange={(e) => setAdForm({ ...adForm, total_override: e.target.value.replace(/\D/g, ""), total_overridden: true })}
                     />
                     <div className="flex items-center justify-between mt-1 gap-2">
                       <p className="text-[10px] text-muted-foreground">
@@ -922,8 +945,12 @@ export default function ExpenseInputPage() {
                   value={adForm.note}
                   onChange={(e) => setAdForm({ ...adForm, note: e.target.value })} />
               </div>
-              <div className="md:col-span-2 lg:col-span-3 flex justify-end">
-                <Button type="submit" disabled={saving} className="gap-2">
+              <div className="md:col-span-2 lg:col-span-3 flex justify-end pt-2 border-t border-slate-100">
+                <Button
+                  type="submit"
+                  disabled={saving}
+                  className="gap-2 rounded-xl px-6 h-11 bg-gradient-to-r from-primary to-primary-glow text-primary-foreground shadow-md hover:shadow-glow hover:-translate-y-0.5 transition-all duration-200"
+                >
                   <PlusCircle className="size-4" />
                   {saving ? "저장 중..." : "광고비 저장"}
                 </Button>
@@ -950,9 +977,13 @@ export default function ExpenseInputPage() {
               </div>
               <div>
                 <Label>금액 (₩) *</Label>
-                <Input inputMode="numeric" placeholder="예: 1500000"
-                  value={etcForm.amount}
-                  onChange={(e) => setEtcForm({ ...etcForm, amount: e.target.value })} />
+                <Input
+                  inputMode="numeric"
+                  placeholder="예: 1,500,000"
+                  className="text-right tabular-nums font-medium text-slate-900"
+                  value={etcForm.amount ? Number(etcForm.amount.replace(/\D/g, "") || 0).toLocaleString("ko-KR") : ""}
+                  onChange={(e) => setEtcForm({ ...etcForm, amount: e.target.value.replace(/\D/g, "") })}
+                />
               </div>
               <div className="md:col-span-2 lg:col-span-3">
                 <Label>거래처 / 적요</Label>
@@ -992,8 +1023,12 @@ export default function ExpenseInputPage() {
                   value={etcForm.note}
                   onChange={(e) => setEtcForm({ ...etcForm, note: e.target.value })} />
               </div>
-              <div className="md:col-span-2 lg:col-span-3 flex justify-end">
-                <Button type="submit" disabled={saving} className="gap-2">
+              <div className="md:col-span-2 lg:col-span-3 flex justify-end pt-2 border-t border-slate-100">
+                <Button
+                  type="submit"
+                  disabled={saving}
+                  className="gap-2 rounded-xl px-6 h-11 bg-gradient-to-r from-primary to-primary-glow text-primary-foreground shadow-md hover:shadow-glow hover:-translate-y-0.5 transition-all duration-200"
+                >
                   <PlusCircle className="size-4" />
                   {saving ? "저장 중..." : "지출 저장"}
                 </Button>
@@ -1023,9 +1058,13 @@ export default function ExpenseInputPage() {
               </div>
               <div>
                 <Label>월 고정 금액 (₩) *</Label>
-                <Input inputMode="numeric" placeholder="예: 29000"
-                  value={fixedForm.amount}
-                  onChange={(e) => setFixedForm({ ...fixedForm, amount: e.target.value })} />
+                <Input
+                  inputMode="numeric"
+                  placeholder="예: 29,000"
+                  className="text-right tabular-nums font-medium text-slate-900"
+                  value={fixedForm.amount ? Number(fixedForm.amount.replace(/\D/g, "") || 0).toLocaleString("ko-KR") : ""}
+                  onChange={(e) => setFixedForm({ ...fixedForm, amount: e.target.value.replace(/\D/g, "") })}
+                />
               </div>
               <div className="md:col-span-2">
                 <Label>거래처 / 서비스명</Label>
@@ -1081,7 +1120,11 @@ export default function ExpenseInputPage() {
                     매월 자동 등록 (템플릿 저장)
                   </span>
                 </label>
-                <Button type="submit" disabled={saving} className="gap-2">
+                <Button
+                  type="submit"
+                  disabled={saving}
+                  className="gap-2 rounded-xl px-6 h-11 bg-gradient-to-r from-primary to-primary-glow text-primary-foreground shadow-md hover:shadow-glow hover:-translate-y-0.5 transition-all duration-200"
+                >
                   <PlusCircle className="size-4" />
                   {saving ? "저장 중..." : "고정지출 저장"}
                 </Button>
@@ -1141,8 +1184,8 @@ export default function ExpenseInputPage() {
               )}
             </div>
           </TabsContent>
-        </Tabs>
-      </Card>
+        </Card>
+      </Tabs>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
         <Card className="p-5 glass">
