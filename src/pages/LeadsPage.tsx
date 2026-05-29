@@ -33,6 +33,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserCheck, PhoneCall, CheckCircle2, Plus, Search, RotateCw, Ban, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import ChannelIntakePage from "@/pages/ChannelIntakePage";
+import { ColumnFilter, matchesFilter, type FilterSelection } from "@/components/common/ColumnFilter";
 
 const STATUS_OPTIONS = [
   "신규 접수",
@@ -153,9 +154,6 @@ export default function LeadsPage() {
   const { staff } = useDashboardStaff();
   const [rows, setRows] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [productFilter, setProductFilter] = useState<string>("all");
-  const [carrierFilter, setCarrierFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru" | "other">("meta");
   const [openLead, setOpenLead] = useState<Lead | null>(null);
@@ -167,6 +165,15 @@ export default function LeadsPage() {
   const [intakeFormOpen, setIntakeFormOpen] = useState(false);
   const [inquiryRows, setInquiryRows] = useState<{ created_at: string; status: string | null }[]>([]);
   const [period, setPeriod] = useState<"all" | "month" | "day">("all");
+  // 엑셀형 컬럼 필터 (메타/도그마루 공통 + 각자 고유)
+  const [fStatus, setFStatus] = useState<FilterSelection>(null);
+  const [fCarrier, setFCarrier] = useState<FilterSelection>(null);
+  const [fProduct, setFProduct] = useState<FilterSelection>(null);
+  const [fCampaign, setFCampaign] = useState<FilterSelection>(null);
+  const [fAssignee, setFAssignee] = useState<FilterSelection>(null);
+  const [fBranch, setFBranch] = useState<FilterSelection>(null);
+  const [fActivation, setFActivation] = useState<FilterSelection>(null);
+  const [fCancellation, setFCancellation] = useState<FilterSelection>(null);
   const [draft, setDraft] = useState<LeadDraft>({
     name: "",
     phone: "",
@@ -279,16 +286,26 @@ export default function LeadsPage() {
       const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
       if (sourceTab === "dogmaru" && !isDogmaru) return false;
       if (sourceTab === "meta" && isDogmaru) return false;
-      if (statusFilter !== "all" && r.status !== statusFilter) return false;
-      if (productFilter !== "all" && r.desired_product !== productFilter) return false;
-      if (carrierFilter !== "all" && r.current_carrier !== carrierFilter) return false;
       if (q) {
-        const hay = `${r.name ?? ""} ${r.phone ?? ""} ${r.campaign_name ?? ""} ${r.desired_device ?? ""} ${r.registration_date ?? ""} ${r.customer_name ?? ""} ${r.customer_phone ?? ""} ${r.branch_name ?? ""} ${r.activation_status ?? ""} ${r.cancellation_status ?? ""} ${r.activation_number ?? ""}`.toLowerCase();
+        // 이름 / 번호 통합 검색 — 메타·도그마루 양쪽 필드 모두 포함
+        const hay = `${r.name ?? ""} ${r.phone ?? ""} ${r.customer_name ?? ""} ${r.customer_phone ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
+      }
+      if (sourceTab === "meta") {
+        if (!matchesFilter(r.status, fStatus)) return false;
+        if (!matchesFilter(r.current_carrier, fCarrier)) return false;
+        if (!matchesFilter(r.desired_product, fProduct)) return false;
+        if (!matchesFilter(r.campaign_name, fCampaign)) return false;
+        const assigneeName = r.assigned_to ? staff.find((s) => s.user_id === r.assigned_to)?.display_name ?? "" : "";
+        if (!matchesFilter(assigneeName, fAssignee)) return false;
+      } else if (sourceTab === "dogmaru") {
+        if (!matchesFilter(r.branch_name, fBranch)) return false;
+        if (!matchesFilter(r.activation_status, fActivation)) return false;
+        if (!matchesFilter(r.cancellation_status, fCancellation)) return false;
       }
       return true;
     });
-  }, [rows, statusFilter, productFilter, carrierFilter, search, sourceTab]);
+  }, [rows, search, sourceTab, fStatus, fCarrier, fProduct, fCampaign, fAssignee, fBranch, fActivation, fCancellation, staff]);
 
   const sourceCounts = useMemo(() => {
     let dogmaru = 0;
@@ -347,14 +364,20 @@ export default function LeadsPage() {
     return { meta, dogmaru, other };
   }, [rows, inquiryRows, period]);
 
-  const productOptions = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.desired_product).filter(Boolean))) as string[],
-    [rows],
+  // ── 엑셀형 헤더 필터에 들어갈 고유값 (탭별로 분리해 메타↔도그마루 섞이지 않게) ──
+  const metaRows = useMemo(() => rows.filter((r) => r.campaign_name !== DOGMARU_CAMPAIGN), [rows]);
+  const dogmaruRows = useMemo(() => rows.filter((r) => r.campaign_name === DOGMARU_CAMPAIGN), [rows]);
+  const valStatus = useMemo(() => metaRows.map((r) => r.status ?? ""), [metaRows]);
+  const valCarrier = useMemo(() => metaRows.map((r) => r.current_carrier ?? ""), [metaRows]);
+  const valProduct = useMemo(() => metaRows.map((r) => r.desired_product ?? ""), [metaRows]);
+  const valCampaign = useMemo(() => metaRows.map((r) => r.campaign_name ?? ""), [metaRows]);
+  const valAssignee = useMemo(
+    () => metaRows.map((r) => (r.assigned_to ? staff.find((s) => s.user_id === r.assigned_to)?.display_name ?? "" : "")),
+    [metaRows, staff],
   );
-  const carrierOptions = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.current_carrier).filter(Boolean))) as string[],
-    [rows],
-  );
+  const valBranch = useMemo(() => dogmaruRows.map((r) => r.branch_name ?? ""), [dogmaruRows]);
+  const valActivation = useMemo(() => dogmaruRows.map((r) => r.activation_status ?? ""), [dogmaruRows]);
+  const valCancellation = useMemo(() => dogmaruRows.map((r) => r.cancellation_status ?? ""), [dogmaruRows]);
 
   async function updateStatus(id: string, status: string) {
     const { error } = await supabase.from("leads").update({ status }).eq("id", id);
@@ -573,59 +596,25 @@ export default function LeadsPage() {
       </Card>
 
       {/* Filters */}
-      <Card className="p-3 flex flex-wrap items-center gap-2">
-        <div className="relative">
-          <Search className="size-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="pl-8 w-56"
-            placeholder="고객명·연락처·캠페인 검색"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-36">
-            <SelectValue placeholder="상태" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">전체 상태</SelectItem>
-            {STATUS_OPTIONS.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={productFilter} onValueChange={setProductFilter}>
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="희망 상품" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">전체 상품</SelectItem>
-            {productOptions.map((p) => (
-              <SelectItem key={p} value={p}>
-                {p}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={carrierFilter} onValueChange={setCarrierFilter}>
-          <SelectTrigger className="w-36">
-            <SelectValue placeholder="현재 통신사" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">전체 통신사</SelectItem>
-            {carrierOptions.map((c) => (
-              <SelectItem key={c} value={c}>
-                {c}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="ml-auto text-xs text-muted-foreground">
-          {filtered.length} / {rows.length}건
-        </div>
-      </Card>
+      {sourceTab !== "other" && (
+        <Card className="p-3 flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[260px] max-w-xl">
+            <Search className="size-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="pl-9 h-10 text-sm"
+              placeholder="고객명 또는 휴대폰 번호로 검색…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="text-xs text-foreground/60">
+            엑셀처럼 각 헤더의 <span className="font-semibold text-foreground/80">▼</span> 를 눌러 다중 선택으로 좁혀보세요.
+          </div>
+          <div className="ml-auto text-xs text-foreground/60 tabular-nums">
+            {filtered.length.toLocaleString()} / {rows.length.toLocaleString()}건
+          </div>
+        </Card>
+      )}
 
       {/* Table */}
       <Tabs value={sourceTab} onValueChange={(v) => setSourceTab(v as "meta" | "dogmaru" | "other")}>
@@ -660,9 +649,15 @@ export default function LeadsPage() {
                 <TableHead className="text-foreground font-bold">접수 일자</TableHead>
                 <TableHead className="text-foreground font-bold">고객 성명</TableHead>
                 <TableHead className="text-foreground font-bold">연락처</TableHead>
-                <TableHead className="text-foreground font-bold">접수 지점명</TableHead>
-                <TableHead className="text-foreground font-bold">개통 상태</TableHead>
-                <TableHead className="text-foreground font-bold">해지 및 철회</TableHead>
+                <TableHead className="text-foreground font-bold">
+                  <ColumnFilter label="접수 지점명" values={valBranch} selected={fBranch} onChange={setFBranch} />
+                </TableHead>
+                <TableHead className="text-foreground font-bold">
+                  <ColumnFilter label="개통 상태" values={valActivation} selected={fActivation} onChange={setFActivation} />
+                </TableHead>
+                <TableHead className="text-foreground font-bold">
+                  <ColumnFilter label="해지 및 철회" values={valCancellation} selected={fCancellation} onChange={setFCancellation} />
+                </TableHead>
                 <TableHead className="text-foreground font-bold">가입번호</TableHead>
                 <TableHead className="text-foreground font-bold w-20 text-center">관리</TableHead>
               </TableRow>
@@ -747,12 +742,22 @@ export default function LeadsPage() {
               <TableHead className="text-foreground font-bold">접수 일시</TableHead>
               <TableHead className="text-foreground font-bold">고객명</TableHead>
               <TableHead className="text-foreground font-bold">연락처</TableHead>
-              <TableHead className="text-foreground font-bold">현재 통신사</TableHead>
+              <TableHead className="text-foreground font-bold">
+                <ColumnFilter label="현재 통신사" values={valCarrier} selected={fCarrier} onChange={setFCarrier} />
+              </TableHead>
               <TableHead className="text-foreground font-bold w-16 text-xs">희망 기종</TableHead>
-              <TableHead className="text-foreground font-bold w-16 text-xs">희망 상품</TableHead>
-              <TableHead className="text-foreground font-bold w-16 text-xs">캠페인</TableHead>
-              <TableHead className="text-foreground font-bold w-32">담당자</TableHead>
-              <TableHead className="text-foreground font-bold w-28">상담 상태</TableHead>
+              <TableHead className="text-foreground font-bold w-16 text-xs">
+                <ColumnFilter label="희망 상품" values={valProduct} selected={fProduct} onChange={setFProduct} />
+              </TableHead>
+              <TableHead className="text-foreground font-bold w-16 text-xs">
+                <ColumnFilter label="캠페인" values={valCampaign} selected={fCampaign} onChange={setFCampaign} />
+              </TableHead>
+              <TableHead className="text-foreground font-bold w-32">
+                <ColumnFilter label="담당자" values={valAssignee} selected={fAssignee} onChange={setFAssignee} />
+              </TableHead>
+              <TableHead className="text-foreground font-bold w-28">
+                <ColumnFilter label="상담 상태" values={valStatus} selected={fStatus} onChange={setFStatus} />
+              </TableHead>
               <TableHead className="text-foreground font-bold min-w-[440px]">메모</TableHead>
               <TableHead className="text-foreground font-bold w-20 text-center">관리</TableHead>
             </TableRow>
