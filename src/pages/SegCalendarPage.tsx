@@ -257,41 +257,52 @@ export default function SegCalendarPage() {
         </div>
       </Card>
 
-      {/* 하단: 종합 리스트 */}
-      <Card className="p-4 border-slate-200 dark:border-slate-800">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <div className="font-semibold flex items-center gap-2">
-            {selectedDay ? (
-              <>
-                <span>{format(selectedDay, "yyyy년 M월 d일 (eee)", { locale: ko })}</span>
-                <span className="text-xs font-medium border border-foreground/30 px-1.5 py-0.5 rounded">{listActs.length}건</span>
-                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setSelectedDay(null)}>전체 보기</Button>
-              </>
-            ) : (
-              <>
-                <span>{format(cursor, "yyyy년 M월", { locale: ko })} 전체 일정</span>
-                <span className="text-xs font-medium border border-foreground/30 px-1.5 py-0.5 rounded">{listActs.length}건</span>
-              </>
-            )}
+      {/* 날짜 클릭 → 상세 팝업 모달 */}
+      <Dialog
+        open={dayModalOpen}
+        onOpenChange={(v) => {
+          setDayModalOpen(v);
+          if (!v) setSelectedDay(null);
+        }}
+      >
+        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900 flex items-center gap-2">
+              {selectedDay && (
+                <>
+                  <span>{format(selectedDay, "yyyy년 M월 d일 (eee)", { locale: ko })}</span>
+                  <span className="text-xs font-medium border border-foreground/30 px-1.5 py-0.5 rounded">{listActs.length}건</span>
+                </>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div className="flex gap-2">
+              <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+                <SelectTrigger className="w-[110px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">전체 상태</SelectItem>
+                  <SelectItem value="scheduled">예정</SelectItem>
+                  <SelectItem value="done">완료</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={listSort} onValueChange={(v: any) => setListSort(v)}>
+                <SelectTrigger className="w-[110px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date">시간순</SelectItem>
+                  <SelectItem value="recent">최신 등록순</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => { if (selectedDay) openQuickFor(selectedDay); }}
+              disabled={!selectedDay}
+            >
+              <Plus className="size-4 mr-1" /> 이 날짜에 일정 추가
+            </Button>
           </div>
-          <div className="flex gap-2">
-            <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
-              <SelectTrigger className="w-[110px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">전체 상태</SelectItem>
-                <SelectItem value="scheduled">예정</SelectItem>
-                <SelectItem value="done">완료</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={listSort} onValueChange={(v: any) => setListSort(v)}>
-              <SelectTrigger className="w-[110px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="date">날짜순</SelectItem>
-                <SelectItem value="recent">최신 등록순</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
 
         {listActs.length === 0 ? (
           <div className="py-10 text-center text-sm text-muted-foreground">등록된 일정이 없습니다.</div>
@@ -400,7 +411,8 @@ export default function SegCalendarPage() {
             </table>
           </div>
         )}
-      </Card>
+        </DialogContent>
+      </Dialog>
 
       <PartnerDetailDrawer open={drawerOpen} onOpenChange={setDrawerOpen} partner={drawerPartner} />
       <QuickScheduleDialog
