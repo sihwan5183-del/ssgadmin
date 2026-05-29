@@ -75,8 +75,8 @@ export const PendingProductScoreboard = () => {
   const grandTotal = useMemo(() => stats.reduce((s, x) => s + x.total, 0), [stats]);
 
   return (
-    <div className="relative h-full w-full flex flex-col bg-card border border-border/60 shadow-sm rounded-xl p-4">
-      <div className="flex items-center justify-between mb-3 px-0.5">
+    <div className="relative h-full w-full flex flex-col bg-card border border-border/60 shadow-sm rounded-xl p-3">
+      <div className="flex items-center justify-between mb-2 px-0.5">
         <div className="flex items-baseline gap-2">
           <h2 className="text-sm font-bold tracking-tight text-foreground inline-flex items-center gap-1.5">
             <Clock className="size-3.5 text-warning" />
@@ -93,8 +93,8 @@ export const PendingProductScoreboard = () => {
 
       <div className="-mx-1 px-1 flex-1 min-h-0">
         <div
-          className="grid gap-2 md:gap-3 h-full"
-          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, 45%), 1fr))" }}
+          className="grid gap-2 h-full"
+          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(120px, 45%), 1fr))" }}
         >
           {stats.map((s) => {
             const Icon = ICONS[s.key];
@@ -102,7 +102,7 @@ export const PendingProductScoreboard = () => {
               <div
                 key={s.key}
                 className={cn(
-                  "text-left px-3 py-2.5 rounded-xl border bg-card transition-all",
+                  "text-left px-2.5 py-2 rounded-xl border bg-card transition-all",
                   "border-border/60",
                   s.total > 0 && "border-warning/40 bg-warning/5",
                 )}

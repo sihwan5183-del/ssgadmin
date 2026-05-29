@@ -88,8 +88,8 @@ export const TopProductScoreboard = () => {
   );
 
   return (
-    <div className="relative h-full w-full flex flex-col bg-card border border-border/60 shadow-sm rounded-xl p-4">
-      <div className="flex items-center justify-between mb-3 px-0.5">
+    <div className="relative h-full w-full flex flex-col bg-card border border-border/60 shadow-sm rounded-xl p-3">
+      <div className="flex items-center justify-between mb-2 px-0.5">
         <div className="flex items-baseline gap-2">
           <h2 className="text-sm font-bold tracking-tight text-foreground">핵심 상품 성과 보드</h2>
           <span className="text-[10px] text-foreground/60">{label} 누적 · 카드 클릭 시 하단 위젯 필터</span>
@@ -108,8 +108,8 @@ export const TopProductScoreboard = () => {
       {/* 컨테이너 가로폭에 맞춰 자동 리플로우되는 반응형 그리드 (auto-fit, 모바일 2열) */}
       <div className="-mx-1 px-1 flex-1 min-h-0">
         <div
-          className="grid gap-2 md:gap-3 h-full"
-          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, 45%), 1fr))" }}
+          className="grid gap-2 h-full"
+          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(120px, 45%), 1fr))" }}
         >
           {stats.map((s) => {
             const Icon = ICONS[s.key];
@@ -121,7 +121,7 @@ export const TopProductScoreboard = () => {
                 key={s.key}
                 onClick={() => setScope(active ? "all" : s.key)}
                 className={cn(
-                  "text-left px-3 py-2.5 rounded-xl border bg-card transition-all group",
+                  "text-left px-2.5 py-2 rounded-xl border bg-card transition-all group",
                   active
                     ? "border-foreground/70 bg-foreground/5 shadow-sm ring-1 ring-foreground/20"
                     : "border-border/60 hover:border-foreground/40 hover:-translate-y-0.5",
