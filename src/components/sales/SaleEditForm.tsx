@@ -694,8 +694,21 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                 </p>
               )}
             </Field>
-            <Field label="생년월일">
-              <Input value={form.birth_date ?? ""} onChange={(e) => set("birth_date", e.target.value)} placeholder="900101" className="h-9 bg-input/60 text-xs border-border/60" />
+            <Field label="생년월일 *">
+              <Input
+                value={form.birth_date ?? ""}
+                onChange={(e) => set("birth_date", e.target.value)}
+                placeholder="900101"
+                className={cn(
+                  "h-9 bg-input/60 text-xs border-border/60",
+                  requiredErrors.birth_date && "border-destructive focus-visible:ring-destructive/40",
+                )}
+              />
+              {requiredErrors.birth_date && (
+                <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
+                  <AlertTriangle className="size-3" /> {requiredErrors.birth_date}
+                </p>
+              )}
             </Field>
             <Field label="연락처 *">
               <Input
@@ -716,21 +729,21 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                 </p>
               )}
             </Field>
-            <Field label="가입 번호">
+            <Field label="가입 번호 *">
               <Input
                 value={customFields.subscription_no ?? ""}
                 onChange={(e) => setCustomFields((f) => ({ ...f, subscription_no: e.target.value.replace(/\D+/g, "").slice(0, 12) }))}
                 placeholder="숫자만 입력 (최대 12자리)"
                 className={cn(
                   "h-9 bg-input/60 text-xs border-border/60",
-                  subscriptionError && "border-destructive focus-visible:ring-destructive/40",
+                  (subscriptionError || requiredErrors.subscription_no) && "border-destructive focus-visible:ring-destructive/40",
                 )}
                 inputMode="numeric"
                 maxLength={12}
               />
-              {subscriptionError && (
+              {(subscriptionError || requiredErrors.subscription_no) && (
                 <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
-                  <AlertTriangle className="size-3" /> {subscriptionError}
+                  <AlertTriangle className="size-3" /> {subscriptionError ?? requiredErrors.subscription_no}
                 </p>
               )}
             </Field>
