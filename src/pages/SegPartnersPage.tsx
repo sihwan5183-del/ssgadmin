@@ -300,6 +300,22 @@ function StorefrontActivityTable({
   }, [activities, partnerMap]);
 
   const [editing, setEditing] = useState<SegActivity | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<SegActivity | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+
+  const doCancel = async () => {
+    if (!cancelTarget) return;
+    setCancelling(true);
+    const nextCf = { ...(cancelTarget.custom_fields ?? {}), cancelled: true, cancelled_at: new Date().toISOString() };
+    const { error } = await (supabase as any)
+      .from("seg_activities")
+      .update({ custom_fields: nextCf })
+      .eq("id", cancelTarget.id);
+    setCancelling(false);
+    if (error) return toast.error(error.message);
+    toast.success("점두 활동이 취소 처리되었습니다");
+    setCancelTarget(null);
+  };
 
   return (
     <Card className="overflow-hidden border-slate-200">
@@ -327,10 +343,16 @@ function StorefrontActivityTable({
             {rows.map((a) => {
               const partner = partnerMap.get(a.partner_id);
               const cf = (a.custom_fields ?? {}) as Record<string, any>;
+              const isCancelled = !!cf.cancelled;
               const hasResult =
-                cf.regulars_count != null || cf.mobile_count != null || cf.internet_count != null;
+                !isCancelled && (cf.regulars_count != null || cf.mobile_count != null || cf.internet_count != null);
               return (
-                <tr key={a.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 transition-colors text-slate-900">
+                <tr
+                  key={a.id}
+                  className={`border-b border-slate-100 last:border-0 hover:bg-slate-50/70 transition-colors text-slate-900 ${
+                    isCancelled ? "opacity-50 line-through" : ""
+                  }`}
+                >
                   <td className="px-3 py-2 whitespace-nowrap tabular-nums">{a.activity_date}</td>
                   <td className="px-3 py-2 whitespace-nowrap font-semibold">{partner?.company_name ?? "-"}</td>
                   <td className="px-3 py-2 whitespace-nowrap">{a.activity_type ?? "-"}</td>
@@ -338,7 +360,7 @@ function StorefrontActivityTable({
                   <td className="px-3 py-2 whitespace-nowrap">{a.assignee_name ?? "-"}</td>
                   <td className="px-3 py-2 whitespace-nowrap">
                     <span className="text-slate-900 font-medium">
-                      {a.is_completed ? "완료" : "진행중"}
+                      {isCancelled ? "취소" : a.is_completed ? "완료" : "진행중"}
                     </span>
                     {hasResult && (
                       <span className="ml-2 text-[11px] text-slate-600 tabular-nums">
@@ -346,14 +368,26 @@ function StorefrontActivityTable({
                       </span>
                     )}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-right">
-                    <Button
-                      size="sm"
-                      onClick={() => setEditing(a)}
-                      className="h-8 bg-slate-900 hover:bg-slate-800 text-white"
-                    >
-                      <Pencil className="size-3.5 mr-1" /> 수정
-                    </Button>
+                  <td className="px-3 py-2 whitespace-nowrap text-right no-underline">
+                    <div className="inline-flex gap-1.5 no-underline">
+                      <Button
+                        size="sm"
+                        onClick={() => setEditing(a)}
+                        disabled={isCancelled}
+                        className="h-8 bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-sm"
+                      >
+                        <Pencil className="size-3.5 mr-1" /> 수정
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setCancelTarget(a)}
+                        disabled={isCancelled}
+                        className="h-8 rounded-xl border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:text-rose-800 shadow-sm"
+                      >
+                        취소
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -365,6 +399,26 @@ function StorefrontActivityTable({
         activity={editing}
         onOpenChange={(open) => { if (!open) setEditing(null); }}
       />
+      <AlertDialog open={!!cancelTarget} onOpenChange={(o) => { if (!o) setCancelTarget(null); }}>
+        <AlertDialogContent className="rounded-2xl shadow-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-slate-900">점두 활동 취소</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-700">
+              해당 점두 활동 일정을 취소 처리하시겠습니까? 취소 시 입력된 실적은 모든 통계에서 제외됩니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>닫기</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={cancelling}
+              onClick={(e) => { e.preventDefault(); doCancel(); }}
+              className="bg-rose-600 hover:bg-rose-700 text-white"
+            >
+              {cancelling ? "처리중..." : "확인"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
