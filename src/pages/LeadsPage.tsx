@@ -197,8 +197,9 @@ export default function LeadsPage() {
 
   const [showCreate, setShowCreate] = useState(false);
   const [intakeFormOpen, setIntakeFormOpen] = useState(false);
-  const [inquiryRows, setInquiryRows] = useState<{ created_at: string; status: string | null }[]>([]);
+  const [inquiryRows, setInquiryRows] = useState<{ created_at: string; status: string | null; manager: string | null }[]>([]);
   const [period, setPeriod] = useState<"all" | "month" | "day">("all");
+  const [personalView, setPersonalView] = useState(false);
   // 엑셀형 컬럼 필터 (메타/도그마루 공통 + 각자 고유)
   const [fStatus, setFStatus] = useState<FilterSelection>(null);
   const [fCarrier, setFCarrier] = useState<FilterSelection>(null);
@@ -236,10 +237,10 @@ export default function LeadsPage() {
     (async () => {
       const { data } = await supabase
         .from("inquiries")
-        .select("created_at,status")
+        .select("created_at,status,manager")
         .order("created_at", { ascending: false })
         .limit(5000);
-      setInquiryRows((data ?? []) as { created_at: string; status: string | null }[]);
+      setInquiryRows((data ?? []) as { created_at: string; status: string | null; manager: string | null }[]);
     })();
     const ch = supabase
       .channel("leads-rt")
@@ -280,11 +281,11 @@ export default function LeadsPage() {
         (payload) => {
           if (payload.eventType === "INSERT") {
             const r = payload.new as any;
-            setInquiryRows((prev) => [{ created_at: r.created_at, status: r.status }, ...prev]);
+            setInquiryRows((prev) => [{ created_at: r.created_at, status: r.status, manager: r.manager ?? null }, ...prev]);
           } else if (payload.eventType === "UPDATE") {
             const r = payload.new as any;
             setInquiryRows((prev) =>
-              prev.map((x) => (x.created_at === r.created_at ? { ...x, status: r.status } : x)),
+              prev.map((x) => (x.created_at === r.created_at ? { ...x, status: r.status, manager: r.manager ?? null } : x)),
             );
           }
         },
