@@ -157,7 +157,7 @@ export const DashboardGrid = ({
               {editable && (
                 <span
                   aria-label="이동 핸들"
-                  className="dash-drag-handle absolute top-1 right-1 z-30 inline-flex items-center justify-center size-6 rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 cursor-grab active:cursor-grabbing opacity-0 group-hover/dash:opacity-100 transition-opacity select-none"
+                  className="dash-drag-handle absolute top-1.5 right-1.5 z-30 inline-flex items-center justify-center size-6 rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-muted/70 cursor-grab active:cursor-grabbing opacity-40 hover:opacity-100 group-hover/dash:opacity-100 transition-opacity select-none bg-background/60 backdrop-blur-sm"
                   title="드래그해서 이동"
                 >
                   <GripVertical className="size-3.5" />
