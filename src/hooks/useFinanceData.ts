@@ -315,6 +315,28 @@ export function useFinanceData(): FinanceData {
         }
       }
     }
+
+    // ---------- 상품군별 (모바일/인터넷/기타) ----------
+    const emptySeg = (): ProductSegmentTotals => ({
+      revenue: 0, expense: 0, distributor: 0, cashOpen: 0,
+      corpCard: 0, customerDeposit: 0, successCount: 0,
+    });
+    const byProduct = { mobile: emptySeg(), internet: emptySeg(), etc: emptySeg() };
+    for (const r of settledSalesRows) {
+      const prod = (r.product ?? "").toString().trim();
+      const seg =
+        prod === "모바일" ? byProduct.mobile :
+        prod === "인터넷" ? byProduct.internet :
+        byProduct.etc;
+      const p = calcDashboardProfit(r);
+      seg.successCount += 1;
+      seg.revenue += p.salesCommission + p.vasFee + p.receivableAmount + p.voucherAmount + p.tradeInConfirmed;
+      seg.distributor += p.distributor;
+      seg.cashOpen += p.cashSupport;
+      seg.corpCard += p.cardSubsidy;
+      seg.customerDeposit += Number(r.receivable_amount ?? 0);
+      seg.expense += p.distributor + p.cashSupport + p.offerSubsidy + p.customerSupport + p.cardSubsidy + p.moyoFee;
+    }
     const moyoFee = sumMoyoFee;
     const totalAdSpend = effectiveSpendRows.reduce(
       (s, r) => s + Number(r.amount ?? 0),
@@ -531,6 +553,7 @@ export function useFinanceData(): FinanceData {
       expenseBreakdown,
       hasSales: totalSuccess > 0,
       hasSpend: totalAdSpend > 0,
+      byProduct,
     };
   }, [salesRows, spendRows, prevSalesRows, prevSpendRows, startDate, endDate, loading, categories, includedExpenseLabels, excludedLabels]);
 }
