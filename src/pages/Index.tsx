@@ -233,9 +233,9 @@ const IndexInner = () => {
     // so the dashboard reads as tiled cards, not a stack of full-width rows.
     { id: "review_alerts",        node: <MyReviewAlerts />,                lg: { x: 0,  y: 0,   w: 8,  h: 4 } },
     { id: "quick_links",          node: <QuickLinksWidget />,              lg: { x: 8,  y: 0,   w: 4,  h: 4 }, adminOnly: true },
-    { id: "today_care",           node: <TodayCareWidget />,               lg: { x: 0,  y: 4,   w: 12, h: 5 } },
-    { id: "top_product",          node: <TopProductScoreboard />,          lg: { x: 0,  y: 9,   w: 6,  h: 6 }, always: true },
-    { id: "pending_product",      node: <PendingProductScoreboard />,      lg: { x: 6,  y: 9,   w: 6,  h: 6 }, always: true },
+    { id: "today_care",           node: <TodayCareWidget />,               lg: { x: 0,  y: 4,   w: 4,  h: 6 } },
+    { id: "top_product",          node: <TopProductScoreboard />,          lg: { x: 4,  y: 4,   w: 4,  h: 6 }, always: true },
+    { id: "pending_product",      node: <PendingProductScoreboard />,      lg: { x: 8,  y: 4,   w: 4,  h: 6 }, always: true },
     { id: "unified_calendar",     node: <UnifiedCalendarWidget />,         lg: { x: 0,  y: 10,  w: 8,  h: 12 }, always: true },
     { id: "goal_gauge",           node: <RadialGoalGauge />,               lg: { x: 8,  y: 10,  w: 4,  h: 9 } },
     { id: "hero_performance",     node: <HeroPerformance />,               lg: { x: 0,  y: 22,  w: 8,  h: 9 } },
