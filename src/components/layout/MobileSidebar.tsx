@@ -32,7 +32,7 @@ export const MobileSidebar = () => {
       </SheetTrigger>
       <SheetContent
         side="left"
-        className="p-0 w-[17rem] max-w-[85vw] border-r border-border/40 [&>button]:hidden"
+        className="p-0 w-[17rem] max-w-[85vw] border-r border-border/40 [&>button]:hidden bg-white"
       >
         {/* Sidebar 자체가 hidden lg:flex 이므로 강제로 보이게 wrapper 적용 */}
         <div className="h-full mobile-sidebar-wrapper">
