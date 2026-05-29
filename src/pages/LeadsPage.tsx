@@ -608,59 +608,25 @@ export default function LeadsPage() {
       </Card>
 
       {/* Filters */}
-      <Card className="p-3 flex flex-wrap items-center gap-2">
-        <div className="relative">
-          <Search className="size-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="pl-8 w-56"
-            placeholder="고객명·연락처·캠페인 검색"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-36">
-            <SelectValue placeholder="상태" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">전체 상태</SelectItem>
-            {STATUS_OPTIONS.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={productFilter} onValueChange={setProductFilter}>
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="희망 상품" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">전체 상품</SelectItem>
-            {productOptions.map((p) => (
-              <SelectItem key={p} value={p}>
-                {p}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={carrierFilter} onValueChange={setCarrierFilter}>
-          <SelectTrigger className="w-36">
-            <SelectValue placeholder="현재 통신사" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">전체 통신사</SelectItem>
-            {carrierOptions.map((c) => (
-              <SelectItem key={c} value={c}>
-                {c}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="ml-auto text-xs text-muted-foreground">
-          {filtered.length} / {rows.length}건
-        </div>
-      </Card>
+      {sourceTab !== "other" && (
+        <Card className="p-3 flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[260px] max-w-xl">
+            <Search className="size-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="pl-9 h-10 text-sm"
+              placeholder="고객명 또는 휴대폰 번호로 검색…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="text-xs text-foreground/60">
+            엑셀처럼 각 헤더의 <span className="font-semibold text-foreground/80">▼</span> 를 눌러 다중 선택으로 좁혀보세요.
+          </div>
+          <div className="ml-auto text-xs text-foreground/60 tabular-nums">
+            {filtered.length.toLocaleString()} / {rows.length.toLocaleString()}건
+          </div>
+        </Card>
+      )}
 
       {/* Table */}
       <Tabs value={sourceTab} onValueChange={(v) => setSourceTab(v as "meta" | "dogmaru" | "other")}>
