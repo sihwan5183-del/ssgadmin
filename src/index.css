@@ -254,3 +254,57 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* === React-Grid-Layout dashboard styling === */
+.react-grid-layout {
+  position: relative;
+  transition: height 200ms ease;
+}
+.react-grid-item {
+  transition: transform 200ms ease, width 200ms ease, height 200ms ease;
+}
+.react-grid-item.cssTransforms {
+  transition-property: transform, width, height;
+}
+.react-grid-item.resizing,
+.react-grid-item.react-draggable-dragging {
+  z-index: 40;
+  opacity: 0.92;
+  transition: none;
+}
+.react-grid-item.react-grid-placeholder {
+  background: hsl(var(--primary) / 0.12);
+  border: 1.5px dashed hsl(var(--primary) / 0.5);
+  border-radius: 1rem;
+  transition-duration: 100ms;
+  z-index: 2;
+  user-select: none;
+}
+.react-grid-item > .react-resizable-handle {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  bottom: 4px;
+  right: 4px;
+  cursor: se-resize;
+  opacity: 0;
+  transition: opacity 200ms ease;
+  background-image: none;
+}
+.react-grid-item:hover > .react-resizable-handle {
+  opacity: 0.6;
+}
+.react-grid-item > .react-resizable-handle::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid hsl(var(--foreground) / 0.5);
+  border-bottom: 2px solid hsl(var(--foreground) / 0.5);
+  border-bottom-right-radius: 2px;
+}
+.dash-grid-item > div {
+  scrollbar-width: thin;
+}
