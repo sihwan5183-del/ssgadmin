@@ -872,17 +872,33 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                 );
               })()}
             </Field>
-            <Field label="개통방식">
+            <Field label="개통방식 *">
               <Select value={form.open_method ?? ""} onValueChange={(v) => set("open_method", v)}>
-                <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectTrigger className={cn(
+                  "h-9 bg-input/60 text-xs",
+                  requiredErrors.open_method && "border-destructive focus-visible:ring-destructive/40",
+                )}><SelectValue placeholder="선택" /></SelectTrigger>
                 <SelectContent>{OPEN_METHODS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
+              {requiredErrors.open_method && (
+                <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
+                  <AlertTriangle className="size-3" /> {requiredErrors.open_method}
+                </p>
+              )}
             </Field>
-            <Field label="최종상태">
+            <Field label="최종상태 *">
               <Select value={form.status ?? "개통완료"} onValueChange={(v) => set("status", v)}>
-                <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className={cn(
+                  "h-9 bg-input/60 text-xs",
+                  requiredErrors.status && "border-destructive focus-visible:ring-destructive/40",
+                )}><SelectValue /></SelectTrigger>
                 <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
+              {requiredErrors.status && (
+                <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
+                  <AlertTriangle className="size-3" /> {requiredErrors.status}
+                </p>
+              )}
             </Field>
             <Field label="개통일자">
               <Input
