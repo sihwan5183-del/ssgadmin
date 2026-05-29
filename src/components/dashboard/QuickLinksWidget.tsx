@@ -5,9 +5,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ExternalLink, Plus, Pencil, Trash2, GripVertical, Link2 } from "lucide-react";
+import { ExternalLink, Plus, Pencil, Trash2, Link2 } from "lucide-react";
 import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
+import { resolveIcon } from "@/lib/menuIcons";
+
+interface QuickLink {
+  id: string;
+  label: string;
+  url: string;
+  icon: string;
+  sort_order: number;
+  active: boolean;
+}
+
+const LinkIcon = ({ name }: { name?: string }) => {
+  const Icon = resolveIcon(name || "ExternalLink");
+  return <Icon className="size-6 text-slate-700" />;
+};
 
 interface QuickLink {
   id: string;
