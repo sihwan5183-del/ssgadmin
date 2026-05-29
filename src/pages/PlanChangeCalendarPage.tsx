@@ -43,7 +43,7 @@ function monthRange(year: number, month: number) {
   return { startDate: ymd(first), endDate: ymd(last) };
 }
 
-export default function PlanChangeCalendarPage() {
+export function PlanChangeCalendarView() {
   const today = new Date();
   const [cursor, setCursor] = useState<{ y: number; m: number }>({
     y: today.getFullYear(),
@@ -148,13 +148,6 @@ export default function PlanChangeCalendarPage() {
 
   return (
     <div>
-      <Header
-        title="요금제 변경 캘린더"
-        subtitle="개통일과 가입 조건 기준으로 자동 계산된 요금제 변경 예정일을 일자별로 관리합니다"
-        showScopeToggle={false}
-        showPeriodFilter={false}
-      />
-
       <Card className="p-4 glass mb-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-1">
