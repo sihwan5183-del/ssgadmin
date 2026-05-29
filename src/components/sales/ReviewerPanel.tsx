@@ -17,6 +17,7 @@ import { useRole } from "@/hooks/useRole";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { toast } from "sonner";
 import { PendingItemsEditor } from "./PendingItemsEditor";
+import { CompletionDateDialog } from "./CompletionDateDialog";
 
 interface ChecklistItem {
   key: string;
@@ -240,16 +241,39 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
   const isCompleted = normalizedStatus === completionTarget;
   const canToggleCompletion = isCompleted || normalizedStatus === completionPrev;
   const [marking, setMarking] = useState(false);
+  const [completionDateOpen, setCompletionDateOpen] = useState(false);
   const toggleCompletion = async () => {
+    // 정방향 전환(택배발송→개통완료 / 청약완료→설치완료)은 개통일자 입력 모달을 띄움
+    if (!isCompleted) {
+      setCompletionDateOpen(true);
+      return;
+    }
+    // 역방향(완료 → 이전 상태)은 즉시 처리하며 open_date 초기화
     setMarking(true);
-    const nextStatus = isCompleted ? completionPrev : completionTarget;
     const { error } = await supabase
       .from("sales")
-      .update({ status: nextStatus } as never)
+      .update({ status: completionPrev, open_date: null, open_month: null } as never)
       .eq("id", sale.id);
     setMarking(false);
     if (error) return toast.error(error.message);
-    toast.success(`${nextStatus}로 변경되었습니다`);
+    toast.success(`${completionPrev}로 복구되었습니다`);
+    onChanged();
+  };
+  const confirmCompletionWithDate = async (isoDate: string) => {
+    const { error } = await supabase
+      .from("sales")
+      .update({
+        status: completionTarget,
+        open_date: isoDate,
+        open_month: isoDate.slice(0, 7),
+      } as never)
+      .eq("id", sale.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setCompletionDateOpen(false);
+    toast.success(`${completionTarget} 처리 · 개통일자 ${isoDate}`);
     onChanged();
   };
 
@@ -774,6 +798,13 @@ export function ReviewerPanel({ sale, onChanged }: Props) {
           검수는 관리자만 수행할 수 있습니다.
         </div>
       ) : null}
+      <CompletionDateDialog
+        open={completionDateOpen}
+        targetStatus={completionTarget}
+        customerName={sale.customer_name}
+        onConfirm={confirmCompletionWithDate}
+        onCancel={() => setCompletionDateOpen(false)}
+      />
     </div>
   );
 }
