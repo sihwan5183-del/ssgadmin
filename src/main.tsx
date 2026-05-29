@@ -4,7 +4,7 @@ import "./index.css";
 
 // ─── 빌드 버전이 바뀌면 구형 레이아웃/필터 캐시 자동 폐기 ───
 // 이 상수만 올리면 모든 직원 브라우저에서 다음 진입 시 1회 자동 초기화 수행.
-const APP_CACHE_VERSION = "2026-05-29-expenses-section-grid";
+const APP_CACHE_VERSION = "2026-05-29-seg-unified";
 if (typeof window !== "undefined") {
   try {
     const prev = localStorage.getItem("__app_cache_version");
