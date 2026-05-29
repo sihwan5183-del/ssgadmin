@@ -49,7 +49,6 @@ import SegCalendarPage from "./pages/SegCalendarPage.tsx";
 import StaffGoalsPage from "./pages/StaffGoalsPage.tsx";
 import PendingItemsAdminPage from "./pages/PendingItemsAdminPage.tsx";
 import PlanRetentionAdminPage from "./pages/PlanRetentionAdminPage.tsx";
-import PlanChangeCalendarPage from "./pages/PlanChangeCalendarPage.tsx";
 import ApartmentPage from "./pages/ApartmentPage.tsx";
 import FileVaultPage from "./pages/FileVaultPage.tsx";
 import FileApprovalsPage from "./pages/FileApprovalsPage.tsx";
@@ -134,7 +133,7 @@ const App = () => {
                             </AdminOnlyRoute>
                           }
                         />
-                        <Route path="/plan-change-calendar" element={<PlanChangeCalendarPage />} />
+                        <Route path="/plan-change-calendar" element={<Navigate to="/activities?tab=plan-change" replace />} />
                         <Route
                           path="/admin/addon-retention"
                           element={<AdminOnlyRoute><AddonRetentionAdminPage /></AdminOnlyRoute>}

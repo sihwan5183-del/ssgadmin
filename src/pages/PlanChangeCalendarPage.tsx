@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { Header } from "@/components/layout/Header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { Navigate } from "react-router-dom";
 
 interface SaleRow {
   id: string;
@@ -43,7 +43,7 @@ function monthRange(year: number, month: number) {
   return { startDate: ymd(first), endDate: ymd(last) };
 }
 
-export default function PlanChangeCalendarPage() {
+export function PlanChangeCalendarView() {
   const today = new Date();
   const [cursor, setCursor] = useState<{ y: number; m: number }>({
     y: today.getFullYear(),
@@ -148,13 +148,6 @@ export default function PlanChangeCalendarPage() {
 
   return (
     <div>
-      <Header
-        title="요금제 변경 캘린더"
-        subtitle="개통일과 가입 조건 기준으로 자동 계산된 요금제 변경 예정일을 일자별로 관리합니다"
-        showScopeToggle={false}
-        showPeriodFilter={false}
-      />
-
       <Card className="p-4 glass mb-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-1">
@@ -399,4 +392,9 @@ export default function PlanChangeCalendarPage() {
       </p>
     </div>
   );
+}
+
+export default function PlanChangeCalendarPage() {
+  // 사이드바 메뉴에서 제거됨 — [검수 관리] 내부 탭으로 통합 리다이렉트
+  return <Navigate to="/activities?tab=plan-change" replace />;
 }
