@@ -859,47 +859,9 @@ const SalesLedgerPage = () => {
         showPeriodFilter
       />
 
-      {/* 검색 바 + 필터 상태 — 스마트 필터 제거, 컬럼 헤더 필터로 통합됨 */}
-      <section className="mb-4 flex items-center gap-2 flex-wrap">
-        <div className="relative flex-1 min-w-[220px] max-w-lg">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            value={searchQ}
-            onChange={(e) => setSearchQ(e.target.value)}
-            placeholder="고객명·연락처 뒷자리·모델명 검색…"
-            className="h-10 pl-9 pr-9 bg-input/60 border-border/60"
-          />
-          {searching ? (
-            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground animate-spin" />
-          ) : searchQ ? (
-            <button
-              type="button"
-              onClick={() => setSearchQ("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded"
-              aria-label="검색어 지우기"
-            >
-              <X className="size-4" />
-            </button>
-          ) : null}
-        </div>
-        {hasActiveFilter && (
-          <Badge variant="outline" className="h-7 px-2 text-[11px] border-primary/40 text-primary gap-1">
-            <Filter className="size-3" /> 컬럼 필터 적용중
-          </Badge>
-        )}
-        {hasActiveFilter && (
-          <button
-            onClick={resetAllFilters}
-            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 px-2 py-1 rounded hover:bg-muted/50"
-          >
-            <X className="size-3" /> 모든 필터 초기화
-          </button>
-        )}
-      </section>
-
       {/* 일별 판매실적 캘린더 (최상단) */}
       <div className="mb-5">
-        <UnifiedCalendarWidget onDayClick={(iso) => setDayFilter((cur) => (cur === iso ? null : iso))} />
+        <UnifiedCalendarWidget onDayClick={(iso) => setDayFilter((cur) => (cur === iso ? null : iso))} showTabs={false} />
         {dayFilter && (
           <div className="mt-2 flex items-center gap-2 text-[12px] text-foreground">
             <Badge variant="outline" className="h-7 px-2 border-primary/40 text-primary gap-1">
