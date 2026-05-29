@@ -177,13 +177,17 @@
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
     border: 1px solid hsl(var(--glass-border));
+    border-radius: 1rem;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 30px rgb(15 23 42 / 0.04);
   }
 
   .glass-strong {
-    background: hsl(0 0% 100% / 0.85);
+    background: hsl(0 0% 100% / 0.96);
     backdrop-filter: blur(32px) saturate(180%);
     -webkit-backdrop-filter: blur(32px) saturate(180%);
     border: 1px solid hsl(var(--glass-border));
+    border-radius: 1rem;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 12px 40px rgb(15 23 42 / 0.05);
   }
 
   .text-gradient {
@@ -198,6 +202,30 @@
 
   .glow-primary { box-shadow: var(--shadow-glow); }
   .shadow-card-elevated { box-shadow: var(--shadow-card); }
+
+  /* === Toss-style premium card + grid hover === */
+  .premium-card {
+    @apply bg-card border border-slate-100 rounded-2xl;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 30px rgb(15 23 42 / 0.04);
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out, border-color 0.3s ease-in-out;
+  }
+  .premium-card:hover {
+    box-shadow: 0 4px 8px rgb(15 23 42 / 0.05), 0 18px 48px rgb(15 23 42 / 0.08);
+    border-color: rgb(226 232 240);
+  }
+
+  /* Dashboard grid: every tile gets the premium feel + lift on hover (not during drag). */
+  .dash-grid-item {
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  }
+  .dash-grid-item:hover:not(.react-draggable-dragging):not(.resizing) {
+    transform: translateY(-2px);
+  }
+  .dash-grid-item.react-draggable-dragging,
+  .dash-grid-item.resizing {
+    transition: none;
+    z-index: 20;
+  }
 
   .ring-gradient {
     position: relative;
