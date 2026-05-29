@@ -87,16 +87,18 @@ const cleanText = (value: unknown) => {
   return value == null ? null : String(value);
 };
 
-const toDogmaruItem = (item: Lead) => ({
-  ...item,
-  registration_date: cleanText(item.registration_date),
-  customer_name: cleanText(item.customer_name),
-  customer_phone: cleanText(item.customer_phone),
-  branch_name: cleanText(item.branch_name),
-  activation_status: cleanText(item.activation_status),
-  cancellation_status: cleanText(item.cancellation_status),
-  activation_number: cleanText(item.activation_number),
-});
+function fmtCompactDate(iso: string) {
+  const d = new Date(iso);
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  let hh = d.getHours();
+  const ampm = hh < 12 ? "오전" : "오후";
+  hh = hh % 12;
+  if (hh === 0) hh = 12;
+  const hStr = String(hh).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${mm}-${dd} ${ampm} ${hStr}:${min}`;
+}
 
 type LeadDraft = {
   name: string;
