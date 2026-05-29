@@ -318,6 +318,33 @@ export default function LeadsPage() {
     })();
   }, [openLead?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── 전역 토스트 알림 클릭 시 진입하는 ?tab=meta|dogmaru&highlight=<id> 동기화 ──
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "meta" || tab === "dogmaru" || tab === "other") {
+      setSourceTab(tab as "meta" | "dogmaru" | "other");
+    }
+    const hid = searchParams.get("highlight");
+    if (hid) {
+      setHighlightId(hid);
+      const t = setTimeout(() => {
+        setHighlightId(null);
+        // URL 정리: 깜빡임이 끝나면 highlight 파라미터 제거
+        const next = new URLSearchParams(searchParams);
+        next.delete("highlight");
+        setSearchParams(next, { replace: true });
+      }, 6000);
+      // 스크롤 포커스
+      requestAnimationFrame(() => {
+        const el = document.querySelector(`[data-lead-row="${hid}"]`);
+        if (el && "scrollIntoView" in el) {
+          (el as HTMLElement).scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      });
+      return () => clearTimeout(t);
+    }
+  }, [searchParams, setSearchParams]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
