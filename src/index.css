@@ -11,12 +11,12 @@
 @layer base {
   :root {
     /* 베이스 — 아주 연한 그레이 캔버스 (#F9FAFB) */
-    --background: 220 14% 97%;
+    --background: 220 20% 98%;
     /* 본문 텍스트: 거의 순수 검정에 가까운 진한 톤으로 강화 (#1A1A1A) */
-    --foreground: 0 0% 10%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 10%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 10%;
@@ -82,8 +82,8 @@
     --shadow-elevated: 0 8px 32px -8px hsl(220 14% 20% / 0.12);
 
     /* Glassmorphism — 화이트 글래스 */
-    --glass-bg: 0 0% 100% / 0.72;
-    --glass-border: 330 30% 90% / 0.6;
+    --glass-bg: 0 0% 100% / 0.92;
+    --glass-border: 220 14% 93%;
 
     /* Sidebar */
     --sidebar-background: 0 0% 99%;
