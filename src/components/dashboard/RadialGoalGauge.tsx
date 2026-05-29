@@ -78,26 +78,29 @@ export const RadialGoalGauge = () => {
     return { color: "hsl(158 65% 42%)", glow: "hsl(158 65% 42% / 0.4)", status: "초과달성" };
   }, [pct]);
 
-  // 반원 (180도) — SVG arc
+  // 반원 (180도) — SVG arc · viewBox 좌표계 (실제 렌더 크기는 컨테이너에 100% 맞춤)
   const size = 220;
   const stroke = 18;
   const radius = (size - stroke) / 2;
-  const cx = size / 2;
   const cy = size / 2;
   const circumference = Math.PI * radius; // 반원
   const offset = circumference * (1 - pct / 100);
 
   return (
-    <div className="glass rounded-xl p-4 shadow-card-elevated relative overflow-hidden">
+    <div className="h-full w-full flex flex-col bg-card rounded-xl border border-border/60 shadow-sm p-4 relative overflow-hidden">
       <div className="absolute -right-10 -top-10 size-40 rounded-full opacity-20 blur-2xl" style={{ background: color }} />
 
-      <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-foreground/80">
         <Target className="size-3.5 text-primary" />
         {label} 목표 달성률
       </div>
 
-      <div className="relative mt-1 flex justify-center">
-        <svg width={size} height={size / 2 + 20} viewBox={`0 0 ${size} ${size / 2 + 20}`}>
+      <div className="relative mt-1 flex-1 min-h-0 flex items-center justify-center">
+        <svg
+          viewBox={`0 0 ${size} ${size / 2 + 20}`}
+          preserveAspectRatio="xMidYMid meet"
+          className="w-full h-full max-h-[260px]"
+        >
           <defs>
             <linearGradient id="gauge-grad" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0%" stopColor={color} stopOpacity="0.6" />
@@ -133,13 +136,16 @@ export const RadialGoalGauge = () => {
           />
         </svg>
 
-        {/* 중앙 숫자 */}
-        <div className="absolute inset-0 flex flex-col items-center justify-end pb-2">
+        {/* 중앙 숫자 — 컨테이너 크기에 맞게 가변 */}
+        <div className="absolute inset-0 flex flex-col items-center justify-end pb-2 pointer-events-none">
           <div className="flex items-baseline gap-1">
-            <span className="text-5xl font-bold tabular-nums leading-none" style={{ color, textShadow: `0 0 20px ${glow}` }}>
+            <span
+              className="font-black tabular-nums leading-none text-[clamp(1.75rem,7cqw,3.25rem)]"
+              style={{ color, textShadow: `0 0 20px ${glow}` }}
+            >
               {pct}
             </span>
-            <span className="text-xl font-semibold text-foreground">%</span>
+            <span className="text-base font-bold text-foreground">%</span>
           </div>
           <span
             className="mt-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
@@ -150,11 +156,11 @@ export const RadialGoalGauge = () => {
         </div>
       </div>
 
-      <div className="mt-1 flex items-center justify-between text-[11px]">
-        <span className="text-muted-foreground">
+      <div className="mt-1 flex items-center justify-between text-[11px] flex-wrap gap-x-2">
+        <span className="text-foreground/70">
           <span className="font-semibold text-foreground tabular-nums">{current.toLocaleString()}</span> / {monthlyTarget.toLocaleString()} 건
         </span>
-        <span className="text-muted-foreground">
+        <span className="text-foreground/70">
           잔여 <span className="font-semibold text-foreground">{Math.max(0, monthlyTarget - current).toLocaleString()}</span>건
         </span>
       </div>
