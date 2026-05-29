@@ -34,7 +34,7 @@ import { InquiryForm } from "@/components/inquiries/InquiryForm";
 import { InquiryDetailDialog } from "@/components/inquiries/InquiryDetailDialog";
 import { useInquiryStatuses } from "@/hooks/useInquiryStatuses";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
-import { inquiryStatusClass } from "@/lib/inquiryStatus";
+import { inquiryStatusClass, inquiryStatusTextClass } from "@/lib/inquiryStatus";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ColumnFilter, matchesFilter, type FilterSelection } from "@/components/common/ColumnFilter";
@@ -778,11 +778,11 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
                   <th className="text-left px-2 py-2 w-[56px]">
                     <ColumnFilter label="통신사" values={allCarriers} selected={filterCarrier} onChange={setFilterCarrier} />
                   </th>
-                  <th className="text-left px-2 py-2 w-[84px]">고객명</th>
-                  <th className="text-left px-2 py-2 w-[76px]">생년월일</th>
+                  <th className="text-left px-2 py-2 w-[140px]">고객명</th>
+                  <th className="text-left px-2 py-2 w-[80px]">생년월일</th>
                   <th className="text-left px-2 py-2 w-[108px]">연락처</th>
-                  <th className="text-left px-2 py-2 w-[120px]">상담모델</th>
-                  <th className="text-left px-2 py-2 w-[84px]">
+                  <th className="text-left px-2 py-2 w-[104px]">상담모델</th>
+                  <th className="text-left px-2 py-2 w-[72px]">
                     <ColumnFilter label="최종상태" values={allStatuses} selected={filterStatus} onChange={setFilterStatus} />
                   </th>
                   <th className="text-left px-2 py-2 w-[72px]">최종액션</th>
@@ -889,12 +889,14 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
                           )}
                         </td>
                         <td className="px-2 py-3 align-middle whitespace-nowrap">
-                          <Badge
-                            variant="outline"
-                            className={cn("text-[10px] h-5 px-1.5 whitespace-nowrap", inquiryStatusClass(displayStatus))}
+                          <span
+                            className={cn(
+                              "text-xs font-bold whitespace-nowrap",
+                              inquiryStatusTextClass(displayStatus),
+                            )}
                           >
                             {displayStatus || "-"}
-                          </Badge>
+                          </span>
                         </td>
                         <td className="px-2 py-3 text-[11px] tabular-nums align-middle whitespace-nowrap text-foreground">
                           {lastLog?.created_at
