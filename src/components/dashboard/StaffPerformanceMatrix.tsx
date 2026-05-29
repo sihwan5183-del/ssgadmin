@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
+import { applyActivationFilter } from "@/lib/salesFilter";
 import { Crown, Medal, Users, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -76,13 +77,13 @@ export const StaffPerformanceMatrix = () => {
   const load = async () => {
     setLoading(true);
     const [salesRes, profilesRes] = await Promise.all([
-      supabase
-        .from("sales")
-        .select("created_by, manager, product, sale_type, custom_fields")
-        .gte("open_date", startDate)
-        .lte("open_date", endDate)
-        .neq("status", "취소")
-        .limit(20000),
+      applyActivationFilter(
+        supabase
+          .from("sales")
+          .select("created_by, manager, product, sale_type, custom_fields"),
+        startDate,
+        endDate,
+      ).limit(20000),
       supabase
         .from("profiles")
         .select("user_id, display_name, store, status, show_in_dashboard")
