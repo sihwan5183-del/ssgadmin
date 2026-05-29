@@ -8,8 +8,8 @@ import { ChannelMarginRanking } from "@/components/finance/ChannelMarginRanking"
 import { SettlementGap } from "@/components/finance/SettlementGap";
 import { EmptyHint } from "@/components/finance/EmptyHint";
 import { CategoryBreakdownChart } from "@/components/finance/CategoryBreakdownChart";
-import { TrendingUp, TrendingDown, Sparkles, Target, Banknote, Wallet, HandCoins, Store, EyeOff, Smartphone, Wifi, Layers, CreditCard, Receipt, RotateCcw } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { TrendingUp, TrendingDown, Banknote, Wallet, HandCoins, Store, EyeOff, Smartphone, Wifi, Layers, CreditCard, Receipt, RotateCcw } from "lucide-react";
+import { useCallback, useState } from "react";
 import { DashboardGrid, type GridWidget } from "@/components/dashboard/DashboardGrid";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
