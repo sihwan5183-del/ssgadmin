@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { useDeviceModels } from "./useDeviceModels";
+import { groupChannel } from "@/lib/channelGroup";
 
 /** Strip capacity / color suffixes to get the series name (e.g. "S942-256" → "S942") */
 export function seriesName(pet: string): string {
