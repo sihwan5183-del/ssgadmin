@@ -198,7 +198,7 @@ export default function LeadsPage() {
 
   useEffect(() => {
     load();
-    // 기타 인입(inquiries) 경량 집계 데이터 — 매트릭스 보드용
+    // 기타인입(inquiries) 경량 집계 데이터 — 매트릭스 보드용
     (async () => {
       const { data } = await supabase
         .from("inquiries")
@@ -515,7 +515,7 @@ export default function LeadsPage() {
               <tr className="text-xs text-muted-foreground border-b border-border">
                 <th className="text-left font-medium py-2 px-2 w-32">지표</th>
                 <th className="text-right font-medium py-2 px-2">메타</th>
-                <th className="text-right font-medium py-2 px-2">도그마루</th>
+                <th className="text-right font-medium py-2 px-2 whitespace-pre-line">도그마루{"\n"}214</th>
                 <th className="text-right font-medium py-2 px-2">기타</th>
                 <th className="text-right font-semibold py-2 px-2 text-foreground">총합</th>
               </tr>
@@ -580,11 +580,11 @@ export default function LeadsPage() {
                 <div className="grid grid-cols-3 gap-2 text-center">
                   {[
                     { k: "메타", v: m },
-                    { k: "도그마루", v: d },
+                    { k: "도그마루\n214", v: d },
                     { k: "기타", v: o },
                   ].map((c) => (
                     <div key={c.k} className="rounded-md bg-muted/50 py-1.5">
-                      <div className="text-[10px] text-muted-foreground">{c.k}</div>
+                      <div className="text-[10px] text-muted-foreground whitespace-pre-line leading-tight">{c.k}</div>
                       <div className="text-sm font-semibold tabular-nums">{c.v.toLocaleString()}</div>
                     </div>
                   ))}
@@ -624,11 +624,11 @@ export default function LeadsPage() {
             <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.meta}</Badge>
           </TabsTrigger>
           <TabsTrigger value="dogmaru" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
-            도그마루 시트
+            도그마루{"\n"}214
             <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.dogmaru}</Badge>
           </TabsTrigger>
           <TabsTrigger value="other" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
-            기타 인입
+            기타인입
           </TabsTrigger>
         </TabsList>
       </Tabs>
