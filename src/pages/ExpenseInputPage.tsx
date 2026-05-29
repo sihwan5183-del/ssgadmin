@@ -844,9 +844,13 @@ export default function ExpenseInputPage() {
                 <Label>
                   {adForm.amount_mode === "daily" ? "일별 소진 금액 (₩) *" : "최종 합산 금액 (₩) *"}
                 </Label>
-                <Input inputMode="numeric" placeholder="예: 500000"
-                  value={adForm.amount}
-                  onChange={(e) => setAdForm({ ...adForm, amount: e.target.value })} />
+                <Input
+                  inputMode="numeric"
+                  placeholder="예: 500,000"
+                  className="text-right tabular-nums font-medium text-slate-900"
+                  value={adForm.amount ? Number(adForm.amount.replace(/\D/g, "") || 0).toLocaleString("ko-KR") : ""}
+                  onChange={(e) => setAdForm({ ...adForm, amount: e.target.value.replace(/\D/g, "") })}
+                />
                 {(() => {
                   const start = new Date(adForm.spend_date + "T00:00:00");
                   const end = new Date((adForm.end_date || adForm.spend_date) + "T00:00:00");
@@ -882,8 +886,9 @@ export default function ExpenseInputPage() {
                     <Input
                       inputMode="numeric"
                       placeholder="자동 계산"
-                      value={displayValue}
-                      onChange={(e) => setAdForm({ ...adForm, total_override: e.target.value, total_overridden: true })}
+                      className="text-right tabular-nums font-medium text-slate-900"
+                      value={displayValue ? Number(String(displayValue).replace(/\D/g, "") || 0).toLocaleString("ko-KR") : ""}
+                      onChange={(e) => setAdForm({ ...adForm, total_override: e.target.value.replace(/\D/g, ""), total_overridden: true })}
                     />
                     <div className="flex items-center justify-between mt-1 gap-2">
                       <p className="text-[10px] text-muted-foreground">
@@ -972,9 +977,13 @@ export default function ExpenseInputPage() {
               </div>
               <div>
                 <Label>금액 (₩) *</Label>
-                <Input inputMode="numeric" placeholder="예: 1500000"
-                  value={etcForm.amount}
-                  onChange={(e) => setEtcForm({ ...etcForm, amount: e.target.value })} />
+                <Input
+                  inputMode="numeric"
+                  placeholder="예: 1,500,000"
+                  className="text-right tabular-nums font-medium text-slate-900"
+                  value={etcForm.amount ? Number(etcForm.amount.replace(/\D/g, "") || 0).toLocaleString("ko-KR") : ""}
+                  onChange={(e) => setEtcForm({ ...etcForm, amount: e.target.value.replace(/\D/g, "") })}
+                />
               </div>
               <div className="md:col-span-2 lg:col-span-3">
                 <Label>거래처 / 적요</Label>
@@ -1049,8 +1058,11 @@ export default function ExpenseInputPage() {
               </div>
               <div>
                 <Label>월 고정 금액 (₩) *</Label>
-                <Input inputMode="numeric" placeholder="예: 29000"
-                  value={fixedForm.amount}
+                <Input
+                  inputMode="numeric"
+                  placeholder="예: 29,000"
+                  className="text-right tabular-nums font-medium text-slate-900"
+                  value={fixedForm.amount ? Number(fixedForm.amount.replace(/\D/g, "") || 0).toLocaleString("ko-KR") : ""}
                   onChange={(e) => setFixedForm({ ...fixedForm, amount: e.target.value })} />
               </div>
               <div className="md:col-span-2">
