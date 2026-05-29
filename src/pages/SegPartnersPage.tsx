@@ -30,10 +30,13 @@ export default function SegPartnersPage() {
   const [selected, setSelected] = useState<SegPartner | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = searchParams.get("tab") === "apartment" ? "apartment" : "partners";
-  const [tab, setTab] = useState<"partners" | "apartment">(initialTab);
+  const tabParam = searchParams.get("tab");
+  const initialTab: "partners" | "apartment" | "storefront" =
+    tabParam === "apartment" ? "apartment" : tabParam === "storefront" ? "storefront" : "partners";
+  const [tab, setTab] = useState<"partners" | "apartment" | "storefront">(initialTab);
   const onTabChange = (v: string) => {
-    const next = v === "apartment" ? "apartment" : "partners";
+    const next: "partners" | "apartment" | "storefront" =
+      v === "apartment" ? "apartment" : v === "storefront" ? "storefront" : "partners";
     setTab(next);
     const sp = new URLSearchParams(searchParams);
     sp.set("tab", next);
@@ -126,11 +129,12 @@ export default function SegPartnersPage() {
         </Suspense>
       </Card>
 
-      {/* ── 하단 탭 ── */}
+      {/* ── 하단 탭 (3대 핵심 활동) ── */}
       <Tabs value={tab} onValueChange={onTabChange} className="w-full">
-        <TabsList className="grid grid-cols-2 w-full max-w-md">
-          <TabsTrigger value="partners">제휴 업체 목록</TabsTrigger>
-          <TabsTrigger value="apartment">아파트 게시 현황</TabsTrigger>
+        <TabsList className="grid grid-cols-3 w-full max-w-2xl h-11">
+          <TabsTrigger value="partners" className="text-sm font-semibold">제휴업체 목록</TabsTrigger>
+          <TabsTrigger value="apartment" className="text-sm font-semibold">아파트 게시</TabsTrigger>
+          <TabsTrigger value="storefront" className="text-sm font-semibold">점두 활동</TabsTrigger>
         </TabsList>
 
         <TabsContent value="partners" className="mt-4 space-y-3">
@@ -225,6 +229,13 @@ export default function SegPartnersPage() {
               <ApartmentPage />
             </Suspense>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="storefront" className="mt-4">
+          <StorefrontActivityTable
+            activities={activities}
+            partners={partners}
+          />
         </TabsContent>
       </Tabs>
 
