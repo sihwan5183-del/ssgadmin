@@ -1072,29 +1072,67 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
           </div>
           {/* 부가서비스 - 자유 텍스트 입력 (선택 사항) */}
           <div className="grid grid-cols-12 gap-2">
-                  <div className="col-span-12 md:col-span-4">
-                    <Field label="부가서비스 1 (선택)">
-                      <Input
-                        value={form.vas1 ?? ""}
-                        onChange={(e) => set("vas1", e.target.value || null)}
-                        placeholder="자유 입력 (예: 음악감상, 데이터팩 등)"
-                        className="h-9 bg-input/60 text-xs"
-                        maxLength={200}
-                      />
-                    </Field>
-                  </div>
-                  <div className="col-span-12 md:col-span-4">
-                    <Field label="부가서비스 2 (다중 선택)">
-                      <MultiSelectChips
-                        options={addonMaster}
-                        value={(form.vas2 ?? "")
+                  <div className="col-span-12 md:col-span-8">
+                    <Field label="부가서비스">
+                      {(() => {
+                        const vas2List = (form.vas2 ?? "")
                           .split(/[,，]\s*/)
                           .map((s) => s.trim())
-                          .filter(Boolean)}
-                        onChange={(next) => set("vas2", next.length > 0 ? next.join(", ") : null)}
-                        placeholder="마스터에서 선택…"
-                        emptyHint="어드민 [부가서비스 유지기간]에서 등록하세요"
-                      />
+                          .filter(Boolean);
+                        const addons: string[] = [form.vas1 ?? "", ...vas2List];
+                        if (addons.length === 0) addons.push("");
+                        const commit = (next: string[]) => {
+                          const cleaned = next.map((s) => s ?? "");
+                          const first = cleaned[0] ?? "";
+                          const rest = cleaned.slice(1).map((s) => s.trim()).filter(Boolean);
+                          set("vas1", first.trim() ? first : null);
+                          set("vas2", rest.length > 0 ? rest.join(", ") : null);
+                        };
+                        return (
+                          <div className="space-y-1.5">
+                            {addons.map((val, i) => (
+                              <div key={i} className="flex items-center gap-1.5">
+                                <Input
+                                  value={val}
+                                  onChange={(e) => {
+                                    const next = [...addons];
+                                    next[i] = e.target.value;
+                                    commit(next);
+                                  }}
+                                  placeholder="자유 입력 (예: V컬러링, 마이포켓 등)"
+                                  className="h-9 bg-input/60 text-xs border-border/60 text-slate-900"
+                                  maxLength={200}
+                                />
+                                {i === addons.length - 1 ? (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-9 px-2 text-xs whitespace-nowrap shrink-0"
+                                    onClick={() => commit([...addons, ""])}
+                                  >
+                                    <Plus className="size-3.5 mr-1" /> 추가
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-9 w-9 shrink-0 text-destructive hover:text-destructive"
+                                    onClick={() => {
+                                      const next = addons.filter((_, idx) => idx !== i);
+                                      commit(next.length === 0 ? [""] : next);
+                                    }}
+                                    aria-label="부가서비스 삭제"
+                                  >
+                                    <Trash2 className="size-3.5" />
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </Field>
                   </div>
                   <div className="col-span-12 md:col-span-4">
