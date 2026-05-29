@@ -858,7 +858,11 @@ export default function LeadsPage() {
                 return (
                   <TableRow
                     key={item.id}
-                    className="cursor-pointer border-b border-border hover:bg-muted/40"
+                    data-lead-row={item.id}
+                    className={
+                      "cursor-pointer border-b border-border hover:bg-muted/40 transition-colors " +
+                      (highlightId === item.id ? "bg-amber-50 ring-2 ring-amber-400 animate-pulse" : "")
+                    }
                     onClick={() => setOpenLead(item)}
                   >
                     <TableCell className="tabular-nums text-foreground font-medium py-1.5">
@@ -954,7 +958,11 @@ export default function LeadsPage() {
             {filtered.map((r) => (
               <TableRow
                 key={r.id}
-                className="cursor-pointer border-b border-border hover:bg-muted/40"
+                data-lead-row={r.id}
+                className={
+                  "cursor-pointer border-b border-border hover:bg-muted/40 transition-colors " +
+                  (highlightId === r.id ? "bg-amber-50 ring-2 ring-amber-400 animate-pulse" : "")
+                }
                 onClick={() => setOpenLead(r)}
               >
                 <TableCell className="tabular-nums text-xs text-foreground font-medium whitespace-nowrap py-1.5">
