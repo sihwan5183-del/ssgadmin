@@ -44,6 +44,7 @@ import { usePeriod } from "@/contexts/PeriodContext";
 import { CalendarDays, Calendar as CalendarIcon, CalendarRange } from "lucide-react";
 import { useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { DashboardGrid, type GridWidget } from "@/components/dashboard/DashboardGrid";
 
 const isoToday = () => {
   const d = new Date();
@@ -172,6 +173,98 @@ const IndexInner = () => {
   const dNet = pctChange(finance.netMargin, finance.prev.netMargin);
   const dRoi = pctChange(finance.roi, finance.prev.roi);
 
+  // === 7-card KPI block (rendered as a single grid widget) ===
+  const StatCardsBlock = (
+    <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3 md:gap-4">
+      <StatCard
+        label="총 수익"
+        value={finance.loading ? "…" : formatShortKRW(finance.totalRevenue)}
+        periodLabel={cardPeriodLabel}
+        delta={dRevenue}
+        icon={TrendingUp}
+        accent="primary"
+        hint="단가표 수수료 + 부가서비스 + 수급완료 미수금 + 반납완료 상품권 + 확정 중고폰"
+      />
+      <StatCard
+        label="총 지출"
+        value={finance.loading ? "…" : formatShortKRW(finance.totalExpense)}
+        periodLabel={cardPeriodLabel}
+        delta={dExpense}
+        icon={TrendingDown}
+        accent="warning"
+        hint="지원금 + 5번 법인카드 + 광고비/기타지출 + 모요 수수료"
+      />
+      <StatCard
+        label="순수익"
+        value={finance.loading ? "…" : formatShortKRW(finance.netMargin)}
+        periodLabel={cardPeriodLabel}
+        delta={dNet}
+        icon={Sparkles}
+        accent="success"
+        hint="총 수익 − 총 지출"
+      />
+      <StatCard
+        label="정산 ROI"
+        value={`${liveRoi}%`}
+        periodLabel={cardPeriodLabel}
+        delta={dRoi}
+        icon={Target}
+        accent="secondary"
+        hint="순수익 ÷ 총 지출"
+      />
+      <CashTodayCard />
+      <PendingItemsCard />
+      {isVisible("untreated_leads") && <UntreatedLeadsCard />}
+    </section>
+  );
+
+  const SettlementChartsBlock = (
+    <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
+      <RevenueComposition />
+      <CategoryBreakdownChart type="지출" />
+    </section>
+  );
+
+  // Widget registry — id, node, default lg position. Visibility filtered via
+  // existing useDashboardLayout toggles; grid auto-compacts hidden gaps.
+  const widgetDefs: Array<{ id: string; node: React.ReactNode; lg: GridWidget["lg"]; always?: boolean; adminOnly?: boolean }> = [
+    { id: "review_alerts",        node: <MyReviewAlerts />,                lg: { x: 0,  y: 0,   w: 12, h: 4 } },
+    { id: "today_care",           node: <TodayCareWidget />,               lg: { x: 0,  y: 4,   w: 12, h: 6 } },
+    { id: "quick_links",          node: <QuickLinksWidget />,              lg: { x: 0,  y: 10,  w: 12, h: 4 }, adminOnly: true },
+    { id: "unified_calendar",     node: <UnifiedCalendarWidget />,         lg: { x: 0,  y: 14,  w: 12, h: 12 }, always: true },
+    { id: "top_product",          node: <TopProductScoreboard />,          lg: { x: 0,  y: 26,  w: 12, h: 8 }, always: true },
+    { id: "goal_gauge",           node: <RadialGoalGauge />,               lg: { x: 0,  y: 34,  w: 4,  h: 9 } },
+    { id: "hero_performance",     node: <HeroPerformance />,               lg: { x: 4,  y: 34,  w: 8,  h: 9 } },
+    { id: "stat_cards",           node: StatCardsBlock,                    lg: { x: 0,  y: 43,  w: 12, h: 8 } },
+    { id: "channel_activation",   node: <ChannelActivationBreakdown />,    lg: { x: 0,  y: 51,  w: 12, h: 9 }, adminOnly: true },
+    { id: "activation_breakdown", node: <ActivationBreakdown />,           lg: { x: 0,  y: 60,  w: 12, h: 9 } },
+    { id: "performance_chart",    node: <PerformanceChart />,              lg: { x: 0,  y: 69,  w: 8,  h: 10 } },
+    { id: "channel_donut",        node: <ChannelDonut />,                  lg: { x: 8,  y: 69,  w: 4,  h: 10 } },
+    { id: "settlement_charts",    node: SettlementChartsBlock,             lg: { x: 0,  y: 79,  w: 12, h: 10 } },
+    { id: "my_incentive",         node: <MyIncentiveWidget />,             lg: { x: 0,  y: 89,  w: 12, h: 6 } },
+    { id: "store_ranking",        node: <StoreRevenueRanking />,           lg: { x: 0,  y: 95,  w: 6,  h: 12 } },
+    { id: "store_efficiency",     node: <StoreEfficiencyBubble />,         lg: { x: 6,  y: 95,  w: 6,  h: 12 } },
+    { id: "staff_matrix",         node: <StaffPerformanceMatrix />,        lg: { x: 0,  y: 107, w: 12, h: 14 } },
+    { id: "performance_ledger",   node: <PerformanceLedger />,             lg: { x: 0,  y: 121, w: 12, h: 14 } },
+    { id: "overall_model",        node: <OverallModelAnalysis />,          lg: { x: 0,  y: 135, w: 12, h: 12 } },
+    { id: "channel_model",        node: <ChannelModelAnalysis />,          lg: { x: 0,  y: 147, w: 12, h: 12 } },
+    { id: "live_feed",            node: <LiveActivityFeed />,              lg: { x: 0,  y: 159, w: 6,  h: 12 } },
+    { id: "planner_feed",         node: <PlannerFeed />,                   lg: { x: 6,  y: 159, w: 6,  h: 12 } },
+    { id: "inventory_widget",     node: <InventoryWidget />,               lg: { x: 0,  y: 171, w: 6,  h: 10 } },
+    { id: "strategy_gauges",      node: <StrategyModelGauges />,           lg: { x: 6,  y: 171, w: 6,  h: 10 } },
+    { id: "ad_schedule",          node: <AdScheduleWidget />,              lg: { x: 0,  y: 181, w: 6,  h: 10 } },
+    { id: "ranking_panel",        node: <RankingPanel />,                  lg: { x: 6,  y: 181, w: 6,  h: 10 } },
+  ];
+
+  const gridItems: GridWidget[] = widgetDefs
+    .filter((w) => {
+      if (w.adminOnly && !canSeeAdminWidgets) return false;
+      if (w.always) return true;
+      return isVisible(w.id);
+    })
+    .map((w) => ({ id: w.id, node: w.node, lg: w.lg }));
+
+
   return (
     <>
       <Header
@@ -232,28 +325,6 @@ const IndexInner = () => {
         </span>
       </div>
 
-      {/* === 본인 검수 피드백 (반려/수정요청) === */}
-      {isVisible("review_alerts") && <MyReviewAlerts />}
-
-      {/* === 오늘의 관리 고객 (요금제 변경 + 부가서비스 해지) === */}
-      {isVisible("today_care") && (
-        <section className="mb-3">
-          <TodayCareWidget />
-        </section>
-      )}
-
-      {/* 업무 바로가기 */}
-      {canSeeAdminWidgets && isVisible("quick_links") && (
-        <section className="mb-1.5">
-          <QuickLinksWidget />
-        </section>
-      )}
-
-      {/* 통합 캘린더 (판매실적 / 영업 / 아파트게시 / 광고) */}
-      <section className="mb-4">
-        <UnifiedCalendarWidget />
-      </section>
-
       {excludedLabels.length > 0 && (
         <div className="mb-1.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 flex items-center gap-2 text-xs">
           <EyeOff className="size-4 text-destructive shrink-0" />
@@ -270,158 +341,7 @@ const IndexInner = () => {
         </div>
       )}
 
-      {/* ========================================================
-          [1] 최상단 — 핵심 요약 (목표 달성률 + 오늘/실적 KPI)
-         ======================================================== */}
-      {/* 6대 핵심 상품 성과 보드 — 캘린더가 비워준 명당자리 */}
-      <section className="mb-4">
-        <TopProductScoreboard />
-      </section>
-
-      {(isVisible("goal_gauge") || isVisible("hero_performance")) && (
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4 mb-4">
-          {isVisible("goal_gauge") && <RadialGoalGauge />}
-          {isVisible("hero_performance") && (
-            <div className={isVisible("goal_gauge") ? "lg:col-span-2" : "lg:col-span-3"}>
-              <HeroPerformance />
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* 핵심 KPI (PC 4열 / 태블릿 2열 / 모바일 1열) */}
-      {isVisible("stat_cards") && (
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3 md:gap-4 mb-4">
-        <StatCard
-          label="총 수익"
-          value={finance.loading ? "…" : formatShortKRW(finance.totalRevenue)}
-          periodLabel={cardPeriodLabel}
-          delta={dRevenue}
-          icon={TrendingUp}
-          accent="primary"
-          hint="단가표 수수료 + 부가서비스 + 수급완료 미수금 + 반납완료 상품권 + 확정 중고폰"
-        />
-        <StatCard
-          label="총 지출"
-          value={finance.loading ? "…" : formatShortKRW(finance.totalExpense)}
-          periodLabel={cardPeriodLabel}
-          delta={dExpense}
-          icon={TrendingDown}
-          accent="warning"
-          hint="지원금 + 5번 법인카드 + 광고비/기타지출 + 모요 수수료"
-        />
-        <StatCard
-          label="순수익"
-          value={finance.loading ? "…" : formatShortKRW(finance.netMargin)}
-          periodLabel={cardPeriodLabel}
-          delta={dNet}
-          icon={Sparkles}
-          accent="success"
-          hint="총 수익 − 총 지출"
-        />
-        <StatCard
-          label="정산 ROI"
-          value={`${liveRoi}%`}
-          periodLabel={cardPeriodLabel}
-          delta={dRoi}
-          icon={Target}
-          accent="secondary"
-          hint="순수익 ÷ 총 지출"
-        />
-        <CashTodayCard />
-        <PendingItemsCard />
-        {isVisible("untreated_leads") && <UntreatedLeadsCard />}
-      </section>
-      )}
-
-      {canSeeAdminWidgets && isVisible("channel_activation") && (
-        <section className="mb-4"><ChannelActivationBreakdown /></section>
-      )}
-      {isVisible("activation_breakdown") && (
-        <section className="mb-4"><ActivationBreakdown /></section>
-      )}
-
-      {/* ========================================================
-          [2] 중단 — 추세 / 정산 차트
-         ======================================================== */}
-      {(isVisible("performance_chart") || isVisible("channel_donut")) && (
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4 mb-4">
-          {isVisible("performance_chart") && (
-            <div className={isVisible("channel_donut") ? "lg:col-span-2" : "lg:col-span-3"}>
-              <PerformanceChart />
-            </div>
-          )}
-          {isVisible("channel_donut") && <ChannelDonut />}
-        </section>
-      )}
-
-      {isVisible("settlement_charts") && (
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4 mb-4">
-          <RevenueComposition />
-          <CategoryBreakdownChart type="지출" />
-        </section>
-      )}
-
-      {isVisible("my_incentive") && (
-        <section className="mb-4">
-          <MyIncentiveWidget />
-        </section>
-      )}
-
-      {/* ========================================================
-          [3] 하단 — 팀 랭킹 / 상세 매트릭스
-         ======================================================== */}
-      {(isVisible("store_ranking") || isVisible("store_efficiency")) && (
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4 mb-4">
-          {isVisible("store_ranking") && <StoreRevenueRanking />}
-          {isVisible("store_efficiency") && <StoreEfficiencyBubble />}
-        </section>
-      )}
-
-      {isVisible("staff_matrix") && (
-        <section className="mb-4">
-          <StaffPerformanceMatrix />
-        </section>
-      )}
-
-      {isVisible("performance_ledger") && (
-        <section className="mb-4">
-          <PerformanceLedger />
-        </section>
-      )}
-
-      {isVisible("overall_model") && (
-        <section className="mb-4">
-          <OverallModelAnalysis />
-        </section>
-      )}
-
-      {isVisible("channel_model") && (
-        <section className="mb-4">
-          <ChannelModelAnalysis />
-        </section>
-      )}
-
-      {(isVisible("live_feed") || isVisible("planner_feed")) && (
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4 mb-4">
-          {isVisible("live_feed") && <LiveActivityFeed />}
-          {isVisible("planner_feed") && <PlannerFeed />}
-        </section>
-      )}
-
-      {(isVisible("inventory_widget") || isVisible("strategy_gauges")) && (
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4 mb-4">
-          {isVisible("inventory_widget") && <InventoryWidget />}
-          {isVisible("strategy_gauges") && <StrategyModelGauges />}
-        </section>
-      )}
-
-      {(isVisible("ad_schedule") || isVisible("ranking_panel")) && (
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
-          {isVisible("ad_schedule") && <AdScheduleWidget />}
-          {isVisible("ranking_panel") && <RankingPanel />}
-        </section>
-      )}
+      <DashboardGrid items={gridItems} editable={isAdmin} storageKey="dashboard.grid.v1" />
     </>
   );
 };

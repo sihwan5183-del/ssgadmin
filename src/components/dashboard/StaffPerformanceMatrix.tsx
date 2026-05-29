@@ -159,6 +159,18 @@ export const StaffPerformanceMatrix = () => {
 
   const maxTotal = useMemo(() => Math.max(1, ...rows.map((r) => r.total)), [rows]);
 
+  const totals = useMemo(() => {
+    const t: Record<CatKey, number> = {
+      mobile: 0, usim: 0, second: 0, internet: 0, renewal: 0, tvfree: 0, smarthome: 0, upsell: 0,
+    };
+    let grand = 0;
+    rows.forEach((r) => {
+      (Object.keys(t) as CatKey[]).forEach((k) => { t[k] += r.counts[k]; });
+      grand += r.total;
+    });
+    return { counts: t, total: grand };
+  }, [rows]);
+
   return (
     <div className="rounded-2xl bg-card border border-border/60 shadow-card p-4 md:p-5">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -181,7 +193,7 @@ export const StaffPerformanceMatrix = () => {
       ) : rows.length === 0 ? (
         <div className="text-sm text-muted-foreground py-10 text-center">이번 달 실적이 있는 직원이 없습니다</div>
       ) : (
-        <div className="overflow-auto -mx-1">
+        <div className="overflow-auto -mx-1 max-h-[520px] relative">
           <table className="w-full text-xs md:text-[13px] whitespace-nowrap">
             <thead>
               <tr className="border-b border-border/60 text-muted-foreground">
@@ -262,6 +274,29 @@ export const StaffPerformanceMatrix = () => {
                 );
               })}
             </tbody>
+            <tfoot className="sticky bottom-0 z-20">
+              <tr className="border-t-2 border-border bg-card shadow-[0_-4px_8px_-4px_hsl(var(--background)/0.6)]">
+                <td className="px-2 py-2.5 font-bold text-foreground sticky left-0 bg-card z-10">Σ</td>
+                <td className="px-2 py-2.5 sticky left-8 bg-card z-10 font-bold text-foreground">
+                  종합 합계
+                  <span className="ml-1.5 text-[10px] font-medium text-muted-foreground">({rows.length}명)</span>
+                </td>
+                {COLUMNS.map((c) => {
+                  const v = totals.counts[c.key];
+                  return (
+                    <td key={c.key} className={cn(
+                      "text-right px-2 py-2.5 tabular-nums font-bold",
+                      v === 0 ? "text-muted-foreground/50" : "text-foreground",
+                    )}>
+                      {v === 0 ? "–" : v}
+                    </td>
+                  );
+                })}
+                <td className="text-right px-2 py-2.5 tabular-nums font-extrabold text-primary">
+                  {totals.total === 0 ? "–" : totals.total}
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
