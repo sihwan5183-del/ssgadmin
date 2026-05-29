@@ -105,9 +105,12 @@ export const TopProductScoreboard = () => {
         )}
       </div>
 
-      {/* PC/태블릿 6열 그리드 · 모바일 가로 스와이프 칩 리스트 */}
-      <div className="-mx-1 px-1 overflow-x-auto md:overflow-visible scrollbar-hide snap-x snap-mandatory md:snap-none">
-        <div className="flex md:grid md:grid-cols-6 gap-2 md:gap-3 min-w-max md:min-w-0 pb-1 md:pb-0">
+      {/* 컨테이너 가로폭에 맞춰 자동 리플로우되는 반응형 그리드 (auto-fill) */}
+      <div className="-mx-1 px-1">
+        <div
+          className="grid gap-2 md:gap-3"
+          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))" }}
+        >
           {stats.map((s) => {
             const Icon = ICONS[s.key];
             const active = scope === s.key;
@@ -118,7 +121,7 @@ export const TopProductScoreboard = () => {
                 key={s.key}
                 onClick={() => setScope(active ? "all" : s.key)}
                 className={cn(
-                  "snap-start shrink-0 w-[148px] md:w-auto text-left px-3 py-2.5 rounded-2xl border transition-all glass group",
+                  "text-left px-3 py-2.5 rounded-2xl border transition-all glass group",
                   active
                     ? "border-primary/60 bg-primary/10 shadow-glow ring-1 ring-primary/40"
                     : "border-border/40 hover:border-primary/40 hover:-translate-y-0.5",
@@ -126,10 +129,10 @@ export const TopProductScoreboard = () => {
               >
                 <div className={cn("flex items-center gap-1.5 text-[11px] font-semibold", ACCENT[s.key])}>
                   <Icon className="size-3.5" />
-                  <span>{s.label}</span>
+                  <span className="truncate">{s.label}</span>
                 </div>
                 <div className="mt-1.5 flex items-baseline gap-1">
-                  <span className="text-2xl md:text-[26px] font-black tabular-nums leading-none text-foreground">
+                  <span className="text-xl xl:text-2xl font-black tabular-nums leading-none text-foreground">
                     {s.total.toLocaleString()}
                   </span>
                   <span className="text-[10px] font-bold text-muted-foreground">건</span>

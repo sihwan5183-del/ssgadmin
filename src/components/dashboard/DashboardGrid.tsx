@@ -13,7 +13,7 @@ import {
   type LayoutItem,
   type ResponsiveLayouts,
 } from "react-grid-layout";
-import { GripVertical } from "lucide-react";
+import { GripVertical, X } from "lucide-react";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
@@ -34,6 +34,8 @@ type Props = {
   rowHeight?: number;
   /** Whether the user can drag/resize. */
   editable?: boolean;
+  /** Optional per-widget remove handler. When provided, an X button shows on each tile. */
+  onRemove?: (id: string) => void;
 };
 
 type Bp = "lg" | "md" | "sm";
@@ -103,6 +105,7 @@ export const DashboardGrid = ({
   storageKey = "dashboard.grid.v1",
   rowHeight = 36,
   editable = true,
+  onRemove,
 }: Props) => {
   const itemsKey = useMemo(() => items.map((i) => i.id).join("|"), [items]);
   const [layouts, setLayouts] = useState<ResponsiveLayouts<Bp>>(() =>
@@ -155,15 +158,32 @@ export const DashboardGrid = ({
           {items.map((it) => (
             <div key={it.id} className="dash-grid-item group/dash relative">
               {editable && (
-                <span
-                  aria-label="이동 핸들"
-                  className="dash-drag-handle absolute top-1.5 right-1.5 z-30 inline-flex items-center justify-center size-6 rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-muted/70 cursor-grab active:cursor-grabbing opacity-40 hover:opacity-100 group-hover/dash:opacity-100 transition-opacity select-none bg-background/60 backdrop-blur-sm"
-                  title="드래그해서 이동"
-                >
-                  <GripVertical className="size-3.5" />
-                </span>
+                <div className="absolute top-1.5 right-1.5 z-30 flex items-center gap-1 opacity-40 group-hover/dash:opacity-100 transition-opacity">
+                  <span
+                    aria-label="이동 핸들"
+                    className="dash-drag-handle inline-flex items-center justify-center size-6 rounded-md text-muted-foreground/70 hover:text-foreground hover:bg-muted/70 cursor-grab active:cursor-grabbing select-none bg-background/70 backdrop-blur-sm"
+                    title="드래그해서 이동"
+                  >
+                    <GripVertical className="size-3.5" />
+                  </span>
+                  {onRemove && (
+                    <button
+                      type="button"
+                      aria-label="위젯 삭제"
+                      title="위젯 숨기기 (위젯 관리에서 복구 가능)"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemove(it.id);
+                      }}
+                      className="inline-flex items-center justify-center size-6 rounded-md text-muted-foreground/70 hover:text-destructive-foreground hover:bg-destructive bg-background/70 backdrop-blur-sm transition-colors"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  )}
+                </div>
               )}
-              <div className="h-full w-full overflow-auto rounded-2xl">{it.node}</div>
+              <div className="h-full w-full overflow-hidden rounded-2xl">{it.node}</div>
             </div>
           ))}
         </ResponsiveGridLayout>
