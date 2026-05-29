@@ -90,6 +90,22 @@ export interface FinanceData {
   // 데이터 검증
   hasSales: boolean;
   hasSpend: boolean;
+  // 상품군(모바일/인터넷/기타)별 수익·지출 분해
+  byProduct: {
+    mobile: ProductSegmentTotals;
+    internet: ProductSegmentTotals;
+    etc: ProductSegmentTotals;
+  };
+}
+
+export interface ProductSegmentTotals {
+  revenue: number;       // 해당 상품군 매출 (단가표 + 부가 + 미수 + 상품권 + 중고폰)
+  expense: number;       // 해당 상품군 지출 합 (분배+현금+오퍼+고객+법인+모요)
+  distributor: number;   // 유통망 지원금
+  cashOpen: number;      // 현금개통 금액
+  corpCard: number;      // 5번 법인카드 결제금액
+  customerDeposit: number; // 고객입금 금액 (receivable_amount)
+  successCount: number;
 }
 
 const PRODUCT_PALETTE: Record<string, string> = {
@@ -298,6 +314,28 @@ export function useFinanceData(): FinanceData {
           moyoAppliedCount += 1;
         }
       }
+    }
+
+    // ---------- 상품군별 (모바일/인터넷/기타) ----------
+    const emptySeg = (): ProductSegmentTotals => ({
+      revenue: 0, expense: 0, distributor: 0, cashOpen: 0,
+      corpCard: 0, customerDeposit: 0, successCount: 0,
+    });
+    const byProduct = { mobile: emptySeg(), internet: emptySeg(), etc: emptySeg() };
+    for (const r of settledSalesRows) {
+      const prod = (r.product ?? "").toString().trim();
+      const seg =
+        prod === "모바일" ? byProduct.mobile :
+        prod === "인터넷" ? byProduct.internet :
+        byProduct.etc;
+      const p = calcDashboardProfit(r);
+      seg.successCount += 1;
+      seg.revenue += p.salesCommission + p.vasFee + p.receivableAmount + p.voucherAmount + p.tradeInConfirmed;
+      seg.distributor += p.distributor;
+      seg.cashOpen += p.cashSupport;
+      seg.corpCard += p.cardSubsidy;
+      seg.customerDeposit += Number(r.receivable_amount ?? 0);
+      seg.expense += p.distributor + p.cashSupport + p.offerSubsidy + p.customerSupport + p.cardSubsidy + p.moyoFee;
     }
     const moyoFee = sumMoyoFee;
     const totalAdSpend = effectiveSpendRows.reduce(
@@ -515,6 +553,7 @@ export function useFinanceData(): FinanceData {
       expenseBreakdown,
       hasSales: totalSuccess > 0,
       hasSpend: totalAdSpend > 0,
+      byProduct,
     };
   }, [salesRows, spendRows, prevSalesRows, prevSpendRows, startDate, endDate, loading, categories, includedExpenseLabels, excludedLabels]);
 }
