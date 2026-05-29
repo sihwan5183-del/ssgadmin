@@ -1,5 +1,6 @@
 import { lazy, memo, startTransition, Suspense, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDashboardStaff } from "@/hooks/useDashboardStaff";
 import { Card } from "@/components/ui/card";
@@ -253,7 +254,7 @@ export default function LeadsPage() {
             if (prev.some((r) => r.id === row.id)) return prev;
             return [row, ...prev];
           });
-          toast.success(`신규 리드 인입: ${row.name ?? "(이름 없음)"}`);
+          // 전역 LeadsRealtimeNotifier 가 토스트/사운드를 단일 채널로 처리하므로 여기서는 데이터만 동기화.
         },
       )
       .on(
