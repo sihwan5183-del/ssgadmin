@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, memo, startTransition, Suspense, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDashboardStaff } from "@/hooks/useDashboardStaff";
@@ -32,7 +32,9 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserCheck, PhoneCall, CheckCircle2, Plus, Search, RotateCw, Ban, XCircle } from "lucide-react";
 import { toast } from "sonner";
-import ChannelIntakePage from "@/pages/ChannelIntakePage";
+// 무거운(1k+ LOC) 페이지 — 사용자가 [기타인입] 탭을 처음 클릭할 때만 로드해서
+// 메타/도그마루 탭의 초기 진입과 탭 전환 응답성을 잡아준다.
+const ChannelIntakePage = lazy(() => import("@/pages/ChannelIntakePage"));
 import { ColumnFilter, matchesFilter, type FilterSelection } from "@/components/common/ColumnFilter";
 
 const STATUS_OPTIONS = [
