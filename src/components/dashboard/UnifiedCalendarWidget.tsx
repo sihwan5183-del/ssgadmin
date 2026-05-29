@@ -108,7 +108,6 @@ export function UnifiedCalendarWidget({ onDayClick, showTabs = true }: { onDayCl
 
   const inRange = (d: string, r: RangeRow) => d >= r.start && d <= r.end;
 
-
   const renderCell = (d: Date) => {
     const iso = isoOf(d);
     const inMonth = d.getMonth() === month0;
@@ -117,6 +116,7 @@ export function UnifiedCalendarWidget({ onDayClick, showTabs = true }: { onDayCl
     const dow = d.getDay(); // 0=일, 6=토
 
     let badge: React.ReactNode = null;
+    if (tab === "sales") {
       const v = salesByDay.get(iso);
       if (v && v.total > 0) {
         badge = (
@@ -181,7 +181,6 @@ export function UnifiedCalendarWidget({ onDayClick, showTabs = true }: { onDayCl
           isSel && "bg-[#FFF1F8]",
         )}
       >
-      >
         <div className="flex items-center justify-between text-[11px] font-medium">
           {isToday ? (
             <span
@@ -214,8 +213,6 @@ export function UnifiedCalendarWidget({ onDayClick, showTabs = true }: { onDayCl
     if (m > 11) { setYear(year + 1); setMonth0(0); } else setMonth0(m);
   };
   const goToday = () => { setYear(now.getFullYear()); setMonth0(now.getMonth()); setSelected(todayIso()); };
-
-  const detailLink: Record<TabKey, { to: string; label: string }> = {
 
   const detailLink: Record<TabKey, { to: string; label: string }> = {
     sales: { to: "/sales-ledger", label: "판매원장 →" },
@@ -299,13 +296,9 @@ export function UnifiedCalendarWidget({ onDayClick, showTabs = true }: { onDayCl
       </div>
 
       {/* Calendar grid */}
-      {/* Calendar grid */}
       <div className="grid grid-cols-7 gap-px bg-[#F0F0F0] rounded-lg overflow-hidden border border-[#F0F0F0]">
         {days.map(renderCell)}
       </div>
-    </div>
-  );
-}
     </div>
   );
 }
