@@ -106,11 +106,9 @@ export function useModelAnalysis() {
       if (product && product !== "모바일") continue;
 
       const model = (r.device_model ?? "기타").toString().trim() || "기타";
-      // 채널 5대 그룹 정규화
-      const channel = (await import("@/lib/channelGroup")).groupChannel
-        ? null
-        : null;
-      // (dynamic import workaround removed below)
+      // 채널 5대 그룹 정규화 (5개에 해당하지 않는 건은 제외)
+      const channel = groupChannel(r.channel);
+      if (!channel) continue;
       const price = Number(r.unit_price ?? 0);
 
       // overall
