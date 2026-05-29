@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { Header } from "@/components/layout/Header";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -222,34 +221,28 @@ export default function ApartmentPage() {
   }, [leads]);
 
   return (
-    <div>
-      <Header
-        title="아파트 게시 영업"
-        subtitle="게시 활동 등록 · 인입 고객 관리 · 자동 종료 알림"
-        showScopeToggle={false}
-      />
-
-      {/* KPI */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <Card className="p-4 glass">
-          <div className="text-[11px] text-muted-foreground">게시 중</div>
-          <div className="text-2xl font-bold mt-1">{stats.ongoing}</div>
+    <div className="p-3 space-y-3 h-auto">
+      {/* KPI (콤팩트) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <Card className="p-2.5">
+          <div className="text-[11px] text-slate-600">게시 중</div>
+          <div className="text-lg font-bold mt-0.5 text-slate-900">{stats.ongoing}</div>
         </Card>
-        <Card className="p-4 glass">
-          <div className="text-[11px] text-muted-foreground">3일 내 종료</div>
-          <div className="text-2xl font-bold mt-1 text-amber-500">{stats.endingSoon}</div>
+        <Card className="p-2.5">
+          <div className="text-[11px] text-slate-600">3일 내 종료</div>
+          <div className="text-lg font-bold mt-0.5 text-amber-600">{stats.endingSoon}</div>
         </Card>
-        <Card className="p-4 glass">
-          <div className="text-[11px] text-muted-foreground">누적 인입</div>
-          <div className="text-2xl font-bold mt-1">{stats.totalLeads}</div>
+        <Card className="p-2.5">
+          <div className="text-[11px] text-slate-600">누적 인입</div>
+          <div className="text-lg font-bold mt-0.5 text-slate-900">{stats.totalLeads}</div>
         </Card>
-        <Card className="p-4 glass">
-          <div className="text-[11px] text-muted-foreground">개통 성공률</div>
-          <div className="text-2xl font-bold mt-1 text-primary">{stats.successRate}%</div>
+        <Card className="p-2.5">
+          <div className="text-[11px] text-slate-600">개통 성공률</div>
+          <div className="text-lg font-bold mt-0.5 text-primary">{stats.successRate}%</div>
         </Card>
       </div>
 
-      <Tabs defaultValue="postings" className="space-y-4">
+      <Tabs defaultValue="postings" className="space-y-2">
         <TabsList>
           <TabsTrigger value="postings" className="gap-2">
             <Building2 className="size-4" /> 게시 활동 ({postings.length})
