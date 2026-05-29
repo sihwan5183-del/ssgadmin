@@ -88,7 +88,7 @@ export const TopProductScoreboard = () => {
   );
 
   return (
-    <div className="relative h-full w-full flex flex-col bg-card border border-border/60 shadow-sm rounded-xl p-3">
+    <div className="relative h-full w-full flex flex-col premium-card p-3 md:p-4">
       <div className="flex items-center justify-between mb-2 px-0.5">
         <div className="flex items-baseline gap-2">
           <h2 className="text-sm font-bold tracking-tight text-foreground">핵심 상품 성과 보드</h2>
@@ -121,10 +121,10 @@ export const TopProductScoreboard = () => {
                 key={s.key}
                 onClick={() => setScope(active ? "all" : s.key)}
                 className={cn(
-                  "text-left px-2.5 py-2 rounded-xl border bg-card transition-all group",
+                  "text-left px-2.5 py-2 rounded-xl border bg-card transition-all duration-300 ease-in-out group",
                   active
-                    ? "border-foreground/70 bg-foreground/5 shadow-sm ring-1 ring-foreground/20"
-                    : "border-border/60 hover:border-foreground/40 hover:-translate-y-0.5",
+                    ? "border-slate-300 bg-slate-50 shadow-sm ring-1 ring-slate-200"
+                    : "border-slate-100 hover:border-slate-300 hover:-translate-y-0.5 hover:shadow-md",
                 )}
               >
                 <div className={cn("flex items-center gap-1.5 text-[11px] font-bold", ACCENT[s.key])}>
@@ -132,10 +132,10 @@ export const TopProductScoreboard = () => {
                   <span className="truncate">{s.label}</span>
                 </div>
                 <div className="mt-1.5 flex items-baseline gap-1">
-                  <span className="text-2xl xl:text-3xl font-black tabular-nums leading-none text-foreground">
+                  <span className="text-2xl xl:text-3xl font-black tabular-nums leading-none text-slate-900">
                     {s.total.toLocaleString()}
                   </span>
-                  <span className="text-[10px] font-bold text-foreground/60">건</span>
+                  <span className="text-[10px] font-bold text-slate-500">건</span>
                 </div>
                 <div
                   className={cn(

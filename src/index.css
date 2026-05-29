@@ -11,12 +11,12 @@
 @layer base {
   :root {
     /* 베이스 — 아주 연한 그레이 캔버스 (#F9FAFB) */
-    --background: 220 14% 97%;
+    --background: 220 20% 98%;
     /* 본문 텍스트: 거의 순수 검정에 가까운 진한 톤으로 강화 (#1A1A1A) */
-    --foreground: 0 0% 10%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 10%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 10%;
@@ -82,8 +82,8 @@
     --shadow-elevated: 0 8px 32px -8px hsl(220 14% 20% / 0.12);
 
     /* Glassmorphism — 화이트 글래스 */
-    --glass-bg: 0 0% 100% / 0.72;
-    --glass-border: 330 30% 90% / 0.6;
+    --glass-bg: 0 0% 100% / 0.92;
+    --glass-border: 220 14% 93%;
 
     /* Sidebar */
     --sidebar-background: 0 0% 99%;
@@ -177,13 +177,17 @@
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
     border: 1px solid hsl(var(--glass-border));
+    border-radius: 1rem;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 30px rgb(15 23 42 / 0.04);
   }
 
   .glass-strong {
-    background: hsl(0 0% 100% / 0.85);
+    background: hsl(0 0% 100% / 0.96);
     backdrop-filter: blur(32px) saturate(180%);
     -webkit-backdrop-filter: blur(32px) saturate(180%);
     border: 1px solid hsl(var(--glass-border));
+    border-radius: 1rem;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 12px 40px rgb(15 23 42 / 0.05);
   }
 
   .text-gradient {
@@ -198,6 +202,30 @@
 
   .glow-primary { box-shadow: var(--shadow-glow); }
   .shadow-card-elevated { box-shadow: var(--shadow-card); }
+
+  /* === Toss-style premium card + grid hover === */
+  .premium-card {
+    @apply bg-card border border-slate-100 rounded-2xl;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 30px rgb(15 23 42 / 0.04);
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out, border-color 0.3s ease-in-out;
+  }
+  .premium-card:hover {
+    box-shadow: 0 4px 8px rgb(15 23 42 / 0.05), 0 18px 48px rgb(15 23 42 / 0.08);
+    border-color: rgb(226 232 240);
+  }
+
+  /* Dashboard grid: every tile gets the premium feel + lift on hover (not during drag). */
+  .dash-grid-item {
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  }
+  .dash-grid-item:hover:not(.react-draggable-dragging):not(.resizing) {
+    transform: translateY(-2px);
+  }
+  .dash-grid-item.react-draggable-dragging,
+  .dash-grid-item.resizing {
+    transition: none;
+    z-index: 20;
+  }
 
   .ring-gradient {
     position: relative;
