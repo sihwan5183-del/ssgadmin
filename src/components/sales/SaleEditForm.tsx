@@ -122,6 +122,16 @@ const isContractProduct = (product: string | null | undefined): boolean => {
   return false;
 };
 
+/** 단말기/일련번호 입력 대상 상품 판별. 모바일 및 2nd(세컨)에서만 활성화한다. */
+const isDeviceRequiredProduct = (product: string | null | undefined): boolean => {
+  if (!product) return false;
+  const p = String(product).toUpperCase();
+  if (p === "2ND") return true;
+  if (p.includes("세컨") || p.includes("2ND")) return true;
+  if (product.includes("모바일")) return true;
+  return false;
+};
+
 /** 최종상태가 완료 계열일 때만 개통일 입력을 허용한다. */
 const COMPLETED_STATUSES = ["개통완료", "설치완료"] as const;
 const isOpenDateAllowed = (status: string | null | undefined): boolean =>
@@ -425,7 +435,7 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
     status: (form.status ?? "").trim() ? null : "최종상태를 선택해주세요",
     product: form.product ? null : "가입상품을 선택해주세요",
     rate_plan: form.rate_plan ? null : "요금제를 선택해주세요",
-    device_model: form.device_model && form.device_model.trim() ? null : "단말기를 선택해주세요",
+    device_model: isDeviceRequiredProduct(form.product) && (!form.device_model || !form.device_model.trim()) ? "단말기를 선택해주세요" : null,
   };
   const subscriptionError = subscriptionValid ? null : "숫자만 입력해주세요";
   const isFormValid =
@@ -1359,12 +1369,21 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
 
           <FormSection title="📱 섹션 3 · 단말 / 유심 및 자동이체">
           <Grid cols={4}>
-            <Field label="단말기 *">
-              <ModelAutocomplete
-                value={form.device_model ?? ""}
-                onChange={(v) => set("device_model", v)}
-                placeholder="942 / S26 / SM-S942N 등"
-              />
+            <Field label={isDeviceRequiredProduct(form.product) ? "단말기 *" : "단말기"}>
+              {isDeviceRequiredProduct(form.product) ? (
+                <ModelAutocomplete
+                  value={form.device_model ?? ""}
+                  onChange={(v) => set("device_model", v)}
+                  placeholder="942 / S26 / SM-S942N 등"
+                />
+              ) : (
+                <Input
+                  value=""
+                  disabled
+                  placeholder="모바일/2nd 상품만 입력"
+                  className="h-9 bg-slate-100 text-xs border-border/60 cursor-not-allowed"
+                />
+              )}
               {requiredErrors.device_model && (
                 <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
                   <AlertTriangle className="size-3" /> {requiredErrors.device_model}
@@ -1373,27 +1392,28 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
             </Field>
             <Field label="단말 일련번호">
               <div className="flex gap-1.5">
-                <Input value={form.device_serial ?? ""} onChange={(e) => set("device_serial", e.target.value)} className="h-9 bg-input/60 text-xs flex-1 border-border/60" inputMode="text" />
+                <Input
+                  value={form.device_serial ?? ""}
+                  onChange={(e) => set("device_serial", e.target.value)}
+                  disabled={!isDeviceRequiredProduct(form.product)}
+                  className={cn(
+                    "h-9 text-xs flex-1 border-border/60",
+                    isDeviceRequiredProduct(form.product) ? "bg-input/60" : "bg-slate-100 cursor-not-allowed"
+                  )}
+                  inputMode="text"
+                />
                 <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0 lg:hidden" onClick={() => toast.info("카메라 스캔은 네이티브 앱에서 지원됩니다")}>
                   <Camera className="size-4" />
                 </Button>
               </div>
             </Field>
             <Field label="USIM">
-              <Select value={form.usim_model ?? ""} onValueChange={(v) => set("usim_model", v)}>
-                <SelectTrigger className="h-9 bg-input/60 text-xs border-border/60">
-                  <SelectValue placeholder={USIM_MODELS.length === 0 ? "어드민 [필드옵션]에서 등록" : "선택"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {/* 기존 자유 입력값이 있으면 보존 노출 */}
-                  {form.usim_model && !USIM_MODELS.includes(form.usim_model) && (
-                    <SelectItem value={form.usim_model}>{form.usim_model} <span className="text-[10px] text-muted-foreground">(기존값)</span></SelectItem>
-                  )}
-                  {USIM_MODELS.map((u) => (
-                    <SelectItem key={u} value={u}>{u}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                value={form.usim_model ?? ""}
+                onChange={(e) => set("usim_model", e.target.value || null)}
+                placeholder="USIM 모델명 및 번호 자유 기재"
+                className="h-9 bg-input/60 text-xs border-border/60"
+              />
             </Field>
             <Field label="USIM 일련번호">
               <div className="flex gap-1.5">
