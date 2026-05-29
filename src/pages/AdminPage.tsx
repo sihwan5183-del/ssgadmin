@@ -42,6 +42,7 @@ import { UserManagementPanel } from "@/components/admin/UserManagementPanel";
 import { RankingConfigManager } from "@/components/admin/RankingConfigManager";
 import { PushScheduleSettings } from "@/components/admin/PushScheduleSettings";
 import { NotificationRulesManager } from "@/components/admin/NotificationRulesManager";
+import { LeadsNotifierSettings } from "@/components/admin/LeadsNotifierSettings";
 import { FieldTeamsManager } from "@/components/admin/FieldTeamsManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -205,6 +206,9 @@ export default function AdminPage() {
           <TabsTrigger value="notif_rules" className="gap-2">
             <BellRing className="size-4" /> 알림 항목 관리
           </TabsTrigger>
+          <TabsTrigger value="leads_notify" className="gap-2">
+            <BellRing className="size-4" /> 실시간 인입 알림
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="push">
@@ -213,6 +217,10 @@ export default function AdminPage() {
 
         <TabsContent value="notif_rules">
           <NotificationRulesManager />
+        </TabsContent>
+
+        <TabsContent value="leads_notify">
+          <LeadsNotifierSettings />
         </TabsContent>
 
         <TabsContent value="field_teams">
