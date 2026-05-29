@@ -245,6 +245,80 @@ export default function SegPartnersPage() {
   );
 }
 
+function StorefrontActivityTable({
+  activities,
+  partners,
+}: {
+  activities: ReturnType<typeof useSegActivities>["activities"];
+  partners: SegPartner[];
+}) {
+  const partnerMap = useMemo(() => {
+    const m = new Map<string, SegPartner>();
+    partners.forEach((p) => m.set(p.id, p));
+    return m;
+  }, [partners]);
+
+  const rows = useMemo(() => {
+    const KW = ["점두", "가판", "판촉", "매장 앞", "스트리트"];
+    return activities.filter((a) => {
+      const partner = partnerMap.get(a.partner_id);
+      const partnerCat = (partner?.custom_fields as any)?.activity_category as string | undefined;
+      if (partnerCat === "자체 점두행사") return true;
+      const haystack = `${a.activity_type ?? ""} ${a.title ?? ""} ${a.content ?? ""} ${a.location ?? ""}`;
+      return KW.some((k) => haystack.includes(k));
+    });
+  }, [activities, partnerMap]);
+
+  return (
+    <Card className="overflow-hidden border-slate-200">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr className="text-left text-slate-700">
+              <th className="px-3 py-2 font-semibold whitespace-nowrap">활동일자</th>
+              <th className="px-3 py-2 font-semibold whitespace-nowrap">시간</th>
+              <th className="px-3 py-2 font-semibold whitespace-nowrap">업체/매장</th>
+              <th className="px-3 py-2 font-semibold whitespace-nowrap">행사 유형</th>
+              <th className="px-3 py-2 font-semibold whitespace-nowrap">제목</th>
+              <th className="px-3 py-2 font-semibold whitespace-nowrap">장소</th>
+              <th className="px-3 py-2 font-semibold whitespace-nowrap">담당자</th>
+              <th className="px-3 py-2 font-semibold whitespace-nowrap">진행상태</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-3 py-10 text-center text-sm text-muted-foreground">
+                  등록된 점두 활동이 없습니다. 제휴업체 상세에서 활동을 [자체 점두행사] 분류로 기록하면 자동 집계됩니다.
+                </td>
+              </tr>
+            )}
+            {rows.map((a) => {
+              const partner = partnerMap.get(a.partner_id);
+              return (
+                <tr key={a.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 transition-colors text-slate-900">
+                  <td className="px-3 py-2 whitespace-nowrap tabular-nums">{a.activity_date}</td>
+                  <td className="px-3 py-2 whitespace-nowrap tabular-nums">{a.activity_time ?? "-"}</td>
+                  <td className="px-3 py-2 whitespace-nowrap font-semibold">{partner?.company_name ?? "-"}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">{a.activity_type ?? "-"}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">{a.title ?? "-"}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">{a.location ?? "-"}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">{a.assignee_name ?? "-"}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <span className="text-slate-900 font-medium">
+                      {a.is_completed ? "완료" : "진행중"}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
+
 function StatBox({ icon: Icon, label, value, tone = "muted" }: { icon: any; label: string; value: number; tone?: string }) {
   const cls = {
     primary: "from-primary/15 to-primary/5 text-primary",
