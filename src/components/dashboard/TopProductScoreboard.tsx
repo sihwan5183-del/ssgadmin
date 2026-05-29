@@ -132,10 +132,10 @@ export const TopProductScoreboard = () => {
                   <span className="truncate">{s.label}</span>
                 </div>
                 <div className="mt-1.5 flex items-baseline gap-1">
-                  <span className="text-2xl xl:text-3xl font-black tabular-nums leading-none text-foreground">
+                  <span className="text-2xl xl:text-3xl font-black tabular-nums leading-none text-slate-900">
                     {s.total.toLocaleString()}
                   </span>
-                  <span className="text-[10px] font-bold text-foreground/60">건</span>
+                  <span className="text-[10px] font-bold text-slate-500">건</span>
                 </div>
                 <div
                   className={cn(
