@@ -9,6 +9,7 @@ import {
 } from "@/contexts/ProductScopeContext";
 import { applyPendingActivationFilter } from "@/lib/salesFilter";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 const ICONS: Record<Exclude<ProductScope, "all">, typeof Smartphone> = {
   "모바일": Smartphone,
@@ -38,6 +39,15 @@ type Row = { product: string | null; sale_type: string | null; status: string | 
 export const PendingProductScoreboard = () => {
   const { startDate, endDate, label } = usePeriod();
   const [rows, setRows] = useState<Row[]>([]);
+  const navigate = useNavigate();
+
+  const gotoLedger = (productLabel?: string) => {
+    const params = new URLSearchParams();
+    params.set("status", "택배발송,청약완료");
+    params.set("from_dashboard", "1");
+    if (productLabel) params.set("product", productLabel);
+    navigate(`/sales-ledger?${params.toString()}`);
+  };
 
   const load = useCallback(async () => {
     const res = await applyPendingActivationFilter(
@@ -78,17 +88,22 @@ export const PendingProductScoreboard = () => {
     <div className="relative h-full w-full flex flex-col premium-card p-3 md:p-4">
       <div className="flex items-center justify-between mb-2 px-0.5">
         <div className="flex items-baseline gap-2">
-          <h2 className="text-sm font-bold tracking-tight text-foreground inline-flex items-center gap-1.5">
+          <h2 className="text-sm font-bold tracking-tight text-slate-900 inline-flex items-center gap-1.5">
             <Clock className="size-3.5 text-warning" />
             미개통 대기 상품 보드
           </h2>
-          <span className="text-[10px] text-foreground/60">
+          <span className="text-[10px] text-slate-600">
             {label} · 택배발송 + 청약완료 (실적 미인정)
           </span>
         </div>
-        <span className="text-[11px] font-bold tabular-nums text-warning">
-          총 {grandTotal.toLocaleString()}건 대기
-        </span>
+        <button
+          type="button"
+          onClick={() => gotoLedger()}
+          className="text-[11px] font-bold tabular-nums text-warning hover:underline"
+          title="판매실적장표에서 보기"
+        >
+          총 {grandTotal.toLocaleString()}건 대기 →
+        </button>
       </div>
 
       <div className="-mx-1 px-1 flex-1 min-h-0">
@@ -99,10 +114,12 @@ export const PendingProductScoreboard = () => {
           {stats.map((s) => {
             const Icon = ICONS[s.key];
             return (
-              <div
+              <button
+                type="button"
                 key={s.key}
+                onClick={() => gotoLedger(s.label)}
                 className={cn(
-                  "text-left px-2.5 py-2 rounded-xl border bg-card transition-all duration-300 ease-in-out",
+                  "text-left px-2.5 py-2 rounded-xl border bg-card transition-all duration-300 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-300",
                   "border-slate-100 hover:border-slate-300 hover:-translate-y-0.5 hover:shadow-md",
                   s.total > 0 && "border-amber-200 bg-amber-50/40",
                 )}
@@ -115,9 +132,9 @@ export const PendingProductScoreboard = () => {
                   <span className="text-2xl xl:text-3xl font-black tabular-nums leading-none text-slate-900">
                     {s.total.toLocaleString()}
                   </span>
-                  <span className="text-[10px] font-bold text-slate-500">건</span>
+                  <span className="text-[10px] font-bold text-slate-700">건</span>
                 </div>
-                <div className="mt-1.5 flex items-center gap-2.5 text-[11px] font-semibold tabular-nums text-slate-600">
+                <div className="mt-1.5 flex items-center gap-2.5 text-[11px] font-semibold tabular-nums text-slate-800">
                   <span className="inline-flex items-center gap-1">
                     <span className="size-1.5 rounded-full bg-slate-400" />
                     청약 {s.subscribed}
@@ -127,7 +144,7 @@ export const PendingProductScoreboard = () => {
                     택배 {s.shipping}
                   </span>
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
