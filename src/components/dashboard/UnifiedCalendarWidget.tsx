@@ -45,7 +45,7 @@ const normalizeSaleType = (t: string | null): "MNP" | "기변" | "신규" | "기
   return "기타";
 };
 
-export function UnifiedCalendarWidget({ onDayClick }: { onDayClick?: (iso: string) => void } = {}) {
+export function UnifiedCalendarWidget({ onDayClick, showTabs = true }: { onDayClick?: (iso: string) => void; showTabs?: boolean } = {}) {
   const [tab, setTab] = useState<TabKey>("sales");
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
