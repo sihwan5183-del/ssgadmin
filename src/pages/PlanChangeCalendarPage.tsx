@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { Navigate } from "react-router-dom";
 
 interface SaleRow {
   id: string;
@@ -392,4 +393,9 @@ export function PlanChangeCalendarView() {
       </p>
     </div>
   );
+}
+
+export default function PlanChangeCalendarPage() {
+  // 사이드바 메뉴에서 제거됨 — [검수 관리] 내부 탭으로 통합 리다이렉트
+  return <Navigate to="/activities?tab=plan-change" replace />;
 }
