@@ -87,6 +87,19 @@ const cleanText = (value: unknown) => {
   return value == null ? null : String(value);
 };
 
+function fmtCompactDate(iso: string) {
+  const d = new Date(iso);
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  let hh = d.getHours();
+  const ampm = hh < 12 ? "오전" : "오후";
+  hh = hh % 12;
+  if (hh === 0) hh = 12;
+  const hStr = String(hh).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${mm}-${dd} ${ampm} ${hStr}:${min}`;
+}
+
 const toDogmaruItem = (item: Lead) => ({
   ...item,
   registration_date: cleanText(item.registration_date),
@@ -687,17 +700,17 @@ export default function LeadsPage() {
                     className="cursor-pointer border-b border-border hover:bg-muted/40"
                     onClick={() => setOpenLead(item)}
                   >
-                    <TableCell className="tabular-nums text-foreground font-medium">
+                    <TableCell className="tabular-nums text-foreground font-medium py-1.5">
                       {item.registration_date ?? "-"}
                     </TableCell>
-                    <TableCell className="font-bold text-foreground">
+                    <TableCell className="font-bold text-foreground py-1.5">
                       {item.customer_name ?? "-"}
                     </TableCell>
-                    <TableCell className="tabular-nums text-foreground font-medium">
+                    <TableCell className="tabular-nums text-foreground font-medium py-1.5">
                       {item.customer_phone ?? "-"}
                     </TableCell>
-                    <TableCell className="text-foreground">{item.branch_name ?? "-"}</TableCell>
-                    <TableCell className="whitespace-nowrap">
+                    <TableCell className="text-foreground py-1.5">{item.branch_name ?? "-"}</TableCell>
+                    <TableCell className="whitespace-nowrap py-1.5">
                       {item.activation_status ? (
                         <span
                           className={
@@ -713,7 +726,7 @@ export default function LeadsPage() {
                         <span className="text-foreground/40">-</span>
                       )}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">
+                    <TableCell className="whitespace-nowrap py-1.5">
                       {isCancelled ? (
                         <span className="text-xs font-bold whitespace-nowrap text-rose-700 dark:text-rose-300">
                           {item.cancellation_status}
@@ -722,10 +735,10 @@ export default function LeadsPage() {
                         <span className="text-foreground/40">-</span>
                       )}
                     </TableCell>
-                    <TableCell className="tabular-nums text-foreground/80">
+                    <TableCell className="tabular-nums text-foreground/80 py-1.5">
                       {item.activation_number ?? "-"}
                     </TableCell>
-                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                    <TableCell className="text-center py-1.5" onClick={(e) => e.stopPropagation()}>
                       <Button size="sm" variant="ghost" onClick={() => setOpenLead(item)}>
                         상세
                       </Button>
@@ -739,7 +752,7 @@ export default function LeadsPage() {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/60 border-b-2 border-border hover:bg-muted/60">
-              <TableHead className="text-foreground font-bold">접수 일시</TableHead>
+              <TableHead className="text-foreground font-bold w-[130px] whitespace-nowrap py-2">접수 일시</TableHead>
               <TableHead className="text-foreground font-bold">고객명</TableHead>
               <TableHead className="text-foreground font-bold">연락처</TableHead>
               <TableHead className="text-foreground font-bold">
@@ -783,23 +796,18 @@ export default function LeadsPage() {
                 className="cursor-pointer border-b border-border hover:bg-muted/40"
                 onClick={() => setOpenLead(r)}
               >
-                <TableCell className="tabular-nums text-xs text-foreground font-medium">
-                  {new Date(r.created_at).toLocaleString("ko-KR", {
-                    month: "2-digit",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                <TableCell className="tabular-nums text-xs text-foreground font-medium whitespace-nowrap py-1.5">
+                  {fmtCompactDate(r.created_at)}
                 </TableCell>
-                <TableCell className="font-bold text-foreground">{r.name ?? "-"}</TableCell>
-                <TableCell className="tabular-nums text-foreground font-medium">{r.phone ?? "-"}</TableCell>
-                <TableCell className="text-foreground">{r.current_carrier ?? "-"}</TableCell>
-                <TableCell className="text-foreground text-xs whitespace-nowrap" title={r.desired_device ?? ""}>{r.desired_device ?? "-"}</TableCell>
-                <TableCell className="text-foreground text-xs whitespace-nowrap" title={r.desired_product ?? ""}>{r.desired_product ?? "-"}</TableCell>
-                <TableCell className="text-xs text-foreground whitespace-nowrap" title={r.campaign_name ?? ""}>
+                <TableCell className="font-bold text-foreground py-1.5">{r.name ?? "-"}</TableCell>
+                <TableCell className="tabular-nums text-foreground font-medium py-1.5">{r.phone ?? "-"}</TableCell>
+                <TableCell className="text-foreground py-1.5">{r.current_carrier ?? "-"}</TableCell>
+                <TableCell className="text-foreground text-xs whitespace-nowrap py-1.5" title={r.desired_device ?? ""}>{r.desired_device ?? "-"}</TableCell>
+                <TableCell className="text-foreground text-xs whitespace-nowrap py-1.5" title={r.desired_product ?? ""}>{r.desired_product ?? "-"}</TableCell>
+                <TableCell className="text-xs text-foreground whitespace-nowrap py-1.5" title={r.campaign_name ?? ""}>
                   {r.campaign_name ?? "-"}
                 </TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()}>
+                <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
                   <Select
                     value={r.assigned_to ?? "none"}
                     onValueChange={(v) => updateAssignee(r.id, v === "none" ? null : v)}
@@ -817,7 +825,7 @@ export default function LeadsPage() {
                     </SelectContent>
                   </Select>
                 </TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()}>
+                <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
                   <Select
                     value={r.status}
                     onValueChange={(v) => updateStatus(r.id, v)}
@@ -837,7 +845,7 @@ export default function LeadsPage() {
                   </Select>
                 </TableCell>
                 <TableCell
-                  className="w-[200px] max-w-[200px] text-xs text-foreground whitespace-nowrap overflow-hidden text-ellipsis"
+                  className="w-[200px] max-w-[200px] text-xs text-foreground whitespace-nowrap overflow-hidden text-ellipsis py-1.5"
                   onClick={(e) => {
                     e.stopPropagation();
                     setOpenLead(r);
@@ -845,7 +853,7 @@ export default function LeadsPage() {
                 >
                   {r.memo || <span className="italic text-foreground/40">메모 추가…</span>}
                 </TableCell>
-                <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                <TableCell className="text-center py-1.5" onClick={(e) => e.stopPropagation()}>
                   <Button size="sm" variant="ghost" onClick={() => setOpenLead(r)}>
                     상세
                   </Button>
