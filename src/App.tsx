@@ -56,6 +56,7 @@ import AddonRetentionAdminPage from "./pages/AddonRetentionAdminPage.tsx";
 import AddonTasksPage from "./pages/AddonTasksPage.tsx";
 import CustomProposalsPage from "./pages/CustomProposalsPage.tsx";
 import LeadsPage from "./pages/LeadsPage.tsx";
+import { LeadsRealtimeNotifier } from "./components/leads/LeadsRealtimeNotifier.tsx";
 
 const queryClient = new QueryClient();
 
@@ -99,6 +100,7 @@ const App = () => {
                 element={
                   <ProtectedRoute>
                     <AppShell>
+                      <LeadsRealtimeNotifier />
                       <Routes>
                         <Route path="/" element={<Index />} />
                         <Route path="/input" element={<InputPage />} />
