@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ExternalLink, Plus, Pencil, Trash2, GripVertical, Link2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Link2 } from "lucide-react";
 import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
+import { resolveIcon } from "@/lib/menuIcons";
 
 interface QuickLink {
   id: string;
@@ -17,6 +18,11 @@ interface QuickLink {
   sort_order: number;
   active: boolean;
 }
+
+const LinkIcon = ({ name }: { name?: string }) => {
+  const Icon = resolveIcon(name || "ExternalLink");
+  return <Icon className="size-6 text-slate-700" />;
+};
 
 export const QuickLinksWidget = () => {
   const { isAdmin } = useRole();
@@ -75,11 +81,11 @@ export const QuickLinksWidget = () => {
   if (links.length === 0 && !isAdmin) return null;
 
   return (
-    <Card className="h-full w-full flex flex-col bg-card border-border/60 shadow-sm rounded-xl p-4">
-      <div className="flex items-center justify-between mb-3">
+    <Card className="h-full w-full flex flex-col bg-card border-border/60 shadow-sm rounded-2xl p-4">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Link2 className="size-4 text-foreground" />
-          <h4 className="text-sm font-bold text-foreground">업무 바로가기</h4>
+          <h4 className="text-sm font-bold text-slate-900">업무 바로가기</h4>
           <Badge variant="outline" className="text-[10px]">{links.length}개</Badge>
         </div>
         {isAdmin && (
@@ -104,32 +110,33 @@ export const QuickLinksWidget = () => {
         )}
       </div>
 
-      <div
-        className="grid gap-2 flex-1 min-h-0 overflow-hidden auto-rows-min content-start"
-        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))" }}
-      >
+      <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 flex-1 min-h-0 overflow-y-auto content-start">
         {links.map((link) => (
           <div key={link.id} className="relative group">
             <a
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg border border-border/60 bg-card hover:bg-accent/40 hover:border-foreground/40 transition-all text-xs font-semibold text-foreground"
+              className="flex flex-col items-center justify-center gap-2 p-3 rounded-2xl border border-border/60 bg-card hover:bg-slate-50 hover:border-foreground/30 hover:-translate-y-1 transition-all duration-200 ease-in-out text-center"
             >
-              <ExternalLink className="size-3.5 text-foreground/70 shrink-0" />
-              <span className="truncate">{link.label}</span>
+              <div className="size-12 rounded-xl bg-slate-100 grid place-items-center shrink-0">
+                <LinkIcon name={link.icon} />
+              </div>
+              <span className="text-xs md:text-sm font-semibold text-slate-900 whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                {link.label}
+              </span>
             </a>
             {editing && isAdmin && (
-              <div className="absolute -top-1 -right-1 flex gap-0.5">
+              <div className="absolute -top-1.5 -right-1.5 flex gap-0.5 z-10">
                 <button
                   onClick={() => setEditItem(link)}
-                  className="size-5 rounded-full bg-primary text-primary-foreground grid place-items-center text-[9px]"
+                  className="size-5 rounded-full bg-primary text-primary-foreground grid place-items-center text-[9px] shadow-sm"
                 >
                   <Pencil className="size-2.5" />
                 </button>
                 <button
                   onClick={() => deleteItem(link.id)}
-                  className="size-5 rounded-full bg-destructive text-destructive-foreground grid place-items-center text-[9px]"
+                  className="size-5 rounded-full bg-destructive text-destructive-foreground grid place-items-center text-[9px] shadow-sm"
                 >
                   <Trash2 className="size-2.5" />
                 </button>
