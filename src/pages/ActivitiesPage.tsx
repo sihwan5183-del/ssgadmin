@@ -21,6 +21,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
 import { PlannerSuperView } from "@/components/sales/PlannerSuperView";
+import { PlanChangeCalendarView } from "@/pages/PlanChangeCalendarPage";
+import { CalendarDays, ClipboardCheck } from "lucide-react";
 import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
 import { useStaffNames } from "@/hooks/useStaffNames";
