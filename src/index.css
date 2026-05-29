@@ -250,6 +250,26 @@
     width: 100% !important;
     height: 100% !important;
     border-right: none !important;
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  /* 모바일 메뉴: 흰 배경 위에서 다크 슬레이트 톤으로 강제 명도 확보 */
+  .mobile-sidebar-wrapper,
+  .mobile-sidebar-wrapper * {
+    color: #0f172a !important; /* slate-900 */
+  }
+  .mobile-sidebar-wrapper button,
+  .mobile-sidebar-wrapper a {
+    color: #0f172a !important;
+  }
+  .mobile-sidebar-wrapper svg {
+    color: #334155 !important; /* slate-700 */
+  }
+  .mobile-sidebar-wrapper a[aria-current="page"],
+  .mobile-sidebar-wrapper a.bg-sidebar-accent {
+    background-color: #f1f5f9 !important; /* slate-100 */
+  }
   }
 
   /* === 터치 타깃: 모바일에서 체크박스/스위치/아이콘버튼 키우기 === */
