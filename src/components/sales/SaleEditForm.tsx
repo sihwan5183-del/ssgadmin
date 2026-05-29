@@ -1370,15 +1370,20 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
           <FormSection title="📱 섹션 3 · 단말 / 유심 및 자동이체">
           <Grid cols={4}>
             <Field label={isDeviceRequiredProduct(form.product) ? "단말기 *" : "단말기"}>
-              <ModelAutocomplete
-                value={form.device_model ?? ""}
-                onChange={(v) => set("device_model", v)}
-                placeholder={isDeviceRequiredProduct(form.product) ? "942 / S26 / SM-S942N 등" : "모바일/2nd 상품만 입력"}
-                disabled={!isDeviceRequiredProduct(form.product)}
-                className={cn(
-                  !isDeviceRequiredProduct(form.product) && "bg-slate-100 cursor-not-allowed"
-                )}
-              />
+              {isDeviceRequiredProduct(form.product) ? (
+                <ModelAutocomplete
+                  value={form.device_model ?? ""}
+                  onChange={(v) => set("device_model", v)}
+                  placeholder="942 / S26 / SM-S942N 등"
+                />
+              ) : (
+                <Input
+                  value=""
+                  disabled
+                  placeholder="모바일/2nd 상품만 입력"
+                  className="h-9 bg-slate-100 text-xs border-border/60 cursor-not-allowed"
+                />
+              )}
               {requiredErrors.device_model && (
                 <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
                   <AlertTriangle className="size-3" /> {requiredErrors.device_model}
