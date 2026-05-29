@@ -27,7 +27,6 @@ import { ModelAutocomplete } from "@/components/ui/model-autocomplete";
 import { useDeviceModels } from "@/hooks/useDeviceModels";
 import { formatPhone } from "@/lib/phoneFormat";
 import { verifyLoadedSale, findMissingBoundKeys } from "@/components/sales/saleFormLoader";
-import { MultiSelectChips } from "@/components/ui/multi-select-chips";
 
 export type SaleRow = {
   id: string;
@@ -417,7 +416,13 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
     !customFields.subscription_no || subscriptionDigits === String(customFields.subscription_no);
   const requiredErrors: Record<string, string | null> = {
     customer_name: (form.customer_name ?? "").trim() ? null : "고객명을 입력해주세요",
+    birth_date: (form.birth_date ?? "").trim() ? null : "생년월일을 입력해주세요",
     phone: !phoneDigits ? "연락처를 입력해주세요" : !phoneValid ? "숫자 10~11자리로 입력해주세요" : null,
+    subscription_no: (customFields.subscription_no ?? "").toString().trim()
+      ? null
+      : "가입 번호를 입력해주세요",
+    open_method: (form.open_method ?? "").trim() ? null : "개통방식을 선택해주세요",
+    status: (form.status ?? "").trim() ? null : "최종상태를 선택해주세요",
     product: form.product ? null : "가입상품을 선택해주세요",
     rate_plan: form.rate_plan ? null : "요금제를 선택해주세요",
     device_model: form.device_model && form.device_model.trim() ? null : "단말기를 선택해주세요",
@@ -688,8 +693,21 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                 </p>
               )}
             </Field>
-            <Field label="생년월일">
-              <Input value={form.birth_date ?? ""} onChange={(e) => set("birth_date", e.target.value)} placeholder="900101" className="h-9 bg-input/60 text-xs border-border/60" />
+            <Field label="생년월일 *">
+              <Input
+                value={form.birth_date ?? ""}
+                onChange={(e) => set("birth_date", e.target.value)}
+                placeholder="900101"
+                className={cn(
+                  "h-9 bg-input/60 text-xs border-border/60",
+                  requiredErrors.birth_date && "border-destructive focus-visible:ring-destructive/40",
+                )}
+              />
+              {requiredErrors.birth_date && (
+                <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
+                  <AlertTriangle className="size-3" /> {requiredErrors.birth_date}
+                </p>
+              )}
             </Field>
             <Field label="연락처 *">
               <Input
@@ -710,21 +728,21 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                 </p>
               )}
             </Field>
-            <Field label="가입 번호">
+            <Field label="가입 번호 *">
               <Input
                 value={customFields.subscription_no ?? ""}
                 onChange={(e) => setCustomFields((f) => ({ ...f, subscription_no: e.target.value.replace(/\D+/g, "").slice(0, 12) }))}
                 placeholder="숫자만 입력 (최대 12자리)"
                 className={cn(
                   "h-9 bg-input/60 text-xs border-border/60",
-                  subscriptionError && "border-destructive focus-visible:ring-destructive/40",
+                  (subscriptionError || requiredErrors.subscription_no) && "border-destructive focus-visible:ring-destructive/40",
                 )}
                 inputMode="numeric"
                 maxLength={12}
               />
-              {subscriptionError && (
+              {(subscriptionError || requiredErrors.subscription_no) && (
                 <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
-                  <AlertTriangle className="size-3" /> {subscriptionError}
+                  <AlertTriangle className="size-3" /> {subscriptionError ?? requiredErrors.subscription_no}
                 </p>
               )}
             </Field>
@@ -853,17 +871,33 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
                 );
               })()}
             </Field>
-            <Field label="개통방식">
+            <Field label="개통방식 *">
               <Select value={form.open_method ?? ""} onValueChange={(v) => set("open_method", v)}>
-                <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue placeholder="선택" /></SelectTrigger>
+                <SelectTrigger className={cn(
+                  "h-9 bg-input/60 text-xs",
+                  requiredErrors.open_method && "border-destructive focus-visible:ring-destructive/40",
+                )}><SelectValue placeholder="선택" /></SelectTrigger>
                 <SelectContent>{OPEN_METHODS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
+              {requiredErrors.open_method && (
+                <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
+                  <AlertTriangle className="size-3" /> {requiredErrors.open_method}
+                </p>
+              )}
             </Field>
-            <Field label="최종상태">
+            <Field label="최종상태 *">
               <Select value={form.status ?? "개통완료"} onValueChange={(v) => set("status", v)}>
-                <SelectTrigger className="h-9 bg-input/60 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className={cn(
+                  "h-9 bg-input/60 text-xs",
+                  requiredErrors.status && "border-destructive focus-visible:ring-destructive/40",
+                )}><SelectValue /></SelectTrigger>
                 <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
+              {requiredErrors.status && (
+                <p className="text-[10px] text-destructive mt-1 flex items-center gap-1">
+                  <AlertTriangle className="size-3" /> {requiredErrors.status}
+                </p>
+              )}
             </Field>
             <Field label="개통일자">
               <Input
@@ -1037,29 +1071,67 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
           </div>
           {/* 부가서비스 - 자유 텍스트 입력 (선택 사항) */}
           <div className="grid grid-cols-12 gap-2">
-                  <div className="col-span-12 md:col-span-4">
-                    <Field label="부가서비스 1 (선택)">
-                      <Input
-                        value={form.vas1 ?? ""}
-                        onChange={(e) => set("vas1", e.target.value || null)}
-                        placeholder="자유 입력 (예: 음악감상, 데이터팩 등)"
-                        className="h-9 bg-input/60 text-xs"
-                        maxLength={200}
-                      />
-                    </Field>
-                  </div>
-                  <div className="col-span-12 md:col-span-4">
-                    <Field label="부가서비스 2 (다중 선택)">
-                      <MultiSelectChips
-                        options={addonMaster}
-                        value={(form.vas2 ?? "")
+                  <div className="col-span-12 md:col-span-8">
+                    <Field label="부가서비스">
+                      {(() => {
+                        const vas2List = (form.vas2 ?? "")
                           .split(/[,，]\s*/)
                           .map((s) => s.trim())
-                          .filter(Boolean)}
-                        onChange={(next) => set("vas2", next.length > 0 ? next.join(", ") : null)}
-                        placeholder="마스터에서 선택…"
-                        emptyHint="어드민 [부가서비스 유지기간]에서 등록하세요"
-                      />
+                          .filter(Boolean);
+                        const addons: string[] = [form.vas1 ?? "", ...vas2List];
+                        if (addons.length === 0) addons.push("");
+                        const commit = (next: string[]) => {
+                          const cleaned = next.map((s) => s ?? "");
+                          const first = cleaned[0] ?? "";
+                          const rest = cleaned.slice(1).map((s) => s.trim()).filter(Boolean);
+                          set("vas1", first.trim() ? first : null);
+                          set("vas2", rest.length > 0 ? rest.join(", ") : null);
+                        };
+                        return (
+                          <div className="space-y-1.5">
+                            {addons.map((val, i) => (
+                              <div key={i} className="flex items-center gap-1.5">
+                                <Input
+                                  value={val}
+                                  onChange={(e) => {
+                                    const next = [...addons];
+                                    next[i] = e.target.value;
+                                    commit(next);
+                                  }}
+                                  placeholder="자유 입력 (예: V컬러링, 마이포켓 등)"
+                                  className="h-9 bg-input/60 text-xs border-border/60 text-slate-900"
+                                  maxLength={200}
+                                />
+                                {i === addons.length - 1 ? (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-9 px-2 text-xs whitespace-nowrap shrink-0"
+                                    onClick={() => commit([...addons, ""])}
+                                  >
+                                    <Plus className="size-3.5 mr-1" /> 추가
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-9 w-9 shrink-0 text-destructive hover:text-destructive"
+                                    onClick={() => {
+                                      const next = addons.filter((_, idx) => idx !== i);
+                                      commit(next.length === 0 ? [""] : next);
+                                    }}
+                                    aria-label="부가서비스 삭제"
+                                  >
+                                    <Trash2 className="size-3.5" />
+                                  </Button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </Field>
                   </div>
                   <div className="col-span-12 md:col-span-4">
