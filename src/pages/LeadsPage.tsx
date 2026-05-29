@@ -752,7 +752,7 @@ export default function LeadsPage() {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/60 border-b-2 border-border hover:bg-muted/60">
-              <TableHead className="text-foreground font-bold">접수 일시</TableHead>
+              <TableHead className="text-foreground font-bold w-[130px] whitespace-nowrap py-2">접수 일시</TableHead>
               <TableHead className="text-foreground font-bold">고객명</TableHead>
               <TableHead className="text-foreground font-bold">연락처</TableHead>
               <TableHead className="text-foreground font-bold">
