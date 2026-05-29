@@ -11,6 +11,7 @@ import { useRole } from "@/hooks/useRole";
 import { Badge } from "@/components/ui/badge";
 import { EXCLUDED_ACTIVATION_STATUSES } from "@/lib/salesFilter";
 import { useProductScope, matchProductScope } from "@/contexts/ProductScopeContext";
+import { groupChannel, CHANNEL_GROUPS } from "@/lib/channelGroup";
 
 /* ── 가입상품 카테고리 설정 ── */
 type ProductCategoryConfig = {
@@ -152,7 +153,12 @@ export const ChannelActivationBreakdown = () => {
   // Merge config with actual data channels
   const mergedConfig = useMemo(() => {
     const dataChannels = new Set<string>();
-    raw.forEach((r) => dataChannels.add(r.channel || "기타"));
+    // 5대 핵심 그룹만 사용 (기타 항목은 차단)
+    CHANNEL_GROUPS.forEach((g) => dataChannels.add(g));
+    raw.forEach((r) => {
+      const g = groupChannel(r.channel);
+      if (g) dataChannels.add(g);
+    });
     // Start with saved config
     const existing = new Map(channelConfig.map((c) => [c.name, c]));
     // Add any new channels from data
@@ -177,7 +183,8 @@ export const ChannelActivationBreakdown = () => {
     const todayISO = new Date().toISOString().slice(0, 10);
     const map = new Map<string, { monthly: number; today: number }>();
     raw.forEach((r) => {
-      const ch = r.channel || "기타";
+      const ch = groupChannel(r.channel);
+      if (!ch) return; // 5대 그룹 외 차단
       if (hiddenChannels.has(ch)) return;
       // 상단 6대 카드 ProductScope 필터를 항상 추가 적용
       if (!matchProductScope(r.product, scope)) return;
