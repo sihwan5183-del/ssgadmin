@@ -228,32 +228,34 @@ const IndexInner = () => {
   // Widget registry — id, node, default lg position. Visibility filtered via
   // existing useDashboardLayout toggles; grid auto-compacts hidden gaps.
   const widgetDefs: Array<{ id: string; node: React.ReactNode; lg: GridWidget["lg"]; always?: boolean; adminOnly?: boolean }> = [
-    { id: "review_alerts",        node: <MyReviewAlerts />,                lg: { x: 0,  y: 0,   w: 12, h: 4 } },
-    { id: "today_care",           node: <TodayCareWidget />,               lg: { x: 0,  y: 4,   w: 12, h: 6 } },
-    { id: "quick_links",          node: <QuickLinksWidget />,              lg: { x: 0,  y: 10,  w: 12, h: 4 }, adminOnly: true },
-    { id: "unified_calendar",     node: <UnifiedCalendarWidget />,         lg: { x: 0,  y: 14,  w: 12, h: 12 }, always: true },
-    { id: "top_product",          node: <TopProductScoreboard />,          lg: { x: 0,  y: 26,  w: 12, h: 8 }, always: true },
-    { id: "goal_gauge",           node: <RadialGoalGauge />,               lg: { x: 0,  y: 34,  w: 4,  h: 9 } },
-    { id: "hero_performance",     node: <HeroPerformance />,               lg: { x: 4,  y: 34,  w: 8,  h: 9 } },
-    { id: "stat_cards",           node: StatCardsBlock,                    lg: { x: 0,  y: 43,  w: 12, h: 8 } },
-    { id: "channel_activation",   node: <ChannelActivationBreakdown />,    lg: { x: 0,  y: 51,  w: 12, h: 9 }, adminOnly: true },
-    { id: "activation_breakdown", node: <ActivationBreakdown />,           lg: { x: 0,  y: 60,  w: 12, h: 9 } },
-    { id: "performance_chart",    node: <PerformanceChart />,              lg: { x: 0,  y: 69,  w: 8,  h: 10 } },
-    { id: "channel_donut",        node: <ChannelDonut />,                  lg: { x: 8,  y: 69,  w: 4,  h: 10 } },
-    { id: "settlement_charts",    node: SettlementChartsBlock,             lg: { x: 0,  y: 79,  w: 12, h: 10 } },
-    { id: "my_incentive",         node: <MyIncentiveWidget />,             lg: { x: 0,  y: 89,  w: 12, h: 6 } },
-    { id: "store_ranking",        node: <StoreRevenueRanking />,           lg: { x: 0,  y: 95,  w: 6,  h: 12 } },
-    { id: "store_efficiency",     node: <StoreEfficiencyBubble />,         lg: { x: 6,  y: 95,  w: 6,  h: 12 } },
-    { id: "staff_matrix",         node: <StaffPerformanceMatrix />,        lg: { x: 0,  y: 107, w: 12, h: 14 } },
-    { id: "performance_ledger",   node: <PerformanceLedger />,             lg: { x: 0,  y: 121, w: 12, h: 14 } },
-    { id: "overall_model",        node: <OverallModelAnalysis />,          lg: { x: 0,  y: 135, w: 12, h: 12 } },
-    { id: "channel_model",        node: <ChannelModelAnalysis />,          lg: { x: 0,  y: 147, w: 12, h: 12 } },
-    { id: "live_feed",            node: <LiveActivityFeed />,              lg: { x: 0,  y: 159, w: 6,  h: 12 } },
-    { id: "planner_feed",         node: <PlannerFeed />,                   lg: { x: 6,  y: 159, w: 6,  h: 12 } },
-    { id: "inventory_widget",     node: <InventoryWidget />,               lg: { x: 0,  y: 171, w: 6,  h: 10 } },
-    { id: "strategy_gauges",      node: <StrategyModelGauges />,           lg: { x: 6,  y: 171, w: 6,  h: 10 } },
-    { id: "ad_schedule",          node: <AdScheduleWidget />,              lg: { x: 0,  y: 181, w: 6,  h: 10 } },
-    { id: "ranking_panel",        node: <RankingPanel />,                  lg: { x: 6,  y: 181, w: 6,  h: 10 } },
+    // Compact tile grid (12 cols). Widgets default to half-width or smaller
+    // so the dashboard reads as tiled cards, not a stack of full-width rows.
+    { id: "review_alerts",        node: <MyReviewAlerts />,                lg: { x: 0,  y: 0,   w: 8,  h: 4 } },
+    { id: "quick_links",          node: <QuickLinksWidget />,              lg: { x: 8,  y: 0,   w: 4,  h: 4 }, adminOnly: true },
+    { id: "today_care",           node: <TodayCareWidget />,               lg: { x: 0,  y: 4,   w: 6,  h: 6 } },
+    { id: "top_product",          node: <TopProductScoreboard />,          lg: { x: 6,  y: 4,   w: 6,  h: 6 }, always: true },
+    { id: "unified_calendar",     node: <UnifiedCalendarWidget />,         lg: { x: 0,  y: 10,  w: 8,  h: 12 }, always: true },
+    { id: "goal_gauge",           node: <RadialGoalGauge />,               lg: { x: 8,  y: 10,  w: 4,  h: 9 } },
+    { id: "hero_performance",     node: <HeroPerformance />,               lg: { x: 0,  y: 22,  w: 8,  h: 9 } },
+    { id: "channel_donut",        node: <ChannelDonut />,                  lg: { x: 8,  y: 19,  w: 4,  h: 10 } },
+    { id: "stat_cards",           node: StatCardsBlock,                    lg: { x: 0,  y: 31,  w: 12, h: 8 } },
+    { id: "channel_activation",   node: <ChannelActivationBreakdown />,    lg: { x: 0,  y: 39,  w: 6,  h: 9 }, adminOnly: true },
+    { id: "activation_breakdown", node: <ActivationBreakdown />,           lg: { x: 6,  y: 39,  w: 6,  h: 9 } },
+    { id: "performance_chart",    node: <PerformanceChart />,              lg: { x: 0,  y: 48,  w: 8,  h: 10 } },
+    { id: "my_incentive",         node: <MyIncentiveWidget />,             lg: { x: 8,  y: 48,  w: 4,  h: 6 } },
+    { id: "settlement_charts",    node: SettlementChartsBlock,             lg: { x: 0,  y: 58,  w: 12, h: 10 } },
+    { id: "store_ranking",        node: <StoreRevenueRanking />,           lg: { x: 0,  y: 68,  w: 6,  h: 12 } },
+    { id: "store_efficiency",     node: <StoreEfficiencyBubble />,         lg: { x: 6,  y: 68,  w: 6,  h: 12 } },
+    { id: "staff_matrix",         node: <StaffPerformanceMatrix />,        lg: { x: 0,  y: 80,  w: 12, h: 14 } },
+    { id: "performance_ledger",   node: <PerformanceLedger />,             lg: { x: 0,  y: 94,  w: 12, h: 14 } },
+    { id: "overall_model",        node: <OverallModelAnalysis />,          lg: { x: 0,  y: 108, w: 6,  h: 12 } },
+    { id: "channel_model",        node: <ChannelModelAnalysis />,          lg: { x: 6,  y: 108, w: 6,  h: 12 } },
+    { id: "live_feed",            node: <LiveActivityFeed />,              lg: { x: 0,  y: 120, w: 6,  h: 12 } },
+    { id: "planner_feed",         node: <PlannerFeed />,                   lg: { x: 6,  y: 120, w: 6,  h: 12 } },
+    { id: "inventory_widget",     node: <InventoryWidget />,               lg: { x: 0,  y: 132, w: 6,  h: 10 } },
+    { id: "strategy_gauges",      node: <StrategyModelGauges />,           lg: { x: 6,  y: 132, w: 6,  h: 10 } },
+    { id: "ad_schedule",          node: <AdScheduleWidget />,              lg: { x: 0,  y: 142, w: 6,  h: 10 } },
+    { id: "ranking_panel",        node: <RankingPanel />,                  lg: { x: 6,  y: 142, w: 6,  h: 10 } },
   ];
 
   const gridItems: GridWidget[] = widgetDefs
@@ -341,7 +343,7 @@ const IndexInner = () => {
         </div>
       )}
 
-      <DashboardGrid items={gridItems} editable={isAdmin} storageKey="dashboard.grid.v1" />
+      <DashboardGrid items={gridItems} editable={isAdmin} storageKey="dashboard.grid.v2" />
     </>
   );
 };
