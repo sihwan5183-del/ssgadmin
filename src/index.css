@@ -270,7 +270,6 @@
   .mobile-sidebar-wrapper a.bg-sidebar-accent {
     background-color: #f1f5f9 !important; /* slate-100 */
   }
-  }
 
   /* === 터치 타깃: 모바일에서 체크박스/스위치/아이콘버튼 키우기 === */
   @media (max-width: 1023px) {
