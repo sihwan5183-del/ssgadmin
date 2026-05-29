@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Building2, Plus, Search, TrendingUp, Calendar as CalIcon, Users, AlertTriangle } from "lucide-react";
-import { useSegPartners, useSegActivities, type SegPartner } from "@/hooks/useSegPartners";
+import { useSegPartners, useSegActivities, type SegPartner, type SegActivity } from "@/hooks/useSegPartners";
 import { PartnerFormDialog } from "@/components/seg/PartnerFormDialog";
 import { PartnerDetailDrawer } from "@/components/seg/PartnerDetailDrawer";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
@@ -30,10 +30,13 @@ export default function SegPartnersPage() {
   const [selected, setSelected] = useState<SegPartner | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = searchParams.get("tab") === "apartment" ? "apartment" : "partners";
-  const [tab, setTab] = useState<"partners" | "apartment">(initialTab);
+  const tabParam = searchParams.get("tab");
+  const initialTab: "partners" | "apartment" | "storefront" =
+    tabParam === "apartment" ? "apartment" : tabParam === "storefront" ? "storefront" : "partners";
+  const [tab, setTab] = useState<"partners" | "apartment" | "storefront">(initialTab);
   const onTabChange = (v: string) => {
-    const next = v === "apartment" ? "apartment" : "partners";
+    const next: "partners" | "apartment" | "storefront" =
+      v === "apartment" ? "apartment" : v === "storefront" ? "storefront" : "partners";
     setTab(next);
     const sp = new URLSearchParams(searchParams);
     sp.set("tab", next);
@@ -126,11 +129,12 @@ export default function SegPartnersPage() {
         </Suspense>
       </Card>
 
-      {/* ── 하단 탭 ── */}
+      {/* ── 하단 탭 (3대 핵심 활동) ── */}
       <Tabs value={tab} onValueChange={onTabChange} className="w-full">
-        <TabsList className="grid grid-cols-2 w-full max-w-md">
-          <TabsTrigger value="partners">제휴 업체 목록</TabsTrigger>
-          <TabsTrigger value="apartment">아파트 게시 현황</TabsTrigger>
+        <TabsList className="grid grid-cols-3 w-full max-w-2xl h-11">
+          <TabsTrigger value="partners" className="text-sm font-semibold">제휴업체 목록</TabsTrigger>
+          <TabsTrigger value="apartment" className="text-sm font-semibold">아파트 게시</TabsTrigger>
+          <TabsTrigger value="storefront" className="text-sm font-semibold">점두 활동</TabsTrigger>
         </TabsList>
 
         <TabsContent value="partners" className="mt-4 space-y-3">
@@ -226,11 +230,92 @@ export default function SegPartnersPage() {
             </Suspense>
           </Card>
         </TabsContent>
+
+        <TabsContent value="storefront" className="mt-4">
+          <StorefrontActivityTable
+            activities={activities}
+            partners={partners}
+          />
+        </TabsContent>
       </Tabs>
 
       <PartnerFormDialog open={formOpen} onOpenChange={setFormOpen} />
       <PartnerDetailDrawer open={drawerOpen} onOpenChange={setDrawerOpen} partner={selected} />
     </div>
+  );
+}
+
+function StorefrontActivityTable({
+  activities,
+  partners,
+}: {
+  activities: SegActivity[];
+  partners: SegPartner[];
+}) {
+  const partnerMap = useMemo(() => {
+    const m = new Map<string, SegPartner>();
+    partners.forEach((p) => m.set(p.id, p));
+    return m;
+  }, [partners]);
+
+  const rows = useMemo(() => {
+    const KW = ["점두", "가판", "판촉", "매장 앞", "스트리트"];
+    return activities.filter((a) => {
+      const partner = partnerMap.get(a.partner_id);
+      const partnerCat = (partner?.custom_fields as any)?.activity_category as string | undefined;
+      if (partnerCat === "자체 점두행사") return true;
+      const haystack = `${a.activity_type ?? ""} ${a.title ?? ""} ${a.content ?? ""} ${a.location ?? ""}`;
+      return KW.some((k) => haystack.includes(k));
+    });
+  }, [activities, partnerMap]);
+
+  return (
+    <Card className="overflow-hidden border-slate-200">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr className="text-left text-slate-700">
+              <th className="px-3 py-2 font-semibold whitespace-nowrap">활동일자</th>
+              <th className="px-3 py-2 font-semibold whitespace-nowrap">시간</th>
+              <th className="px-3 py-2 font-semibold whitespace-nowrap">업체/매장</th>
+              <th className="px-3 py-2 font-semibold whitespace-nowrap">행사 유형</th>
+              <th className="px-3 py-2 font-semibold whitespace-nowrap">제목</th>
+              <th className="px-3 py-2 font-semibold whitespace-nowrap">장소</th>
+              <th className="px-3 py-2 font-semibold whitespace-nowrap">담당자</th>
+              <th className="px-3 py-2 font-semibold whitespace-nowrap">진행상태</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-3 py-10 text-center text-sm text-muted-foreground">
+                  등록된 점두 활동이 없습니다. 제휴업체 상세에서 활동을 [자체 점두행사] 분류로 기록하면 자동 집계됩니다.
+                </td>
+              </tr>
+            )}
+            {rows.map((a) => {
+              const partner = partnerMap.get(a.partner_id);
+              return (
+                <tr key={a.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 transition-colors text-slate-900">
+                  <td className="px-3 py-2 whitespace-nowrap tabular-nums">{a.activity_date}</td>
+                  <td className="px-3 py-2 whitespace-nowrap tabular-nums">{a.activity_time ?? "-"}</td>
+                  <td className="px-3 py-2 whitespace-nowrap font-semibold">{partner?.company_name ?? "-"}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">{a.activity_type ?? "-"}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">{a.title ?? "-"}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">{a.location ?? "-"}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">{a.assignee_name ?? "-"}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <span className="text-slate-900 font-medium">
+                      {a.is_completed ? "완료" : "진행중"}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Card>
   );
 }
 
