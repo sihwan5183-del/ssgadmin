@@ -885,6 +885,42 @@ const SalesLedgerPage = () => {
 
       {/* 액션 바 */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
+        {/* 검색바 */}
+        <div className="relative flex-1 min-w-[220px] max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
+            value={searchQ}
+            onChange={(e) => setSearchQ(e.target.value)}
+            placeholder="고객명·연락처 뒷자리·모델명 검색…"
+            className="h-10 pl-9 pr-9 bg-input/60 border-border/60"
+          />
+          {searching ? (
+            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground animate-spin" />
+          ) : searchQ ? (
+            <button
+              type="button"
+              onClick={() => setSearchQ("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded"
+              aria-label="검색어 지우기"
+            >
+              <X className="size-4" />
+            </button>
+          ) : null}
+        </div>
+        {hasActiveFilter && (
+          <Badge variant="outline" className="h-7 px-2 text-[11px] border-primary/40 text-primary gap-1">
+            <Filter className="size-3" /> 컬럼 필터 적용중
+          </Badge>
+        )}
+        {hasActiveFilter && (
+          <button
+            onClick={resetAllFilters}
+            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 px-2 py-1 rounded hover:bg-muted/50"
+          >
+            <X className="size-3" /> 모든 필터 초기화
+          </button>
+        )}
+
         <Button variant="outline" size="sm" onClick={handleExport} className="rounded-xl gap-2">
           <Download className="size-4" /> 실적 엑셀
         </Button>
