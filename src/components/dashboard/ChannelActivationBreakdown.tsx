@@ -547,7 +547,7 @@ export const ChannelActivationBreakdown = () => {
                   </span>
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="size-3 rounded-full shrink-0" style={{ background: color }} />
-                    <span className="text-base font-bold truncate text-foreground">{row.channel}</span>
+                    <span className="text-lg font-extrabold truncate text-slate-900">{row.channel}</span>
                   </div>
                   <div className="h-3 rounded-full bg-muted/80 overflow-hidden">
                     <div className="h-full rounded-full transition-all duration-500" style={{ width: `${ratio}%`, background: color }} />
@@ -556,8 +556,8 @@ export const ChannelActivationBreakdown = () => {
                     <span className="text-xs text-muted-foreground hidden sm:inline">오늘 <span className="font-bold text-primary">+{row.today}</span></span>
                     <span className="text-xs text-primary sm:hidden font-bold">+{row.today}</span>
                     <span className={cn(
-                      "text-lg sm:text-xl font-black tracking-tight min-w-[2.75rem] text-right",
-                      isTop ? "text-primary" : "text-foreground"
+                      "text-xl sm:text-2xl font-black tracking-tight min-w-[2.75rem] text-right",
+                      isTop ? "text-primary" : "text-slate-900"
                     )}>
                       {row.monthly}
                     </span>
