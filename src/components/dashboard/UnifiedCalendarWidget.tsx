@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronLeft, ChevronRight, Megaphone, MapPin, Briefcase, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -44,7 +45,7 @@ const normalizeSaleType = (t: string | null): "MNP" | "기변" | "신규" | "기
   return "기타";
 };
 
-export function UnifiedCalendarWidget({ onDayClick }: { onDayClick?: (iso: string) => void } = {}) {
+export function UnifiedCalendarWidget({ onDayClick, showTabs = true }: { onDayClick?: (iso: string) => void; showTabs?: boolean } = {}) {
   const [tab, setTab] = useState<TabKey>("sales");
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -247,33 +248,42 @@ export function UnifiedCalendarWidget({ onDayClick }: { onDayClick?: (iso: strin
   return (
     <div className="rounded-2xl border border-[#F0F0F0] bg-card p-4 md:p-5 shadow-sm">
       {/* Tab bar */}
-      <div className="-mx-1 mb-4 overflow-x-auto scrollbar-hide border-b border-[#F0F0F0]">
-        <div className="flex gap-1 px-1 min-w-max">
-          {TABS.map((t) => {
-            const active = tab === t.key;
-            const Icon = t.icon;
-            return (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className={cn(
-                  "relative whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-colors inline-flex items-center gap-1.5",
-                  active ? "text-[#1A1A1A]" : "text-neutral-500 hover:text-[#1A1A1A]",
-                )}
-              >
-                <Icon className="size-3.5" style={active ? { color: MAGENTA } : undefined} />
-                {t.label}
-                {active && (
-                  <span
-                    className="absolute left-3 right-3 -bottom-px h-0.5 rounded-full"
-                    style={{ backgroundColor: MAGENTA }}
-                  />
-                )}
-              </button>
-            );
-          })}
+      {showTabs ? (
+        <div className="-mx-1 mb-4 overflow-x-auto scrollbar-hide border-b border-[#F0F0F0]">
+          <div className="flex gap-1 px-1 min-w-max">
+            {TABS.map((t) => {
+              const active = tab === t.key;
+              const Icon = t.icon;
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => setTab(t.key)}
+                  className={cn(
+                    "relative whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-colors inline-flex items-center gap-1.5",
+                    active ? "text-[#1A1A1A]" : "text-neutral-500 hover:text-[#1A1A1A]",
+                  )}
+                >
+                  <Icon className="size-3.5" style={active ? { color: MAGENTA } : undefined} />
+                  {t.label}
+                  {active && (
+                    <span
+                      className="absolute left-3 right-3 -bottom-px h-0.5 rounded-full"
+                      style={{ backgroundColor: MAGENTA }}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="mb-4 pb-3 border-b border-[#F0F0F0]">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[#1A1A1A]">
+            <TrendingUp className="size-4" style={{ color: MAGENTA }} />
+            일별 판매실적
+          </div>
+        </div>
+      )}
 
       {/* Month nav */}
       <div className="mb-3 flex items-center justify-between">

@@ -859,9 +859,34 @@ const SalesLedgerPage = () => {
         showPeriodFilter
       />
 
-      {/* 검색 바 + 필터 상태 — 스마트 필터 제거, 컬럼 헤더 필터로 통합됨 */}
-      <section className="mb-4 flex items-center gap-2 flex-wrap">
-        <div className="relative flex-1 min-w-[220px] max-w-lg">
+      {/* 일별 판매실적 캘린더 (최상단) */}
+      <div className="mb-5">
+        <UnifiedCalendarWidget onDayClick={(iso) => setDayFilter((cur) => (cur === iso ? null : iso))} showTabs={false} />
+        {dayFilter && (
+          <div className="mt-2 flex items-center gap-2 text-[12px] text-foreground">
+            <Badge variant="outline" className="h-7 px-2 border-primary/40 text-primary gap-1">
+              <Filter className="size-3" /> {dayFilter} 개통건만 표시
+            </Badge>
+            <button
+              onClick={() => setDayFilter(null)}
+              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 px-2 py-1 rounded hover:bg-muted/50"
+            >
+              <X className="size-3" /> 날짜 필터 해제 (당월 전체 보기)
+            </button>
+          </div>
+        )}
+      </div>
+      {dbSummary.excludedCount > 0 && (
+        <div className="-mt-3 mb-4 text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+          <AlertTriangle className="size-3" />
+          상품권 미반납 {dbSummary.excludedCount}건은 합계에서 제외되었습니다 (반납 완료 시 자동 반영)
+        </div>
+      )}
+
+      {/* 액션 바 */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        {/* 검색바 */}
+        <div className="relative flex-1 min-w-[220px] max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
             value={searchQ}
@@ -895,34 +920,7 @@ const SalesLedgerPage = () => {
             <X className="size-3" /> 모든 필터 초기화
           </button>
         )}
-      </section>
 
-      {/* 일별 판매실적 캘린더 (최상단) */}
-      <div className="mb-5">
-        <UnifiedCalendarWidget onDayClick={(iso) => setDayFilter((cur) => (cur === iso ? null : iso))} />
-        {dayFilter && (
-          <div className="mt-2 flex items-center gap-2 text-[12px] text-foreground">
-            <Badge variant="outline" className="h-7 px-2 border-primary/40 text-primary gap-1">
-              <Filter className="size-3" /> {dayFilter} 개통건만 표시
-            </Badge>
-            <button
-              onClick={() => setDayFilter(null)}
-              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 px-2 py-1 rounded hover:bg-muted/50"
-            >
-              <X className="size-3" /> 날짜 필터 해제 (당월 전체 보기)
-            </button>
-          </div>
-        )}
-      </div>
-      {dbSummary.excludedCount > 0 && (
-        <div className="-mt-3 mb-4 text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
-          <AlertTriangle className="size-3" />
-          상품권 미반납 {dbSummary.excludedCount}건은 합계에서 제외되었습니다 (반납 완료 시 자동 반영)
-        </div>
-      )}
-
-      {/* 액션 바 */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
         <Button variant="outline" size="sm" onClick={handleExport} className="rounded-xl gap-2">
           <Download className="size-4" /> 실적 엑셀
         </Button>
