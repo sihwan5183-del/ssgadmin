@@ -4,12 +4,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Plus, Search, TrendingUp, Calendar as CalIcon, Users, AlertTriangle } from "lucide-react";
+import { Building2, Plus, Search, TrendingUp, Calendar as CalIcon, Users, AlertTriangle, Pencil } from "lucide-react";
 import { useSegPartners, useSegActivities, type SegPartner, type SegActivity } from "@/hooks/useSegPartners";
 import { PartnerFormDialog } from "@/components/seg/PartnerFormDialog";
 import { PartnerDetailDrawer } from "@/components/seg/PartnerDetailDrawer";
 import { QuickScheduleDialog } from "@/components/seg/QuickScheduleDialog";
 import { ApartmentPostingQuickDialog } from "@/components/seg/ApartmentPostingQuickDialog";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
 import { useSearchParams } from "react-router-dom";
 
