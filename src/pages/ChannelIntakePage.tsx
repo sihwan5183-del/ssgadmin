@@ -839,21 +839,21 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
                           openDetailEditor(r);
                         }}
                       >
-                        <td className="px-3 py-3 align-middle">
+                        <td className="px-2 py-3 align-middle">
                           <Checkbox
                             checked={selectedIds.has(r.id)}
                             onCheckedChange={() => toggleOne(r.id)}
                             aria-label="선택"
                           />
                         </td>
-                        <td className="px-3 py-3 text-xs tabular-nums align-middle whitespace-nowrap text-foreground">{r.inquiry_date}</td>
-                        <td className="px-3 py-3 align-middle whitespace-nowrap text-xs text-foreground">
+                        <td className="px-2 py-3 text-xs tabular-nums align-middle whitespace-nowrap text-foreground">{r.inquiry_date}</td>
+                        <td className="px-2 py-3 align-middle whitespace-nowrap text-xs text-foreground truncate">
                           {r.channel}
                         </td>
-                        <td className="px-3 py-3 align-middle whitespace-nowrap text-xs text-foreground">
+                        <td className="px-2 py-3 align-middle whitespace-nowrap text-xs text-foreground truncate">
                           {carrier ? carrier : <span className="text-muted-foreground">-</span>}
                         </td>
-                        <td className="px-3 py-3 text-xs font-medium align-middle whitespace-nowrap text-foreground">
+                        <td className="px-2 py-3 text-xs font-medium align-middle whitespace-nowrap text-foreground truncate">
                           <div className="inline-flex items-center gap-1.5">
                             <span>{r.customer_name ?? "-"}</span>
                             {newLead && (
@@ -873,35 +873,35 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
                             )}
                           </div>
                         </td>
-                        <td className="px-3 py-3 text-xs tabular-nums align-middle whitespace-nowrap text-foreground">{r.birth_date ?? "-"}</td>
-                        <td className="px-3 py-3 text-xs align-middle whitespace-nowrap text-foreground">
+                        <td className="px-2 py-3 text-xs tabular-nums align-middle whitespace-nowrap text-foreground">{r.birth_date ?? "-"}</td>
+                        <td className="px-2 py-3 text-xs align-middle whitespace-nowrap text-foreground">
                           {r.phone ? (
                             <a href={`tel:${r.phone}`} className="text-foreground hover:underline tabular-nums">
                               {formatPhone(r.phone)}
                             </a>
                           ) : "-"}
                         </td>
-                        <td className="px-3 py-3 align-middle whitespace-nowrap text-xs text-foreground">
+                        <td className="px-2 py-3 align-middle whitespace-nowrap text-xs text-foreground">
                           {consultDevice ? (
-                            <span className="truncate inline-block max-w-[140px] align-middle" title={consultDevice}>{consultDevice}</span>
+                            <span className="truncate inline-block max-w-full align-middle" title={consultDevice}>{consultDevice}</span>
                           ) : (
                             <span className="text-muted-foreground">-</span>
                           )}
                         </td>
-                        <td className="px-3 py-3 align-middle">
+                        <td className="px-2 py-3 align-middle whitespace-nowrap">
                           <Badge
                             variant="outline"
-                            className={cn("text-[10px] h-5 px-2", inquiryStatusClass(displayStatus))}
+                            className={cn("text-[10px] h-5 px-1.5 whitespace-nowrap", inquiryStatusClass(displayStatus))}
                           >
                             {displayStatus || "-"}
                           </Badge>
                         </td>
-                        <td className="px-3 py-3 text-[11px] tabular-nums align-middle whitespace-nowrap text-foreground">
+                        <td className="px-2 py-3 text-[11px] tabular-nums align-middle whitespace-nowrap text-foreground">
                           {lastLog?.created_at
                             ? formatTime(lastLog.created_at)
                             : formatTime(r.last_action_at)}
                         </td>
-                        <td className="px-3 py-3 text-xs align-middle min-w-[440px] max-w-[520px] whitespace-nowrap overflow-hidden text-ellipsis text-foreground">
+                        <td className="px-2 py-3 text-xs align-middle whitespace-nowrap overflow-hidden text-ellipsis text-foreground">
                           {(lastSummary || consultDevice) ? (
                             <TooltipProvider delayDuration={150}>
                               <UITooltip>
@@ -937,7 +937,7 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
                             <span className="text-muted-foreground">-</span>
                           )}
                         </td>
-                        <td className="px-3 py-3 text-xs align-middle whitespace-nowrap text-foreground">{r.manager ? r.manager.split(/\s*[·•]\s*/)[0] : "-"}</td>
+                        <td className="px-2 py-3 text-xs align-middle whitespace-nowrap text-foreground truncate">{r.manager ? r.manager.split(/\s*[·•]\s*/)[0] : "-"}</td>
                       </tr>
                     );
                   })
