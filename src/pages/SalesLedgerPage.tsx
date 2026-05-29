@@ -39,6 +39,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { calcDashboardProfit } from "@/lib/profit";
 import { useDashboardStaff } from "@/hooks/useDashboardStaff";
+import { UnifiedCalendarWidget } from "@/components/dashboard/UnifiedCalendarWidget";
 
 const PAGE_SIZE = 25;
 
@@ -197,6 +198,7 @@ const SalesLedgerPage = () => {
   const [rows, setRows] = useState<SaleRow[]>([]);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
+  const [dayFilter, setDayFilter] = useState<string | null>(null);
   const [searchQ, setSearchQ] = useState(() => searchParams.get("q") ?? "");
   const [debouncedSearchQ, setDebouncedSearchQ] = useState(() => searchParams.get("q") ?? "");
   const [searching, setSearching] = useState(false);
