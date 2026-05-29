@@ -40,6 +40,7 @@ import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { BulkActionBar } from "@/components/common/BulkActionBar";
 import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
 import { PurgeByFilterDialog, type PurgeFilter } from "@/components/common/PurgeByFilterDialog";
+import { CompletionDateDialog } from "./CompletionDateDialog";
 
 type ApprovalStatus = "승인대기" | "검수완료" | "확정" | "반려" | "수정요청" | "환수" | "취소";
 
