@@ -302,9 +302,9 @@ export const ChannelActivationBreakdown = () => {
   };
 
   return (
-    <section className="mb-1.5">
-      <Card className="p-5 glass">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+    <section className="h-full">
+      <Card className="p-3 md:p-4 glass h-full flex flex-col">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <div className="flex items-center gap-2.5">
             <div className="size-8 rounded-lg bg-primary/10 grid place-items-center">
               <Radio className="size-4 text-primary" />
@@ -517,7 +517,7 @@ export const ChannelActivationBreakdown = () => {
         ) : rows.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground text-sm font-medium">선택한 기간 내 데이터가 없습니다</div>
         ) : (
-          <div className="space-y-1.5">
+          <div className="space-y-2 flex-1 min-h-0">
             {[...rows].sort((a, b) => b.monthly - a.monthly).map((row, idx) => {
               const ratio = (row.monthly / maxMonthly) * 100;
               const color = colorFor(row.channel, idx);
@@ -526,35 +526,35 @@ export const ChannelActivationBreakdown = () => {
                 <div
                   key={row.channel}
                   className={cn(
-                    "grid grid-cols-[28px_minmax(0,1fr)_minmax(0,2fr)_auto] items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 rounded-lg border transition-colors",
+                    "grid grid-cols-[28px_minmax(0,1fr)_minmax(0,2fr)_auto] items-center gap-2 sm:gap-3 px-3 py-2.5 rounded-lg border transition-colors",
                     isTop
                       ? "border-primary/40 bg-primary/5"
                       : "border-border/50 bg-card hover:bg-accent/30"
                   )}
                 >
                   <span className={cn(
-                    "text-xs font-black tabular-nums text-center",
+                    "text-sm font-black tabular-nums text-center",
                     isTop ? "text-primary" : "text-muted-foreground"
                   )}>
                     {idx + 1}
                   </span>
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="size-2.5 rounded-full shrink-0" style={{ background: color }} />
-                    <span className="text-sm font-bold truncate">{row.channel}</span>
+                    <span className="size-3 rounded-full shrink-0" style={{ background: color }} />
+                    <span className="text-base font-bold truncate text-foreground">{row.channel}</span>
                   </div>
-                  <div className="h-2 rounded-full bg-muted/80 overflow-hidden">
+                  <div className="h-3 rounded-full bg-muted/80 overflow-hidden">
                     <div className="h-full rounded-full transition-all duration-500" style={{ width: `${ratio}%`, background: color }} />
                   </div>
                   <div className="flex items-baseline gap-2 sm:gap-3 justify-end tabular-nums whitespace-nowrap">
                     <span className="text-xs text-muted-foreground hidden sm:inline">오늘 <span className="font-bold text-primary">+{row.today}</span></span>
                     <span className="text-xs text-primary sm:hidden font-bold">+{row.today}</span>
                     <span className={cn(
-                      "text-base sm:text-lg font-black tracking-tight min-w-[2.5rem] text-right",
+                      "text-lg sm:text-xl font-black tracking-tight min-w-[2.75rem] text-right",
                       isTop ? "text-primary" : "text-foreground"
                     )}>
                       {row.monthly}
                     </span>
-                    <span className="text-[10px] font-semibold text-muted-foreground">건</span>
+                    <span className="text-[11px] font-semibold text-muted-foreground">건</span>
                   </div>
                 </div>
               );
