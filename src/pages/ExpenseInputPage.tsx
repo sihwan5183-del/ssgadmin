@@ -1063,7 +1063,8 @@ export default function ExpenseInputPage() {
                   placeholder="예: 29,000"
                   className="text-right tabular-nums font-medium text-slate-900"
                   value={fixedForm.amount ? Number(fixedForm.amount.replace(/\D/g, "") || 0).toLocaleString("ko-KR") : ""}
-                  onChange={(e) => setFixedForm({ ...fixedForm, amount: e.target.value })} />
+                  onChange={(e) => setFixedForm({ ...fixedForm, amount: e.target.value.replace(/\D/g, "") })}
+                />
               </div>
               <div className="md:col-span-2">
                 <Label>거래처 / 서비스명</Label>
