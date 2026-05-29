@@ -75,7 +75,7 @@ export const PendingProductScoreboard = () => {
   const grandTotal = useMemo(() => stats.reduce((s, x) => s + x.total, 0), [stats]);
 
   return (
-    <div className="relative h-full w-full flex flex-col bg-card border border-border/60 shadow-sm rounded-xl p-3">
+    <div className="relative h-full w-full flex flex-col premium-card p-3 md:p-4">
       <div className="flex items-center justify-between mb-2 px-0.5">
         <div className="flex items-baseline gap-2">
           <h2 className="text-sm font-bold tracking-tight text-foreground inline-flex items-center gap-1.5">
@@ -102,9 +102,9 @@ export const PendingProductScoreboard = () => {
               <div
                 key={s.key}
                 className={cn(
-                  "text-left px-2.5 py-2 rounded-xl border bg-card transition-all",
-                  "border-border/60",
-                  s.total > 0 && "border-warning/40 bg-warning/5",
+                  "text-left px-2.5 py-2 rounded-xl border bg-card transition-all duration-300 ease-in-out",
+                  "border-slate-100 hover:border-slate-300 hover:-translate-y-0.5 hover:shadow-md",
+                  s.total > 0 && "border-amber-200 bg-amber-50/40",
                 )}
               >
                 <div className={cn("flex items-center gap-1.5 text-[11px] font-bold", ACCENT[s.key])}>
@@ -112,18 +112,18 @@ export const PendingProductScoreboard = () => {
                   <span className="truncate">{s.label}</span>
                 </div>
                 <div className="mt-1.5 flex items-baseline gap-1">
-                  <span className="text-2xl xl:text-3xl font-black tabular-nums leading-none text-foreground">
+                  <span className="text-2xl xl:text-3xl font-black tabular-nums leading-none text-slate-900">
                     {s.total.toLocaleString()}
                   </span>
-                  <span className="text-[10px] font-bold text-foreground/60">건</span>
+                  <span className="text-[10px] font-bold text-slate-500">건</span>
                 </div>
-                <div className="mt-1.5 flex items-center gap-2 text-[10px] font-semibold tabular-nums text-foreground/70">
-                  <span className="inline-flex items-center gap-0.5">
-                    <span className="size-1.5 rounded-full bg-[hsl(215_90%_55%)]" />
+                <div className="mt-1.5 flex items-center gap-2.5 text-[11px] font-semibold tabular-nums text-slate-600">
+                  <span className="inline-flex items-center gap-1">
+                    <span className="size-1.5 rounded-full bg-slate-400" />
                     청약 {s.subscribed}
                   </span>
-                  <span className="inline-flex items-center gap-0.5">
-                    <span className="size-1.5 rounded-full bg-[hsl(38_92%_50%)]" />
+                  <span className="inline-flex items-center gap-1">
+                    <span className="size-1.5 rounded-full bg-slate-300" />
                     택배 {s.shipping}
                   </span>
                 </div>
