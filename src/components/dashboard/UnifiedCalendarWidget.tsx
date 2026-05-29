@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronLeft, ChevronRight, Megaphone, MapPin, Briefcase, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
