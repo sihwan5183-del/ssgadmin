@@ -229,33 +229,65 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
     e.stopPropagation();
     const completionStatus = completionStatusFor(row.product);
     const isCurrentlyCompleted = normalizeStatusValue(row.status) === completionStatus;
+    // 정방향(완료 처리) → 개통일자 지정 모달 띄우기
+    if (!isCurrentlyCompleted) {
+      setCompletionPrompt({ row });
+      return;
+    }
     const cf = ((row as any).custom_fields ?? {}) as Record<string, any>;
     const defaultPrev = isHomeProduct(row.product) ? "청약완료" : "택배발송";
-    const nextStatus = isCurrentlyCompleted
-      ? (cf.previous_status as string | undefined) || defaultPrev
-      : completionStatus;
-    const nextCustomFields = isCurrentlyCompleted
-      ? (() => {
-          const { previous_status: _omit, ...rest } = cf;
-          return rest;
-        })()
-      : { ...cf, previous_status: row.status ?? defaultPrev };
-
-    // 1) 애니메이션 트리거 (완료 처리 시에만 사라짐 효과)
-    if (!isCurrentlyCompleted) {
-      setCompletingIds((prev) => {
-        const n = new Set(prev);
-        n.add(row.id);
-        return n;
-      });
-    }
+    const nextStatus = (cf.previous_status as string | undefined) || defaultPrev;
+    const { previous_status: _omit, ...rest } = cf;
+    const nextCustomFields = rest;
     // 2) DB 즉시 업데이트 (저장 버튼 불필요)
     const { error } = await supabase
       .from("sales")
-      .update({ status: nextStatus, custom_fields: nextCustomFields as any })
+      .update({ status: nextStatus, custom_fields: nextCustomFields as any, open_date: null, open_month: null })
       .eq("id", row.id);
     if (error) {
-      toast.error((isCurrentlyCompleted ? "복구" : "완료") + " 처리 실패: " + error.message);
+      toast.error("복구 처리 실패: " + error.message);
+      return;
+    }
+    toast.success(`${row.customer_name ?? "고객"} · ${nextStatus} 처리됨`);
+    // 복구: 상태값만 갱신, open_date 초기화
+    setResults((prev) =>
+      prev.map((r) =>
+        r.id === row.id
+          ? ({ ...r, status: nextStatus, custom_fields: nextCustomFields, open_date: null } as SaleHit)
+          : r,
+      ),
+    );
+    refreshCounts();
+  };
+
+  // 개통일자 지정 모달에서 [저장] 클릭 시 호출
+  const confirmCompletionWithDate = async (isoDate: string) => {
+    const row = completionPrompt?.row;
+    if (!row) return;
+    const completionStatus = completionStatusFor(row.product);
+    const cf = ((row as any).custom_fields ?? {}) as Record<string, any>;
+    const defaultPrev = isHomeProduct(row.product) ? "청약완료" : "택배발송";
+    const nextCustomFields = { ...cf, previous_status: row.status ?? defaultPrev };
+
+    // 애니메이션 트리거
+    setCompletingIds((prev) => {
+      const n = new Set(prev);
+      n.add(row.id);
+      return n;
+    });
+
+    const { error } = await supabase
+      .from("sales")
+      .update({
+        status: completionStatus,
+        custom_fields: nextCustomFields as any,
+        open_date: isoDate,
+        open_month: isoDate.slice(0, 7),
+      })
+      .eq("id", row.id);
+
+    if (error) {
+      toast.error("완료 처리 실패: " + error.message);
       setCompletingIds((prev) => {
         const n = new Set(prev);
         n.delete(row.id);
@@ -263,43 +295,31 @@ export const SaleSearchPanel = ({ presetStatus = null, bypassPeriod = false }: S
       });
       return;
     }
-    toast.success(`${row.customer_name ?? "고객"} · ${nextStatus} 처리됨`);
-    // 3) 로컬 상태 즉시 반영
-    if (isCurrentlyCompleted) {
-      // 복구: 리스트에 그대로 두고 상태값만 갱신
+    setCompletionPrompt(null);
+    toast.success(`${row.customer_name ?? "고객"} · ${completionStatus} 처리됨 (개통일자 ${isoDate})`);
+    setTimeout(() => {
       setResults((prev) =>
-        prev.map((r) =>
-          r.id === row.id
-            ? ({ ...r, status: nextStatus, custom_fields: nextCustomFields } as SaleHit)
-            : r,
-        ),
-      );
-      refreshCounts();
-    } else {
-      // 완료: 애니메이션 후 미완료 리스트에서 제거 (완료 상태 행은 미완료 필터에서 자동 제외)
-      setTimeout(() => {
-        setResults((prev) =>
-          prev.map((r) =>
+        prev
+          .map((r) =>
             r.id === row.id
-              ? ({ ...r, status: nextStatus, custom_fields: nextCustomFields } as SaleHit)
+              ? ({ ...r, status: completionStatus, custom_fields: nextCustomFields, open_date: isoDate } as SaleHit)
               : r,
-          ).filter((r) => {
-            // 미완료 탭(presetStatus)에서는 완료된 행을 제거
+          )
+          .filter((r) => {
             if (presetStatus) {
               const allowed = presetStatus.split(",").map((s) => s.trim());
               return allowed.includes(r.status ?? "");
             }
             return true;
           }),
-        );
-        setCompletingIds((prev) => {
-          const n = new Set(prev);
-          n.delete(row.id);
-          return n;
-        });
-        refreshCounts();
-      }, 320);
-    }
+      );
+      setCompletingIds((prev) => {
+        const n = new Set(prev);
+        n.delete(row.id);
+        return n;
+      });
+      refreshCounts();
+    }, 320);
   };
 
   const purgeFilter: PurgeFilter = useMemo(() => ({
