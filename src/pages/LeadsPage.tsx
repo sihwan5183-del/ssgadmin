@@ -632,7 +632,12 @@ export default function LeadsPage() {
       )}
 
       {/* Table */}
-      <Tabs value={sourceTab} onValueChange={(v) => setSourceTab(v as "meta" | "dogmaru" | "other")}>
+      <Tabs
+        value={sourceTab}
+        onValueChange={(v) =>
+          startTransition(() => setSourceTab(v as "meta" | "dogmaru" | "other"))
+        }
+      >
         <TabsList className="grid grid-cols-3 w-full max-w-2xl h-12 bg-muted/60 mb-3">
           <TabsTrigger value="meta" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
             메타광고
@@ -649,11 +654,13 @@ export default function LeadsPage() {
       </Tabs>
       {sourceTab === "other" ? (
         <div key="other-intake" className="animate-fade-in">
-          <ChannelIntakePage
-            embedded
-            formOpen={intakeFormOpen}
-            onFormOpenChange={setIntakeFormOpen}
-          />
+          <Suspense fallback={<IntakeSkeleton />}>
+            <ChannelIntakePage
+              embedded
+              formOpen={intakeFormOpen}
+              onFormOpenChange={setIntakeFormOpen}
+            />
+          </Suspense>
         </div>
       ) : (
       <Card key={sourceTab} className="overflow-hidden border-border animate-fade-in">
