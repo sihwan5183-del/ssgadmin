@@ -27,7 +27,6 @@ import { ModelAutocomplete } from "@/components/ui/model-autocomplete";
 import { useDeviceModels } from "@/hooks/useDeviceModels";
 import { formatPhone } from "@/lib/phoneFormat";
 import { verifyLoadedSale, findMissingBoundKeys } from "@/components/sales/saleFormLoader";
-import { MultiSelectChips } from "@/components/ui/multi-select-chips";
 
 export type SaleRow = {
   id: string;
