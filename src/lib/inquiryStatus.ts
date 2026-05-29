@@ -87,3 +87,28 @@ export const inquiryStatusSolidClass = (status: string | null | undefined): stri
   const key = STYLE_ALIASES[status] ?? status;
   return SOLID_STYLES[key] ?? SOLID_FALLBACK;
 };
+
+// 텍스트 전용 변형: 테두리/배경 없이 진한 텍스트 컬러만 적용.
+// 리스트의 [최종상태] 컬럼에서 알약/뱃지 껍데기를 걷어내고 글자색만으로 상태를 구분할 때 사용.
+const TEXT_STYLES: Record<string, string> = {
+  상담전:    "text-red-700 dark:text-red-300",
+  미처리:    "text-red-700 dark:text-red-300",
+  상담중:    "text-blue-700 dark:text-blue-300",
+  케어중:    "text-blue-700 dark:text-blue-300",
+  부재:      "text-orange-700 dark:text-orange-300",
+  재케어:    "text-violet-700 dark:text-violet-300",
+  방문예약:  "text-indigo-700 dark:text-indigo-300",
+  택배발송:  "text-indigo-700 dark:text-indigo-300",
+  택배개통:  "text-indigo-700 dark:text-indigo-300",
+  실패:      "text-rose-700 dark:text-rose-300",
+  취소:      "text-rose-700 dark:text-rose-300",
+  개통완료:  "text-emerald-700 dark:text-emerald-300",
+};
+
+const TEXT_FALLBACK = "text-foreground";
+
+export const inquiryStatusTextClass = (status: string | null | undefined): string => {
+  if (!status) return TEXT_FALLBACK;
+  const key = STYLE_ALIASES[status] ?? status;
+  return TEXT_STYLES[key] ?? TEXT_FALLBACK;
+};

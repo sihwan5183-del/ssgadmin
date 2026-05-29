@@ -697,27 +697,27 @@ export default function LeadsPage() {
                       {item.customer_phone ?? "-"}
                     </TableCell>
                     <TableCell className="text-foreground">{item.branch_name ?? "-"}</TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       {item.activation_status ? (
-                        <Badge
+                        <span
                           className={
-                            "bg-background border font-bold " +
+                            "text-xs font-bold whitespace-nowrap " +
                             (isActivated
-                              ? "text-emerald-700 border-emerald-600 dark:text-emerald-300 dark:border-emerald-400"
-                              : "text-zinc-700 border-zinc-500 dark:text-zinc-200 dark:border-zinc-400")
+                              ? "text-emerald-700 dark:text-emerald-300"
+                              : "text-indigo-700 dark:text-indigo-300")
                           }
                         >
                           {item.activation_status}
-                        </Badge>
+                        </span>
                       ) : (
                         <span className="text-foreground/40">-</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       {isCancelled ? (
-                        <Badge className="bg-background text-rose-700 border border-rose-600 font-bold dark:text-rose-300 dark:border-rose-400">
+                        <span className="text-xs font-bold whitespace-nowrap text-rose-700 dark:text-rose-300">
                           {item.cancellation_status}
-                        </Badge>
+                        </span>
                       ) : (
                         <span className="text-foreground/40">-</span>
                       )}
