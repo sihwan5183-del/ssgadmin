@@ -807,7 +807,7 @@ export default function LeadsPage() {
                 <TableCell className="text-xs text-foreground whitespace-nowrap py-1.5" title={r.campaign_name ?? ""}>
                   {r.campaign_name ?? "-"}
                 </TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()}>
+                <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
                   <Select
                     value={r.assigned_to ?? "none"}
                     onValueChange={(v) => updateAssignee(r.id, v === "none" ? null : v)}
@@ -825,7 +825,7 @@ export default function LeadsPage() {
                     </SelectContent>
                   </Select>
                 </TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()}>
+                <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
                   <Select
                     value={r.status}
                     onValueChange={(v) => updateStatus(r.id, v)}
@@ -845,7 +845,7 @@ export default function LeadsPage() {
                   </Select>
                 </TableCell>
                 <TableCell
-                  className="w-[200px] max-w-[200px] text-xs text-foreground whitespace-nowrap overflow-hidden text-ellipsis"
+                  className="w-[200px] max-w-[200px] text-xs text-foreground whitespace-nowrap overflow-hidden text-ellipsis py-1.5"
                   onClick={(e) => {
                     e.stopPropagation();
                     setOpenLead(r);
@@ -853,7 +853,7 @@ export default function LeadsPage() {
                 >
                   {r.memo || <span className="italic text-foreground/40">메모 추가…</span>}
                 </TableCell>
-                <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                <TableCell className="text-center py-1.5" onClick={(e) => e.stopPropagation()}>
                   <Button size="sm" variant="ghost" onClick={() => setOpenLead(r)}>
                     상세
                   </Button>
