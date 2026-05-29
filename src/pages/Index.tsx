@@ -343,7 +343,7 @@ const IndexInner = () => {
         </div>
       )}
 
-      <DashboardGrid items={gridItems} editable={isAdmin} storageKey="dashboard.grid.v1" />
+      <DashboardGrid items={gridItems} editable={isAdmin} storageKey="dashboard.grid.v2" />
     </>
   );
 };
