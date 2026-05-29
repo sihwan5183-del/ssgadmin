@@ -1,4 +1,4 @@
-import { useMemo, useState, lazy, Suspense } from "react";
+import { useMemo, useState, useEffect, lazy, Suspense } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -380,14 +380,14 @@ function StorefrontResultDialog({
   const [saving, setSaving] = useState(false);
 
   // sync when activity changes
-  useMemo(() => {
+  useEffect(() => {
     if (activity) {
-      setRegulars(cf.regulars_count?.toString() ?? "");
-      setMobile(cf.mobile_count?.toString() ?? "");
-      setInternet(cf.internet_count?.toString() ?? "");
-      setMemo(cf.result_memo ?? "");
+      const c = (activity.custom_fields ?? {}) as Record<string, any>;
+      setRegulars(c.regulars_count?.toString() ?? "");
+      setMobile(c.mobile_count?.toString() ?? "");
+      setInternet(c.internet_count?.toString() ?? "");
+      setMemo(c.result_memo ?? "");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activity?.id]);
 
   const save = async () => {
