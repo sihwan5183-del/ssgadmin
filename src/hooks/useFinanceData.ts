@@ -505,7 +505,8 @@ export function useFinanceData(): FinanceData {
     for (const r of settledSalesRows) {
       if (!r.open_date) continue;
       const wk = isoWeekKey(r.open_date);
-      const ch = (r.channel ?? "기타").toString();
+      const ch = groupChannel(r.channel);
+      if (!ch) continue;
       if (!offerMap.has(wk)) offerMap.set(wk, new Map());
       const w = offerMap.get(wk)!;
       if (!w.has(ch)) w.set(ch, { sum: 0, cnt: 0 });
