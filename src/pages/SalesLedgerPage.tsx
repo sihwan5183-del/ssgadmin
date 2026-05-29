@@ -859,7 +859,7 @@ const SalesLedgerPage = () => {
         showPeriodFilter
       />
 
-      {/* 일별 판매실적 캘린더 (최상단) */}
+      <div className="mb-3">
       <div className="mb-5">
         <UnifiedCalendarWidget onDayClick={(iso) => setDayFilter((cur) => (cur === iso ? null : iso))} showTabs={false} />
         {dayFilter && (
