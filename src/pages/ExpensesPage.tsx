@@ -61,7 +61,7 @@ const ExpensesPage = () => {
     { id: "moyo_applied", row: 4, label: "모요 적용 건수", value: `${f.moyoAppliedCount}건`, tone: "expense", Icon: Store, hint: "수수료 발생 대상" },
   ];
 
-  // 히든 위젯 상태 (localStorage)
+  // 히든 위젯 상태 (localStorage) - KPI
   const HIDDEN_KEY = "expenses.kpi.hidden.v1";
   const [hidden, setHidden] = useState<Set<string>>(() => {
     try {
@@ -83,6 +83,25 @@ const ExpensesPage = () => {
     persistHidden(next);
   }, [hidden, persistHidden]);
   const restoreAll = useCallback(() => persistHidden(new Set()), [persistHidden]);
+
+  // ----- 하단 분석 섹션 위젯 (드래그·리사이즈·삭제) -----
+  const SECTION_HIDDEN_KEY = "expenses.section.hidden.v1";
+  const [sectionHidden, setSectionHidden] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(SECTION_HIDDEN_KEY);
+      return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+    } catch { return new Set(); }
+  });
+  const persistSectionHidden = useCallback((next: Set<string>) => {
+    setSectionHidden(new Set(next));
+    try { localStorage.setItem(SECTION_HIDDEN_KEY, JSON.stringify([...next])); } catch { /* ignore */ }
+  }, []);
+  const onRemoveSection = useCallback((id: string) => {
+    const next = new Set(sectionHidden);
+    next.add(id);
+    persistSectionHidden(next);
+  }, [sectionHidden, persistSectionHidden]);
+  const restoreSections = useCallback(() => persistSectionHidden(new Set()), [persistSectionHidden]);
 
   // 행별 컬럼 분배 (lg=12)
   const widths: Record<string, number> = {
@@ -161,35 +180,44 @@ const ExpensesPage = () => {
         />
       </div>
 
-      <SectionTitle index={1} title="지출 상세 분석" subtitle="실질 지출 항목만 합산 · 하단 카드 결제금액 제외" />
-      <section className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-8">
-        <div className="lg:col-span-3"><MediaSpendStack /></div>
-        <div className="lg:col-span-2"><CpaChart /></div>
-      </section>
-
-      <SectionTitle index={2} title="수익 상세 분석" subtitle="확정 수익 항목별 비중 + 순수익 정산" />
-      <section className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-4">
-        <div className="lg:col-span-2"><RevenueComposition /></div>
-        <div className="lg:col-span-3"><NetMarginCard /></div>
-      </section>
-      <section className="mb-8">
-        <OfferTrendChart />
-      </section>
-
-      <SectionTitle index={3} title="전략적 효율 지표 (ROI)" subtitle="채널 마진율 순위 + 정산 갭" />
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        <ChannelMarginRanking />
-        <SettlementGap />
-      </section>
-
-      <SectionTitle index={4} title="항목별 구성 분석" subtitle="세부 항목별 비중 (항목 관리 기반)" />
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        <CategoryBreakdownChart type="수익" />
-        <CategoryBreakdownChart type="지출" />
-      </section>
+      {/* ── 하단 분석 위젯 그리드 (드래그·리사이즈·삭제) ── */}
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <h2 className="text-base md:text-lg font-bold tracking-tight text-slate-900">상세 분석 위젯</h2>
+          <p className="text-xs text-slate-500">드래그로 위치 이동 · 우측 하단 핸들로 크기 조절 · X 로 숨김</p>
+        </div>
+        {sectionHidden.size > 0 && (
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={restoreSections}>
+            <RotateCcw className="size-3.5" /> 분석 위젯 복원 ({sectionHidden.size})
+          </Button>
+        )}
+      </div>
+      <DashboardGrid
+        items={[
+          { id: "media_spend", lg: { x: 0, y: 0, w: 7, h: 12, minW: 4, minH: 8 }, node: <SectionCard title="지출 상세 분석 · 매체별 광고비"><MediaSpendStack /></SectionCard> },
+          { id: "cpa", lg: { x: 7, y: 0, w: 5, h: 12, minW: 3, minH: 8 }, node: <SectionCard title="채널별 CPA"><CpaChart /></SectionCard> },
+          { id: "rev_composition", lg: { x: 0, y: 12, w: 5, h: 12, minW: 3, minH: 8 }, node: <SectionCard title="수익 상세 분석 · 항목별 비중"><RevenueComposition /></SectionCard> },
+          { id: "net_margin", lg: { x: 5, y: 12, w: 7, h: 12, minW: 4, minH: 8 }, node: <SectionCard title="순수익 정산"><NetMarginCard /></SectionCard> },
+          { id: "offer_trend", lg: { x: 0, y: 24, w: 12, h: 10, minW: 4, minH: 6 }, node: <SectionCard title="고객 지원금 추세"><OfferTrendChart /></SectionCard> },
+          { id: "ch_margin", lg: { x: 0, y: 34, w: 6, h: 12, minW: 3, minH: 8 }, node: <SectionCard title="전략적 효율 지표 · 채널 마진율"><ChannelMarginRanking /></SectionCard> },
+          { id: "settle_gap", lg: { x: 6, y: 34, w: 6, h: 12, minW: 3, minH: 8 }, node: <SectionCard title="정산 갭"><SettlementGap /></SectionCard> },
+          { id: "cat_rev", lg: { x: 0, y: 46, w: 6, h: 12, minW: 3, minH: 8 }, node: <SectionCard title="항목별 구성 · 수익"><CategoryBreakdownChart type="수익" /></SectionCard> },
+          { id: "cat_exp", lg: { x: 6, y: 46, w: 6, h: 12, minW: 3, minH: 8 }, node: <SectionCard title="항목별 구성 · 지출"><CategoryBreakdownChart type="지출" /></SectionCard> },
+        ].filter((w) => !sectionHidden.has(w.id))}
+        storageKey="expenses.section.grid.v1"
+        rowHeight={36}
+        onRemove={onRemoveSection}
+      />
     </>
   );
 };
+
+const SectionCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <div className="premium-card h-full w-full p-3 md:p-4 flex flex-col overflow-hidden">
+    <div className="mb-2 text-sm font-bold text-slate-900 truncate pr-16">{title}</div>
+    <div className="flex-1 min-h-0 overflow-auto">{children}</div>
+  </div>
+);
 
 const KpiTile = ({
   label, value, tone, Icon, hint,
