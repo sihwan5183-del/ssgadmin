@@ -35,6 +35,23 @@ import { toast } from "sonner";
 // 무거운(1k+ LOC) 페이지 — 사용자가 [기타인입] 탭을 처음 클릭할 때만 로드해서
 // 메타/도그마루 탭의 초기 진입과 탭 전환 응답성을 잡아준다.
 const ChannelIntakePage = lazy(() => import("@/pages/ChannelIntakePage"));
+
+/** 탭 전환 직후 lazy chunk를 로드하는 동안 화면이 굳어 보이지 않도록
+ *  shadcn 스타일과 어울리는 스켈레톤 행을 표시한다. */
+const IntakeSkeleton = memo(function IntakeSkeleton() {
+  return (
+    <div className="space-y-2.5 p-4">
+      <div className="h-10 rounded-md bg-muted/70 animate-pulse" />
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div
+          key={i}
+          className="h-9 rounded-md bg-muted/40 animate-pulse"
+          style={{ animationDelay: `${i * 40}ms` }}
+        />
+      ))}
+    </div>
+  );
+});
 import { ColumnFilter, matchesFilter, type FilterSelection } from "@/components/common/ColumnFilter";
 
 const STATUS_OPTIONS = [
