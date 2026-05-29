@@ -1,9 +1,85 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import webpush from 'npm:web-push@3.6.7'
 
 const WEBHOOK_SECRET = Deno.env.get('LEADS_WEBHOOK_SECRET') ?? ''
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const VAPID_PUBLIC = Deno.env.get('VAPID_PUBLIC_KEY') ?? ''
+const VAPID_PRIVATE = Deno.env.get('VAPID_PRIVATE_KEY') ?? ''
+const RAW_SUBJECT = (Deno.env.get('VAPID_SUBJECT') ?? '').trim()
+const VAPID_SUBJECT = RAW_SUBJECT
+  ? (RAW_SUBJECT.startsWith('mailto:') || RAW_SUBJECT.startsWith('http')
+      ? RAW_SUBJECT
+      : `mailto:${RAW_SUBJECT}`)
+  : 'mailto:admin@example.com'
+
+let vapidReady = false
+try {
+  if (VAPID_PUBLIC && VAPID_PRIVATE) {
+    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE)
+    vapidReady = true
+  }
+} catch (e) {
+  console.error('[leads-webhook] vapid init failed', e)
+}
+
+const DOGMARU_CAMPAIGN = '도그마루_홈캠'
+
+async function broadcastLeadPush(
+  supabase: ReturnType<typeof createClient>,
+  leadId: string,
+  channel: 'meta' | 'dogmaru',
+) {
+  if (!vapidReady) return
+  const isDogmaru = channel === 'dogmaru'
+  const title = '📢 [신규 리드 인입]'
+  const body = isDogmaru
+    ? '도그마루에 새 잠재고객이 등록되었습니다. 즉시 확인 후 해피콜을 진행하세요.'
+    : '메타광고에 새 잠재고객이 등록되었습니다. 즉시 확인 후 해피콜을 진행하세요.'
+  const url = `/leads?tab=${channel}&highlight=${leadId}`
+
+  // 활성 직원 + 푸시 허용된 사용자
+  const { data: profs } = await supabase
+    .from('profiles')
+    .select('user_id')
+    .eq('status', 'active')
+    .eq('push_enabled', true)
+  const uids = (profs ?? []).map((p: any) => p.user_id).filter(Boolean)
+  if (uids.length === 0) return
+
+  const { data: tokens } = await supabase
+    .from('user_push_tokens')
+    .select('id, endpoint, p256dh, auth')
+    .in('user_id', uids)
+
+  const payload = JSON.stringify({
+    title,
+    body,
+    url,
+    tag: `lead-${channel}-${leadId}`,
+    icon: '/pwa-192.png',
+    vibrate: [200, 100, 200],
+  })
+
+  await Promise.all(
+    (tokens ?? []).map(async (t: any) => {
+      try {
+        await webpush.sendNotification(
+          { endpoint: t.endpoint, keys: { p256dh: t.p256dh, auth: t.auth } },
+          payload,
+        )
+      } catch (e: any) {
+        const status = e?.statusCode
+        if (status === 404 || status === 410) {
+          await supabase.from('user_push_tokens').delete().eq('id', t.id)
+        } else {
+          console.warn('[leads-webhook] push failed', status, e?.message)
+        }
+      }
+    }),
+  )
+}
 
 function unauthorized(msg = 'Unauthorized') {
   return new Response(JSON.stringify({ error: msg }), {
@@ -99,6 +175,14 @@ Deno.serve(async (req) => {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
+  }
+
+  // 휴대폰 시스템 푸시 (백그라운드/잠금화면 알림)
+  try {
+    const channel: 'meta' | 'dogmaru' = campaignName === DOGMARU_CAMPAIGN ? 'dogmaru' : 'meta'
+    await broadcastLeadPush(supabase, data.id as string, channel)
+  } catch (e) {
+    console.warn('[leads-webhook] broadcast failed', e)
   }
 
   return new Response(JSON.stringify({ ok: true, id: data.id }), {

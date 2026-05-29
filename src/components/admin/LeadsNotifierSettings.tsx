@@ -2,13 +2,15 @@ import { useEffect, useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Bell, BellOff, Zap, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Bell, BellOff, Zap, ShieldCheck, ShieldAlert, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import {
   isLeadsNotifyEnabled,
   setLeadsNotifyEnabled,
   showLeadToast,
 } from "@/components/leads/LeadsRealtimeNotifier";
+import { subscribeDeviceToPush } from "@/hooks/usePushSubscription";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Perm = "granted" | "denied" | "default" | "unsupported";
 
@@ -18,9 +20,11 @@ function getPerm(): Perm {
 }
 
 export function LeadsNotifierSettings() {
+  const { user } = useAuth();
   const [perm, setPerm] = useState<Perm>(getPerm());
   const [meta, setMeta] = useState<boolean>(isLeadsNotifyEnabled("meta"));
   const [dogmaru, setDogmaru] = useState<boolean>(isLeadsNotifyEnabled("dogmaru"));
+  const [subscribing, setSubscribing] = useState(false);
 
   useEffect(() => {
     const onFocus = () => setPerm(getPerm());
@@ -61,6 +65,19 @@ export function LeadsNotifierSettings() {
       name: channel === "dogmaru" ? "테스트(도그마루)" : "테스트(메타)",
       phone: "010-0000-0000",
     });
+  };
+
+  const subscribePhone = async () => {
+    if (!user?.id) {
+      toast.error("로그인 후 이용해 주세요.");
+      return;
+    }
+    setSubscribing(true);
+    const r = await subscribeDeviceToPush(user.id);
+    setSubscribing(false);
+    setPerm(getPerm());
+    if (r.ok) toast.success("이 기기에 푸시 알림이 구독되었습니다. 화면을 꺼도 알림이 전송됩니다.");
+    else toast.error((r as { ok: false; reason: string }).reason);
   };
 
   const permBadge = (() => {
@@ -157,6 +174,30 @@ export function LeadsNotifierSettings() {
             className="rounded-xl bg-amber-400 text-slate-900 hover:bg-amber-300 font-bold shrink-0"
           >
             <Zap className="size-4 mr-2" /> ⚡ 테스트 알림 발송
+          </Button>
+        </div>
+      </Card>
+
+      {/* 스마트폰 푸시 구독 */}
+      <Card className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_4px_16px_-8px_rgba(15,23,42,0.12),0_10px_36px_-12px_rgba(15,23,42,0.18)]">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1 min-w-0">
+            <div className="flex items-center gap-2 text-slate-900">
+              <Smartphone className="size-4 text-slate-700" />
+              <h3 className="text-[15px] font-bold">스마트폰 푸시 알림 구독</h3>
+            </div>
+            <p className="text-[12px] text-slate-600 leading-relaxed">
+              본인 스마트폰 브라우저(Chrome/Safari)에서 로그인한 뒤 아래 버튼을 누르면,
+              브라우저를 닫거나 화면을 꺼도 신규 인입 시 휴대폰 상단 알림으로 전송됩니다.
+            </p>
+          </div>
+          <Button
+            onClick={subscribePhone}
+            disabled={subscribing}
+            className="rounded-xl bg-slate-900 text-white hover:bg-slate-800 shrink-0"
+          >
+            <Smartphone className="size-4 mr-2" />
+            {subscribing ? "구독 중..." : "스마트폰 알림 구독하기"}
           </Button>
         </div>
       </Card>
