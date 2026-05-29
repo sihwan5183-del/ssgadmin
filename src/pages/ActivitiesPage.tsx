@@ -460,18 +460,21 @@ const ActivitiesPage = () => {
     tabParam === "subscribed" ||
     statusParam === "청약완료,택배발송,예약" ||
     statusParam === "청약완료,택배발송";
+  const isPlanChangeParam = tabParam === "plan-change";
   const initialTab = isReviewParam
     ? "review"
     : (filterParam === "pending"
         ? "pending"
         : (tabParam || (wantPending ? "review" : (isAdmin ? "super" : "review"))));
   const [tab, setTab] = useState<string>(initialTab);
+  const [outerTab, setOuterTab] = useState<string>(isPlanChangeParam ? "plan-change" : "list");
   useEffect(() => {
     if (filterParam === "pending") setTab("pending");
     else if (isReviewParam) setTab("review");
     else if (tabParam) setTab(tabParam);
     else if (wantPending) setTab("review");
-  }, [wantPending, tabParam, statusParam, isReviewParam, filterParam]);
+    if (isPlanChangeParam) setOuterTab("plan-change");
+  }, [wantPending, tabParam, statusParam, isReviewParam, filterParam, isPlanChangeParam]);
 
   return (
     <>
@@ -486,6 +489,21 @@ const ActivitiesPage = () => {
         }
       />
 
+      <Tabs value={outerTab} onValueChange={setOuterTab} className="space-y-5">
+        <TabsList>
+          <TabsTrigger value="list" className="gap-2">
+            <ClipboardCheck className="size-4" /> 기본 검수 리스트
+          </TabsTrigger>
+          <TabsTrigger value="plan-change" className="gap-2">
+            <CalendarDays className="size-4" /> 요금제 변경 캘린더
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="plan-change">
+          <PlanChangeCalendarView />
+        </TabsContent>
+
+        <TabsContent value="list">
       <Tabs value={tab} onValueChange={setTab} className="space-y-5">
         <TabsList>
           {isAdmin && (
@@ -533,6 +551,8 @@ const ActivitiesPage = () => {
 
         <TabsContent value="pending">
           <PendingItemsSection />
+        </TabsContent>
+      </Tabs>
         </TabsContent>
       </Tabs>
     </>
