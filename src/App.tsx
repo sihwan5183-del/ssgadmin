@@ -134,7 +134,7 @@ const App = () => {
                             </AdminOnlyRoute>
                           }
                         />
-                        <Route path="/plan-change-calendar" element={<PlanChangeCalendarPage />} />
+                        <Route path="/plan-change-calendar" element={<Navigate to="/activities?tab=plan-change" replace />} />
                         <Route
                           path="/admin/addon-retention"
                           element={<AdminOnlyRoute><AddonRetentionAdminPage /></AdminOnlyRoute>}
