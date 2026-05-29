@@ -75,11 +75,11 @@ export const QuickLinksWidget = () => {
   if (links.length === 0 && !isAdmin) return null;
 
   return (
-    <Card className="glass border-border/40 p-4">
+    <Card className="h-full w-full flex flex-col bg-card border-border/60 shadow-sm rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Link2 className="size-4 text-primary" />
-          <h4 className="text-sm font-semibold">업무 바로가기</h4>
+          <Link2 className="size-4 text-foreground" />
+          <h4 className="text-sm font-bold text-foreground">업무 바로가기</h4>
           <Badge variant="outline" className="text-[10px]">{links.length}개</Badge>
         </div>
         {isAdmin && (
@@ -105,8 +105,8 @@ export const QuickLinksWidget = () => {
       </div>
 
       <div
-        className="grid gap-2"
-        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))" }}
+        className="grid gap-2 flex-1 min-h-0 overflow-hidden auto-rows-min content-start"
+        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))" }}
       >
         {links.map((link) => (
           <div key={link.id} className="relative group">
@@ -114,9 +114,9 @@ export const QuickLinksWidget = () => {
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border/40 bg-card/50 hover:bg-accent/50 hover:border-primary/30 transition-all text-xs font-medium"
+              className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg border border-border/60 bg-card hover:bg-accent/40 hover:border-foreground/40 transition-all text-xs font-semibold text-foreground"
             >
-              <ExternalLink className="size-3.5 text-primary shrink-0" />
+              <ExternalLink className="size-3.5 text-foreground/70 shrink-0" />
               <span className="truncate">{link.label}</span>
             </a>
             {editing && isAdmin && (
