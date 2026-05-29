@@ -1,15 +1,19 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, lazy, Suspense } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Building2, Plus, Search, TrendingUp, Calendar as CalIcon, Users, AlertTriangle } from "lucide-react";
 import { useSegPartners, useSegActivities, type SegPartner } from "@/hooks/useSegPartners";
 import { PartnerFormDialog } from "@/components/seg/PartnerFormDialog";
 import { PartnerDetailDrawer } from "@/components/seg/PartnerDetailDrawer";
-import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isBefore } from "date-fns";
-import { useNavigate } from "react-router-dom";
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
+import { useSearchParams } from "react-router-dom";
+
+// 통합 화면 내부에 임베드 — 무거운 컴포넌트는 lazy
+const SegCalendarPage = lazy(() => import("./SegCalendarPage"));
+const ApartmentPage = lazy(() => import("./ApartmentPage"));
 
 const STATUS_LABEL: Record<string, string> = { active: "진행중", paused: "보류", ended: "종료" };
 // 상태/뱃지: 배경/테두리 제거, 블랙 텍스트로 통일
@@ -25,7 +29,16 @@ export default function SegPartnersPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [selected, setSelected] = useState<SegPartner | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") === "apartment" ? "apartment" : "partners";
+  const [tab, setTab] = useState<"partners" | "apartment">(initialTab);
+  const onTabChange = (v: string) => {
+    const next = v === "apartment" ? "apartment" : "partners";
+    setTab(next);
+    const sp = new URLSearchParams(searchParams);
+    sp.set("tab", next);
+    setSearchParams(sp, { replace: true });
+  };
 
   const filtered = useMemo(() => {
     return partners.filter((p) => {
@@ -86,13 +99,10 @@ export default function SegPartnersPage() {
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight">SEG. 활동 관리</h1>
-            <p className="text-xs text-muted-foreground">B2B 파트너 · MOU · 외부 영업 활동을 한 곳에서 관리합니다.</p>
+            <p className="text-xs text-muted-foreground">통합 영업 캘린더 · 제휴 업체 · 아파트 게시 현황을 한 화면에서 관리합니다.</p>
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => navigate("/seg-calendar")}>
-            <CalIcon className="size-4 mr-1" /> 영업 캘린더
-          </Button>
           <Button onClick={() => setFormOpen(true)}>
             <Plus className="size-4 mr-1" /> 신규 업체
           </Button>
@@ -107,7 +117,24 @@ export default function SegPartnersPage() {
         <StatBox icon={AlertTriangle} label="기한 초과" value={stats.overdue} tone="danger" />
       </div>
 
-      <Card className="p-3 flex flex-wrap gap-2 items-center">
+      {/* ── 상단 고정형 SEG 통합 영업 캘린더 ── */}
+      <Card className="p-0 overflow-hidden border-slate-200">
+        <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">캘린더 로딩 중…</div>}>
+          <div className="-mt-2">
+            <SegCalendarPage />
+          </div>
+        </Suspense>
+      </Card>
+
+      {/* ── 하단 탭 ── */}
+      <Tabs value={tab} onValueChange={onTabChange} className="w-full">
+        <TabsList className="grid grid-cols-2 w-full max-w-md">
+          <TabsTrigger value="partners">제휴 업체 목록</TabsTrigger>
+          <TabsTrigger value="apartment">아파트 게시 현황</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="partners" className="mt-4 space-y-3">
+          <Card className="p-3 flex flex-wrap gap-2 items-center">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input className="pl-9" placeholder="업체명, 담당자, 연락처 검색" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -135,59 +162,71 @@ export default function SegPartnersPage() {
             {activityCategories.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
           </SelectContent>
         </Select>
-      </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-        {filtered.length === 0 && (
-          <Card className="p-10 text-center text-sm text-muted-foreground col-span-full">
-            등록된 업체가 없습니다. 우측 상단 [신규 업체] 버튼으로 추가하세요.
           </Card>
-        )}
-        {filtered.map((p) => {
-          const partnerActs = activities.filter((a) => a.partner_id === p.id);
-          const lastAct = partnerActs[0];
-          const today = format(new Date(), "yyyy-MM-dd");
-          const overdue = partnerActs.find((a) => !a.is_completed && a.next_action_date && a.next_action_date < today);
-          const category = (p.custom_fields as any)?.activity_category as string | undefined;
-          const regularsTotal = partnerActs.reduce((sum, a) => {
-            const cf = (a.custom_fields as any) ?? {};
-            const v = Number(cf.regulars_count ?? cf.partner_count ?? 0);
-            return sum + (isFinite(v) ? v : 0);
-          }, 0);
-          return (
-            <Card
-              key={p.id}
-              className="p-4 cursor-pointer hover:shadow-glow transition-shadow"
-              onClick={() => { setSelected(p); setDrawerOpen(true); }}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-semibold truncate">{p.company_name}</h3>
-                    <span className={CLEAN_STATUS_CLS}>{STATUS_LABEL[p.status] ?? p.status}</span>
-                  </div>
-                  {category && (
-                    <div className="text-xs font-medium text-foreground mt-0.5">{category}</div>
+
+          {/* 엑셀식 가로 리스트 */}
+          <Card className="overflow-hidden border-slate-200">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr className="text-left text-slate-700">
+                    <th className="px-3 py-2 font-semibold whitespace-nowrap">업체명</th>
+                    <th className="px-3 py-2 font-semibold whitespace-nowrap">활동 분류</th>
+                    <th className="px-3 py-2 font-semibold whitespace-nowrap">제휴 유형</th>
+                    <th className="px-3 py-2 font-semibold whitespace-nowrap">담당자</th>
+                    <th className="px-3 py-2 font-semibold whitespace-nowrap">연락처</th>
+                    <th className="px-3 py-2 font-semibold whitespace-nowrap">계약일자</th>
+                    <th className="px-3 py-2 font-semibold whitespace-nowrap text-right">활동수</th>
+                    <th className="px-3 py-2 font-semibold whitespace-nowrap">진행상태</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="px-3 py-10 text-center text-sm text-muted-foreground">
+                        등록된 업체가 없습니다. 우측 상단 [신규 업체] 버튼으로 추가하세요.
+                      </td>
+                    </tr>
                   )}
-                  <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-2">
-                    <span>{p.business_type}</span>
-                    {p.contract_type && <span>· {p.contract_type}</span>}
-                    {p.contract_date && <span>· {p.contract_date}</span>}
-                  </div>
-                </div>
-                {overdue && (
-                  <span className="shrink-0 text-foreground text-[11px] font-medium">기한 초과</span>
-                )}
-              </div>
-              <div className="mt-3 text-xs space-y-0.5 text-muted-foreground">
-                {p.contact_name && <div>담당: {p.contact_name}{p.contact_phone ? ` · ${p.contact_phone}` : ""}</div>}
-                <div>활동: {partnerActs.length}건{lastAct ? ` · 최근 ${lastAct.activity_date}` : ""}</div>
-                <div>타사등록: {regularsTotal > 0 ? `${regularsTotal}건` : "-"}</div>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+                  {filtered.map((p) => {
+                    const partnerActs = activities.filter((a) => a.partner_id === p.id);
+                    const today = format(new Date(), "yyyy-MM-dd");
+                    const overdue = partnerActs.find((a) => !a.is_completed && a.next_action_date && a.next_action_date < today);
+                    const category = (p.custom_fields as any)?.activity_category as string | undefined;
+                    return (
+                      <tr
+                        key={p.id}
+                        onClick={() => { setSelected(p); setDrawerOpen(true); }}
+                        className="border-b border-slate-100 last:border-0 cursor-pointer hover:bg-slate-50/70 transition-colors text-slate-900"
+                      >
+                        <td className="px-3 py-2 whitespace-nowrap font-semibold">{p.company_name}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{category ?? "-"}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{p.contract_type ?? "-"}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{p.contact_name ?? "-"}</td>
+                        <td className="px-3 py-2 whitespace-nowrap tabular-nums">{p.contact_phone ?? "-"}</td>
+                        <td className="px-3 py-2 whitespace-nowrap tabular-nums">{p.contract_date ?? "-"}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-right tabular-nums">{partnerActs.length}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          <span className="text-slate-900 font-medium">{STATUS_LABEL[p.status] ?? p.status}</span>
+                          {overdue && <span className="ml-2 text-rose-600 text-xs">기한 초과</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="apartment" className="mt-4">
+          <Card className="p-0 overflow-hidden border-slate-200">
+            <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">아파트 게시 현황 로딩 중…</div>}>
+              <ApartmentPage />
+            </Suspense>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <PartnerFormDialog open={formOpen} onOpenChange={setFormOpen} />
       <PartnerDetailDrawer open={drawerOpen} onOpenChange={setDrawerOpen} partner={selected} />
