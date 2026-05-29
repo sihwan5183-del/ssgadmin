@@ -745,11 +745,11 @@ export default function LeadsPage() {
               <TableHead className="text-foreground font-bold">
                 <ColumnFilter label="현재 통신사" values={valCarrier} selected={fCarrier} onChange={setFCarrier} />
               </TableHead>
-              <TableHead className="text-foreground font-bold w-16 text-xs">희망 기종</TableHead>
-              <TableHead className="text-foreground font-bold w-16 text-xs">
+              <TableHead className="text-foreground font-bold w-[160px] text-xs whitespace-nowrap">희망 기종</TableHead>
+              <TableHead className="text-foreground font-bold w-[200px] text-xs whitespace-nowrap">
                 <ColumnFilter label="희망 상품" values={valProduct} selected={fProduct} onChange={setFProduct} />
               </TableHead>
-              <TableHead className="text-foreground font-bold w-16 text-xs">
+              <TableHead className="text-foreground font-bold w-[120px] text-xs whitespace-nowrap">
                 <ColumnFilter label="캠페인" values={valCampaign} selected={fCampaign} onChange={setFCampaign} />
               </TableHead>
               <TableHead className="text-foreground font-bold w-32">
@@ -758,7 +758,7 @@ export default function LeadsPage() {
               <TableHead className="text-foreground font-bold w-28">
                 <ColumnFilter label="상담 상태" values={valStatus} selected={fStatus} onChange={setFStatus} />
               </TableHead>
-              <TableHead className="text-foreground font-bold min-w-[440px]">메모</TableHead>
+              <TableHead className="text-foreground font-bold w-[200px]">메모</TableHead>
               <TableHead className="text-foreground font-bold w-20 text-center">관리</TableHead>
             </TableRow>
           </TableHeader>
@@ -794,9 +794,9 @@ export default function LeadsPage() {
                 <TableCell className="font-bold text-foreground">{r.name ?? "-"}</TableCell>
                 <TableCell className="tabular-nums text-foreground font-medium">{r.phone ?? "-"}</TableCell>
                 <TableCell className="text-foreground">{r.current_carrier ?? "-"}</TableCell>
-                <TableCell className="text-foreground/80 text-xs truncate max-w-[64px]" title={r.desired_device ?? ""}>{r.desired_device ?? "-"}</TableCell>
-                <TableCell className="text-foreground/80 text-xs truncate max-w-[64px]" title={r.desired_product ?? ""}>{r.desired_product ?? "-"}</TableCell>
-                <TableCell className="text-xs text-foreground/60 truncate max-w-[64px]" title={r.campaign_name ?? ""}>
+                <TableCell className="text-foreground text-xs whitespace-nowrap" title={r.desired_device ?? ""}>{r.desired_device ?? "-"}</TableCell>
+                <TableCell className="text-foreground text-xs whitespace-nowrap" title={r.desired_product ?? ""}>{r.desired_product ?? "-"}</TableCell>
+                <TableCell className="text-xs text-foreground whitespace-nowrap" title={r.campaign_name ?? ""}>
                   {r.campaign_name ?? "-"}
                 </TableCell>
                 <TableCell onClick={(e) => e.stopPropagation()}>
@@ -837,7 +837,7 @@ export default function LeadsPage() {
                   </Select>
                 </TableCell>
                 <TableCell
-                  className="min-w-[440px] text-xs text-foreground whitespace-normal break-words leading-relaxed"
+                  className="w-[200px] max-w-[200px] text-xs text-foreground whitespace-nowrap overflow-hidden text-ellipsis"
                   onClick={(e) => {
                     e.stopPropagation();
                     setOpenLead(r);
