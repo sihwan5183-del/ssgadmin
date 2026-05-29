@@ -700,17 +700,17 @@ export default function LeadsPage() {
                     className="cursor-pointer border-b border-border hover:bg-muted/40"
                     onClick={() => setOpenLead(item)}
                   >
-                    <TableCell className="tabular-nums text-foreground font-medium">
+                    <TableCell className="tabular-nums text-foreground font-medium py-1.5">
                       {item.registration_date ?? "-"}
                     </TableCell>
-                    <TableCell className="font-bold text-foreground">
+                    <TableCell className="font-bold text-foreground py-1.5">
                       {item.customer_name ?? "-"}
                     </TableCell>
-                    <TableCell className="tabular-nums text-foreground font-medium">
+                    <TableCell className="tabular-nums text-foreground font-medium py-1.5">
                       {item.customer_phone ?? "-"}
                     </TableCell>
-                    <TableCell className="text-foreground">{item.branch_name ?? "-"}</TableCell>
-                    <TableCell className="whitespace-nowrap">
+                    <TableCell className="text-foreground py-1.5">{item.branch_name ?? "-"}</TableCell>
+                    <TableCell className="whitespace-nowrap py-1.5">
                       {item.activation_status ? (
                         <span
                           className={
@@ -726,7 +726,7 @@ export default function LeadsPage() {
                         <span className="text-foreground/40">-</span>
                       )}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">
+                    <TableCell className="whitespace-nowrap py-1.5">
                       {isCancelled ? (
                         <span className="text-xs font-bold whitespace-nowrap text-rose-700 dark:text-rose-300">
                           {item.cancellation_status}
@@ -735,10 +735,10 @@ export default function LeadsPage() {
                         <span className="text-foreground/40">-</span>
                       )}
                     </TableCell>
-                    <TableCell className="tabular-nums text-foreground/80">
+                    <TableCell className="tabular-nums text-foreground/80 py-1.5">
                       {item.activation_number ?? "-"}
                     </TableCell>
-                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                    <TableCell className="text-center py-1.5" onClick={(e) => e.stopPropagation()}>
                       <Button size="sm" variant="ghost" onClick={() => setOpenLead(item)}>
                         상세
                       </Button>
