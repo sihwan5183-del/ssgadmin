@@ -1015,7 +1015,75 @@ const SalesLedgerPage = () => {
 
       {/* 테이블 */}
       <section className="glass-strong rounded-2xl p-2 md:p-3 shadow-card-elevated">
-        <div className="overflow-x-auto">
+        {/* ── 모바일 전용: 카드형 리스트 ── */}
+        <div className="md:hidden space-y-3 p-1">
+          {filteredRows.length === 0 && (
+            <div className="text-center py-10 text-sm text-muted-foreground">
+              {searchQ ? "검색 결과가 없습니다." : "선택한 기간에 데이터가 없습니다."}
+            </div>
+          )}
+          {filteredRows.map((r) => {
+            const offer = offerOf(r);
+            const profit = profitOf(r);
+            const negative = profit < 0;
+            const s = (r.status ?? "").trim();
+            const dotCls =
+              s.includes("개통") && s.includes("완료") ? "bg-emerald-500" :
+              s.includes("택배") ? "bg-sky-500" :
+              s.includes("진행") ? "bg-blue-500" :
+              s.includes("반려") || s.includes("취소") ? "bg-rose-500" :
+              s.includes("보류") || s.includes("대기") ? "bg-amber-500" :
+              "bg-slate-400";
+            return (
+              <button
+                key={r.id}
+                onClick={() => navigate(`/input?edit=${r.id}`)}
+                className="w-full text-left bg-white dark:bg-slate-900 border border-slate-100 dark:border-border/40 rounded-2xl p-5 shadow-sm active:scale-[0.99] transition-transform"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary truncate max-w-[60%]">
+                    {r.channel ?? "경로 미지정"}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-foreground/80">
+                    <span className={cn("inline-block size-2 rounded-full", dotCls)} />
+                    {s || "상태 미정"}
+                  </span>
+                </div>
+                <div className="mt-3">
+                  <div className="text-base font-bold text-slate-900 dark:text-foreground truncate">
+                    {isAdmin ? (r.customer_name ?? "이름 미입력") : (maskName(r.customer_name) || "이름 미입력")}
+                  </div>
+                  <div className="mt-0.5 text-sm text-slate-500 tabular-nums font-mono tracking-tight truncate">
+                    {(() => {
+                      const raw = isAdmin ? (r.phone ?? "") : (maskPhone(r.phone) || "");
+                      if (!raw) return "연락처 -";
+                      return isAdmin ? formatPhone(raw) : raw;
+                    })()}
+                  </div>
+                </div>
+                <div className="mt-3 pt-3 border-t border-slate-100 dark:border-border/40 flex items-end justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-[11px] text-slate-500">개통일 · 상품</div>
+                    <div className="text-sm font-semibold text-slate-800 dark:text-foreground truncate">
+                      {r.open_date ?? "-"} · {r.product ?? "-"}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-[11px] text-slate-500">최종수익</div>
+                    <div className={cn(
+                      "text-base font-extrabold tabular-nums",
+                      negative ? "text-rose-600" : "text-blue-600 dark:text-blue-400",
+                    )}>
+                      {profit.toLocaleString("ko-KR")}
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-[11.5px] min-w-[1280px] font-sans [font-feature-settings:'tnum'] border-collapse">
             <thead>
               <tr className="text-[10.5px] uppercase tracking-wide text-foreground/70 border-b-2 border-border/60 bg-muted/60 [&>th]:whitespace-nowrap [&>th]:align-middle [&>th]:px-1.5 [&>th]:py-2">
