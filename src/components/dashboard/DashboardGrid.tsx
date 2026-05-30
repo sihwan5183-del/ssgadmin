@@ -16,6 +16,8 @@ import {
 import { GripVertical, X } from "lucide-react";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export type GridWidget = {
   /** Stable widget id. */
@@ -107,11 +109,50 @@ export const DashboardGrid = ({
   editable = true,
   onRemove,
 }: Props) => {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+  // 사용자별 DB 저장 키. 로그인 사용자가 있으면 계정 단위로 레이아웃이 따라간다.
+  const dbKey = useMemo(
+    () => (userId ? `grid.${storageKey}.${userId}` : null),
+    [userId, storageKey],
+  );
+
   const itemsKey = useMemo(() => items.map((i) => i.id).join("|"), [items]);
   const [layouts, setLayouts] = useState<ResponsiveLayouts<Bp>>(() =>
     mergeLayouts(loadFromLS(storageKey), items),
   );
   const skipPersistRef = useRef(true);
+  const dbLoadedRef = useRef(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // DB 에서 사용자별 저장된 레이아웃을 끌어와 최우선으로 적용한다.
+  // 로그아웃/로그인 또는 다른 디바이스에서도 동일한 배치를 복원하기 위함.
+  useEffect(() => {
+    let cancelled = false;
+    if (!dbKey) return;
+    (async () => {
+      const { data } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", dbKey)
+        .maybeSingle();
+      if (cancelled) return;
+      if (data?.value && typeof data.value === "object") {
+        const saved = data.value as ResponsiveLayouts<Bp>;
+        setLayouts(mergeLayouts(saved, items));
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(saved));
+        } catch { /* ignore */ }
+      }
+      dbLoadedRef.current = true;
+      // DB 로드 직후 자동 콜백으로 인한 덮어쓰기 1회 방지
+      skipPersistRef.current = true;
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dbKey]);
 
   // Adopt newly added / removed widgets without losing saved positions for survivors.
   useEffect(() => {
@@ -134,8 +175,19 @@ export const DashboardGrid = ({
       } catch {
         /* quota — ignore */
       }
+      // DB 동기화 (디바운스). 슈퍼관리자(편집 가능)일 때만 의미가 있지만,
+      // editable=false 인 경우에는 onLayoutChange 자체가 거의 호출되지 않는다.
+      if (dbKey && editable) {
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(() => {
+          supabase
+            .from("app_settings")
+            .upsert({ key: dbKey, value: all as any }, { onConflict: "key" })
+            .then(() => {});
+        }, 400);
+      }
     },
-    [storageKey],
+    [storageKey, dbKey, editable],
   );
 
   if (items.length === 0) return null;
