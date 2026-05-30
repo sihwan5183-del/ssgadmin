@@ -17,7 +17,6 @@ import { GripVertical, X } from "lucide-react";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 
 export type GridWidget = {
   /** Stable widget id. */
@@ -134,14 +133,9 @@ export const DashboardGrid = ({
   editable = true,
   onRemove,
 }: Props) => {
-  const { user } = useAuth();
   const isDesktopGrid = useDesktopGridViewport();
-  const userId = user?.id ?? null;
-  // 사용자별 DB 저장 키. 로그인 사용자가 있으면 계정 단위로 레이아웃이 따라간다.
-  const dbKey = useMemo(
-    () => (userId ? `grid.${storageKey}.${userId}` : null),
-    [userId, storageKey],
-  );
+  // 슈퍼관리자가 고정한 단일 원본 배치만 모든 직원에게 동일하게 배포한다.
+  const dbKey = useMemo(() => `grid.${storageKey}.global`, [storageKey]);
 
   const itemsKey = useMemo(() => items.map((i) => i.id).join("|"), [items]);
   const [layouts, setLayouts] = useState<ResponsiveLayouts<Bp>>(() =>
@@ -155,7 +149,6 @@ export const DashboardGrid = ({
   // 로그아웃/로그인 또는 다른 디바이스에서도 동일한 배치를 복원하기 위함.
   useEffect(() => {
     let cancelled = false;
-    if (!dbKey) return;
     (async () => {
       const { data } = await supabase
         .from("app_settings")
@@ -165,9 +158,10 @@ export const DashboardGrid = ({
       if (cancelled) return;
       if (data?.value && typeof data.value === "object") {
         const saved = data.value as ResponsiveLayouts<Bp>;
-        setLayouts(mergeLayouts(saved, items));
+        const stable = desktopOnlyLayouts(saved, items);
+        setLayouts(stable);
         try {
-          localStorage.setItem(storageKey, JSON.stringify(saved));
+          localStorage.setItem(storageKey, JSON.stringify(stable));
         } catch { /* ignore */ }
       }
       dbLoadedRef.current = true;
