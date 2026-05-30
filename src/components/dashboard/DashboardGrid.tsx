@@ -114,6 +114,9 @@ const desktopOnlyLayouts = (
   return mergeLayouts({ lg: next.lg ?? defaults.lg, md: defaults.md, sm: defaults.sm }, items);
 };
 
+const getMobileTileHeight = (item: GridWidget, rowHeight: number) =>
+  Math.max(200, item.lg.h * rowHeight + Math.max(0, item.lg.h - 1) * 8);
+
 const loadFromLS = (key: string): ResponsiveLayouts<Bp> | null => {
   try {
     const raw = localStorage.getItem(key);
@@ -142,11 +145,10 @@ export const DashboardGrid = ({
     mergeLayouts(loadFromLS(storageKey), items),
   );
   const skipPersistRef = useRef(true);
-  const dbLoadedRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // DB 에서 사용자별 저장된 레이아웃을 끌어와 최우선으로 적용한다.
-  // 로그아웃/로그인 또는 다른 디바이스에서도 동일한 배치를 복원하기 위함.
+  // DB 에서 슈퍼관리자가 저장한 글로벌 PC 레이아웃만 끌어와 최우선으로 적용한다.
+  // 모바일/태블릿 접속값은 저장하지 않아 원본 좌표 오염을 막는다.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -164,7 +166,6 @@ export const DashboardGrid = ({
           localStorage.setItem(storageKey, JSON.stringify(stable));
         } catch { /* ignore */ }
       }
-      dbLoadedRef.current = true;
       // DB 로드 직후 자동 콜백으로 인한 덮어쓰기 1회 방지
       skipPersistRef.current = true;
     })();
@@ -225,9 +226,9 @@ export const DashboardGrid = ({
           <div
             key={it.id}
             className="dash-grid-item relative w-full min-w-0 overflow-visible rounded-2xl"
-            style={{ minHeight: Math.max(180, it.lg.h * rowHeight + Math.max(0, it.lg.h - 1) * 8) }}
+            style={{ height: getMobileTileHeight(it, rowHeight) }}
           >
-            <div className="w-full min-w-0 overflow-visible rounded-2xl">{it.node}</div>
+            <div className="h-full w-full min-w-0 overflow-visible rounded-2xl">{it.node}</div>
           </div>
         ))}
       </div>
