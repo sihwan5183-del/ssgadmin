@@ -17,7 +17,7 @@ import { GripVertical, X } from "lucide-react";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import type { Json } from "@/integrations/supabase/types";
 
 export type GridWidget = {
   /** Stable widget id. */
@@ -43,6 +43,23 @@ type Props = {
 type Bp = "lg" | "md" | "sm";
 const BREAKPOINTS: Record<Bp, number> = { lg: 1280, md: 996, sm: 0 };
 const COLS: Record<Bp, number> = { lg: 12, md: 8, sm: 4 };
+const DESKTOP_GRID_MIN_WIDTH = 1280;
+
+const useDesktopGridViewport = () => {
+  const [isDesktopGrid, setIsDesktopGrid] = useState(() =>
+    typeof window === "undefined" ? true : window.innerWidth >= DESKTOP_GRID_MIN_WIDTH,
+  );
+
+  useEffect(() => {
+    const media = window.matchMedia(`(min-width: ${DESKTOP_GRID_MIN_WIDTH}px)`);
+    const sync = () => setIsDesktopGrid(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  return isDesktopGrid;
+};
 
 const buildDefaultLayouts = (items: GridWidget[]): ResponsiveLayouts<Bp> => {
   const lg: LayoutItem[] = items.map((it) => ({
@@ -90,6 +107,17 @@ const mergeLayouts = (
   return out;
 };
 
+const desktopOnlyLayouts = (
+  next: ResponsiveLayouts<Bp>,
+  items: GridWidget[],
+): ResponsiveLayouts<Bp> => {
+  const defaults = buildDefaultLayouts(items);
+  return mergeLayouts({ lg: next.lg ?? defaults.lg, md: defaults.md, sm: defaults.sm }, items);
+};
+
+const getMobileTileHeight = (item: GridWidget, rowHeight: number) =>
+  Math.max(200, item.lg.h * rowHeight + Math.max(0, item.lg.h - 1) * 8);
+
 const loadFromLS = (key: string): ResponsiveLayouts<Bp> | null => {
   try {
     const raw = localStorage.getItem(key);
@@ -102,6 +130,9 @@ const loadFromLS = (key: string): ResponsiveLayouts<Bp> | null => {
   }
 };
 
+const loadInitialLayouts = (key: string, items: GridWidget[]) =>
+  desktopOnlyLayouts(loadFromLS(key) ?? buildDefaultLayouts(items), items);
+
 export const DashboardGrid = ({
   items,
   storageKey = "dashboard.grid.v1",
@@ -109,27 +140,21 @@ export const DashboardGrid = ({
   editable = true,
   onRemove,
 }: Props) => {
-  const { user } = useAuth();
-  const userId = user?.id ?? null;
-  // 사용자별 DB 저장 키. 로그인 사용자가 있으면 계정 단위로 레이아웃이 따라간다.
-  const dbKey = useMemo(
-    () => (userId ? `grid.${storageKey}.${userId}` : null),
-    [userId, storageKey],
-  );
+  const isDesktopGrid = useDesktopGridViewport();
+  // 슈퍼관리자가 고정한 단일 원본 배치만 모든 직원에게 동일하게 배포한다.
+  const dbKey = useMemo(() => `grid.${storageKey}.global`, [storageKey]);
 
   const itemsKey = useMemo(() => items.map((i) => i.id).join("|"), [items]);
   const [layouts, setLayouts] = useState<ResponsiveLayouts<Bp>>(() =>
-    mergeLayouts(loadFromLS(storageKey), items),
+    loadInitialLayouts(storageKey, items),
   );
   const skipPersistRef = useRef(true);
-  const dbLoadedRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // DB 에서 사용자별 저장된 레이아웃을 끌어와 최우선으로 적용한다.
-  // 로그아웃/로그인 또는 다른 디바이스에서도 동일한 배치를 복원하기 위함.
+  // DB 에서 슈퍼관리자가 저장한 글로벌 PC 레이아웃만 끌어와 최우선으로 적용한다.
+  // 모바일/태블릿 접속값은 저장하지 않아 원본 좌표 오염을 막는다.
   useEffect(() => {
     let cancelled = false;
-    if (!dbKey) return;
     (async () => {
       const { data } = await supabase
         .from("app_settings")
@@ -139,12 +164,12 @@ export const DashboardGrid = ({
       if (cancelled) return;
       if (data?.value && typeof data.value === "object") {
         const saved = data.value as ResponsiveLayouts<Bp>;
-        setLayouts(mergeLayouts(saved, items));
+        const stable = desktopOnlyLayouts(saved, items);
+        setLayouts(stable);
         try {
-          localStorage.setItem(storageKey, JSON.stringify(saved));
+          localStorage.setItem(storageKey, JSON.stringify(stable));
         } catch { /* ignore */ }
       }
-      dbLoadedRef.current = true;
       // DB 로드 직후 자동 콜백으로 인한 덮어쓰기 1회 방지
       skipPersistRef.current = true;
     })();
@@ -161,36 +186,54 @@ export const DashboardGrid = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemsKey]);
 
+  useEffect(() => () => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+  }, []);
+
   const { containerRef, width, mounted } = useContainerWidth();
 
   const onLayoutChange = useCallback(
     (_current: Layout, all: ResponsiveLayouts<Bp>) => {
+      if (!isDesktopGrid || !editable) return;
       if (skipPersistRef.current) {
         skipPersistRef.current = false;
         return;
       }
-      setLayouts(all);
+      const desktopLayouts = desktopOnlyLayouts(all, items);
+      setLayouts(desktopLayouts);
       try {
-        localStorage.setItem(storageKey, JSON.stringify(all));
+        localStorage.setItem(storageKey, JSON.stringify(desktopLayouts));
       } catch {
         /* quota — ignore */
       }
-      // DB 동기화 (디바운스). 슈퍼관리자(편집 가능)일 때만 의미가 있지만,
-      // editable=false 인 경우에는 onLayoutChange 자체가 거의 호출되지 않는다.
-      if (dbKey && editable) {
-        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = setTimeout(() => {
-          supabase
-            .from("app_settings")
-            .upsert({ key: dbKey, value: all as any }, { onConflict: "key" })
-            .then(() => {});
-        }, 400);
-      }
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        supabase
+          .from("app_settings")
+          .upsert({ key: dbKey, value: desktopLayouts as unknown as Json }, { onConflict: "key" })
+          .then(() => {});
+      }, 400);
     },
-    [storageKey, dbKey, editable],
+    [isDesktopGrid, items, storageKey, dbKey, editable],
   );
 
   if (items.length === 0) return null;
+
+  if (!isDesktopGrid) {
+    return (
+      <div className="dashboard-mobile-stack flex w-full flex-col gap-4">
+        {items.map((it) => (
+          <div
+            key={it.id}
+            className="dash-grid-item relative w-full min-w-0 overflow-visible rounded-2xl"
+            style={{ height: getMobileTileHeight(it, rowHeight) }}
+          >
+            <div className="h-full w-full min-w-0 overflow-visible rounded-2xl">{it.node}</div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div ref={containerRef} className="w-full">

@@ -227,6 +227,35 @@
     z-index: 20;
   }
 
+  .dashboard-mobile-stack .dash-grid-item {
+    transform: none !important;
+  }
+
+  .dashboard-mobile-stack .premium-card,
+  .dashboard-mobile-stack .glass,
+  .dashboard-mobile-stack .glass-strong {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .dashboard-mobile-stack .premium-card {
+    padding: 1rem;
+  }
+
+  .dashboard-mobile-stack h2,
+  .dashboard-mobile-stack h3 {
+    font-size: 1rem;
+    line-height: 1.35;
+    font-weight: 700;
+  }
+
+  .dashboard-mobile-stack button,
+  .dashboard-mobile-stack a,
+  .dashboard-mobile-stack span,
+  .dashboard-mobile-stack div {
+    min-width: 0;
+  }
+
   .ring-gradient {
     position: relative;
   }
@@ -355,4 +384,11 @@
 }
 .dash-grid-item > div {
   scrollbar-width: thin;
+}
+
+@media (max-width: 1279px) {
+  .react-grid-layout,
+  .react-grid-item {
+    transition: none !important;
+  }
 }
