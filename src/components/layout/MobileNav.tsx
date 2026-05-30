@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, PlusCircle, Users, BarChart3 } from "lucide-react";
+import { LayoutDashboard, PlusCircle, Users, BarChart3, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const leftItems = [
@@ -48,7 +48,7 @@ export const MobileNav = () => {
           <NavItem key={it.to} item={it} active={it.match(pathname)} />
         ))}
         <NavItem
-          item={{ to: "/my", label: "마이", icon: require("lucide-react").User }}
+          item={{ to: "/my", label: "마이", icon: User }}
           active={pathname.startsWith("/my")}
         />
       </div>
