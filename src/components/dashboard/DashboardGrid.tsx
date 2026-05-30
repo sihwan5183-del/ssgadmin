@@ -17,6 +17,7 @@ import { GripVertical, X } from "lucide-react";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 export type GridWidget = {
   /** Stable widget id. */
@@ -212,7 +213,7 @@ export const DashboardGrid = ({
         saveTimerRef.current = setTimeout(() => {
           supabase
             .from("app_settings")
-            .upsert({ key: dbKey, value: desktopLayouts as any }, { onConflict: "key" })
+            .upsert({ key: dbKey, value: desktopLayouts as unknown as Json }, { onConflict: "key" })
             .then(() => {});
         }, 400);
       }
