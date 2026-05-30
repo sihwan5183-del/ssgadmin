@@ -129,6 +129,9 @@ const loadFromLS = (key: string): ResponsiveLayouts<Bp> | null => {
   }
 };
 
+const loadInitialLayouts = (key: string, items: GridWidget[]) =>
+  desktopOnlyLayouts(loadFromLS(key) ?? buildDefaultLayouts(items), items);
+
 export const DashboardGrid = ({
   items,
   storageKey = "dashboard.grid.v1",
@@ -142,7 +145,7 @@ export const DashboardGrid = ({
 
   const itemsKey = useMemo(() => items.map((i) => i.id).join("|"), [items]);
   const [layouts, setLayouts] = useState<ResponsiveLayouts<Bp>>(() =>
-    mergeLayouts(loadFromLS(storageKey), items),
+    loadInitialLayouts(storageKey, items),
   );
   const skipPersistRef = useRef(true);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
