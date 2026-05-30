@@ -43,6 +43,23 @@ type Props = {
 type Bp = "lg" | "md" | "sm";
 const BREAKPOINTS: Record<Bp, number> = { lg: 1280, md: 996, sm: 0 };
 const COLS: Record<Bp, number> = { lg: 12, md: 8, sm: 4 };
+const DESKTOP_GRID_MIN_WIDTH = 1280;
+
+const useDesktopGridViewport = () => {
+  const [isDesktopGrid, setIsDesktopGrid] = useState(() =>
+    typeof window === "undefined" ? true : window.innerWidth >= DESKTOP_GRID_MIN_WIDTH,
+  );
+
+  useEffect(() => {
+    const media = window.matchMedia(`(min-width: ${DESKTOP_GRID_MIN_WIDTH}px)`);
+    const sync = () => setIsDesktopGrid(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  return isDesktopGrid;
+};
 
 const buildDefaultLayouts = (items: GridWidget[]): ResponsiveLayouts<Bp> => {
   const lg: LayoutItem[] = items.map((it) => ({
@@ -90,6 +107,14 @@ const mergeLayouts = (
   return out;
 };
 
+const desktopOnlyLayouts = (
+  next: ResponsiveLayouts<Bp>,
+  items: GridWidget[],
+): ResponsiveLayouts<Bp> => {
+  const defaults = buildDefaultLayouts(items);
+  return mergeLayouts({ lg: next.lg ?? defaults.lg, md: defaults.md, sm: defaults.sm }, items);
+};
+
 const loadFromLS = (key: string): ResponsiveLayouts<Bp> | null => {
   try {
     const raw = localStorage.getItem(key);
@@ -110,6 +135,7 @@ export const DashboardGrid = ({
   onRemove,
 }: Props) => {
   const { user } = useAuth();
+  const isDesktopGrid = useDesktopGridViewport();
   const userId = user?.id ?? null;
   // 사용자별 DB 저장 키. 로그인 사용자가 있으면 계정 단위로 레이아웃이 따라간다.
   const dbKey = useMemo(
@@ -161,17 +187,23 @@ export const DashboardGrid = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemsKey]);
 
+  useEffect(() => () => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+  }, []);
+
   const { containerRef, width, mounted } = useContainerWidth();
 
   const onLayoutChange = useCallback(
     (_current: Layout, all: ResponsiveLayouts<Bp>) => {
+      if (!isDesktopGrid) return;
       if (skipPersistRef.current) {
         skipPersistRef.current = false;
         return;
       }
-      setLayouts(all);
+      const desktopLayouts = desktopOnlyLayouts(all, items);
+      setLayouts(desktopLayouts);
       try {
-        localStorage.setItem(storageKey, JSON.stringify(all));
+        localStorage.setItem(storageKey, JSON.stringify(desktopLayouts));
       } catch {
         /* quota — ignore */
       }
@@ -182,15 +214,31 @@ export const DashboardGrid = ({
         saveTimerRef.current = setTimeout(() => {
           supabase
             .from("app_settings")
-            .upsert({ key: dbKey, value: all as any }, { onConflict: "key" })
+            .upsert({ key: dbKey, value: desktopLayouts as any }, { onConflict: "key" })
             .then(() => {});
         }, 400);
       }
     },
-    [storageKey, dbKey, editable],
+    [isDesktopGrid, items, storageKey, dbKey, editable],
   );
 
   if (items.length === 0) return null;
+
+  if (!isDesktopGrid) {
+    return (
+      <div className="dashboard-mobile-stack flex w-full flex-col gap-4">
+        {items.map((it) => (
+          <div
+            key={it.id}
+            className="dash-grid-item relative w-full min-w-0 overflow-visible rounded-2xl"
+            style={{ minHeight: Math.max(180, it.lg.h * rowHeight + Math.max(0, it.lg.h - 1) * 8) }}
+          >
+            <div className="w-full min-w-0 overflow-visible rounded-2xl">{it.node}</div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div ref={containerRef} className="w-full">
