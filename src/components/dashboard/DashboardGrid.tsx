@@ -194,7 +194,7 @@ export const DashboardGrid = ({
 
   const onLayoutChange = useCallback(
     (_current: Layout, all: ResponsiveLayouts<Bp>) => {
-      if (!isDesktopGrid) return;
+      if (!isDesktopGrid || !editable) return;
       if (skipPersistRef.current) {
         skipPersistRef.current = false;
         return;
@@ -206,17 +206,13 @@ export const DashboardGrid = ({
       } catch {
         /* quota — ignore */
       }
-      // DB 동기화 (디바운스). 슈퍼관리자(편집 가능)일 때만 의미가 있지만,
-      // editable=false 인 경우에는 onLayoutChange 자체가 거의 호출되지 않는다.
-      if (dbKey && editable) {
-        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = setTimeout(() => {
-          supabase
-            .from("app_settings")
-            .upsert({ key: dbKey, value: desktopLayouts as unknown as Json }, { onConflict: "key" })
-            .then(() => {});
-        }, 400);
-      }
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        supabase
+          .from("app_settings")
+          .upsert({ key: dbKey, value: desktopLayouts as unknown as Json }, { onConflict: "key" })
+          .then(() => {});
+      }, 400);
     },
     [isDesktopGrid, items, storageKey, dbKey, editable],
   );
