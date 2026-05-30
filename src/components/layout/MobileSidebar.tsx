@@ -114,7 +114,7 @@ export const MobileSidebar = () => {
         <div className="lg:hidden fixed inset-0 z-[9999]">
           {/* 오버레이 */}
           <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setOpen(false)}
             aria-hidden
           />
@@ -123,7 +123,7 @@ export const MobileSidebar = () => {
           <aside
             role="dialog"
             aria-label="메뉴"
-            className="absolute left-0 top-0 h-full w-[280px] max-w-[85vw] bg-white shadow-2xl flex flex-col animate-slide-in-from-left"
+            className="absolute left-0 top-0 w-[280px] max-w-[85vw] bg-white shadow-2xl flex flex-col"
             style={{ height: "100dvh" }}
           >
             <div className="px-4 py-4 flex items-center gap-2.5 border-b border-slate-100">
