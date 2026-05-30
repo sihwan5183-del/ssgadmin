@@ -43,14 +43,27 @@ export const Sidebar = () => {
   const [newLeadCount, setNewLeadCount] = useState(0);
   useEffect(() => {
     let cancelled = false;
+    // 오후 8시 마감 기준 24시간 만료:
+    // 등록 시각 + 24h 이후 도래하는 첫 20:00 에 배지에서 제외.
+    // 동치: created_at >= (가장 최근 지나간 20:00) - 24h
+    const computeSinceIso = () => {
+      const now = new Date();
+      const cutoff = new Date(now);
+      cutoff.setHours(20, 0, 0, 0);
+      if (cutoff > now) cutoff.setDate(cutoff.getDate() - 1);
+      return new Date(cutoff.getTime() - 24 * 60 * 60 * 1000).toISOString();
+    };
     const fetchCount = async () => {
       const { count } = await supabase
         .from("leads")
         .select("id", { count: "exact", head: true })
-        .eq("status", "신규 접수");
+        .eq("status", "신규 접수")
+        .gte("created_at", computeSinceIso());
       if (!cancelled) setNewLeadCount(count ?? 0);
     };
     fetchCount();
+    // 1분마다 시간 동기화 (만료된 건 자동 차감)
+    const tick = setInterval(fetchCount, 60 * 1000);
     const ch = supabase
       .channel("sidebar-leads-count")
       .on(
@@ -61,6 +74,7 @@ export const Sidebar = () => {
       .subscribe();
     return () => {
       cancelled = true;
+      clearInterval(tick);
       supabase.removeChannel(ch);
     };
   }, []);
