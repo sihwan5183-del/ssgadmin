@@ -347,9 +347,9 @@ const IndexInner = () => {
 
       <DashboardGrid
         items={gridItems}
-        editable={isAdmin}
+        editable={isSuperAdmin}
         storageKey="dashboard.grid.v2"
-        onRemove={isAdmin ? toggle : undefined}
+        onRemove={isSuperAdmin ? toggle : undefined}
       />
     </>
   );
