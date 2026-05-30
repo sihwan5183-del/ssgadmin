@@ -1,10 +1,14 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, PlusCircle, User } from "lucide-react";
+import { LayoutDashboard, PlusCircle, Users, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const sideItems = [
-  { to: "/", label: "홈", icon: LayoutDashboard },
-  { to: "/my", label: "마이페이지", icon: User },
+const leftItems = [
+  { to: "/", label: "대시보드", icon: LayoutDashboard, match: (p: string) => p === "/" },
+  { to: "/leads", label: "잠재고객", icon: Users, match: (p: string) => p.startsWith("/leads") },
+];
+
+const rightItems = [
+  { to: "/sales-ledger", label: "판매장표", icon: BarChart3, match: (p: string) => p.startsWith("/sales-ledger") },
 ];
 
 export const MobileNav = () => {
@@ -12,12 +16,14 @@ export const MobileNav = () => {
   const inputActive = pathname === "/input";
   return (
     <nav
-      className="lg:hidden fixed bottom-0 inset-x-0 z-40 glass-strong border-t border-border/40 pb-[env(safe-area-inset-bottom)]"
+      className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-t border-border/40 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-12px_rgba(15,23,42,0.18)]"
       aria-label="하단 네비게이션"
     >
-      <div className="relative grid grid-cols-3 items-end">
-        {/* 왼쪽: 홈 */}
-        <NavItem item={sideItems[0]} active={pathname === sideItems[0].to} />
+      <div className="relative grid grid-cols-5 items-end">
+        {/* 좌측 2개: 대시보드 / 잠재고객 */}
+        {leftItems.map((it) => (
+          <NavItem key={it.to} item={it} active={it.match(pathname)} />
+        ))}
 
         {/* 중앙: 강조된 실적 입력 버튼 */}
         <div className="flex justify-center">
@@ -33,12 +39,18 @@ export const MobileNav = () => {
             )}
           >
             <PlusCircle className="size-7" strokeWidth={2.4} />
-            <span className="text-[10px] font-bold leading-none">실적</span>
+            <span className="text-[10px] font-bold leading-none">실적입력</span>
           </NavLink>
         </div>
 
-        {/* 오른쪽: 마이페이지 */}
-        <NavItem item={sideItems[1]} active={pathname === sideItems[1].to} />
+        {/* 우측: 판매장표 + 마이페이지 자리 */}
+        {rightItems.map((it) => (
+          <NavItem key={it.to} item={it} active={it.match(pathname)} />
+        ))}
+        <NavItem
+          item={{ to: "/my", label: "마이", icon: require("lucide-react").User }}
+          active={pathname.startsWith("/my")}
+        />
       </div>
     </nav>
   );
@@ -57,10 +69,10 @@ function NavItem({
       to={item.to}
       className={cn(
         "flex flex-col items-center justify-center gap-1 min-h-[64px] py-2 text-[12px] transition-colors active:bg-primary/5",
-        active ? "text-primary-glow" : "text-muted-foreground"
+        active ? "text-primary" : "text-slate-500 dark:text-muted-foreground"
       )}
     >
-      <Icon className={cn("size-6", active && "drop-shadow-[0_0_8px_hsl(330_100%_55%/0.7)]")} />
+      <Icon className={cn("size-[22px]", active && "drop-shadow-[0_0_8px_hsl(330_100%_55%/0.6)]")} />
       <span className="text-[11px] font-semibold leading-none">{item.label}</span>
     </NavLink>
   );
