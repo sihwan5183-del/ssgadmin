@@ -15,12 +15,14 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { useFinanceData } from "@/hooks/useFinanceData";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 
 const formatKRW = (n: number) => "₩" + Math.round(n).toLocaleString("ko-KR");
 
 const ExpensesPage = () => {
   const { label } = usePeriod();
   const f = useFinanceData();
+  const { isSuperAdmin } = useSuperAdmin();
 
   // ----- 4단 KPI 위젯 정의 -----
   const mobileExpenseTotal =
@@ -176,7 +178,8 @@ const ExpensesPage = () => {
           items={kpiWidgets}
           storageKey="expenses.kpi.grid.v1"
           rowHeight={36}
-          onRemove={onRemove}
+          editable={isSuperAdmin}
+          onRemove={isSuperAdmin ? onRemove : undefined}
         />
       </div>
 
@@ -206,7 +209,8 @@ const ExpensesPage = () => {
         ].filter((w) => !sectionHidden.has(w.id))}
         storageKey="expenses.section.grid.v1"
         rowHeight={36}
-        onRemove={onRemoveSection}
+        editable={isSuperAdmin}
+        onRemove={isSuperAdmin ? onRemoveSection : undefined}
       />
     </>
   );
