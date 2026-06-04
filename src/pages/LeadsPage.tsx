@@ -39,6 +39,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { BulkActionBar } from "@/components/common/BulkActionBar";
 import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { Trash2 } from "lucide-react";
 // 무거운(1k+ LOC) 페이지 — 사용자가 [기타인입] 탭을 처음 클릭할 때만 로드해서
 // 메타/도그마루 탭의 초기 진입과 탭 전환 응답성을 잡아준다.
