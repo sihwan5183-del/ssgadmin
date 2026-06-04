@@ -227,14 +227,6 @@ export default function LeadsPage() {
     memo: "",
   });
 
-  const PAGE_SIZE = 50;
-  const [page, setPage] = useState(0);
-
-  const pagedFiltered = useMemo(() => {
-    const start = page * PAGE_SIZE;
-    return filtered.slice(start, start + PAGE_SIZE);
-  }, [filtered, page]);
-
   async function load() {
     setLoading(true);
     const { data, error } = await supabase
