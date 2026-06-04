@@ -367,7 +367,7 @@ export default function LeadsPage() {
         if (!matchesFilter(r.desired_product, fProduct)) return false;
         if (!matchesFilter(r.campaign_name, fCampaign)) return false;
         const assigneeName = r.assigned_to ? staff.find((s) => s.user_id === r.assigned_to)?.display_name ?? "" : "";
-        if (!matchesFilter(assigneeName, fAssignee)) return false;
+    if (!matchesFilter(assigneeName, fAssignee)) return false;
       } else if (sourceTab === "dogmaru") {
         if (!matchesFilter(r.branch_name, fBranch)) return false;
         if (!matchesFilter(r.activation_status, fActivation)) return false;
@@ -377,8 +377,21 @@ export default function LeadsPage() {
     });
   }, [rows, search, sourceTab, fStatus, fCarrier, fProduct, fCampaign, fAssignee, fBranch, fActivation, fCancellation, staff]);
 
+  const PAGE_SIZE = 50;
+  const [page, setPage] = useState(0);
+
+  const pagedFiltered = useMemo(() => {
+    const start = page * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, page]);
+
+  // 필터/검색/탭 변경 시 첫 페이지로 리셋
+  useEffect(() => {
+    setPage(0);
+  }, [search, sourceTab, fStatus, fCarrier, fProduct, fCampaign, fAssignee, fBranch, fActivation, fCancellation]);
+
   // ── 일괄 선택/삭제 ──
-  const filteredIds = useMemo(() => filtered.map((r) => r.id), [filtered]);
+  const filteredIds = useMemo(() => pagedFiltered.map((r) => r.id), [pagedFiltered]);
   const bulk = useBulkSelection<string>(filteredIds);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
