@@ -957,6 +957,13 @@ export default function LeadsPage() {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/60 border-b-2 border-border hover:bg-muted/60">
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={bulk.allOnPageSelected}
+                  onCheckedChange={(v) => bulk.togglePage(!!v)}
+                  aria-label="전체 선택"
+                />
+              </TableHead>
               <TableHead className="text-foreground font-bold w-[130px] whitespace-nowrap py-2">접수 일시</TableHead>
               <TableHead className="text-foreground font-bold">고객명</TableHead>
               <TableHead className="text-foreground font-bold">연락처</TableHead>
@@ -983,14 +990,14 @@ export default function LeadsPage() {
           <TableBody>
             {loading && (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-10 text-foreground/60">
+                <TableCell colSpan={12} className="text-center py-10 text-foreground/60">
                   불러오는 중…
                 </TableCell>
               </TableRow>
             )}
             {!loading && filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-10 text-foreground/60">
+                <TableCell colSpan={12} className="text-center py-10 text-foreground/60">
                   표시할 리드가 없습니다.
                 </TableCell>
               </TableRow>
@@ -1004,7 +1011,15 @@ export default function LeadsPage() {
                   (highlightId === r.id ? "bg-amber-50 ring-2 ring-amber-400 animate-pulse" : "")
                 }
                 onClick={() => setOpenLead(r)}
+                data-state={bulk.isSelected(r.id) ? "selected" : undefined}
               >
+                <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    checked={bulk.isSelected(r.id)}
+                    onCheckedChange={() => bulk.toggle(r.id)}
+                    aria-label="행 선택"
+                  />
+                </TableCell>
                 <TableCell className="tabular-nums text-xs text-foreground font-medium whitespace-nowrap py-1.5">
                   {fmtCompactDate(r.created_at)}
                 </TableCell>
