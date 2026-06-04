@@ -35,6 +35,11 @@ import { UserCheck, PhoneCall, CheckCircle2, Plus, Search, RotateCw, Ban, XCircl
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { BulkActionBar } from "@/components/common/BulkActionBar";
+import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
+import { Trash2 } from "lucide-react";
 // 무거운(1k+ LOC) 페이지 — 사용자가 [기타인입] 탭을 처음 클릭할 때만 로드해서
 // 메타/도그마루 탭의 초기 진입과 탭 전환 응답성을 잡아준다.
 const ChannelIntakePage = lazy(() => import("@/pages/ChannelIntakePage"));
@@ -371,6 +376,26 @@ export default function LeadsPage() {
       return true;
     });
   }, [rows, search, sourceTab, fStatus, fCarrier, fProduct, fCampaign, fAssignee, fBranch, fActivation, fCancellation, staff]);
+
+  // ── 일괄 선택/삭제 ──
+  const filteredIds = useMemo(() => filtered.map((r) => r.id), [filtered]);
+  const bulk = useBulkSelection<string>(filteredIds);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  async function bulkDelete() {
+    setBulkBusy(true);
+    const ids = bulk.selectedIds;
+    const { error } = await supabase.from("leads").delete().in("id", ids);
+    setBulkBusy(false);
+    if (error) {
+      toast.error("일괄 삭제 실패: " + error.message);
+      return;
+    }
+    setRows((prev) => prev.filter((r) => !ids.includes(r.id)));
+    toast.success(`${ids.length}건 삭제되었습니다`);
+    setBulkDeleteOpen(false);
+    bulk.clear();
+  }
 
   const sourceCounts = useMemo(() => {
     let dogmaru = 0;
@@ -820,6 +845,13 @@ export default function LeadsPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/60 border-b-2 border-border hover:bg-muted/60">
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={bulk.allOnPageSelected}
+                    onCheckedChange={(v) => bulk.togglePage(!!v)}
+                    aria-label="전체 선택"
+                  />
+                </TableHead>
                 <TableHead className="text-foreground font-bold">접수 일자</TableHead>
                 <TableHead className="text-foreground font-bold">고객 성명</TableHead>
                 <TableHead className="text-foreground font-bold">연락처</TableHead>
@@ -839,14 +871,14 @@ export default function LeadsPage() {
             <TableBody>
               {loading && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-10 text-foreground/60">
+                  <TableCell colSpan={9} className="text-center py-10 text-foreground/60">
                     불러오는 중…
                   </TableCell>
                 </TableRow>
               )}
               {!loading && filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-10 text-foreground/60">
+                  <TableCell colSpan={9} className="text-center py-10 text-foreground/60">
                     도그마루 시트에서 인입된 데이터가 없습니다.
                   </TableCell>
                 </TableRow>
@@ -864,7 +896,15 @@ export default function LeadsPage() {
                       (highlightId === item.id ? "bg-amber-50 ring-2 ring-amber-400 animate-pulse" : "")
                     }
                     onClick={() => setOpenLead(item)}
+                    data-state={bulk.isSelected(item.id) ? "selected" : undefined}
                   >
+                    <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={bulk.isSelected(item.id)}
+                        onCheckedChange={() => bulk.toggle(item.id)}
+                        aria-label="행 선택"
+                      />
+                    </TableCell>
                     <TableCell className="tabular-nums text-foreground font-medium py-1.5">
                       {item.registration_date ?? "-"}
                     </TableCell>
@@ -917,6 +957,13 @@ export default function LeadsPage() {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/60 border-b-2 border-border hover:bg-muted/60">
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={bulk.allOnPageSelected}
+                  onCheckedChange={(v) => bulk.togglePage(!!v)}
+                  aria-label="전체 선택"
+                />
+              </TableHead>
               <TableHead className="text-foreground font-bold w-[130px] whitespace-nowrap py-2">접수 일시</TableHead>
               <TableHead className="text-foreground font-bold">고객명</TableHead>
               <TableHead className="text-foreground font-bold">연락처</TableHead>
@@ -943,14 +990,14 @@ export default function LeadsPage() {
           <TableBody>
             {loading && (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-10 text-foreground/60">
+                <TableCell colSpan={12} className="text-center py-10 text-foreground/60">
                   불러오는 중…
                 </TableCell>
               </TableRow>
             )}
             {!loading && filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-10 text-foreground/60">
+                <TableCell colSpan={12} className="text-center py-10 text-foreground/60">
                   표시할 리드가 없습니다.
                 </TableCell>
               </TableRow>
@@ -964,7 +1011,15 @@ export default function LeadsPage() {
                   (highlightId === r.id ? "bg-amber-50 ring-2 ring-amber-400 animate-pulse" : "")
                 }
                 onClick={() => setOpenLead(r)}
+                data-state={bulk.isSelected(r.id) ? "selected" : undefined}
               >
+                <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    checked={bulk.isSelected(r.id)}
+                    onCheckedChange={() => bulk.toggle(r.id)}
+                    aria-label="행 선택"
+                  />
+                </TableCell>
                 <TableCell className="tabular-nums text-xs text-foreground font-medium whitespace-nowrap py-1.5">
                   {fmtCompactDate(r.created_at)}
                 </TableCell>
@@ -1189,6 +1244,30 @@ export default function LeadsPage() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {sourceTab !== "other" && (
+        <>
+          <BulkActionBar count={bulk.selectedCount} onClear={bulk.clear}>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => setBulkDeleteOpen(true)}
+              className="h-10 lg:h-8"
+            >
+              <Trash2 className="size-4 lg:size-3.5 mr-1" /> 선택 삭제
+            </Button>
+          </BulkActionBar>
+          <BulkDeleteDialog
+            open={bulkDeleteOpen}
+            onOpenChange={setBulkDeleteOpen}
+            count={bulk.selectedCount}
+            itemLabel="건의 잠재고객을 삭제하시겠습니까?"
+            onConfirm={bulkDelete}
+            loading={bulkBusy}
+            confirmLabel="삭제"
+          />
+        </>
+      )}
     </div>
   );
 }
