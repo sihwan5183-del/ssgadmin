@@ -1101,6 +1101,12 @@ export default function LeadsPage() {
           </TableBody>
         </Table>
         )}
+        <PaginationBar
+          page={page}
+          pageSize={PAGE_SIZE}
+          total={filtered.length}
+          onChange={setPage}
+        />
       </Card>
       )}
 
