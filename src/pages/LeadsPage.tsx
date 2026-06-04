@@ -1244,6 +1244,30 @@ export default function LeadsPage() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {sourceTab !== "other" && (
+        <>
+          <BulkActionBar count={bulk.selectedCount} onClear={bulk.clear}>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => setBulkDeleteOpen(true)}
+              className="h-10 lg:h-8"
+            >
+              <Trash2 className="size-4 lg:size-3.5 mr-1" /> 선택 삭제
+            </Button>
+          </BulkActionBar>
+          <BulkDeleteDialog
+            open={bulkDeleteOpen}
+            onOpenChange={setBulkDeleteOpen}
+            count={bulk.selectedCount}
+            itemLabel="건의 잠재고객을 삭제하시겠습니까?"
+            onConfirm={bulkDelete}
+            loading={bulkBusy}
+            confirmLabel="삭제"
+          />
+        </>
+      )}
     </div>
   );
 }
