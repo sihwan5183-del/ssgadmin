@@ -890,14 +890,14 @@ export default function LeadsPage() {
                   </TableCell>
                 </TableRow>
               )}
-              {!loading && filtered.length === 0 && (
+              {!loading && pagedFiltered.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-10 text-foreground/60">
                     도그마루 시트에서 인입된 데이터가 없습니다.
                   </TableCell>
                 </TableRow>
               )}
-              {filtered.map((r) => {
+              {pagedFiltered.map((r) => {
                 const item = toDogmaruItem(r);
                 const isCancelled = !!item.cancellation_status;
                 const isActivated = (item.activation_status ?? "").includes("개통완료");
