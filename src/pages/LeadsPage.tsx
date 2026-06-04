@@ -1009,14 +1009,14 @@ export default function LeadsPage() {
                 </TableCell>
               </TableRow>
             )}
-            {!loading && filtered.length === 0 && (
+            {!loading && pagedFiltered.length === 0 && (
               <TableRow>
                 <TableCell colSpan={12} className="text-center py-10 text-foreground/60">
                   표시할 리드가 없습니다.
                 </TableCell>
               </TableRow>
             )}
-            {filtered.map((r) => (
+            {pagedFiltered.map((r) => (
               <TableRow
                 key={r.id}
                 data-lead-row={r.id}
