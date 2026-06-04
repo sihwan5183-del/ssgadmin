@@ -39,6 +39,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { BulkActionBar } from "@/components/common/BulkActionBar";
 import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { Trash2 } from "lucide-react";
 // 무거운(1k+ LOC) 페이지 — 사용자가 [기타인입] 탭을 처음 클릭할 때만 로드해서
 // 메타/도그마루 탭의 초기 진입과 탭 전환 응답성을 잡아준다.
@@ -367,7 +368,7 @@ export default function LeadsPage() {
         if (!matchesFilter(r.desired_product, fProduct)) return false;
         if (!matchesFilter(r.campaign_name, fCampaign)) return false;
         const assigneeName = r.assigned_to ? staff.find((s) => s.user_id === r.assigned_to)?.display_name ?? "" : "";
-        if (!matchesFilter(assigneeName, fAssignee)) return false;
+    if (!matchesFilter(assigneeName, fAssignee)) return false;
       } else if (sourceTab === "dogmaru") {
         if (!matchesFilter(r.branch_name, fBranch)) return false;
         if (!matchesFilter(r.activation_status, fActivation)) return false;
@@ -377,8 +378,21 @@ export default function LeadsPage() {
     });
   }, [rows, search, sourceTab, fStatus, fCarrier, fProduct, fCampaign, fAssignee, fBranch, fActivation, fCancellation, staff]);
 
+  const PAGE_SIZE = 50;
+  const [page, setPage] = useState(0);
+
+  const pagedFiltered = useMemo(() => {
+    const start = page * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, page]);
+
+  // 필터/검색/탭 변경 시 첫 페이지로 리셋
+  useEffect(() => {
+    setPage(0);
+  }, [search, sourceTab, fStatus, fCarrier, fProduct, fCampaign, fAssignee, fBranch, fActivation, fCancellation]);
+
   // ── 일괄 선택/삭제 ──
-  const filteredIds = useMemo(() => filtered.map((r) => r.id), [filtered]);
+  const filteredIds = useMemo(() => pagedFiltered.map((r) => r.id), [pagedFiltered]);
   const bulk = useBulkSelection<string>(filteredIds);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -876,14 +890,14 @@ export default function LeadsPage() {
                   </TableCell>
                 </TableRow>
               )}
-              {!loading && filtered.length === 0 && (
+              {!loading && pagedFiltered.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-10 text-foreground/60">
                     도그마루 시트에서 인입된 데이터가 없습니다.
                   </TableCell>
                 </TableRow>
               )}
-              {filtered.map((r) => {
+              {pagedFiltered.map((r) => {
                 const item = toDogmaruItem(r);
                 const isCancelled = !!item.cancellation_status;
                 const isActivated = (item.activation_status ?? "").includes("개통완료");
@@ -995,14 +1009,14 @@ export default function LeadsPage() {
                 </TableCell>
               </TableRow>
             )}
-            {!loading && filtered.length === 0 && (
+            {!loading && pagedFiltered.length === 0 && (
               <TableRow>
                 <TableCell colSpan={12} className="text-center py-10 text-foreground/60">
                   표시할 리드가 없습니다.
                 </TableCell>
               </TableRow>
             )}
-            {filtered.map((r) => (
+            {pagedFiltered.map((r) => (
               <TableRow
                 key={r.id}
                 data-lead-row={r.id}
@@ -1087,6 +1101,12 @@ export default function LeadsPage() {
           </TableBody>
         </Table>
         )}
+        <PaginationBar
+          page={page}
+          pageSize={PAGE_SIZE}
+          total={filtered.length}
+          onChange={setPage}
+        />
       </Card>
       )}
 
