@@ -377,6 +377,26 @@ export default function LeadsPage() {
     });
   }, [rows, search, sourceTab, fStatus, fCarrier, fProduct, fCampaign, fAssignee, fBranch, fActivation, fCancellation, staff]);
 
+  // ── 일괄 선택/삭제 ──
+  const filteredIds = useMemo(() => filtered.map((r) => r.id), [filtered]);
+  const bulk = useBulkSelection<string>(filteredIds);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  async function bulkDelete() {
+    setBulkBusy(true);
+    const ids = bulk.selectedIds;
+    const { error } = await supabase.from("leads").delete().in("id", ids);
+    setBulkBusy(false);
+    if (error) {
+      toast.error("일괄 삭제 실패: " + error.message);
+      return;
+    }
+    setRows((prev) => prev.filter((r) => !ids.includes(r.id)));
+    toast.success(`${ids.length}건 삭제되었습니다`);
+    setBulkDeleteOpen(false);
+    bulk.clear();
+  }
+
   const sourceCounts = useMemo(() => {
     let dogmaru = 0;
     let meta = 0;
