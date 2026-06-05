@@ -969,7 +969,24 @@ const SalesLedgerPage = () => {
         </Link>
 
         <div className="ml-auto flex items-center gap-2">
-          <Badge className="bg-primary/15 text-primary-glow border-primary/30">총 {dbSummary.count.toLocaleString()}건</Badge>
+          <button
+            type="button"
+            onClick={() => setViewAll((v) => !v)}
+            className={`h-7 px-2.5 rounded-full text-[11px] font-medium border transition ${
+              viewAll
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background text-muted-foreground border-border hover:text-foreground"
+            }`}
+            title="전체 기간 보기 / 선택 기간 보기 전환"
+          >
+            {viewAll ? "전체 기간 보기" : `${periodLabel} 보기`}
+          </button>
+          <Badge className="bg-primary/15 text-primary-glow border-primary/30">
+            {viewAll ? "검색 결과" : "기간 내"} {total.toLocaleString()}건
+          </Badge>
+          <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30">
+            이달 실적(개통/설치완료) {monthDoneCount.toLocaleString()}건
+          </Badge>
           {isAdmin && selected.size > 0 && (
             <div className="flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-50 dark:bg-amber-500/10 px-2 py-1">
               <span className="text-[11px] font-medium text-amber-700 dark:text-amber-300">담당자 일괄지정({selected.size})</span>
