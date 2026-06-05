@@ -179,7 +179,7 @@ export const DashboardGrid = ({
         const saved = data.value as ResponsiveLayouts<Bp>;
         const stable = desktopOnlyLayouts(saved, items);
         setLayouts(stable);
-        try {
+        if (editable) try {
           localStorage.setItem(storageKey, JSON.stringify(stable));
         } catch { /* ignore */ }
       }
@@ -194,10 +194,12 @@ export const DashboardGrid = ({
 
   // Adopt newly added / removed widgets without losing saved positions for survivors.
   useEffect(() => {
-    setLayouts((prev) => mergeLayouts(prev, items));
+    if (editable) {
+      setLayouts((prev) => mergeLayouts(prev, items));
+    }
     skipPersistRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemsKey]);
+  }, [itemsKey, editable]);
 
   useEffect(() => () => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -208,6 +210,7 @@ export const DashboardGrid = ({
   const onLayoutChange = useCallback(
     (_current: Layout, all: ResponsiveLayouts<Bp>) => {
       if (!isDesktopGrid || !editable) return;
+      if (isSameLayouts(desktopOnlyLayouts(all, items), layouts)) return;
       if (skipPersistRef.current) {
         skipPersistRef.current = false;
         return;
@@ -227,7 +230,7 @@ export const DashboardGrid = ({
           .then(() => {});
       }, 400);
     },
-    [isDesktopGrid, items, storageKey, dbKey, editable],
+    [isDesktopGrid, items, layouts, storageKey, dbKey, editable],
   );
 
   if (items.length === 0) return null;
