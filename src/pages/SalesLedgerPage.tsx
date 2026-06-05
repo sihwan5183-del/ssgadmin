@@ -306,6 +306,17 @@ const SalesLedgerPage = () => {
   });
   const [unpaidCount, setUnpaidCount] = useState(0);
   const [unreturnedCount, setUnreturnedCount] = useState(0);
+  // 판매원장은 기본적으로 전체 기간을 조회 (대시보드 기간 필터 무시)
+  // 대시보드 deep-link 진입 시에만 false 로 전환됨
+  const [viewAll, setViewAll] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    const sp = new URLSearchParams(window.location.search);
+    // 대시보드 진입(staffName/from_dashboard/status deep-link)일 때만 기간 적용
+    if (sp.get("staffName") || sp.get("from_dashboard") === "1" || sp.get("status")) return false;
+    return true;
+  });
+  // 이달 실적(개통완료·설치완료) 카운트
+  const [monthDoneCount, setMonthDoneCount] = useState(0);
 
   // 담당자 필드에 UUID가 들어간 경우 프로필 display_name으로 치환하기 위한 맵
   const [managerNameMap, setManagerNameMap] = useState<Record<string, string>>({});
@@ -436,12 +447,15 @@ const SalesLedgerPage = () => {
     let query = supabase
       .from("sales")
       .select("*", { count: "exact" })
-      // 대시보드 [개통 대기] 와 동일 기준:
-      // open_date 가 기간 내 OR (open_date NULL 이면서 created_at 이 기간 내)
-      .or(
+      ;
+    // 판매원장 리스트는 기본 전체 기간 조회.
+    // 대시보드 deep-link 등으로 진입한 경우(viewAll=false)에만 기간 필터 적용.
+    if (!viewAll) {
+      query = query.or(
         `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
         `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
       );
+    }
     // === 엑셀형 컬럼 필터 적용 (서버 사이드) ===
     if (colFilters.status.length > 0) query = query.in("status", colFilters.status);
     if (colFilters.channel.length > 0) query = query.in("channel", colFilters.channel);
@@ -481,7 +495,7 @@ const SalesLedgerPage = () => {
     setRows((data ?? []) as SaleRow[]);
     setTotal(count ?? 0);
     setSearching(false);
-  }, [page, startDate, endDate, colFilters, managerValues, debouncedSearchQ]);
+  }, [page, startDate, endDate, viewAll, colFilters, managerValues, debouncedSearchQ]);
 
   const loadSummary = useCallback(async () => {
     // 정책: 저장된 모든 실적은 즉시 합계에 반영. (status·approval_status·검수상태와 무관)
