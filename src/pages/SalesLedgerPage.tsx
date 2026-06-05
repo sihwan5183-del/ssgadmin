@@ -582,13 +582,27 @@ const SalesLedgerPage = () => {
     setUnreturnedCount(urc ?? 0);
   }, [startDate, endDate, colFilters, managerValues]);
 
+  // 이달 실적 카운트: 상태가 '개통완료' 또는 '설치완료' 를 포함하는 건만 집계
+  const loadMonthDone = useCallback(async () => {
+    const { count } = await supabase
+      .from("sales")
+      .select("id", { count: "exact", head: true })
+      .or(
+        `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
+        `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
+      )
+      .or("status.ilike.%개통완료%,status.ilike.%설치완료%");
+    setMonthDoneCount(count ?? 0);
+  }, [startDate, endDate]);
+
   useEffect(() => {
     load();
     loadSummary();
+    loadMonthDone();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, startDate, endDate, colFilters, managerValues, debouncedSearchQ]);
+  }, [page, startDate, endDate, viewAll, colFilters, managerValues, debouncedSearchQ]);
 
-  useEffect(() => { setPage(0); }, [startDate, endDate, colFilters, managerValues, debouncedSearchQ]);
+  useEffect(() => { setPage(0); }, [startDate, endDate, viewAll, colFilters, managerValues, debouncedSearchQ]);
 
   // 실적 입력 후 navigate로 진입 시 즉시 강제 리로드 (캐시 우회)
   useEffect(() => {
