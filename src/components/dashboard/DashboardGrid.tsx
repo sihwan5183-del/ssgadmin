@@ -171,12 +171,16 @@ export const DashboardGrid = ({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("app_settings")
         .select("value")
         .eq("key", dbKey)
         .maybeSingle();
       if (cancelled) return;
+      if (error) {
+        skipPersistRef.current = true;
+        return;
+      }
       if (data?.value && typeof data.value === "object") {
         const saved = data.value as ResponsiveLayouts<Bp>;
         const stable = desktopOnlyLayouts(saved, items);
