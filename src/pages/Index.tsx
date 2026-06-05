@@ -115,7 +115,7 @@ const IndexInner = () => {
   const { isAdmin } = useRole();
   const { isSuperAdmin } = useSuperAdmin();
   const canSeeAdminWidgets = isAdmin || isSuperAdmin;
-  const { widgets, isVisible, toggle, move, resetToDefault } = useDashboardLayout();
+  const { widgets, isVisible, toggle, move, resetToDefault } = useDashboardLayout(isSuperAdmin);
   const liveRoi = Math.round(finance.roi);
 
   const { mode, year, month, startDate, label: periodLabel, setMode, setYear, setMonth } = usePeriod();
@@ -274,7 +274,7 @@ const IndexInner = () => {
       <Header
         title="영업기획팀 전략 대시보드"
         subtitle={headerSubtitle}
-        rightSlot={isAdmin ? (
+        rightSlot={isSuperAdmin ? (
           <DashboardLayoutManager
             widgets={widgets}
             toggle={toggle}
