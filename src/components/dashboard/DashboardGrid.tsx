@@ -143,8 +143,8 @@ const loadFromLS = (key: string): ResponsiveLayouts<Bp> | null => {
   }
 };
 
-const loadInitialLayouts = (key: string, items: GridWidget[]) =>
-  desktopOnlyLayouts(loadFromLS(key) ?? buildDefaultLayouts(items), items);
+const loadInitialLayouts = (key: string, items: GridWidget[], editable: boolean) =>
+  desktopOnlyLayouts((editable ? loadFromLS(key) : null) ?? buildDefaultLayouts(items), items);
 
 export const DashboardGrid = ({
   items,
@@ -159,8 +159,10 @@ export const DashboardGrid = ({
 
   const itemsKey = useMemo(() => items.map((i) => i.id).join("|"), [items]);
   const [layouts, setLayouts] = useState<ResponsiveLayouts<Bp>>(() =>
-    loadInitialLayouts(storageKey, items),
+    loadInitialLayouts(storageKey, items, editable),
   );
+  const [remoteReady, setRemoteReady] = useState(false);
+  const remoteLayoutsRef = useRef<ResponsiveLayouts<Bp> | null>(null);
   const skipPersistRef = useRef(true);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
