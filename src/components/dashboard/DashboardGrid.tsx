@@ -8,6 +8,7 @@ import {
 } from "react";
 import {
   ResponsiveGridLayout,
+  noCompactor,
   useContainerWidth,
   type Layout,
   type LayoutItem,
@@ -44,6 +45,18 @@ type Bp = "lg" | "md" | "sm";
 const BREAKPOINTS: Record<Bp, number> = { lg: 1280, md: 996, sm: 0 };
 const COLS: Record<Bp, number> = { lg: 12, md: 8, sm: 4 };
 const DESKTOP_GRID_MIN_WIDTH = 1280;
+
+const isSameLayout = (a: readonly LayoutItem[], b: readonly LayoutItem[]) => {
+  if (a.length !== b.length) return false;
+  const bMap = new Map(b.map((item) => [item.i, item]));
+  return a.every((item) => {
+    const other = bMap.get(item.i);
+    return other && item.x === other.x && item.y === other.y && item.w === other.w && item.h === other.h;
+  });
+};
+
+const isSameLayouts = (a: ResponsiveLayouts<Bp>, b: ResponsiveLayouts<Bp>) =>
+  (Object.keys(COLS) as Bp[]).every((bp) => isSameLayout(a[bp] ?? [], b[bp] ?? []));
 
 const useDesktopGridViewport = () => {
   const [isDesktopGrid, setIsDesktopGrid] = useState(() =>
