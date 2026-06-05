@@ -847,7 +847,16 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={12} className="text-center py-10 text-muted-foreground">불러오는 중…</td></tr>
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <tr key={`sk-${i}`} className="border-t border-border/30">
+                      <td colSpan={12} className="px-2 py-2">
+                        <div
+                          className="h-8 rounded-md bg-muted/50 animate-pulse"
+                          style={{ animationDelay: `${i * 40}ms` }}
+                        />
+                      </td>
+                    </tr>
+                  ))
                 ) : filtered.length === 0 ? (
                   <tr><td colSpan={12} className="text-center py-10 text-muted-foreground">데이터 없음</td></tr>
                 ) : (
