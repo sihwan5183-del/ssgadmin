@@ -182,6 +182,9 @@ export const HeroPerformance = () => {
       .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, () => {
         fetchAll();
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "custom_proposals" }, () => {
+        fetchAll();
+      })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [fetchAll]);
