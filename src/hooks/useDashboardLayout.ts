@@ -94,7 +94,7 @@ const persist = async (cfg: WidgetConfig[]) => {
     .upsert({ key: SETTINGS_KEY, value: cfg as any }, { onConflict: "key" });
 };
 
-export function useDashboardLayout() {
+export function useDashboardLayout(editable = false) {
   const [widgets, setWidgets] = useState<WidgetConfig[]>(_state);
   const [loaded, setLoadedLocal] = useState<boolean>(_loaded);
 
@@ -116,21 +116,29 @@ export function useDashboardLayout() {
   );
 
   const toggle = useCallback((id: string) => {
+    if (!editable) return;
     persist(_state.map((w) => (w.id === id ? { ...w, visible: !w.visible } : w)));
-  }, []);
+  }, [editable]);
 
   const move = useCallback((id: string, dir: -1 | 1) => {
+    if (!editable) return;
     const arr = [..._state];
     const idx = arr.findIndex((w) => w.id === id);
     const target = idx + dir;
     if (idx < 0 || target < 0 || target >= arr.length) return;
     [arr[idx], arr[target]] = [arr[target], arr[idx]];
     persist(arr.map((w, i) => ({ ...w, order: i })));
-  }, []);
+  }, [editable]);
 
-  const save = useCallback((cfg: WidgetConfig[]) => persist(cfg), []);
+  const save = useCallback((cfg: WidgetConfig[]) => {
+    if (!editable) return;
+    persist(cfg);
+  }, [editable]);
 
-  const resetToDefault = useCallback(() => persist(buildDefault()), []);
+  const resetToDefault = useCallback(() => {
+    if (!editable) return;
+    persist(buildDefault());
+  }, [editable]);
 
   return { widgets, loaded, isVisible, toggle, move, save, resetToDefault };
 }
