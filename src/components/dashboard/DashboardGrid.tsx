@@ -8,6 +8,7 @@ import {
 } from "react";
 import {
   ResponsiveGridLayout,
+  noCompactor,
   useContainerWidth,
   type Layout,
   type LayoutItem,
@@ -44,6 +45,18 @@ type Bp = "lg" | "md" | "sm";
 const BREAKPOINTS: Record<Bp, number> = { lg: 1280, md: 996, sm: 0 };
 const COLS: Record<Bp, number> = { lg: 12, md: 8, sm: 4 };
 const DESKTOP_GRID_MIN_WIDTH = 1280;
+
+const isSameLayout = (a: readonly LayoutItem[], b: readonly LayoutItem[]) => {
+  if (a.length !== b.length) return false;
+  const bMap = new Map(b.map((item) => [item.i, item]));
+  return a.every((item) => {
+    const other = bMap.get(item.i);
+    return other && item.x === other.x && item.y === other.y && item.w === other.w && item.h === other.h;
+  });
+};
+
+const isSameLayouts = (a: ResponsiveLayouts<Bp>, b: ResponsiveLayouts<Bp>) =>
+  (Object.keys(COLS) as Bp[]).every((bp) => isSameLayout(a[bp] ?? [], b[bp] ?? []));
 
 const useDesktopGridViewport = () => {
   const [isDesktopGrid, setIsDesktopGrid] = useState(() =>
@@ -130,8 +143,8 @@ const loadFromLS = (key: string): ResponsiveLayouts<Bp> | null => {
   }
 };
 
-const loadInitialLayouts = (key: string, items: GridWidget[]) =>
-  desktopOnlyLayouts(loadFromLS(key) ?? buildDefaultLayouts(items), items);
+const loadInitialLayouts = (key: string, items: GridWidget[], editable: boolean) =>
+  desktopOnlyLayouts((editable ? loadFromLS(key) : null) ?? buildDefaultLayouts(items), items);
 
 export const DashboardGrid = ({
   items,
@@ -146,8 +159,10 @@ export const DashboardGrid = ({
 
   const itemsKey = useMemo(() => items.map((i) => i.id).join("|"), [items]);
   const [layouts, setLayouts] = useState<ResponsiveLayouts<Bp>>(() =>
-    loadInitialLayouts(storageKey, items),
+    loadInitialLayouts(storageKey, items, editable),
   );
+  const [remoteReady, setRemoteReady] = useState(false);
+  const remoteLayoutsRef = useRef<ResponsiveLayouts<Bp> | null>(null);
   const skipPersistRef = useRef(true);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -156,20 +171,30 @@ export const DashboardGrid = ({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("app_settings")
         .select("value")
         .eq("key", dbKey)
         .maybeSingle();
       if (cancelled) return;
+      if (error) {
+        skipPersistRef.current = true;
+        return;
+      }
       if (data?.value && typeof data.value === "object") {
         const saved = data.value as ResponsiveLayouts<Bp>;
         const stable = desktopOnlyLayouts(saved, items);
+        remoteLayoutsRef.current = stable;
         setLayouts(stable);
-        try {
+        if (editable) try {
           localStorage.setItem(storageKey, JSON.stringify(stable));
         } catch { /* ignore */ }
+      } else {
+        const fallback = desktopOnlyLayouts(buildDefaultLayouts(items), items);
+        remoteLayoutsRef.current = fallback;
+        setLayouts(fallback);
       }
+      setRemoteReady(true);
       // DB 로드 직후 자동 콜백으로 인한 덮어쓰기 1회 방지
       skipPersistRef.current = true;
     })();
@@ -181,10 +206,12 @@ export const DashboardGrid = ({
 
   // Adopt newly added / removed widgets without losing saved positions for survivors.
   useEffect(() => {
-    setLayouts((prev) => mergeLayouts(prev, items));
+    if (editable && remoteReady) {
+      setLayouts((prev) => mergeLayouts(prev, items));
+    }
     skipPersistRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemsKey]);
+  }, [itemsKey, editable, remoteReady]);
 
   useEffect(() => () => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -194,12 +221,15 @@ export const DashboardGrid = ({
 
   const onLayoutChange = useCallback(
     (_current: Layout, all: ResponsiveLayouts<Bp>) => {
-      if (!isDesktopGrid || !editable) return;
+      if (!isDesktopGrid || !editable || !remoteReady) return;
+      if (isSameLayouts(desktopOnlyLayouts(all, items), layouts)) return;
+      if (remoteLayoutsRef.current && isSameLayouts(desktopOnlyLayouts(all, items), remoteLayoutsRef.current)) return;
       if (skipPersistRef.current) {
         skipPersistRef.current = false;
         return;
       }
       const desktopLayouts = desktopOnlyLayouts(all, items);
+      remoteLayoutsRef.current = desktopLayouts;
       setLayouts(desktopLayouts);
       try {
         localStorage.setItem(storageKey, JSON.stringify(desktopLayouts));
@@ -214,7 +244,7 @@ export const DashboardGrid = ({
           .then(() => {});
       }, 400);
     },
-    [isDesktopGrid, items, storageKey, dbKey, editable],
+    [isDesktopGrid, items, layouts, remoteReady, storageKey, dbKey, editable],
   );
 
   if (items.length === 0) return null;
@@ -246,6 +276,7 @@ export const DashboardGrid = ({
           rowHeight={rowHeight}
           margin={[16, 16]}
           containerPadding={[0, 0]}
+          compactor={noCompactor}
           dragConfig={{ enabled: editable, handle: ".dash-drag-handle" }}
           resizeConfig={{ enabled: editable, handles: ["se"] }}
           onLayoutChange={onLayoutChange}
