@@ -180,11 +180,17 @@ export const DashboardGrid = ({
       if (data?.value && typeof data.value === "object") {
         const saved = data.value as ResponsiveLayouts<Bp>;
         const stable = desktopOnlyLayouts(saved, items);
+        remoteLayoutsRef.current = stable;
         setLayouts(stable);
         if (editable) try {
           localStorage.setItem(storageKey, JSON.stringify(stable));
         } catch { /* ignore */ }
+      } else {
+        const fallback = desktopOnlyLayouts(buildDefaultLayouts(items), items);
+        remoteLayoutsRef.current = fallback;
+        setLayouts(fallback);
       }
+      setRemoteReady(true);
       // DB 로드 직후 자동 콜백으로 인한 덮어쓰기 1회 방지
       skipPersistRef.current = true;
     })();
@@ -196,12 +202,12 @@ export const DashboardGrid = ({
 
   // Adopt newly added / removed widgets without losing saved positions for survivors.
   useEffect(() => {
-    if (editable) {
+    if (editable && remoteReady) {
       setLayouts((prev) => mergeLayouts(prev, items));
     }
     skipPersistRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemsKey, editable]);
+  }, [itemsKey, editable, remoteReady]);
 
   useEffect(() => () => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -211,13 +217,15 @@ export const DashboardGrid = ({
 
   const onLayoutChange = useCallback(
     (_current: Layout, all: ResponsiveLayouts<Bp>) => {
-      if (!isDesktopGrid || !editable) return;
+      if (!isDesktopGrid || !editable || !remoteReady) return;
       if (isSameLayouts(desktopOnlyLayouts(all, items), layouts)) return;
+      if (remoteLayoutsRef.current && isSameLayouts(desktopOnlyLayouts(all, items), remoteLayoutsRef.current)) return;
       if (skipPersistRef.current) {
         skipPersistRef.current = false;
         return;
       }
       const desktopLayouts = desktopOnlyLayouts(all, items);
+      remoteLayoutsRef.current = desktopLayouts;
       setLayouts(desktopLayouts);
       try {
         localStorage.setItem(storageKey, JSON.stringify(desktopLayouts));
@@ -232,7 +240,7 @@ export const DashboardGrid = ({
           .then(() => {});
       }, 400);
     },
-    [isDesktopGrid, items, layouts, storageKey, dbKey, editable],
+    [isDesktopGrid, items, layouts, remoteReady, storageKey, dbKey, editable],
   );
 
   if (items.length === 0) return null;
