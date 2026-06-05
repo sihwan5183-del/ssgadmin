@@ -76,7 +76,7 @@ export const StaffPerformanceMatrix = () => {
 
   const load = async () => {
     setLoading(true);
-    const [salesRes, profilesRes] = await Promise.all([
+    const [salesRes, profilesRes, proposalsRes] = await Promise.all([
       applyActivationFilter(
         supabase
           .from("sales")
@@ -89,6 +89,13 @@ export const StaffPerformanceMatrix = () => {
         .select("user_id, display_name, store, status, show_in_dashboard")
         .eq("status", "active")
         .eq("show_in_dashboard", true),
+      // [맞춤제안 실적관리] 데이터 — 직원별 업셀 컬럼으로 합산
+      supabase
+        .from("custom_proposals")
+        .select("created_by, manager")
+        .gte("change_date", startDate)
+        .lte("change_date", endDate)
+        .limit(20000),
     ]);
 
     const profiles = profilesRes.data ?? [];
@@ -135,6 +142,27 @@ export const StaffPerformanceMatrix = () => {
       if (upsellFlag && cat !== "upsell") {
         cur.counts.upsell += 1;
       }
+      map.set(uid, cur);
+    });
+
+    // 맞춤제안 → 업셀 카운트 합산
+    (proposalsRes.data ?? []).forEach((p: any) => {
+      const m = (p.manager ?? "").trim();
+      const ml = m.toLowerCase();
+      let uid: string | null = null;
+      if (m && byId.has(m)) uid = m;
+      else if (ml && byName.has(ml)) uid = byName.get(ml)!;
+      else if (p.created_by) uid = p.created_by;
+      if (!uid || !byId.has(uid)) return;
+      const cur = map.get(uid) ?? {
+        uid,
+        name: byId.get(uid)?.display_name ?? (m || "미지정"),
+        store: byId.get(uid)?.store ?? "-",
+        counts: empty(),
+        total: 0,
+      };
+      cur.counts.upsell += 1;
+      cur.total += 1;
       map.set(uid, cur);
     });
 
