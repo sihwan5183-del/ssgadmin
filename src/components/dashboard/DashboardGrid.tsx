@@ -262,6 +262,7 @@ export const DashboardGrid = ({
           rowHeight={rowHeight}
           margin={[16, 16]}
           containerPadding={[0, 0]}
+          compactor={noCompactor}
           dragConfig={{ enabled: editable, handle: ".dash-drag-handle" }}
           resizeConfig={{ enabled: editable, handles: ["se"] }}
           onLayoutChange={onLayoutChange}
