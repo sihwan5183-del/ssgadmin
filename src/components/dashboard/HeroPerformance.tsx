@@ -139,17 +139,32 @@ export const HeroPerformance = () => {
       .gte("created_at", `${startDate}T00:00:00`)
       .lte("created_at", `${endDate}T23:59:59.999`);
     for (const s of EXCLUDED_ACTIVATION_STATUSES) pendingQuery = pendingQuery.neq("status", s);
-    const [a, b, c, d, e] = await Promise.all([
+    // [맞춤제안 실적관리] 데이터 — 업셀 세그먼트로 합산 (change_date 기준)
+    const proposals = (s: string, e: string) =>
+      supabase
+        .from("custom_proposals")
+        .select("id")
+        .gte("change_date", s)
+        .lte("change_date", e)
+        .limit(10000);
+    const [a, b, c, d, e, pa, pb, pc, pd] = await Promise.all([
       activated(startDate, endDate),
       activated(prevStartDate, prevEndDate),
       activated(todayISO, todayISO),
       activated(ydayISO, ydayISO),
       pendingQuery.limit(10000),
+      proposals(startDate, endDate),
+      proposals(prevStartDate, prevEndDate),
+      proposals(todayISO, todayISO),
+      proposals(ydayISO, ydayISO),
     ]);
-    setCurrentRows(a.data ?? []);
-    setPrevRows(b.data ?? []);
-    setTodayRows(c.data ?? []);
-    setYdayRows(d.data ?? []);
+    // 맞춤제안 1건 = 업셀 실적 1건 으로 카운트되도록 product="맞춤제안" 가상 행 주입
+    const asUpsell = (n: number) =>
+      Array.from({ length: n }, () => ({ product: "맞춤제안" as string | null }));
+    setCurrentRows([...(a.data ?? []), ...asUpsell(pa.data?.length ?? 0)]);
+    setPrevRows([...(b.data ?? []), ...asUpsell(pb.data?.length ?? 0)]);
+    setTodayRows([...(c.data ?? []), ...asUpsell(pc.data?.length ?? 0)]);
+    setYdayRows([...(d.data ?? []), ...asUpsell(pd.data?.length ?? 0)]);
     setPendingRows(e.data ?? []);
     setLoading(false);
   }, [startDate, endDate, prevStartDate, prevEndDate]);
