@@ -306,6 +306,17 @@ const SalesLedgerPage = () => {
   });
   const [unpaidCount, setUnpaidCount] = useState(0);
   const [unreturnedCount, setUnreturnedCount] = useState(0);
+  // 판매원장은 기본적으로 전체 기간을 조회 (대시보드 기간 필터 무시)
+  // 대시보드 deep-link 진입 시에만 false 로 전환됨
+  const [viewAll, setViewAll] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    const sp = new URLSearchParams(window.location.search);
+    // 대시보드 진입(staffName/from_dashboard/status deep-link)일 때만 기간 적용
+    if (sp.get("staffName") || sp.get("from_dashboard") === "1" || sp.get("status")) return false;
+    return true;
+  });
+  // 이달 실적(개통완료·설치완료) 카운트
+  const [monthDoneCount, setMonthDoneCount] = useState(0);
 
   // 담당자 필드에 UUID가 들어간 경우 프로필 display_name으로 치환하기 위한 맵
   const [managerNameMap, setManagerNameMap] = useState<Record<string, string>>({});
@@ -436,12 +447,15 @@ const SalesLedgerPage = () => {
     let query = supabase
       .from("sales")
       .select("*", { count: "exact" })
-      // 대시보드 [개통 대기] 와 동일 기준:
-      // open_date 가 기간 내 OR (open_date NULL 이면서 created_at 이 기간 내)
-      .or(
+      ;
+    // 판매원장 리스트는 기본 전체 기간 조회.
+    // 대시보드 deep-link 등으로 진입한 경우(viewAll=false)에만 기간 필터 적용.
+    if (!viewAll) {
+      query = query.or(
         `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
         `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
       );
+    }
     // === 엑셀형 컬럼 필터 적용 (서버 사이드) ===
     if (colFilters.status.length > 0) query = query.in("status", colFilters.status);
     if (colFilters.channel.length > 0) query = query.in("channel", colFilters.channel);
@@ -481,7 +495,7 @@ const SalesLedgerPage = () => {
     setRows((data ?? []) as SaleRow[]);
     setTotal(count ?? 0);
     setSearching(false);
-  }, [page, startDate, endDate, colFilters, managerValues, debouncedSearchQ]);
+  }, [page, startDate, endDate, viewAll, colFilters, managerValues, debouncedSearchQ]);
 
   const loadSummary = useCallback(async () => {
     // 정책: 저장된 모든 실적은 즉시 합계에 반영. (status·approval_status·검수상태와 무관)
@@ -568,13 +582,27 @@ const SalesLedgerPage = () => {
     setUnreturnedCount(urc ?? 0);
   }, [startDate, endDate, colFilters, managerValues]);
 
+  // 이달 실적 카운트: 상태가 '개통완료' 또는 '설치완료' 를 포함하는 건만 집계
+  const loadMonthDone = useCallback(async () => {
+    const { count } = await supabase
+      .from("sales")
+      .select("id", { count: "exact", head: true })
+      .or(
+        `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
+        `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
+      )
+      .or("status.ilike.%개통완료%,status.ilike.%설치완료%");
+    setMonthDoneCount(count ?? 0);
+  }, [startDate, endDate]);
+
   useEffect(() => {
     load();
     loadSummary();
+    loadMonthDone();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, startDate, endDate, colFilters, managerValues, debouncedSearchQ]);
+  }, [page, startDate, endDate, viewAll, colFilters, managerValues, debouncedSearchQ]);
 
-  useEffect(() => { setPage(0); }, [startDate, endDate, colFilters, managerValues, debouncedSearchQ]);
+  useEffect(() => { setPage(0); }, [startDate, endDate, viewAll, colFilters, managerValues, debouncedSearchQ]);
 
   // 실적 입력 후 navigate로 진입 시 즉시 강제 리로드 (캐시 우회)
   useEffect(() => {
@@ -941,7 +969,24 @@ const SalesLedgerPage = () => {
         </Link>
 
         <div className="ml-auto flex items-center gap-2">
-          <Badge className="bg-primary/15 text-primary-glow border-primary/30">총 {dbSummary.count.toLocaleString()}건</Badge>
+          <button
+            type="button"
+            onClick={() => setViewAll((v) => !v)}
+            className={`h-7 px-2.5 rounded-full text-[11px] font-medium border transition ${
+              viewAll
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background text-muted-foreground border-border hover:text-foreground"
+            }`}
+            title="전체 기간 보기 / 선택 기간 보기 전환"
+          >
+            {viewAll ? "전체 기간 보기" : `${periodLabel} 보기`}
+          </button>
+          <Badge className="bg-primary/15 text-primary-glow border-primary/30">
+            {viewAll ? "검색 결과" : "기간 내"} {total.toLocaleString()}건
+          </Badge>
+          <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30">
+            이달 실적(개통/설치완료) {monthDoneCount.toLocaleString()}건
+          </Badge>
           {isAdmin && selected.size > 0 && (
             <div className="flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-50 dark:bg-amber-500/10 px-2 py-1">
               <span className="text-[11px] font-medium text-amber-700 dark:text-amber-300">담당자 일괄지정({selected.size})</span>
