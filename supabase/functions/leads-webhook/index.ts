@@ -91,12 +91,11 @@ function unauthorized(msg = 'Unauthorized') {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
-  // Auth: shared secret via header or query string
-  const url = new URL(req.url)
+  // Auth: shared secret via header only. Query string is disallowed to avoid
+  // leaking the secret into access logs / Referer headers / CDN caches.
   const token =
     req.headers.get('x-webhook-secret') ??
     req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ??
-    url.searchParams.get('secret') ??
     ''
   if (!WEBHOOK_SECRET || token !== WEBHOOK_SECRET) return unauthorized()
 
