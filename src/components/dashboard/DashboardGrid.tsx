@@ -9,6 +9,7 @@ import {
 import {
   ResponsiveGridLayout,
   noCompactor,
+  verticalCompactor,
   useContainerWidth,
   type Layout,
   type LayoutItem,
@@ -276,7 +277,7 @@ export const DashboardGrid = ({
           rowHeight={rowHeight}
           margin={[16, 16]}
           containerPadding={[0, 0]}
-          compactor={noCompactor}
+          compactor={verticalCompactor}
           dragConfig={{ enabled: editable, handle: ".dash-drag-handle" }}
           resizeConfig={{ enabled: editable, handles: ["se"] }}
           onLayoutChange={onLayoutChange}
