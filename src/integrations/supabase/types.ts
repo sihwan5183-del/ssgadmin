@@ -1395,6 +1395,7 @@ export type Database = {
           memo: string | null
           name: string | null
           phone: string | null
+          pkg_number: string | null
           registration_date: string | null
           source: string | null
           status: string
@@ -1417,6 +1418,7 @@ export type Database = {
           memo?: string | null
           name?: string | null
           phone?: string | null
+          pkg_number?: string | null
           registration_date?: string | null
           source?: string | null
           status?: string
@@ -1439,6 +1441,7 @@ export type Database = {
           memo?: string | null
           name?: string | null
           phone?: string | null
+          pkg_number?: string | null
           registration_date?: string | null
           source?: string | null
           status?: string
