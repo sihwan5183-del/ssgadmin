@@ -14,8 +14,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import confetti from "canvas-confetti";
 
 /* ─── 상세 판매 타입 ─── */
@@ -1071,51 +1071,137 @@ const RankingPage = () => {
         </div>
       </div>
 
-      {/* 상세 패널 */}
-      <Sheet open={!!detailUser} onOpenChange={(o) => !o && setDetailUser(null)}>
-        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+      {/* 상세 다이얼로그 */}
+      <Dialog open={!!detailUser} onOpenChange={(o) => !o && setDetailUser(null)}>
+        <DialogContent className="max-w-3xl w-full max-h-[90vh] overflow-y-auto">
           {detailUser && (
             <>
-              <SheetHeader className="border-b pb-4 mb-4">
-                <SheetTitle className="text-xl font-bold flex items-center gap-2">
-                  <span>{detailUser.name}</span>
+              <DialogHeader className="border-b pb-4">
+                <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                  {detailUser.name}
                   <span className="text-sm font-normal text-muted-foreground">판매 상세</span>
-                </SheetTitle>
+                </DialogTitle>
                 <div className="flex gap-3 text-sm text-muted-foreground">
                   <span>총 <b className="text-foreground">{detailUser.count}건</b></span>
                   <span>{detailUser.store ?? "매장 미배정"}</span>
                 </div>
-              </SheetHeader>
+              </DialogHeader>
 
               {detailLoading ? (
                 <div className="text-center py-10 text-muted-foreground">불러오는 중…</div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-4 pt-2">
+                  {/* 대시보드 요약 */}
                   {(() => {
-                    const byDate = new Map<string, SaleDetail[]>();
+                    const total = detailSales.length;
+                    // 유형별
+                    const typeMap = new Map<string, number>();
+                    // 상품별
+                    const productMap = new Map<string, number>();
+                    // 요금제별
+                    const planMap = new Map<string, number>();
+                    // 단말별
+                    const modelMap = new Map<string, number>();
+
                     for (const s of detailSales) {
-                      const d = s.open_date ?? "날짜 없음";
-                      if (!byDate.has(d)) byDate.set(d, []);
-                      byDate.get(d)!.push(s);
+                      const t = s.sale_type ?? "기타";
+                      typeMap.set(t, (typeMap.get(t) ?? 0) + 1);
+                      const p = s.product ?? "기타";
+                      productMap.set(p, (productMap.get(p) ?? 0) + 1);
+                      const pl = s.device_model ?? "기타";
+                      modelMap.set(pl, (modelMap.get(pl) ?? 0) + 1);
                     }
-                    return Array.from(byDate.entries()).map(([date, items]) => (
-                      <div key={date} className="rounded-xl border border-border overflow-hidden">
-                        <div className="bg-muted/60 px-4 py-2 flex items-center gap-2">
-                          <Calendar className="size-4 text-muted-foreground" />
-                          <span className="font-semibold text-sm">{date}</span>
-                          <span className="ml-auto text-xs text-muted-foreground">{items.length}건</span>
+
+                    const typeColors: Record<string, string> = {
+                      MNP: "bg-emerald-500",
+                      기변: "bg-blue-500",
+                      신규: "bg-amber-500",
+                      번이: "bg-violet-500",
+                    };
+                    const productColors: Record<string, string> = {
+                      모바일: "bg-pink-500",
+                      인터넷: "bg-cyan-500",
+                      "TV프리": "bg-orange-500",
+                      부가서비스: "bg-purple-500",
+                    };
+
+                    const sortedTypes = Array.from(typeMap.entries()).sort((a,b) => b[1]-a[1]);
+                    const sortedProducts = Array.from(productMap.entries()).sort((a,b) => b[1]-a[1]);
+                    const sortedModels = Array.from(modelMap.entries()).sort((a,b) => b[1]-a[1]).slice(0,5);
+
+                    const Bar = ({ label, count, color, total }: { label: string; count: number; color: string; total: number }) => (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-foreground w-20 shrink-0 truncate">{label}</span>
+                        <div className="flex-1 h-5 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={cn("h-full rounded-full transition-all", color)}
+                            style={{ width: `${Math.round(count/total*100)}%` }}
+                          />
                         </div>
-                        <div className="divide-y divide-border">
-                          {items.map((s) => {
-                            const cf = (s.custom_fields as any) ?? {};
-                            const color = cf.color ?? cf.device_color ?? null;
-                            return (
-                              <div key={s.id} className="px-4 py-3 flex flex-col gap-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-bold text-foreground">{s.device_model ?? "—"}</span>
-                                  {color && (
-                                    <span className="text-xs px-2 py-0.5 rounded-full bg-muted border border-border text-muted-foreground">{color}</span>
-                                  )}
+                        <span className="text-xs font-bold tabular-nums w-10 text-right">{count}건</span>
+                        <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(count/total*100)}%</span>
+                      </div>
+                    );
+
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* 가입유형 */}
+                        <div className="rounded-xl border border-border p-4">
+                          <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">가입 유형</div>
+                          <div className="space-y-2">
+                            {sortedTypes.map(([t, c]) => (
+                              <Bar key={t} label={t} count={c} color={typeColors[t] ?? "bg-slate-400"} total={total} />
+                            ))}
+                          </div>
+                        </div>
+                        {/* 상품 */}
+                        <div className="rounded-xl border border-border p-4">
+                          <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">상품</div>
+                          <div className="space-y-2">
+                            {sortedProducts.map(([p, c]) => (
+                              <Bar key={p} label={p} count={c} color={productColors[p] ?? "bg-slate-400"} total={total} />
+                            ))}
+                          </div>
+                        </div>
+                        {/* 단말 TOP5 */}
+                        <div className="rounded-xl border border-border p-4">
+                          <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">단말 TOP5</div>
+                          <div className="space-y-2">
+                            {sortedModels.map(([m, c]) => (
+                              <Bar key={m} label={m} count={c} color="bg-primary" total={total} />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* 일별 목록 */}
+                  <div className="space-y-2">
+                    <div className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <Calendar className="size-4" /> 일별 판매 내역
+                    </div>
+                    {(() => {
+                      const byDate = new Map<string, SaleDetail[]>();
+                      for (const s of detailSales) {
+                        const d = s.open_date ?? "날짜 없음";
+                        if (!byDate.has(d)) byDate.set(d, []);
+                        byDate.get(d)!.push(s);
+                      }
+                      return Array.from(byDate.entries()).map(([date, items]) => (
+                        <div key={date} className="rounded-xl border border-border overflow-hidden">
+                          <div className="bg-muted/60 px-4 py-2 flex items-center gap-2">
+                            <span className="font-semibold text-sm">{date}</span>
+                            <span className="ml-auto text-xs text-muted-foreground">{items.length}건</span>
+                          </div>
+                          <div className="divide-y divide-border">
+                            {items.map((s) => {
+                              const cf = (s.custom_fields as any) ?? {};
+                              const color = cf.color ?? cf.device_color ?? null;
+                              return (
+                                <div key={s.id} className="px-4 py-2.5 flex items-center gap-3 flex-wrap">
+                                  <span className="font-bold text-foreground text-sm">{s.device_model ?? "—"}</span>
+                                  {color && <span className="text-xs px-2 py-0.5 rounded-full bg-muted border text-muted-foreground">{color}</span>}
                                   <span className={cn(
                                     "text-xs px-2 py-0.5 rounded-full font-semibold border",
                                     s.sale_type === "MNP" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
@@ -1123,27 +1209,27 @@ const RankingPage = () => {
                                     s.sale_type === "신규" ? "bg-amber-50 text-amber-700 border-amber-200" :
                                     "bg-muted text-muted-foreground border-border"
                                   )}>{s.sale_type ?? "—"}</span>
+                                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <Package className="size-3" />{s.product ?? "—"}
+                                  </span>
+                                  {s.open_method && <span className="text-xs text-muted-foreground">{s.open_method}</span>}
                                 </div>
-                                <div className="text-xs text-muted-foreground flex gap-3 flex-wrap">
-                                  <span className="flex items-center gap-1"><Package className="size-3" />{s.product ?? "—"}</span>
-                                  {s.open_method && <span>개통방식: {s.open_method}</span>}
-                                </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    ));
-                  })()}
-                  {detailSales.length === 0 && (
-                    <div className="text-center py-10 text-muted-foreground text-sm">판매 내역이 없습니다</div>
-                  )}
+                      ));
+                    })()}
+                    {detailSales.length === 0 && (
+                      <div className="text-center py-10 text-muted-foreground text-sm">판매 내역이 없습니다</div>
+                    )}
+                  </div>
                 </div>
               )}
             </>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
