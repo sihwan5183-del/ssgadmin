@@ -1070,6 +1070,80 @@ const RankingPage = () => {
           </div>
         </div>
       </div>
+
+      {/* 상세 패널 */}
+      <Sheet open={!!detailUser} onOpenChange={(o) => !o && setDetailUser(null)}>
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+          {detailUser && (
+            <>
+              <SheetHeader className="border-b pb-4 mb-4">
+                <SheetTitle className="text-xl font-bold flex items-center gap-2">
+                  <span>{detailUser.name}</span>
+                  <span className="text-sm font-normal text-muted-foreground">판매 상세</span>
+                </SheetTitle>
+                <div className="flex gap-3 text-sm text-muted-foreground">
+                  <span>총 <b className="text-foreground">{detailUser.count}건</b></span>
+                  <span>{detailUser.store ?? "매장 미배정"}</span>
+                </div>
+              </SheetHeader>
+
+              {detailLoading ? (
+                <div className="text-center py-10 text-muted-foreground">불러오는 중…</div>
+              ) : (
+                <div className="space-y-2">
+                  {(() => {
+                    const byDate = new Map<string, SaleDetail[]>();
+                    for (const s of detailSales) {
+                      const d = s.open_date ?? "날짜 없음";
+                      if (!byDate.has(d)) byDate.set(d, []);
+                      byDate.get(d)!.push(s);
+                    }
+                    return Array.from(byDate.entries()).map(([date, items]) => (
+                      <div key={date} className="rounded-xl border border-border overflow-hidden">
+                        <div className="bg-muted/60 px-4 py-2 flex items-center gap-2">
+                          <Calendar className="size-4 text-muted-foreground" />
+                          <span className="font-semibold text-sm">{date}</span>
+                          <span className="ml-auto text-xs text-muted-foreground">{items.length}건</span>
+                        </div>
+                        <div className="divide-y divide-border">
+                          {items.map((s) => {
+                            const cf = (s.custom_fields as any) ?? {};
+                            const color = cf.color ?? cf.device_color ?? null;
+                            return (
+                              <div key={s.id} className="px-4 py-3 flex flex-col gap-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-bold text-foreground">{s.device_model ?? "—"}</span>
+                                  {color && (
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-muted border border-border text-muted-foreground">{color}</span>
+                                  )}
+                                  <span className={cn(
+                                    "text-xs px-2 py-0.5 rounded-full font-semibold border",
+                                    s.sale_type === "MNP" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                                    s.sale_type === "기변" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                    s.sale_type === "신규" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                    "bg-muted text-muted-foreground border-border"
+                                  )}>{s.sale_type ?? "—"}</span>
+                                </div>
+                                <div className="text-xs text-muted-foreground flex gap-3 flex-wrap">
+                                  <span className="flex items-center gap-1"><Package className="size-3" />{s.product ?? "—"}</span>
+                                  {s.open_method && <span>개통방식: {s.open_method}</span>}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                  {detailSales.length === 0 && (
+                    <div className="text-center py-10 text-muted-foreground text-sm">판매 내역이 없습니다</div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </>
   );
 };
