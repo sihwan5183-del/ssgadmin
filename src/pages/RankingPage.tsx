@@ -8,12 +8,28 @@ import {
   Crown, Medal, Trophy, Star, TrendingUp, Flame, Zap,
   Award, BarChart3, Smartphone, Gift, ChevronDown, CheckCircle2, Sparkles,
   Wifi, Tv, ArrowUp, ArrowDown, Minus, UserX, Target, ShieldCheck,
-  Home, CreditCard, Monitor,
+  Home, CreditCard, Monitor, Calendar, Package,
 } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle,
+} from "@/components/ui/sheet";
 import confetti from "canvas-confetti";
+
+/* ─── 상세 판매 타입 ─── */
+type SaleDetail = {
+  id: string;
+  open_date: string | null;
+  device_model: string | null;
+  product: string | null;
+  sale_type: string | null;
+  open_method: string | null;
+  status: string | null;
+  manager: string | null;
+  custom_fields: any;
+};
 
 /* ─── types ─── */
 type ProfileMap = Record<string, { display_name: string; store: string | null }>;
@@ -260,6 +276,24 @@ const RankingPage = () => {
   const [cleanMap, setCleanMap] = useState<Map<string, { isClean: boolean; cleanDays: number }>>(new Map());
   const [loading, setLoading] = useState(true);
   const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
+  const [detailUser, setDetailUser] = useState<RankedUser | null>(null);
+  const [detailSales, setDetailSales] = useState<SaleDetail[]>([]);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  async function openDetail(u: RankedUser) {
+    setDetailUser(u);
+    setDetailSales([]);
+    setDetailLoading(true);
+    const { data } = await supabase
+      .from("sales")
+      .select("id, open_date, device_model, product, sale_type, open_method, status, manager, custom_fields")
+      .or(`created_by.eq.${u.user_id},manager.eq.${u.name}`)
+      .in("status", ["개통완료","설치완료","변경완료(업셀용)","택배발송","청약완료"])
+      .order("open_date", { ascending: false })
+      .limit(500);
+    setDetailSales((data ?? []) as SaleDetail[]);
+    setDetailLoading(false);
+  }
   const [hideExcluded, setHideExcluded] = useState(true);
   const [configLoaded, setConfigLoaded] = useState(false);
 
@@ -870,8 +904,9 @@ const RankingPage = () => {
                   return (
                     <div
                       key={u.user_id}
+                      onClick={() => openDetail(u)}
                       className={cn(
-                        "relative overflow-hidden rounded-2xl p-5 backdrop-blur-md transition-all hover:-translate-y-1",
+                        "relative overflow-hidden rounded-2xl p-5 backdrop-blur-md transition-all hover:-translate-y-1 cursor-pointer",
                         "min-h-[260px]",
                         S.bg, S.ring,
                         isMe && "outline outline-2 outline-primary/50 outline-offset-2"
