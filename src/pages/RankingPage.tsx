@@ -834,14 +834,6 @@ const RankingPage = () => {
 
       {/* 필터 바 */}
       <div className="flex flex-wrap gap-2 mb-4">
-        <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="w-[120px] h-9 text-xs rounded-xl bg-input/60">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {PERIOD_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
         <Select value={storeFilter} onValueChange={setStoreFilter}>
           <SelectTrigger className="w-[140px] h-9 text-xs rounded-xl bg-input/60">
             <SelectValue placeholder="전체 매장" />
