@@ -832,6 +832,30 @@ const RankingPage = () => {
         </section>
       )}
 
+      {/* 기간 선택 버튼 */}
+      <div className="flex items-center gap-1.5 flex-wrap mb-3">
+        {QUICK_PERIODS.map(o => (
+          <button key={o.value} onClick={() => setPeriod(o.value)}
+            className={cn("px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors",
+              period === o.value
+                ? "bg-primary text-primary-foreground border-primary"
+                : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground bg-background"
+            )}>
+            {o.label}
+          </button>
+        ))}
+        <Select value={ARCHIVE_OPTIONS.some(o=>o.value===period)?period:""} onValueChange={v=>v&&setPeriod(v)}>
+          <SelectTrigger className={cn("h-8 text-xs font-semibold border-border w-auto px-3",
+            ARCHIVE_OPTIONS.some(o=>o.value===period) ? "border-primary text-primary" : "text-muted-foreground"
+          )}>
+            <SelectValue placeholder="과거 기간 ▼" />
+          </SelectTrigger>
+          <SelectContent>
+            {ARCHIVE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* 필터 바 */}
       <div className="flex flex-wrap gap-2 mb-4">
         <Select value={storeFilter} onValueChange={setStoreFilter}>
