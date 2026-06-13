@@ -966,8 +966,8 @@ const RankingPage = () => {
                   const tier = getTier(u.count);
                   const isMe = u.user_id === user?.id;
                   return (
-                    <li key={u.user_id} className={cn(
-                      "grid grid-cols-12 items-center gap-2 px-3 py-2.5 rounded-lg transition-colors border border-transparent",
+                    <li key={u.user_id} onClick={() => openDetail(u)} className={cn(
+                      "grid grid-cols-12 items-center gap-2 px-3 py-2.5 rounded-lg transition-colors border border-transparent cursor-pointer",
                       isMe ? "bg-primary/[0.08] ring-1 ring-primary/20" : "hover:bg-muted/30 hover:border-border/40"
                     )}>
                       <div className="col-span-6 flex items-center gap-2 min-w-0">
