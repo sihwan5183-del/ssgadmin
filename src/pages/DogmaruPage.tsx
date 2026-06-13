@@ -307,11 +307,14 @@ export default function DogmaruPage() {
                 const s = l.activation_status ?? "미입력";
                 map[s] = (map[s] ?? 0) + 1;
               });
-              return Object.entries(map).sort(([, a], [, b]) => b - a).map(([status, count], i) => (0
-                  <div className="text-lg font-bold" style={{ color: COLORS[i % COLORS.length] }}>{count}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">{status}</div>
-                </div>
-              ));
+              return Object.entries(map).sort(([, a], [, b]) => b - a).map(([status, count], i) => {
+                return (
+                  <div key={status} className="border border-border rounded-lg p-3 text-center">
+                    <div className="text-lg font-bold" style={{ color: COLORS[i % COLORS.length] }}>{count}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{status}</div>
+                  </div>
+                );
+              });
             })()}
           </div>
         </div>
