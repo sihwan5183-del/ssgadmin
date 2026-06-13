@@ -60,10 +60,21 @@ export default function DogmaruPage() {
   }, []);
 
   const inRange = (lead: Lead) => {
-    const raw = lead.registration_date ?? lead.created_at;
-    if (!raw) return true;
-    const iso = raw.length === 10 ? raw : raw.slice(0, 10);
     if (period === "all") return true;
+    // registration_date: "6/3" 형식 or created_at ISO 형식
+    let iso = "";
+    const rd = lead.registration_date;
+    if (rd && rd.includes("/")) {
+      // "6/3" -> "2026-06-03"
+      const parts = rd.split("/");
+      const m = parts[0].padStart(2, "0");
+      const d = parts[1].padStart(2, "0");
+      iso = `2026-${m}-${d}`;
+    } else if (rd) {
+      iso = rd.slice(0, 10);
+    } else {
+      iso = lead.created_at.slice(0, 10);
+    }
     if (period === "this_month") return iso.slice(0, 7) === getMonthStr(0);
     if (period === "last_month") return iso.slice(0, 7) === getMonthStr(-1);
     if (period === "this_week") { const w = getWeekRange(0); return iso >= w.start && iso <= w.end; }
@@ -121,14 +132,16 @@ export default function DogmaruPage() {
     return Object.entries(map).sort(([, a], [, b]) => b - a).map(([branch, count]) => ({ branch, count }));
   }, [filtered]);
 
-  // 개통방식 (택배개통 vs 기사개통)
+  // 개통방식 (택배개통/기사개통으로 분류)
   const pkgData = useMemo(() => {
-    const map: Record<string, number> = {};
+    const map: Record<string, number> = { "택배개통": 0, "기사개통": 0, "미입력": 0 };
     filtered.forEach(l => {
-      const p = l.pkg_number ?? "미입력";
-      map[p] = (map[p] ?? 0) + 1;
+      const p = l.pkg_number ?? "";
+      if (p.includes("택배")) map["택배개통"] += 1;
+      else if (p.includes("기사")) map["기사개통"] += 1;
+      else map["미입력"] += 1;
     });
-    return Object.entries(map).sort(([, a], [, b]) => b - a).map(([name, value]) => ({ name, value }));
+    return Object.entries(map).filter(([, v]) => v > 0).map(([name, value]) => ({ name, value }));
   }, [filtered]);
 
   // 이슈 현황 (비고)
@@ -304,7 +317,13 @@ export default function DogmaruPage() {
             {(() => {
               const map: Record<string, number> = {};
               filtered.forEach(l => {
-                const s = l.activation_status ?? "미입력";
+                // activation_status 값 정리
+                let s = l.activation_status ?? "";
+                if (!s || s.trim() === "") s = "미입력";
+                else if (s.includes("완료")) s = "개통완료";
+                else if (s.includes("택배신청")) s = "택배신청완료";
+                else if (s.includes("기사출동")) s = "기사출동신청완료";
+                else if (s.includes("절회") || s.includes("철회")) s = "절회요청";
                 map[s] = (map[s] ?? 0) + 1;
               });
               return Object.entries(map).sort(([, a], [, b]) => b - a).map(([status, count], i) => {
