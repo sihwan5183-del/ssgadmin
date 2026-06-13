@@ -1046,7 +1046,7 @@ export default function LeadsPage() {
                   {fmtCompactDate(r.created_at)}
                 </TableCell>
                 <TableCell className="font-bold text-foreground py-1.5">{r.name ?? "-"}</TableCell>
-                <TableCell className="tabular-nums text-foreground font-medium py-1.5">{r.phone ?? "-"}</TableCell>
+                <TableCell className="tabular-nums text-foreground font-medium py-1.5 whitespace-nowrap">{r.phone ?? "-"}</TableCell>
                 <TableCell className="text-foreground py-1.5">{r.current_carrier ?? "-"}</TableCell>
                 <TableCell className="text-foreground text-xs whitespace-nowrap py-1.5" title={r.desired_device ?? ""}>{r.desired_device ?? "-"}</TableCell>
                 <TableCell className="text-foreground text-xs whitespace-nowrap py-1.5" title={r.desired_product ?? ""}>{r.desired_product ?? "-"}</TableCell>
