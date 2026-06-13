@@ -28,6 +28,8 @@ type SaleDetail = {
   open_method: string | null;
   status: string | null;
   manager: string | null;
+  channel: string | null;
+  rate_plan: string | null;
   custom_fields: any;
 };
 
@@ -98,26 +100,62 @@ const nextTier = (count: number) => {
   return idx >= 0 ? TIERS[idx] : null;
 };
 
-const PERIOD_OPTIONS = [
-  { value: "today", label: "오늘" },
-  { value: "week", label: "이번 주" },
-  { value: "month", label: "이번 달" },
-  { value: "quarter", label: "이번 분기" },
+// 빠른 기간 버튼
+const QUICK_PERIODS = [
+  { value: "week",   label: "이번 주" },
+  { value: "week-1", label: "저번 주" },
+  { value: "week-2", label: "저저번 주" },
+  { value: "month",   label: "이번 달" },
+  { value: "month-1", label: "전달" },
+  { value: "month-2", label: "전전달" },
 ];
+
+// 드롭다운용 과거 기간 (최근 36개월, 빠른버튼 제외)
+const ARCHIVE_OPTIONS = (() => {
+  const opts: { value: string; label: string }[] = [];
+  const now = new Date();
+  for (let i = 3; i < 36; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const y = d.getFullYear();
+    const m = d.getMonth() + 1;
+    const value = `${y}-${String(m).padStart(2, "0")}`;
+    opts.push({ value, label: `${y}년 ${m}월` });
+  }
+  return opts;
+})();
 
 const dateRange = (period: string) => {
   const now = new Date();
   const y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
   const toISO = (dt: Date) => dt.toISOString().slice(0, 10);
   if (period === "today") return { start: toISO(now), end: toISO(now) };
-  if (period === "week") {
+  // 주 단위
+  if (period === "week" || period === "week-1" || period === "week-2") {
+    const offset = period === "week" ? 0 : period === "week-1" ? 1 : 2;
     const day = now.getDay();
-    const mon = new Date(y, m, d - (day === 0 ? 6 : day - 1));
-    return { start: toISO(mon), end: toISO(now) };
+    const thisMonday = new Date(y, m, d - (day === 0 ? 6 : day - 1));
+    const wStart = new Date(thisMonday.getTime() - offset * 7 * 86400000);
+    const wEnd = new Date(wStart.getTime() + 6 * 86400000);
+    return { start: toISO(wStart), end: offset === 0 ? toISO(now) : toISO(wEnd) };
+  }
+  // 월 단위 (month, month-1, month-2)
+  if (period === "month" || period === "month-1" || period === "month-2") {
+    const offset = period === "month" ? 0 : period === "month-1" ? 1 : 2;
+    const tgtDate = new Date(y, m - offset, 1);
+    const ty = tgtDate.getFullYear(), tm = tgtDate.getMonth();
+    const lastDay = new Date(ty, tm + 1, 0).getDate();
+    const end = offset === 0 ? toISO(now) : `${ty}-${String(tm+1).padStart(2,"0")}-${String(lastDay).padStart(2,"0")}`;
+    return { start: `${ty}-${String(tm+1).padStart(2,"0")}-01`, end };
   }
   if (period === "quarter") {
     const qStartMonth = Math.floor(m / 3) * 3;
     return { start: `${y}-${String(qStartMonth + 1).padStart(2, "0")}-01`, end: toISO(now) };
+  }
+  // YYYY-MM 형식 월별 처리
+  if (/^\d{4}-\d{2}$/.test(period)) {
+    const [py, pm] = period.split("-").map(Number);
+    const lastDay = new Date(py, pm, 0).getDate();
+    return { start: `${period}-01`, end: `${period}-${String(lastDay).padStart(2, "0")}` };
   }
   return { start: `${y}-${String(m + 1).padStart(2, "0")}-01`, end: toISO(now) };
 };
@@ -284,11 +322,14 @@ const RankingPage = () => {
     setDetailUser(u);
     setDetailSales([]);
     setDetailLoading(true);
+    const { start, end } = dateRange(period);
     const { data } = await supabase
       .from("sales")
-      .select("id, open_date, device_model, product, sale_type, open_method, status, manager, custom_fields")
+      .select("id, open_date, device_model, product, sale_type, open_method, status, manager, channel, rate_plan, custom_fields")
       .or(`created_by.eq.${u.user_id},manager.eq.${u.name}`)
       .in("status", ["개통완료","설치완료","변경완료(업셀용)","택배발송","청약완료"])
+      .gte("open_date", start)
+      .lte("open_date", end)
       .order("open_date", { ascending: false })
       .limit(500);
     setDetailSales((data ?? []) as SaleDetail[]);
@@ -307,7 +348,7 @@ const RankingPage = () => {
         .maybeSingle();
       if (data?.value) {
         const cfg: any = data.value;
-        if (cfg.default_period && ["today", "week", "month", "quarter"].includes(cfg.default_period)) {
+        if (cfg.default_period) {
           setPeriod(cfg.default_period);
         }
         if (Array.isArray(cfg.excluded_user_ids)) setExcludedIds(new Set(cfg.excluded_user_ids));
@@ -1090,141 +1131,7 @@ const RankingPage = () => {
               {detailLoading ? (
                 <div className="text-center py-10 text-muted-foreground">불러오는 중…</div>
               ) : (
-                <div className="space-y-4 pt-2">
-                  {/* 대시보드 요약 */}
-                  {(() => {
-                    const total = detailSales.length;
-                    // 유형별
-                    const typeMap = new Map<string, number>();
-                    // 상품별
-                    const productMap = new Map<string, number>();
-                    // 요금제별
-                    const planMap = new Map<string, number>();
-                    // 단말별
-                    const modelMap = new Map<string, number>();
-
-                    for (const s of detailSales) {
-                      const t = s.sale_type ?? "기타";
-                      typeMap.set(t, (typeMap.get(t) ?? 0) + 1);
-                      const p = s.product ?? "기타";
-                      productMap.set(p, (productMap.get(p) ?? 0) + 1);
-                      const pl = s.device_model ?? "기타";
-                      modelMap.set(pl, (modelMap.get(pl) ?? 0) + 1);
-                    }
-
-                    const typeColors: Record<string, string> = {
-                      MNP: "bg-emerald-500",
-                      기변: "bg-blue-500",
-                      신규: "bg-amber-500",
-                      번이: "bg-violet-500",
-                    };
-                    const productColors: Record<string, string> = {
-                      모바일: "bg-pink-500",
-                      인터넷: "bg-cyan-500",
-                      "TV프리": "bg-orange-500",
-                      부가서비스: "bg-purple-500",
-                    };
-
-                    const sortedTypes = Array.from(typeMap.entries()).sort((a,b) => b[1]-a[1]);
-                    const sortedProducts = Array.from(productMap.entries()).sort((a,b) => b[1]-a[1]);
-                    const sortedModels = Array.from(modelMap.entries()).sort((a,b) => b[1]-a[1]).slice(0,5);
-
-                    const Bar = ({ label, count, color, total }: { label: string; count: number; color: string; total: number }) => (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-foreground w-20 shrink-0 truncate">{label}</span>
-                        <div className="flex-1 h-5 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className={cn("h-full rounded-full transition-all", color)}
-                            style={{ width: `${Math.round(count/total*100)}%` }}
-                          />
-                        </div>
-                        <span className="text-xs font-bold tabular-nums w-10 text-right">{count}건</span>
-                        <span className="text-xs text-muted-foreground w-8 text-right">{Math.round(count/total*100)}%</span>
-                      </div>
-                    );
-
-                    return (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* 가입유형 */}
-                        <div className="rounded-xl border border-border p-4">
-                          <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">가입 유형</div>
-                          <div className="space-y-2">
-                            {sortedTypes.map(([t, c]) => (
-                              <Bar key={t} label={t} count={c} color={typeColors[t] ?? "bg-slate-400"} total={total} />
-                            ))}
-                          </div>
-                        </div>
-                        {/* 상품 */}
-                        <div className="rounded-xl border border-border p-4">
-                          <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">상품</div>
-                          <div className="space-y-2">
-                            {sortedProducts.map(([p, c]) => (
-                              <Bar key={p} label={p} count={c} color={productColors[p] ?? "bg-slate-400"} total={total} />
-                            ))}
-                          </div>
-                        </div>
-                        {/* 단말 TOP5 */}
-                        <div className="rounded-xl border border-border p-4">
-                          <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">단말 TOP5</div>
-                          <div className="space-y-2">
-                            {sortedModels.map(([m, c]) => (
-                              <Bar key={m} label={m} count={c} color="bg-primary" total={total} />
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* 일별 목록 */}
-                  <div className="space-y-2">
-                    <div className="text-sm font-bold text-foreground flex items-center gap-2">
-                      <Calendar className="size-4" /> 일별 판매 내역
-                    </div>
-                    {(() => {
-                      const byDate = new Map<string, SaleDetail[]>();
-                      for (const s of detailSales) {
-                        const d = s.open_date ?? "날짜 없음";
-                        if (!byDate.has(d)) byDate.set(d, []);
-                        byDate.get(d)!.push(s);
-                      }
-                      return Array.from(byDate.entries()).map(([date, items]) => (
-                        <div key={date} className="rounded-xl border border-border overflow-hidden">
-                          <div className="bg-muted/60 px-4 py-2 flex items-center gap-2">
-                            <span className="font-semibold text-sm">{date}</span>
-                            <span className="ml-auto text-xs text-muted-foreground">{items.length}건</span>
-                          </div>
-                          <div className="divide-y divide-border">
-                            {items.map((s) => {
-                              const cf = (s.custom_fields as any) ?? {};
-                              const color = cf.color ?? cf.device_color ?? null;
-                              return (
-                                <div key={s.id} className="px-4 py-2.5 flex items-center gap-3 flex-wrap">
-                                  <span className="font-bold text-foreground text-sm">{s.device_model ?? "—"}</span>
-                                  {color && <span className="text-xs px-2 py-0.5 rounded-full bg-muted border text-muted-foreground">{color}</span>}
-                                  <span className={cn(
-                                    "text-xs px-2 py-0.5 rounded-full font-semibold border",
-                                    s.sale_type === "MNP" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                                    s.sale_type === "기변" ? "bg-blue-50 text-blue-700 border-blue-200" :
-                                    s.sale_type === "신규" ? "bg-amber-50 text-amber-700 border-amber-200" :
-                                    "bg-muted text-muted-foreground border-border"
-                                  )}>{s.sale_type ?? "—"}</span>
-                                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                    <Package className="size-3" />{s.product ?? "—"}
-                                  </span>
-                                  {s.open_method && <span className="text-xs text-muted-foreground">{s.open_method}</span>}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ));
-                    })()}
-                    {detailSales.length === 0 && (
-                      <div className="text-center py-10 text-muted-foreground text-sm">판매 내역이 없습니다</div>
-                    )}
-                  </div>
-                </div>
+                <DetailDashboard sales={detailSales} />
               )}
             </>
           )}
@@ -1233,5 +1140,173 @@ const RankingPage = () => {
     </>
   );
 };
+
+
+/* ─── 상세 대시보드 컴포넌트 ─── */
+function DetailDashboard({ sales }: { sales: SaleDetail[] }) {
+  const [channelTab, setChannelTab] = useState<"전체"|"모요"|"유닥">("전체");
+  const [monthFilter, setMonthFilter] = useState<string>("전체");
+
+  // 보유한 월 목록 추출
+  const months = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of sales) {
+      if (r.open_date) s.add(r.open_date.slice(0, 7));
+    }
+    return ["전체", ...Array.from(s).sort().reverse()];
+  }, [sales]);
+
+  // 채널 필터링
+  const MOYO_CH = ["모요"];
+  const UDAK_CH = ["유닥", "유닥(UDak)"];
+
+  const filtered = useMemo(() => {
+    return sales.filter(s => {
+      const ch = s.channel ?? "";
+      if (channelTab === "모요" && !MOYO_CH.includes(ch)) return false;
+      if (channelTab === "유닥" && !UDAK_CH.includes(ch)) return false;
+      if (monthFilter !== "전체" && s.open_date?.slice(0,7) !== monthFilter) return false;
+      return true;
+    });
+  }, [sales, channelTab, monthFilter]);
+
+  const total = filtered.length;
+
+  const typeColors: Record<string, string> = { MNP:"bg-emerald-500", 기변:"bg-blue-500", 신규:"bg-amber-500", 번이:"bg-violet-500" };
+  const productColors: Record<string, string> = { 모바일:"bg-pink-500", 인터넷:"bg-cyan-500", "TV프리":"bg-orange-500", 부가서비스:"bg-purple-500" };
+
+  function countMap(key: keyof SaleDetail, top?: number) {
+    const m = new Map<string, number>();
+    for (const s of filtered) {
+      const v = (s[key] as string) ?? "기타";
+      m.set(v, (m.get(v) ?? 0) + 1);
+    }
+    const sorted = Array.from(m.entries()).sort((a,b) => b[1]-a[1]);
+    return top ? sorted.slice(0, top) : sorted;
+  }
+
+  const Bar = ({ label, count, color }: { label: string; count: number; color: string }) => (
+    <div className="flex items-center gap-2">
+      <span className="text-xs font-medium text-foreground w-24 shrink-0 truncate" title={label}>{label}</span>
+      <div className="flex-1 h-4 bg-muted rounded-full overflow-hidden">
+        <div className={cn("h-full rounded-full", color)} style={{ width: total ? `${Math.round(count/total*100)}%` : "0%" }} />
+      </div>
+      <span className="text-xs font-bold tabular-nums w-8 text-right">{count}</span>
+      <span className="text-xs text-muted-foreground w-8 text-right">{total ? Math.round(count/total*100) : 0}%</span>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4 pt-2">
+      {/* 채널 탭 */}
+      <div className="flex gap-1 p-1 bg-muted/40 rounded-xl border border-border w-fit">
+        {(["전체","모요","유닥"] as const).map(t => (
+          <button key={t} onClick={() => setChannelTab(t)}
+            className={cn("px-4 py-1.5 text-sm font-semibold rounded-lg transition-colors",
+              channelTab === t ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
+            )}>
+            {t}
+            <span className="ml-1.5 text-xs tabular-nums">
+              {t === "전체" ? sales.length :
+               t === "모요" ? sales.filter(s => MOYO_CH.includes(s.channel ?? "")).length :
+               sales.filter(s => UDAK_CH.includes(s.channel ?? "")).length}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* 월 필터 */}
+      {months.length > 2 && (
+        <div className="flex gap-1.5 flex-wrap">
+          {months.map(m => (
+            <button key={m} onClick={() => setMonthFilter(m)}
+              className={cn("px-3 py-1 text-xs font-semibold rounded-full border transition-colors",
+                monthFilter === m
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+              )}>
+              {m === "전체" ? "전체" : (() => { const [y,mo] = m.split("-"); return `${y}년 ${parseInt(mo)}월`; })()}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 총 건수 */}
+      <div className="text-sm text-muted-foreground">
+        필터 결과 <b className="text-foreground">{total}건</b>
+      </div>
+
+      {/* 대시보드 4개 카드 */}
+      {total > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="rounded-xl border border-border p-4">
+            <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">가입 유형</div>
+            <div className="space-y-2">{countMap("sale_type").map(([t,c]) => <Bar key={t} label={t} count={c} color={typeColors[t] ?? "bg-slate-400"} />)}</div>
+          </div>
+          <div className="rounded-xl border border-border p-4">
+            <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">상품</div>
+            <div className="space-y-2">{countMap("product").map(([p,c]) => <Bar key={p} label={p} count={c} color={productColors[p] ?? "bg-slate-400"} />)}</div>
+          </div>
+          <div className="rounded-xl border border-border p-4">
+            <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">단말 TOP5</div>
+            <div className="space-y-2">{countMap("device_model",5).map(([m,c]) => <Bar key={m} label={m} count={c} color="bg-primary" />)}</div>
+          </div>
+          <div className="rounded-xl border border-border p-4">
+            <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">요금제 TOP5</div>
+            <div className="space-y-2">{countMap("rate_plan",5).map(([r,c]) => <Bar key={r} label={r} count={c} color="bg-violet-500" />)}</div>
+          </div>
+        </div>
+      ) : (
+        <div className="text-center py-8 text-muted-foreground text-sm">해당 조건의 판매 내역이 없습니다</div>
+      )}
+
+      {/* 일별 목록 */}
+      {total > 0 && (
+        <div className="space-y-2">
+          <div className="text-sm font-bold text-foreground flex items-center gap-2">
+            <Calendar className="size-4" /> 일별 판매 내역
+          </div>
+          {(() => {
+            const byDate = new Map<string, SaleDetail[]>();
+            for (const s of filtered) {
+              const d = s.open_date ?? "날짜 없음";
+              if (!byDate.has(d)) byDate.set(d, []);
+              byDate.get(d)!.push(s);
+            }
+            return Array.from(byDate.entries()).map(([date, items]) => (
+              <div key={date} className="rounded-xl border border-border overflow-hidden">
+                <div className="bg-muted/60 px-4 py-2 flex items-center gap-2">
+                  <span className="font-semibold text-sm">{date}</span>
+                  <span className="ml-auto text-xs text-muted-foreground">{items.length}건</span>
+                </div>
+                <div className="divide-y divide-border">
+                  {items.map((s) => {
+                    const cf = (s.custom_fields as any) ?? {};
+                    const color = cf.color ?? cf.device_color ?? null;
+                    return (
+                      <div key={s.id} className="px-4 py-2.5 flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-foreground text-sm">{s.device_model ?? "—"}</span>
+                        {color && <span className="text-xs px-2 py-0.5 rounded-full bg-muted border text-muted-foreground">{color}</span>}
+                        <span className={cn("text-xs px-2 py-0.5 rounded-full font-semibold border",
+                          s.sale_type === "MNP" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                          s.sale_type === "기변" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                          s.sale_type === "신규" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                          "bg-muted text-muted-foreground border-border"
+                        )}>{s.sale_type ?? "—"}</span>
+                        <span className="text-xs text-muted-foreground"><Package className="size-3 inline mr-0.5" />{s.product ?? "—"}</span>
+                        {s.rate_plan && <span className="text-xs text-muted-foreground">{s.rate_plan}</span>}
+                        {s.open_method && <span className="text-xs text-muted-foreground">{s.open_method}</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ));
+          })()}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default RankingPage;
