@@ -1,10 +1,10 @@
 import { useAuth } from "@/contexts/AuthContext";
 
-export const SUPER_ADMIN_EMAIL = "h860306@naver.com";
-export const SUPER_ADMIN_NAME = "박태진";
+export const SUPER_ADMIN_EMAIL = "kksin00@gmail.com";
+export const SUPER_ADMIN_NAME = "김시환";
 
 /**
- * 슈퍼관리자(h860306@naver.com) 전용 권한 체크 훅
+ * 슈퍼관리자(kksin00@gmail.com) 전용 권한 체크 훅
  * 계정 삭제(소프트 삭제) 등 최고 권한이 필요한 동작에 사용
  */
 export function useSuperAdmin(): { isSuperAdmin: boolean; email: string | null } {
