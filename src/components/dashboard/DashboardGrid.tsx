@@ -8,7 +8,6 @@ import {
 } from "react";
 import {
   ResponsiveGridLayout,
-  noCompactor,
   verticalCompactor,
   useContainerWidth,
   type Layout,
