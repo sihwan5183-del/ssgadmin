@@ -56,6 +56,7 @@ import AddonRetentionAdminPage from "./pages/AddonRetentionAdminPage.tsx";
 import AddonTasksPage from "./pages/AddonTasksPage.tsx";
 import CustomProposalsPage from "./pages/CustomProposalsPage.tsx";
 import LeadsPage from "./pages/LeadsPage.tsx";
+import DogmaruPage from "./pages/DogmaruPage.tsx";
 import { LeadsRealtimeNotifier } from "./components/leads/LeadsRealtimeNotifier.tsx";
 
 const queryClient = new QueryClient();
@@ -165,6 +166,7 @@ const App = () => {
                         <Route path="/admin/file-approvals" element={<AdminOnlyRoute><FileApprovalsPage /></AdminOnlyRoute>} />
                         <Route path="/custom-proposals" element={<CustomProposalsPage />} />
                         <Route path="/leads" element={<LeadsPage />} />
+                        <Route path="/dogmaru" element={<DogmaruPage />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </AppShell>
