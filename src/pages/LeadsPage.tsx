@@ -998,7 +998,7 @@ export default function LeadsPage() {
                       {item.activation_number ?? "-"}
                     </TableCell>
                     <TableCell className="text-foreground/80 py-1.5">
-                      {(item as any).pkg_number ?? "-"}
+                      {item.pkg_number ?? "-"}
                     </TableCell>
                     <TableCell className="text-foreground/80 py-1.5 max-w-[200px] truncate">
                       {item.memo ?? "-"}
