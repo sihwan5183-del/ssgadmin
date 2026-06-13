@@ -214,7 +214,7 @@ export default function LeadsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [intakeFormOpen, setIntakeFormOpen] = useState(false);
   const [inquiryRows, setInquiryRows] = useState<{ created_at: string; status: string | null; manager: string | null }[]>([]);
-  const [period, setPeriod] = useState<"all" | "month" | "day">("all");
+  const [period, setPeriod] = useState<"all" | "this_month" | "last_month" | "two_months_ago" | "this_week" | "last_week" | "two_weeks_ago" | "day">("all");
   const [personalView, setPersonalView] = useState(false);
   const [highlightId, setHighlightId] = useState<string | null>(null);
   // 엑셀형 컬럼 필터 (메타/도그마루 공통 + 각자 고유)
@@ -443,11 +443,26 @@ export default function LeadsPage() {
   const matrix = useMemo(() => {
     const now = new Date();
     const today = now.toISOString().slice(0, 10);
-    const month = today.slice(0, 7);
+    const getMonthStr = (offset: number) => {
+      const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+      return d.toISOString().slice(0, 7);
+    };
+    const getWeekRange = (offset: number) => {
+      const d = new Date(now);
+      const day = d.getDay() === 0 ? 6 : d.getDay() - 1;
+      d.setDate(d.getDate() - day + offset * 7);
+      const start = d.toISOString().slice(0, 10);
+      const end = new Date(d.getTime() + 6 * 86400000).toISOString().slice(0, 10);
+      return { start, end };
+    };
     const inRange = (iso: string) => {
       if (period === "all") return true;
-      if (period === "month") return iso.slice(0, 7) === month;
-      return iso.slice(0, 10) === today;
+      if (period === "day") return iso.slice(0, 10) === today;
+      if (period === "this_month") return iso.slice(0, 7) === getMonthStr(0);
+      if (period === "last_month") return iso.slice(0, 7) === getMonthStr(-1);
+      if (period === "two_months_ago") return iso.slice(0, 7) === getMonthStr(-2);
+      const w = getWeekRange(period === "this_week" ? 0 : period === "last_week" ? -1 : -2);
+      return iso.slice(0, 10) >= w.start && iso.slice(0, 10) <= w.end;
     };
     const empty = () => ({ total: 0, today: 0, done: 0, recare: 0, absent: 0, fail: 0 });
     const meta = empty();
@@ -480,11 +495,26 @@ export default function LeadsPage() {
   const staffMatrix = useMemo(() => {
     const now = new Date();
     const today = now.toISOString().slice(0, 10);
-    const month = today.slice(0, 7);
+    const getMonthStr2 = (offset: number) => {
+      const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+      return d.toISOString().slice(0, 7);
+    };
+    const getWeekRange2 = (offset: number) => {
+      const d = new Date(now);
+      const day = d.getDay() === 0 ? 6 : d.getDay() - 1;
+      d.setDate(d.getDate() - day + offset * 7);
+      const start = d.toISOString().slice(0, 10);
+      const end = new Date(d.getTime() + 6 * 86400000).toISOString().slice(0, 10);
+      return { start, end };
+    };
     const inRange = (iso: string) => {
       if (period === "all") return true;
-      if (period === "month") return iso.slice(0, 7) === month;
-      return iso.slice(0, 10) === today;
+      if (period === "day") return iso.slice(0, 10) === today;
+      if (period === "this_month") return iso.slice(0, 7) === getMonthStr2(0);
+      if (period === "last_month") return iso.slice(0, 7) === getMonthStr2(-1);
+      if (period === "two_months_ago") return iso.slice(0, 7) === getMonthStr2(-2);
+      const w = getWeekRange2(period === "this_week" ? 0 : period === "last_week" ? -1 : -2);
+      return iso.slice(0, 10) >= w.start && iso.slice(0, 10) <= w.end;
     };
     const empty = () => ({ total: 0, today: 0, done: 0, recare: 0, absent: 0, fail: 0 });
     const map = new Map<string, ReturnType<typeof empty>>();
@@ -887,6 +917,8 @@ export default function LeadsPage() {
                   <ColumnFilter label="해지 및 철회" values={valCancellation} selected={fCancellation} onChange={setFCancellation} />
                 </TableHead>
                 <TableHead className="text-foreground font-bold">가입번호</TableHead>
+                <TableHead className="text-foreground font-bold">택배개통</TableHead>
+                <TableHead className="text-foreground font-bold">비고</TableHead>
                 <TableHead className="text-foreground font-bold w-20 text-center">관리</TableHead>
               </TableRow>
             </TableHeader>
@@ -964,6 +996,12 @@ export default function LeadsPage() {
                     </TableCell>
                     <TableCell className="tabular-nums text-foreground/80 py-1.5">
                       {item.activation_number ?? "-"}
+                    </TableCell>
+                    <TableCell className="text-foreground/80 py-1.5">
+                      {(item as any).pkg_number ?? "-"}
+                    </TableCell>
+                    <TableCell className="text-foreground/80 py-1.5 max-w-[200px] truncate">
+                      {item.memo ?? "-"}
                     </TableCell>
                     <TableCell className="text-center py-1.5" onClick={(e) => e.stopPropagation()}>
                       <Button size="sm" variant="ghost" onClick={() => setOpenLead(item)}>
