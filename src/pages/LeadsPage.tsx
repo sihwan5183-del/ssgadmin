@@ -58,9 +58,10 @@ const MOBILE_STATUS_OPTIONS = [
 
 const ABSENCE_REASONS = ["통화중", "부재"];
 const RECARE_REASONS = ["가격 재상담", "기기 미정", "타사 비교중", "시기 조율", "가족 상의", "기타"];
+const DOGMARU_CAMPAIGN = "도그마루_홈캠";
 
 function MobileLeadsView({
-  rows, loading, sourceTab, setSourceTab, search, setSearch, filtered, updateStatus, onSwitchToFull
+  rows, loading, sourceTab, setSourceTab, search, setSearch, updateStatus, onSwitchToFull
 }: {
   rows: Lead[];
   loading: boolean;
@@ -68,7 +69,6 @@ function MobileLeadsView({
   setSourceTab: (t: "meta" | "dogmaru" | "other") => void;
   search: string;
   setSearch: (s: string) => void;
-  filtered: Lead[];
   updateStatus: (id: string, status: string) => Promise<void>;
   onSwitchToFull: () => void;
 }) {
@@ -76,34 +76,67 @@ function MobileLeadsView({
   const [statusLoading, setStatusLoading] = useState<string | null>(null);
   const [absenceModal, setAbsenceModal] = useState<Lead | null>(null);
   const [recareModal, setRecareModal] = useState<Lead | null>(null);
-  const [statusModal, setStatusModal] = useState<Lead | null>(null);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [templateModal, setTemplateModal] = useState<{ lead: Lead; reason: string } | null>(null);
+
+  useEffect(() => {
+    supabase.from("sms_templates").select("*").eq("active", true).eq("type", "absence")
+      .then(({ data }) => setTemplates(data ?? []));
+  }, []);
+
+  // 탭별 필터
+  const filtered = useMemo(() => {
+    return rows.filter(r => {
+      const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
+      if (sourceTab === "dogmaru" && !isDogmaru) return false;
+      if (sourceTab === "meta" && isDogmaru) return false;
+      if (search) {
+        const s = search.toLowerCase();
+        return (r.customer_name ?? "").toLowerCase().includes(s) ||
+               (r.customer_phone ?? "").includes(s);
+      }
+      return true;
+    });
+  }, [rows, sourceTab, search]);
+
+  const metaCount = rows.filter(r => r.campaign_name !== DOGMARU_CAMPAIGN).length;
+  const dogmaruCount = rows.filter(r => r.campaign_name === DOGMARU_CAMPAIGN).length;
 
   async function handleStatus(lead: Lead, status: string) {
     setStatusLoading(lead.id + status);
     await updateStatus(lead.id, status);
     setStatusLoading(null);
-    setStatusModal(null);
+    setAbsenceModal(null);
+    setRecareModal(null);
   }
 
-  const metaCount = rows.filter(r => r.campaign_name !== "도그마루_홈캠" && !r.campaign_name?.includes("기타")).length;
-  const dogmaruCount = rows.filter(r => r.campaign_name === "도그마루_홈캠").length;
+  // 채널 감지
+  function getChannel(lead: Lead): string {
+    const camp = (lead.campaign_name ?? "").toLowerCase();
+    if (camp.includes("도그마루")) return "도그마루";
+    if (camp.includes("모요")) return "모요";
+    return "유닥";
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* 상단 헤더 */}
       <div className="sticky top-0 z-20 bg-background border-b px-4 py-3 flex items-center justify-between">
         <div className="font-bold text-base">잠재고객</div>
-        <button onClick={onSwitchToFull} className="text-xs text-muted-foreground px-2 py-1 rounded border border-border/60">
-          PC 전체 뷰
+        <button
+          onClick={onSwitchToFull}
+          className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border border-border/60 bg-muted/30 active:bg-muted/60 transition-colors"
+        >
+          🖥️ PC 전체 뷰
         </button>
       </div>
 
       {/* 탭 */}
       <div className="sticky top-[53px] z-10 bg-background border-b flex">
         {([
-          { key: "meta", label: `메타광고 ${metaCount}` },
-          { key: "dogmaru", label: `도그마루 ${dogmaruCount}` },
-          { key: "other", label: "기타인입" },
+          { key: "meta", label: "메타광고", count: metaCount },
+          { key: "dogmaru", label: "도그마루", count: dogmaruCount },
+          { key: "other", label: "기타인입", count: 0 },
         ] as const).map((t) => (
           <button
             key={t.key}
@@ -114,7 +147,7 @@ function MobileLeadsView({
                 : "border-transparent text-muted-foreground"
             }`}
           >
-            {t.label}
+            {t.label} <span className="opacity-70">{t.count}</span>
           </button>
         ))}
       </div>
@@ -145,9 +178,8 @@ function MobileLeadsView({
             const statusInfo = MOBILE_STATUS_OPTIONS.find(s => s.value === lead.status) ?? MOBILE_STATUS_OPTIONS[0];
             return (
               <div key={lead.id} className="bg-background">
-                {/* 카드 헤더 */}
                 <div
-                  className="px-4 py-3 flex items-center gap-3 cursor-pointer active:bg-muted/30"
+                  className="px-4 py-3 flex items-center gap-3 active:bg-muted/30 cursor-pointer"
                   onClick={() => setExpandedId(isExpanded ? null : lead.id)}
                 >
                   <div className="flex-1 min-w-0">
@@ -164,23 +196,20 @@ function MobileLeadsView({
                       <div className="text-xs text-muted-foreground mt-0.5">{lead.branch_name}</div>
                     )}
                   </div>
-                  {/* 전화 버튼 */}
                   {lead.customer_phone && (
                     <a
                       href={`tel:${lead.customer_phone}`}
                       onClick={e => e.stopPropagation()}
-                      className="flex-shrink-0 size-10 rounded-full bg-emerald-500 flex items-center justify-center shadow-md active:scale-95 transition-transform"
+                      className="flex-shrink-0 size-11 rounded-full bg-emerald-500 flex items-center justify-center shadow-md active:scale-90 transition-transform"
                     >
-                      <span className="text-white text-lg">📞</span>
+                      <span className="text-white text-xl">📞</span>
                     </a>
                   )}
                   <span className={`text-muted-foreground text-xs transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}>▼</span>
                 </div>
 
-                {/* 펼쳐지는 액션 */}
                 {isExpanded && (
                   <div className="px-4 pb-4 space-y-3 bg-muted/10 border-t border-border/20">
-                    {/* 상태 변경 버튼들 */}
                     <div className="pt-3">
                       <div className="text-xs text-muted-foreground mb-2 font-medium">상태 변경</div>
                       <div className="grid grid-cols-3 gap-1.5">
@@ -192,20 +221,18 @@ function MobileLeadsView({
                               if (s.value === "재케어") { setRecareModal(lead); return; }
                               handleStatus(lead, s.value);
                             }}
-                            disabled={statusLoading === lead.id + s.value}
-                            className={`py-2 rounded-lg text-xs font-medium border transition-all active:scale-95 ${
+                            disabled={!!statusLoading}
+                            className={`py-2.5 rounded-xl text-xs font-medium border transition-all active:scale-95 ${
                               lead.status === s.value
-                                ? `${s.color} border-current`
-                                : "bg-background border-border/60 text-muted-foreground"
-                            } ${statusLoading === lead.id + s.value ? "opacity-50" : ""}`}
+                                ? `${s.color} border-current shadow-sm`
+                                : "bg-background border-border/60 text-muted-foreground active:bg-muted/40"
+                            } ${statusLoading ? "opacity-50" : ""}`}
                           >
                             {statusLoading === lead.id + s.value ? "⏳" : s.label}
                           </button>
                         ))}
                       </div>
                     </div>
-
-                    {/* 메모 */}
                     {lead.memo && (
                       <div className="text-xs text-muted-foreground bg-background rounded-lg p-2.5 border border-border/40">
                         💬 {lead.memo}
@@ -228,11 +255,13 @@ function MobileLeadsView({
               {ABSENCE_REASONS.map(r => (
                 <button
                   key={r}
-                  onClick={async () => {
-                    await handleStatus(absenceModal, "부재케어");
-                    // 문자 앱 열기
+                  onClick={() => {
+                    handleStatus(absenceModal, "부재케어");
+                    const ch = getChannel(absenceModal);
+                    const tmpl = templates.find(t => t.channel === ch && t.title === r);
+                    const msg = tmpl?.content ?? `안녕하세요 고객님, ${ch}를 통해 연락드렸습니다. 편하신 시간에 연락 부탁드립니다 :)`;
                     if (absenceModal.customer_phone) {
-                      window.location.href = `sms:${absenceModal.customer_phone}?body=${encodeURIComponent(`안녕하세요, ${absenceModal.customer_name ?? "고객"}님. ${r} 관련하여 연락드렸습니다. 편하신 시간에 연락 부탁드립니다.`)}`;
+                      window.location.href = `sms:${absenceModal.customer_phone}?body=${encodeURIComponent(msg)}`;
                     }
                   }}
                   className="w-full py-3 rounded-xl bg-orange-50 border border-orange-200 text-orange-700 font-medium text-sm active:scale-95 transition-transform"
@@ -257,10 +286,7 @@ function MobileLeadsView({
               {RECARE_REASONS.map(r => (
                 <button
                   key={r}
-                  onClick={async () => {
-                    await handleStatus(recareModal, "재케어");
-                    setRecareModal(null);
-                  }}
+                  onClick={() => { handleStatus(recareModal, "재케어"); }}
                   className="w-full py-3 rounded-xl bg-purple-50 border border-purple-200 text-purple-700 font-medium text-sm active:scale-95 transition-transform"
                 >
                   {r}
@@ -1024,7 +1050,6 @@ export default function LeadsPage() {
       setSourceTab={setSourceTab}
       search={search}
       setSearch={setSearch}
-      filtered={pagedFiltered}
       updateStatus={updateStatus}
       onSwitchToFull={() => setMobileFullView(true)}
     />;
