@@ -47,7 +47,7 @@ import { Trash2 } from "lucide-react";
 // 메타/도그마루 탭의 초기 진입과 탭 전환 응답성을 잡아준다.
 const ChannelIntakePage = lazy(() => import("@/pages/ChannelIntakePage"));
 // ─── 모바일 영업 전용 뷰 ───────────────────────────────────────────────────
-const STATUS_OPTIONS = [
+const MOBILE_STATUS_OPTIONS = [
   { value: "신규 접수", label: "신규", color: "bg-blue-100 text-blue-700" },
   { value: "상담중", label: "상담중", color: "bg-yellow-100 text-yellow-700" },
   { value: "성공", label: "성공", color: "bg-emerald-100 text-emerald-700" },
@@ -142,7 +142,7 @@ function MobileLeadsView({
         ) : (
           filtered.map((lead) => {
             const isExpanded = expandedId === lead.id;
-            const statusInfo = STATUS_OPTIONS.find(s => s.value === lead.status) ?? STATUS_OPTIONS[0];
+            const statusInfo = MOBILE_STATUS_OPTIONS.find(s => s.value === lead.status) ?? MOBILE_STATUS_OPTIONS[0];
             return (
               <div key={lead.id} className="bg-background">
                 {/* 카드 헤더 */}
@@ -184,7 +184,7 @@ function MobileLeadsView({
                     <div className="pt-3">
                       <div className="text-xs text-muted-foreground mb-2 font-medium">상태 변경</div>
                       <div className="grid grid-cols-3 gap-1.5">
-                        {STATUS_OPTIONS.map(s => (
+                        {MOBILE_STATUS_OPTIONS.map(s => (
                           <button
                             key={s.value}
                             onClick={() => {
