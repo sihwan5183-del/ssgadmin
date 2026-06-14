@@ -693,7 +693,7 @@ export default function LeadsPage() {
       {/* 종합 리드 성과 보드 — 경로별/기간별 매트릭스 */}
       <Card className="p-4">
         <div
-          className="flex items-center justify-between gap-3 flex-wrap cursor-pointer"
+          className="flex items-center justify-between gap-3 flex-wrap cursor-pointer mb-1"
           onClick={() => setDashOpen(v => !v)}
         >
           <div className="flex items-center gap-2">
@@ -701,16 +701,17 @@ export default function LeadsPage() {
             <div className="text-xs text-muted-foreground">
               {personalView ? "직원별 · 기간별 처리 현황" : "경로별 · 기간별 접수/개통 매트릭스"}
             </div>
-            <span className={"text-xs text-muted-foreground transition-transform " + (dashOpen ? "rotate-180" : "")}>▼</span>
+            <span className={"text-xs text-muted-foreground transition-transform duration-200 inline-block " + (dashOpen ? "rotate-180" : "")}>▼</span>
           </div>
           <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-            <span className="text-xs font-semibold text-slate-700">개인별 보기</span>
-            <Switch
-              checked={personalView}
-              onCheckedChange={(v) => startTransition(() => setPersonalView(!!v))}
-            />
-          </label>
+            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+              <span className="text-xs font-semibold text-slate-700">개인별 보기</span>
+              <Switch
+                checked={personalView}
+                onCheckedChange={(v) => startTransition(() => setPersonalView(!!v))}
+              />
+            </label>
+          </div>
         </div>
 
         {/* 아코디언 - 기간 필터 + 차트 */}
