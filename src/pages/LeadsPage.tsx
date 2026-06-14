@@ -1559,17 +1559,19 @@ export default function LeadsPage() {
         const recareC = tabRows.filter(r => r.status === "재케어" && !isDogmaruCompletePC(r)).length;
         const failC = tabRows.filter(r => r.status === "실패" && !isDogmaruCompletePC(r)).length;
         const completeC = tabRows.filter(r => isDogmaruCompletePC(r)).length;
-        const tabs = [
+        const pcTabs: { key: string; label: string; color: string }[] = [
           { key: "all", label: "전체", color: "" },
           { key: "absence", label: `부재케어 ${absenceC}`, color: "orange" },
           { key: "recare", label: `재케어 ${recareC}`, color: "purple" },
           { key: "fail", label: `실패 ${failC}`, color: "red" },
-          ...(sourceTab === "dogmaru" ? [{ key: "complete", label: `완료 ${completeC}`, color: "blue" }] : []),
-        ] as const;
+        ];
+        if (sourceTab === "dogmaru") {
+          pcTabs.push({ key: "complete", label: `완료 ${completeC}`, color: "blue" });
+        }
         return (
           <div className="flex gap-1.5 mb-3 flex-wrap">
-            {(tabs as any[]).map(t => (
-              <button key={t.key} onClick={() => setPcCareTab(t.key)}
+            {pcTabs.map(t => (
+              <button key={t.key} onClick={() => setPcCareTab(t.key as any)}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                   pcCareTab === t.key
                     ? t.color === "orange" ? "bg-orange-100 text-orange-700 border-orange-300"
