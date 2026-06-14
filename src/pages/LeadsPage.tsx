@@ -554,24 +554,51 @@ export default function LeadsPage() {
       .sort((a, b) => b.total - a.total);
   }, [rows, inquiryRows, period, customStart, customEnd, staff]);
 
-  // 일별 접수 추이 (최근 30일)
-  const trendData = useMemo(() => {
+  // 날짜 파싱 헬퍼
+  const parseLeadDate = (r: typeof rows[0]) => {
+    const rd = r.registration_date;
+    if (rd && rd.includes("/")) {
+      const parts = rd.split("/");
+      const m = parts[0].padStart(2, "0");
+      const dy = parts[1]?.padStart(2, "0") ?? "01";
+      return `2026-${m}-${dy}`;
+    }
+    if (rd && rd.length >= 10) return rd.slice(0, 10);
+    return (r.created_at ?? "").slice(0, 10);
+  };
+
+  // 메타 일별 추이 (최근 30일)
+  const metaTrendData = useMemo(() => {
     const now = new Date();
-    const days: { date: string; label: string; meta: number; dogmaru: number }[] = [];
+    const days: { date: string; label: string; count: number }[] = [];
     for (let i = 29; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
       const iso = d.toISOString().slice(0, 10);
-      const label = `${d.getMonth()+1}/${d.getDate()}`;
-      days.push({ date: iso, label, meta: 0, dogmaru: 0 });
+      days.push({ date: iso, label: `${d.getMonth()+1}/${d.getDate()}`, count: 0 });
     }
-    for (const r of rows) {
-      const iso = (r.created_at ?? "").slice(0, 10);
+    for (const r of rows.filter(r => r.campaign_name !== DOGMARU_CAMPAIGN)) {
+      const iso = parseLeadDate(r);
       const day = days.find(d => d.date === iso);
-      if (!day) continue;
-      const camp = r.campaign_name ?? "";
-      if (camp === "도그마루_홈캠") day.dogmaru++;
-      else day.meta++;
+      if (day) day.count++;
+    }
+    return days;
+  }, [rows]);
+
+  // 도그마루 일별 추이 (최근 30일)
+  const dogmaruTrendData = useMemo(() => {
+    const now = new Date();
+    const days: { date: string; label: string; count: number }[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const iso = d.toISOString().slice(0, 10);
+      days.push({ date: iso, label: `${d.getMonth()+1}/${d.getDate()}`, count: 0 });
+    }
+    for (const r of rows.filter(r => r.campaign_name === DOGMARU_CAMPAIGN)) {
+      const iso = parseLeadDate(r);
+      const day = days.find(d => d.date === iso);
+      if (day) day.count++;
     }
     return days;
   }, [rows]);
@@ -714,10 +741,9 @@ export default function LeadsPage() {
           </div>
         </div>
 
-        {/* 아코디언 - 기간 필터 + 차트 */}
+        {/* 아코디언 - 기간 필터 */}
         {dashOpen && (
-          <div className="mt-4 space-y-4">
-            {/* 기간 필터 */}
+          <div className="mt-4">
             <div className="flex items-center gap-2 flex-wrap">
               <div className="inline-flex rounded-md border border-border bg-muted/40 p-0.5">
                 {([
@@ -750,45 +776,6 @@ export default function LeadsPage() {
                   <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} className="text-xs border border-border rounded px-2 py-1 bg-background" />
                 </div>
               )}
-            </div>
-            {/* 일별 접수 추이 차트 - 라인 */}
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="text-xs font-semibold text-slate-700">일별 접수 추이 (최근 30일)</div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span className="inline-block w-3 h-0.5 bg-indigo-500 rounded" /> 메타
-                  <span className="inline-block w-3 h-0.5 bg-pink-500 rounded ml-1" /> 도그마루
-                </div>
-              </div>
-              <ResponsiveContainer width="100%" height={160}>
-                <LineChart data={trendData} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
-                  <XAxis dataKey="label" tick={{ fontSize: 9 }} interval={4} />
-                  <YAxis tick={{ fontSize: 9 }} allowDecimals={false} width={28} />
-                  <Tooltip
-                    formatter={(value: number, name: string) => [value + "건", name === "meta" ? "메타" : "도그마루"]}
-                    labelFormatter={(label) => label + "일"}
-                    contentStyle={{ fontSize: 11 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="meta"
-                    stroke="#6366f1"
-                    strokeWidth={2}
-                    dot={{ r: 3, fill: "#6366f1", strokeWidth: 0 }}
-                    activeDot={{ r: 5 }}
-                    name="meta"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="dogmaru"
-                    stroke="#ec4899"
-                    strokeWidth={2}
-                    dot={{ r: 3, fill: "#ec4899", strokeWidth: 0 }}
-                    activeDot={{ r: 5 }}
-                    name="dogmaru"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
             </div>
           </div>
         )}
@@ -981,6 +968,33 @@ export default function LeadsPage() {
         </div>
       ) : (
       <Card key={sourceTab} className="overflow-hidden border-border animate-fade-in">
+        {/* 탭별 일별 추이 차트 */}
+        {sourceTab === "dogmaru" && (
+          <div className="p-4 border-b border-border">
+            <div className="text-xs font-semibold text-slate-700 mb-2">도그마루 일별 접수 추이 (최근 30일)</div>
+            <ResponsiveContainer width="100%" height={120}>
+              <LineChart data={dogmaruTrendData} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
+                <XAxis dataKey="label" tick={{ fontSize: 9 }} interval={4} />
+                <YAxis tick={{ fontSize: 9 }} allowDecimals={false} width={28} />
+                <Tooltip formatter={(v: number) => [v + "건", "접수"]} labelFormatter={(l) => l + "일"} contentStyle={{ fontSize: 11 }} />
+                <Line type="monotone" dataKey="count" stroke="#ec4899" strokeWidth={2} dot={{ r: 2.5, fill: "#ec4899", strokeWidth: 0 }} activeDot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+        {sourceTab === "meta" && (
+          <div className="p-4 border-b border-border">
+            <div className="text-xs font-semibold text-slate-700 mb-2">메타광고 일별 접수 추이 (최근 30일)</div>
+            <ResponsiveContainer width="100%" height={120}>
+              <LineChart data={metaTrendData} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
+                <XAxis dataKey="label" tick={{ fontSize: 9 }} interval={4} />
+                <YAxis tick={{ fontSize: 9 }} allowDecimals={false} width={28} />
+                <Tooltip formatter={(v: number) => [v + "건", "접수"]} labelFormatter={(l) => l + "일"} contentStyle={{ fontSize: 11 }} />
+                <Line type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={2} dot={{ r: 2.5, fill: "#6366f1", strokeWidth: 0 }} activeDot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
         {sourceTab === "dogmaru" ? (
           <Table>
             <TableHeader>
