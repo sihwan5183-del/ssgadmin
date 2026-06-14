@@ -513,11 +513,24 @@ export default function LeadsPage() {
     const other = empty();
 
     for (const r of rows) {
-      if (!inRange(r.created_at)) continue;
+      // 도그마루는 registration_date 기준, 메타는 created_at 기준
+      let dateIso = "";
+      const rd = r.registration_date;
+      if (rd && rd.includes("/")) {
+        const parts = rd.split("/");
+        const mo = parts[0].padStart(2, "0");
+        const dy = parts[1]?.padStart(2, "0") ?? "01";
+        dateIso = `2026-${mo}-${dy}`;
+      } else if (rd && rd.length >= 10) {
+        dateIso = rd.slice(0, 10);
+      } else {
+        dateIso = r.created_at.slice(0, 10);
+      }
+      if (!inRange(dateIso)) continue;
       const bucket = r.campaign_name === DOGMARU_CAMPAIGN ? dogmaru : meta;
       bucket.total += 1;
-      if (r.created_at.slice(0, 10) === today) bucket.today += 1;
-      if (r.status === "개통 완료") bucket.done += 1;
+      if (dateIso === today) bucket.today += 1;
+      if (r.status === "개통 완료" || r.activation_status?.includes("완료")) bucket.done += 1;
       if (r.status === "재케어") bucket.recare += 1;
       if (r.status === "부재 중") bucket.absent += 1;
       if (r.status === "실패" || r.status === "취소") bucket.fail += 1;
