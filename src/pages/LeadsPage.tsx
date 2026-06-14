@@ -78,7 +78,10 @@ function MobileLeadsView({
   const [absenceModal, setAbsenceModal] = useState<Lead | null>(null);
   const [recareModal, setRecareModal] = useState<Lead | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
-  const [careTab, setCareTab] = useState<"all" | "absence" | "recare" | "fail">("all");
+  const [careTab, setCareTab] = useState<"all" | "absence" | "recare" | "fail" | "complete">("all");
+  const [completePage, setCompletePage] = useState(0);
+  const COMPLETE_PAGE_SIZE = 50;
+  const [completeSearch, setCompleteSearch] = useState("");
   const [memoLead, setMemoLead] = useState<Lead | null>(null);
   const [memoDraft, setMemoDraft] = useState("");
   const [memoSaving, setMemoSaving] = useState(false);
@@ -94,6 +97,15 @@ function MobileLeadsView({
   // 탭 전환시 케어탭 리셋
   useEffect(() => { setCareTab("all"); }, [sourceTab]);
 
+  // 도그마루 완료건 판단
+  function isDogmaruComplete(lead: Lead): boolean {
+    return !!(
+      (lead as any).activation_status ||
+      (lead as any).activation_number ||
+      (lead as any).pkg_number
+    );
+  }
+
   // 탭별 필터 (메타/도그마루 완전 분리)
   const filtered = useMemo(() => {
     return rows.filter(r => {
@@ -101,6 +113,12 @@ function MobileLeadsView({
       if (sourceTab === "dogmaru" && !isDogmaru) return false;
       if (sourceTab === "meta" && isDogmaru) return false;
       if (sourceTab === "other" && isDogmaru) return false;
+      // 도그마루 완료건 처리
+      if (isDogmaru) {
+        const complete = isDogmaruComplete(r);
+        if (careTab === "complete" && !complete) return false;
+        if (careTab !== "complete" && complete) return false; // 완료건은 완료탭에서만
+      }
       // 케어 보관함 필터 (현재 탭 내에서만)
       if (careTab === "absence" && r.status !== "부재케어") return false;
       if (careTab === "recare" && r.status !== "재케어") return false;
@@ -126,9 +144,10 @@ function MobileLeadsView({
     if (sourceTab === "meta") return !isDogmaru;
     return !isDogmaru;
   }), [rows, sourceTab]);
-  const absenceCount = tabRows.filter(r => r.status === "부재케어").length;
-  const recareCount = tabRows.filter(r => r.status === "재케어").length;
-  const failCount = tabRows.filter(r => r.status === "실패").length;
+  const absenceCount = tabRows.filter(r => r.status === "부재케어" && !isDogmaruComplete(r)).length;
+  const recareCount = tabRows.filter(r => r.status === "재케어" && !isDogmaruComplete(r)).length;
+  const failCount = tabRows.filter(r => r.status === "실패" && !isDogmaruComplete(r)).length;
+  const completeCount = tabRows.filter(r => isDogmaruComplete(r)).length;
 
   async function handleStatus(lead: Lead, status: string) {
     setStatusLoading(lead.id + status);
@@ -196,13 +215,15 @@ function MobileLeadsView({
           { key: "absence", label: `부재 ${absenceCount}`, color: "orange" },
           { key: "recare", label: `재케어 ${recareCount}`, color: "purple" },
           { key: "fail", label: `실패 ${failCount}`, color: "red" },
-        ] as const).map(t => (
-          <button key={t.key} onClick={() => setCareTab(t.key)}
+          ...(sourceTab === "dogmaru" ? [{ key: "complete", label: `완료 ${completeCount}`, color: "blue" }] : []),
+        ] as const).map((t: any) => (
+          <button key={t.key} onClick={() => { setCareTab(t.key); setCompletePage(0); }}
             className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all active:scale-95 ${
               careTab === t.key
                 ? t.color === "orange" ? "bg-orange-100 text-orange-700 shadow-sm"
                   : t.color === "purple" ? "bg-purple-100 text-purple-700 shadow-sm"
                   : t.color === "red" ? "bg-red-100 text-red-700 shadow-sm"
+                  : t.color === "blue" ? "bg-blue-100 text-blue-700 shadow-sm"
                   : "bg-primary text-primary-foreground shadow-sm"
                 : "bg-background text-muted-foreground border border-border/40"
             }`}>
@@ -211,8 +232,72 @@ function MobileLeadsView({
         ))}
       </div>
 
-      {/* 카드 목록 */}
-      <div className="flex-1 overflow-y-auto divide-y divide-border/30">
+      {/* 완료건 전용 뷰 */}
+      {careTab === "complete" && (
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-3 py-2 border-b">
+            <input
+              value={completeSearch}
+              onChange={e => { setCompleteSearch(e.target.value); setCompletePage(0); }}
+              placeholder="완료건 검색..."
+              className="w-full text-sm px-3 py-2 rounded-lg border border-border/60 bg-background"
+            />
+          </div>
+          {(() => {
+            const completeRows = filtered.filter(r => {
+              if (!completeSearch) return true;
+              const s = completeSearch.toLowerCase();
+              return (r.customer_name ?? "").toLowerCase().includes(s) ||
+                     (r.customer_phone ?? "").includes(s) ||
+                     ((r as any).activation_number ?? "").includes(s);
+            });
+            const paged = completeRows.slice(completePage * COMPLETE_PAGE_SIZE, (completePage + 1) * COMPLETE_PAGE_SIZE);
+            return (
+              <>
+                <div className="divide-y divide-border/30">
+                  {paged.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground text-sm">완료건이 없습니다</div>
+                  ) : paged.map(lead => (
+                    <div key={lead.id} className="px-4 py-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-semibold text-sm">{lead.customer_name ?? "-"}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">완료</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">{lead.customer_phone ?? "-"} · {lead.branch_name ?? "-"}</div>
+                      {(lead as any).activation_status && (
+                        <div className="text-xs text-muted-foreground mt-0.5">개통상태: {(lead as any).activation_status}</div>
+                      )}
+                      {(lead as any).activation_number && (
+                        <div className="text-xs text-muted-foreground mt-0.5">가입번호: {(lead as any).activation_number}</div>
+                      )}
+                      {(lead as any).pkg_number && (
+                        <div className="text-xs text-muted-foreground mt-0.5">상품번호: {(lead as any).pkg_number}</div>
+                      )}
+                      {lead.registration_date && (
+                        <div className="text-xs text-muted-foreground mt-0.5">접수일: {lead.registration_date}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {completeRows.length > COMPLETE_PAGE_SIZE && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t">
+                    <span className="text-xs text-muted-foreground">{completePage * COMPLETE_PAGE_SIZE + 1}–{Math.min((completePage + 1) * COMPLETE_PAGE_SIZE, completeRows.length)} / {completeRows.length}건</span>
+                    <div className="flex gap-2">
+                      <button onClick={() => setCompletePage(p => Math.max(0, p-1))} disabled={completePage === 0}
+                        className="text-xs px-3 py-1.5 rounded-lg border border-border/60 disabled:opacity-30">← 이전</button>
+                      <button onClick={() => setCompletePage(p => p+1)} disabled={(completePage+1)*COMPLETE_PAGE_SIZE >= completeRows.length}
+                        className="text-xs px-3 py-1.5 rounded-lg border border-border/60 disabled:opacity-30">다음 →</button>
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* 카드 목록 (완료탭 아닐 때만) */}
+      {careTab !== "complete" && <div className="flex-1 overflow-y-auto divide-y divide-border/30">
         {loading ? (
           Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="h-20 m-3 rounded-xl bg-muted/40 animate-pulse" style={{ animationDelay: `${i*60}ms` }} />
@@ -1969,6 +2054,7 @@ export default function LeadsPage() {
           />
         </>
       )}
+      </div>}
     </div>
   );
 }
