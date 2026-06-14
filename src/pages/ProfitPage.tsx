@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,25 +42,22 @@ type AnomalyFlag = { emoji: string; label: string };
 
 function detectAnomalies(s: Sale & { netFee?: number }): AnomalyFlag[] {
   const flags: AnomalyFlag[] = [];
-  const net = s.netFee ?? s.net_fee ?? 0;
+  const dbNet = s.net_fee ?? 0;
+  const calcNet = s.netFee ?? 0;
   const unit = s.unit_price ?? 0;
   const dist = s.distributor_amount ?? 0;
-  const calcNet = (s.unit_price ?? 0) + (s.vas_fee ?? 0) + (s.receivable_amount ?? 0)
-    + (s.trade_in_confirmed ?? 0)
-    - dist - (s.extra_subsidy ?? 0)
-    - (s.cash_support_amount ?? 0) - (s.customer_support_amount ?? 0) - (s.corp_card_amount ?? 0);
 
-  // 1. net_fee가 계산값과 500원 이상 차이 (직접 입력 의심)
-  if (Math.abs(net - calcNet) > 500 && unit > 0) {
-    flags.push({ emoji: "⚠️", label: `net_fee 불일치 (DB:${net.toLocaleString()} / 계산:${Math.round(calcNet).toLocaleString()})` });
+  // 1. DB net_fee와 계산값이 500원 이상 차이 (직접 입력 의심)
+  if (unit > 0 && Math.abs(dbNet - calcNet) > 500) {
+    flags.push({ emoji: "⚠️", label: `net_fee 불일치 (DB:${dbNet.toLocaleString()} / 계산:${Math.round(calcNet).toLocaleString()})` });
   }
-  // 2. net_fee가 비정상적으로 큼 (100만 초과)
-  if (net > 1_000_000) {
-    flags.push({ emoji: "🚨", label: `net_fee 비정상 과다 (${net.toLocaleString()}원)` });
+  // 2. DB net_fee가 비정상적으로 큼 (100만 초과)
+  if (dbNet > 1_000_000) {
+    flags.push({ emoji: "🚨", label: `DB net_fee 비정상 과다 (${dbNet.toLocaleString()}원)` });
   }
-  // 3. net_fee가 비정상적으로 작음 (-50만 미만)
-  if (net < -500_000) {
-    flags.push({ emoji: "🔴", label: `net_fee 과다 손실 (${net.toLocaleString()}원)` });
+  // 3. 계산 net_fee가 -50만 미만
+  if (calcNet < -500_000) {
+    flags.push({ emoji: "🔴", label: `순마진 과다 손실 (${Math.round(calcNet).toLocaleString()}원)` });
   }
   // 4. distributor_amount = 0인데 unit_price > 0
   if (dist === 0 && unit > 0) {
@@ -87,6 +85,7 @@ export default function ProfitPage() {
   const { isAdmin, loading: roleLoading } = useRole();
   const { policies } = useIncentivePolicies();
   const { calc: calcNetFee } = useNetFeeFormula();
+  const navigate = useNavigate();
 
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,7 +126,9 @@ export default function ProfitPage() {
     return filtered.map((s) => {
       const revenue = sumRevenue(s as any);
       const offer = sumOffer(s as any);
-      const netFee = s.net_fee ?? calcNetFee(s as any);
+      // 항상 공식으로 재계산 (DB net_fee 직접입력 오류 방지)
+      // DB값은 이상 감지 비교용으로만 보존 (s.net_fee)
+      const netFee = calcNetFee(s as any);
 
       // 직원 인센티브 계산
       const saleForIncentive = {
@@ -454,6 +455,14 @@ export default function ProfitPage() {
                               <div className="flex justify-between"><span className="text-muted-foreground">상품</span><span>{r.product ?? "-"}</span></div>
                               <div className="flex justify-between"><span className="text-muted-foreground">판매유형</span><span>{r.sale_type ?? "-"}</span></div>
                               <div className="flex justify-between"><span className="text-muted-foreground">단말</span><span>{r.device_model ?? "-"}</span></div>
+                              <div className="pt-2 border-t mt-1">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); navigate(`/input?edit=${r.id}`); }}
+                                  className="w-full text-xs px-2 py-1.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium"
+                                >
+                                  📋 실적 건 바로가기 →
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </td>
