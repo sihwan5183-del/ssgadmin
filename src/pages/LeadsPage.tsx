@@ -46,6 +46,239 @@ import { Trash2 } from "lucide-react";
 // 무거운(1k+ LOC) 페이지 — 사용자가 [기타인입] 탭을 처음 클릭할 때만 로드해서
 // 메타/도그마루 탭의 초기 진입과 탭 전환 응답성을 잡아준다.
 const ChannelIntakePage = lazy(() => import("@/pages/ChannelIntakePage"));
+// ─── 모바일 영업 전용 뷰 ───────────────────────────────────────────────────
+const STATUS_OPTIONS = [
+  { value: "신규 접수", label: "신규", color: "bg-blue-100 text-blue-700" },
+  { value: "상담중", label: "상담중", color: "bg-yellow-100 text-yellow-700" },
+  { value: "성공", label: "성공", color: "bg-emerald-100 text-emerald-700" },
+  { value: "실패", label: "실패", color: "bg-red-100 text-red-700" },
+  { value: "부재케어", label: "부재케어", color: "bg-orange-100 text-orange-700" },
+  { value: "재케어", label: "재케어", color: "bg-purple-100 text-purple-700" },
+];
+
+const ABSENCE_REASONS = ["통화중", "부재"];
+const RECARE_REASONS = ["가격 재상담", "기기 미정", "타사 비교중", "시기 조율", "가족 상의", "기타"];
+
+function MobileLeadsView({
+  rows, loading, sourceTab, setSourceTab, search, setSearch, filtered, updateStatus, onSwitchToFull
+}: {
+  rows: Lead[];
+  loading: boolean;
+  sourceTab: "meta" | "dogmaru" | "other";
+  setSourceTab: (t: "meta" | "dogmaru" | "other") => void;
+  search: string;
+  setSearch: (s: string) => void;
+  filtered: Lead[];
+  updateStatus: (id: string, status: string) => Promise<void>;
+  onSwitchToFull: () => void;
+}) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [statusLoading, setStatusLoading] = useState<string | null>(null);
+  const [absenceModal, setAbsenceModal] = useState<Lead | null>(null);
+  const [recareModal, setRecareModal] = useState<Lead | null>(null);
+  const [statusModal, setStatusModal] = useState<Lead | null>(null);
+
+  async function handleStatus(lead: Lead, status: string) {
+    setStatusLoading(lead.id + status);
+    await updateStatus(lead.id, status);
+    setStatusLoading(null);
+    setStatusModal(null);
+  }
+
+  const metaCount = rows.filter(r => r.campaign_name !== "도그마루_홈캠" && !r.campaign_name?.includes("기타")).length;
+  const dogmaruCount = rows.filter(r => r.campaign_name === "도그마루_홈캠").length;
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* 상단 헤더 */}
+      <div className="sticky top-0 z-20 bg-background border-b px-4 py-3 flex items-center justify-between">
+        <div className="font-bold text-base">잠재고객</div>
+        <button onClick={onSwitchToFull} className="text-xs text-muted-foreground px-2 py-1 rounded border border-border/60">
+          PC 전체 뷰
+        </button>
+      </div>
+
+      {/* 탭 */}
+      <div className="sticky top-[53px] z-10 bg-background border-b flex">
+        {([
+          { key: "meta", label: `메타광고 ${metaCount}` },
+          { key: "dogmaru", label: `도그마루 ${dogmaruCount}` },
+          { key: "other", label: "기타인입" },
+        ] as const).map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setSourceTab(t.key)}
+            className={`flex-1 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
+              sourceTab === t.key
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 검색 */}
+      <div className="px-3 py-2 border-b bg-muted/20">
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="이름 또는 연락처 검색..."
+          className="w-full text-sm px-3 py-2 rounded-lg border border-border/60 bg-background"
+        />
+      </div>
+
+      {/* 카드 목록 */}
+      <div className="flex-1 overflow-y-auto divide-y divide-border/30">
+        {loading ? (
+          <div className="space-y-2 p-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-20 rounded-xl bg-muted/40 animate-pulse" />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-16 text-muted-foreground text-sm">리드가 없습니다</div>
+        ) : (
+          filtered.map((lead) => {
+            const isExpanded = expandedId === lead.id;
+            const statusInfo = STATUS_OPTIONS.find(s => s.value === lead.status) ?? STATUS_OPTIONS[0];
+            return (
+              <div key={lead.id} className="bg-background">
+                {/* 카드 헤더 */}
+                <div
+                  className="px-4 py-3 flex items-center gap-3 cursor-pointer active:bg-muted/30"
+                  onClick={() => setExpandedId(isExpanded ? null : lead.id)}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="font-semibold text-sm truncate">{lead.customer_name ?? "-"}</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${statusInfo.color}`}>
+                        {statusInfo.label}
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {lead.customer_phone ?? "번호 없음"} · {lead.registration_date ?? lead.created_at?.slice(0, 10) ?? "-"}
+                    </div>
+                    {lead.branch_name && (
+                      <div className="text-xs text-muted-foreground mt-0.5">{lead.branch_name}</div>
+                    )}
+                  </div>
+                  {/* 전화 버튼 */}
+                  {lead.customer_phone && (
+                    <a
+                      href={`tel:${lead.customer_phone}`}
+                      onClick={e => e.stopPropagation()}
+                      className="flex-shrink-0 size-10 rounded-full bg-emerald-500 flex items-center justify-center shadow-md active:scale-95 transition-transform"
+                    >
+                      <span className="text-white text-lg">📞</span>
+                    </a>
+                  )}
+                  <span className={`text-muted-foreground text-xs transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}>▼</span>
+                </div>
+
+                {/* 펼쳐지는 액션 */}
+                {isExpanded && (
+                  <div className="px-4 pb-4 space-y-3 bg-muted/10 border-t border-border/20">
+                    {/* 상태 변경 버튼들 */}
+                    <div className="pt-3">
+                      <div className="text-xs text-muted-foreground mb-2 font-medium">상태 변경</div>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {STATUS_OPTIONS.map(s => (
+                          <button
+                            key={s.value}
+                            onClick={() => {
+                              if (s.value === "부재케어") { setAbsenceModal(lead); return; }
+                              if (s.value === "재케어") { setRecareModal(lead); return; }
+                              handleStatus(lead, s.value);
+                            }}
+                            disabled={statusLoading === lead.id + s.value}
+                            className={`py-2 rounded-lg text-xs font-medium border transition-all active:scale-95 ${
+                              lead.status === s.value
+                                ? `${s.color} border-current`
+                                : "bg-background border-border/60 text-muted-foreground"
+                            } ${statusLoading === lead.id + s.value ? "opacity-50" : ""}`}
+                          >
+                            {statusLoading === lead.id + s.value ? "⏳" : s.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 메모 */}
+                    {lead.memo && (
+                      <div className="text-xs text-muted-foreground bg-background rounded-lg p-2.5 border border-border/40">
+                        💬 {lead.memo}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* 부재케어 모달 */}
+      {absenceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setAbsenceModal(null)}>
+          <div className="bg-background rounded-2xl w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b font-bold text-base">부재 사유 선택</div>
+            <div className="p-4 space-y-2">
+              {ABSENCE_REASONS.map(r => (
+                <button
+                  key={r}
+                  onClick={async () => {
+                    await handleStatus(absenceModal, "부재케어");
+                    // 문자 앱 열기
+                    if (absenceModal.customer_phone) {
+                      window.location.href = `sms:${absenceModal.customer_phone}?body=${encodeURIComponent(`안녕하세요, ${absenceModal.customer_name ?? "고객"}님. ${r} 관련하여 연락드렸습니다. 편하신 시간에 연락 부탁드립니다.`)}`;
+                    }
+                  }}
+                  className="w-full py-3 rounded-xl bg-orange-50 border border-orange-200 text-orange-700 font-medium text-sm active:scale-95 transition-transform"
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+            <div className="px-4 pb-4">
+              <button onClick={() => setAbsenceModal(null)} className="w-full py-2.5 text-sm text-muted-foreground">취소</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 재케어 모달 */}
+      {recareModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setRecareModal(null)}>
+          <div className="bg-background rounded-2xl w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b font-bold text-base">재케어 사유 선택</div>
+            <div className="p-4 space-y-2">
+              {RECARE_REASONS.map(r => (
+                <button
+                  key={r}
+                  onClick={async () => {
+                    await handleStatus(recareModal, "재케어");
+                    setRecareModal(null);
+                  }}
+                  className="w-full py-3 rounded-xl bg-purple-50 border border-purple-200 text-purple-700 font-medium text-sm active:scale-95 transition-transform"
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+            <div className="px-4 pb-4">
+              <button onClick={() => setRecareModal(null)} className="w-full py-2.5 text-sm text-muted-foreground">취소</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+
 
 /** 탭 전환 직후 lazy chunk를 로드하는 동안 화면이 굳어 보이지 않도록
  *  shadcn 스타일과 어울리는 스켈레톤 행을 표시한다. */
@@ -205,6 +438,13 @@ export default function LeadsPage() {
     return () => clearTimeout(t);
   }, []);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const [mobileFullView, setMobileFullView] = useState(false); // 모바일에서 전체 PC 뷰 전환
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
   const [rows, setRows] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -773,6 +1013,21 @@ export default function LeadsPage() {
       memo: "",
     });
     load();
+  }
+
+  // 모바일 뷰
+  if (isMobile && !mobileFullView) {
+    return <MobileLeadsView
+      rows={rows}
+      loading={loading}
+      sourceTab={sourceTab}
+      setSourceTab={setSourceTab}
+      search={search}
+      setSearch={setSearch}
+      filtered={pagedFiltered}
+      updateStatus={updateStatus}
+      onSwitchToFull={() => setMobileFullView(true)}
+    />;
   }
 
   return (
