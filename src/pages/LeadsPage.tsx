@@ -365,12 +365,46 @@ export default function LeadsPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const now = new Date();
+    const getMonthStrF = (offset: number) => {
+      const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+      return d.toISOString().slice(0, 7);
+    };
+    const getWeekRangeF = (offset: number) => {
+      const d = new Date(now);
+      const day = d.getDay() === 0 ? 6 : d.getDay() - 1;
+      d.setDate(d.getDate() - day + offset * 7);
+      const start = d.toISOString().slice(0, 10);
+      const end = new Date(d.getTime() + 6 * 86400000).toISOString().slice(0, 10);
+      return { start, end };
+    };
+    const inPeriod = (r: typeof rows[0]) => {
+      if (period === "all") return true;
+      const rd = r.registration_date;
+      let iso = "";
+      if (rd && rd.includes("/")) {
+        const parts = rd.split("/");
+        const m = parts[0].padStart(2, "0");
+        const dy = parts[1]?.padStart(2, "0") ?? "01";
+        iso = `2026-${m}-${dy}`;
+      } else if (rd && rd.length >= 10) {
+        iso = rd.slice(0, 10);
+      } else {
+        iso = (r.created_at ?? "").slice(0, 10);
+      }
+      if (period === "this_month") return iso.slice(0, 7) === getMonthStrF(0);
+      if (period === "last_month") return iso.slice(0, 7) === getMonthStrF(-1);
+      if (period === "this_week") { const w = getWeekRangeF(0); return iso >= w.start && iso <= w.end; }
+      if (period === "last_week") { const w = getWeekRangeF(-1); return iso >= w.start && iso <= w.end; }
+      if (period === "custom") return (!customStart || iso >= customStart) && (!customEnd || iso <= customEnd);
+      return true;
+    };
     return rows.filter((r) => {
       const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
       if (sourceTab === "dogmaru" && !isDogmaru) return false;
       if (sourceTab === "meta" && isDogmaru) return false;
+      if (!inPeriod(r)) return false;
       if (q) {
-        // 이름 / 번호 통합 검색 — 메타·도그마루 양쪽 필드 모두 포함
         const hay = `${r.name ?? ""} ${r.phone ?? ""} ${r.customer_name ?? ""} ${r.customer_phone ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
@@ -380,7 +414,7 @@ export default function LeadsPage() {
         if (!matchesFilter(r.desired_product, fProduct)) return false;
         if (!matchesFilter(r.campaign_name, fCampaign)) return false;
         const assigneeName = r.assigned_to ? staff.find((s) => s.user_id === r.assigned_to)?.display_name ?? "" : "";
-    if (!matchesFilter(assigneeName, fAssignee)) return false;
+        if (!matchesFilter(assigneeName, fAssignee)) return false;
       } else if (sourceTab === "dogmaru") {
         if (!matchesFilter(r.branch_name, fBranch)) return false;
         if (!matchesFilter(r.activation_status, fActivation)) return false;
@@ -388,7 +422,7 @@ export default function LeadsPage() {
       }
       return true;
     });
-  }, [rows, search, sourceTab, fStatus, fCarrier, fProduct, fCampaign, fAssignee, fBranch, fActivation, fCancellation, staff]);
+  }, [rows, search, sourceTab, period, customStart, customEnd, fStatus, fCarrier, fProduct, fCampaign, fAssignee, fBranch, fActivation, fCancellation, staff]);
 
   const PAGE_SIZE = 50;
   const [page, setPage] = useState(0);
