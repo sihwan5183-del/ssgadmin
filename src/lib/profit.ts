@@ -56,7 +56,7 @@ const isSettled = (value: unknown, positiveValues: string[]) => {
  */
 export const calcDashboardProfit = (row: ProfitSource) => {
   // 수익
-  const salesCommission = pickAmount(row, "unit_price", "sales_commission", "commission", "net_fee");
+  const salesCommission = pickAmount(row, "unit_price", "sales_commission", "commission"); // net_fee 폴백 제거 - unit_price 없는 건에 net_fee 오합산 버그 수정
   const vasFee = pickAmount(row, "vas_fee");
   const receivablePaid = isSettled(row?.receivable_paid, ["완료", "수급완료", "입금완료", "유", "yes", "true"]);
   const receivableAmount = receivablePaid ? pickAmount(row, "receivable_amount") : 0;
