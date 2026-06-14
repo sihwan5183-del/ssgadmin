@@ -373,6 +373,43 @@ export default function ProfitPage() {
           </div>
         </Card>
 
+        {/* 개인별 수익 기여도 */}
+        <Card className="p-4">
+          <div className="text-sm font-semibold mb-4">개인별 수익 기여도</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {byManager.map((m) => (
+              <div
+                key={m.name}
+                onClick={() => { setSelectedManager(m.name); setMgPage(0); }}
+                className={`rounded-xl p-4 border cursor-pointer transition-all hover:shadow-md ${m.profit >= 0 ? "bg-emerald-50/50 border-emerald-200 hover:border-emerald-400" : "bg-red-50/50 border-red-200 hover:border-red-400"}`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-semibold text-sm">{m.name}</span>
+                  <span className="text-xs text-muted-foreground">{m.count}건</span>
+                </div>
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">순마진</span>
+                    <span className={`font-medium tabular-nums ${m.netFee >= 0 ? "text-indigo-600" : "text-red-500"}`}>
+                      {wonFull(m.netFee)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">인센티브</span>
+                    <span className="text-amber-600 tabular-nums">-{wonFull(m.incentive)}</span>
+                  </div>
+                  <div className="flex justify-between pt-1 border-t border-border/40 font-bold">
+                    <span>회사 실이익</span>
+                    <span className={`tabular-nums ${m.profit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                      {wonFull(m.profit)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+
         {/* 건별 상세 */}
         <Card className="p-4">
           <div className="text-sm font-semibold mb-4">판매 건별 수익 상세</div>
@@ -508,41 +545,6 @@ export default function ProfitPage() {
           </div>
         </Card>
 
-        {/* 개인별 수익 기여도 */}
-        <Card className="p-4">
-          <div className="text-sm font-semibold mb-4">개인별 수익 기여도</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {byManager.map((m) => (
-              <div
-                key={m.name}
-                onClick={() => { setSelectedManager(m.name); setMgPage(0); }}
-                className={`rounded-xl p-4 border cursor-pointer transition-all hover:shadow-md ${m.profit >= 0 ? "bg-emerald-50/50 border-emerald-200 hover:border-emerald-400" : "bg-red-50/50 border-red-200 hover:border-red-400"}`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-sm">{m.name}</span>
-                  <span className="text-xs text-muted-foreground">{m.count}건</span>
-                </div>
-                <div className="space-y-1 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">순마진</span>
-                    <span className={`font-medium tabular-nums ${m.netFee >= 0 ? "text-indigo-600" : "text-red-500"}`}>
-                      {wonFull(m.netFee)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">인센티브</span>
-                    <span className="text-amber-600 tabular-nums">-{wonFull(m.incentive)}</span>
-                  </div>
-                  <div className="flex justify-between pt-1 border-t border-border/40 font-bold">
-                    <span>회사 실이익</span>
-                    <span className={`tabular-nums ${m.profit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-                      {wonFull(m.profit)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
         </Card>
 
         {/* 개인 상세 모달 */}
