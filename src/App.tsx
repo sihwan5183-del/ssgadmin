@@ -58,6 +58,7 @@ import CustomProposalsPage from "./pages/CustomProposalsPage.tsx";
 import LeadsPage from "./pages/LeadsPage.tsx";
 import ProfitPage from "./pages/ProfitPage.tsx";
 import DogmaruPage from "./pages/DogmaruPage.tsx";
+import TrashPage from "./pages/TrashPage.tsx";
 import { LeadsRealtimeNotifier } from "./components/leads/LeadsRealtimeNotifier.tsx";
 
 const queryClient = new QueryClient();
@@ -169,6 +170,7 @@ const App = () => {
                         <Route path="/leads" element={<LeadsPage />} />
                         <Route path="/dogmaru" element={<DogmaruPage />} />
                         <Route path="/profit" element={<AdminOnlyRoute><ProfitPage /></AdminOnlyRoute>} />
+                        <Route path="/trash" element={<AdminOnlyRoute><TrashPage /></AdminOnlyRoute>} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </AppShell>
