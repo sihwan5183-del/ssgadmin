@@ -344,7 +344,6 @@ const STATUS_COLOR: Record<string, string> = {
   "취소": "bg-background text-rose-700 border border-rose-600 font-bold dark:text-rose-300 dark:border-rose-400",
 };
 
-const DOGMARU_CAMPAIGN = "도그마루_홈캠";
 
 const LEADS_SELECT = `
   id,
