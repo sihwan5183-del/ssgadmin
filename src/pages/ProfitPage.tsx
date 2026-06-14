@@ -36,6 +36,42 @@ type Sale = {
   custom_fields: Record<string, any>;
 };
 
+// 이상 건 감지
+type AnomalyFlag = { emoji: string; label: string };
+
+function detectAnomalies(s: Sale & { netFee?: number }): AnomalyFlag[] {
+  const flags: AnomalyFlag[] = [];
+  const net = s.netFee ?? s.net_fee ?? 0;
+  const unit = s.unit_price ?? 0;
+  const dist = s.distributor_amount ?? 0;
+  const calcNet = (s.unit_price ?? 0) + (s.vas_fee ?? 0) + (s.receivable_amount ?? 0)
+    + (s.trade_in_confirmed ?? 0)
+    - dist - (s.extra_subsidy ?? 0)
+    - (s.cash_support_amount ?? 0) - (s.customer_support_amount ?? 0) - (s.corp_card_amount ?? 0);
+
+  // 1. net_fee가 계산값과 500원 이상 차이 (직접 입력 의심)
+  if (Math.abs(net - calcNet) > 500 && unit > 0) {
+    flags.push({ emoji: "⚠️", label: `net_fee 불일치 (DB:${net.toLocaleString()} / 계산:${Math.round(calcNet).toLocaleString()})` });
+  }
+  // 2. net_fee가 비정상적으로 큼 (100만 초과)
+  if (net > 1_000_000) {
+    flags.push({ emoji: "🚨", label: `net_fee 비정상 과다 (${net.toLocaleString()}원)` });
+  }
+  // 3. net_fee가 비정상적으로 작음 (-50만 미만)
+  if (net < -500_000) {
+    flags.push({ emoji: "🔴", label: `net_fee 과다 손실 (${net.toLocaleString()}원)` });
+  }
+  // 4. distributor_amount = 0인데 unit_price > 0
+  if (dist === 0 && unit > 0) {
+    flags.push({ emoji: "❓", label: "유통망 지급액 0원 (누락 의심)" });
+  }
+  // 5. open_date NULL
+  if (!s.open_date) {
+    flags.push({ emoji: "📭", label: "개통일 미입력" });
+  }
+  return flags;
+}
+
 const won = (n: number) =>
   n >= 10000
     ? `${(n / 10000).toFixed(1)}만`
@@ -219,6 +255,21 @@ export default function ProfitPage() {
           <span className="text-xs text-muted-foreground ml-2">{summary.count}건</span>
         </div>
 
+        {/* 이상 건 요약 배너 */}
+        {(() => {
+          const anomalyRows = saleRows.filter(r => detectAnomalies(r).length > 0);
+          if (anomalyRows.length === 0) return null;
+          return (
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-sm">
+              <span className="text-lg">⚠️</span>
+              <div>
+                <span className="font-semibold text-amber-800">이상 건 {anomalyRows.length}건 감지됨</span>
+                <span className="text-amber-600 text-xs ml-2">아래 목록에서 이모지로 표시된 행을 확인하세요</span>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* 핵심 지표 카드 */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
@@ -333,16 +384,29 @@ export default function ProfitPage() {
                 </tr>
               </thead>
               <tbody>
-                {saleRows.slice(0, 50).map((r) => (
+                {saleRows.slice(0, 50).map((r) => {
+                  const anomalies = detectAnomalies(r);
+                  const hasAnomaly = anomalies.length > 0;
+                  return (
                   <>
                     <tr
                       key={r.id}
-                      className="border-b border-border/40 hover:bg-muted/30 cursor-pointer"
+                      className={`border-b border-border/40 hover:bg-muted/30 cursor-pointer ${hasAnomaly ? "bg-amber-50/60" : ""}`}
                       onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
                     >
                       <td className="py-2 px-2 tabular-nums text-xs">{r.open_date?.slice(0, 10) ?? "-"}</td>
                       <td className="py-2 px-2">{r.manager ?? "-"}</td>
-                      <td className="py-2 px-2 text-xs text-muted-foreground">{r.device_model ?? r.product ?? "-"}</td>
+                      <td className="py-2 px-2 text-xs text-muted-foreground">
+                        <span>{r.device_model ?? r.product ?? "-"}</span>
+                        {hasAnomaly && (
+                          <span
+                            className="ml-1.5 cursor-help"
+                            title={anomalies.map(a => `${a.emoji} ${a.label}`).join("\n")}
+                          >
+                            {anomalies.map(a => a.emoji).join("")}
+                          </span>
+                        )}
+                      </td>
                       <td className="text-right py-2 px-2 tabular-nums text-indigo-600">{wonFull(r.netFee)}</td>
                       <td className="text-right py-2 px-2 tabular-nums text-amber-600">-{wonFull(r.incentive)}</td>
                       <td className={`text-right py-2 px-2 tabular-nums font-bold ${r.companyProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
@@ -355,6 +419,14 @@ export default function ProfitPage() {
                     {expandedId === r.id && (
                       <tr key={r.id + "_detail"} className="bg-muted/20">
                         <td colSpan={7} className="px-4 py-3">
+                          {hasAnomaly && (
+                            <div className="mb-3 p-2.5 rounded-lg bg-amber-50 border border-amber-200 space-y-1">
+                              <div className="text-xs font-semibold text-amber-800 mb-1">⚠️ 이상 항목 감지</div>
+                              {anomalies.map((a, i) => (
+                                <div key={i} className="text-xs text-amber-700">{a.emoji} {a.label}</div>
+                              ))}
+                            </div>
+                          )}
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                             <div className="space-y-1">
                               <div className="font-semibold text-foreground mb-1">수익 항목</div>
@@ -388,7 +460,8 @@ export default function ProfitPage() {
                       </tr>
                     )}
                   </>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
             {saleRows.length > 50 && (
