@@ -53,12 +53,17 @@ const pickNum = (row: Record<string, any>, key: string): number => {
 export const sumRevenue = (row: Record<string, any>): number => {
   // 중고폰은 trade_in_enabled=true 일 때만 가산
   const tradeIn = row?.trade_in_enabled === false ? 0 : pickNum(row, "trade_in_confirmed");
+  // 상품권은 반납 완료된 경우에만 수익 인식
+  const voucherReturned = ["유", "완료", "반납완료", "yes", "true"].includes(
+    String(row?.voucher_returned ?? "").trim().toLowerCase()
+  );
+  const voucherAmount = voucherReturned ? pickNum(row, "voucher_amount") : 0;
   return (
     tradeIn +
     pickNum(row, "unit_price") +
     pickNum(row, "vas_fee") +
     pickNum(row, "receivable_amount") +
-    pickNum(row, "voucher_amount")
+    voucherAmount
   );
 };
 
