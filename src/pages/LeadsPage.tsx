@@ -382,7 +382,7 @@ function MobileLeadsView({
             </div>
           );
         })}
-      </div>
+      </div>}
 
       {/* 메모 모달 */}
       {memoLead && (
@@ -690,6 +690,7 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru" | "other">("meta");
+  const [pcCareTab, setPcCareTab] = useState<"all" | "absence" | "recare" | "fail" | "complete">("all");
   const [openLead, setOpenLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState<LeadNote[]>([]);
   const [newNote, setNewNote] = useState("");
@@ -891,6 +892,16 @@ export default function LeadsPage() {
       if (sourceTab === "dogmaru" && !isDogmaru) return false;
       if (sourceTab === "meta" && isDogmaru) return false;
       if (!inPeriod(r)) return false;
+      // 도그마루 완료건 처리
+      if (isDogmaru) {
+        const complete = isDogmaruCompletePC(r);
+        if (pcCareTab === "complete" && !complete) return false;
+        if (pcCareTab !== "complete" && complete) return false;
+      }
+      // 케어 탭 필터
+      if (pcCareTab === "absence" && r.status !== "부재케어") return false;
+      if (pcCareTab === "recare" && r.status !== "재케어") return false;
+      if (pcCareTab === "fail" && r.status !== "실패") return false;
       if (q) {
         const hay = `${r.name ?? ""} ${r.phone ?? ""} ${r.customer_name ?? ""} ${r.customer_phone ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
@@ -909,7 +920,7 @@ export default function LeadsPage() {
       }
       return true;
     });
-  }, [rows, search, sourceTab, period, customStart, customEnd, fStatus, fCarrier, fProduct, fCampaign, fAssignee, fBranch, fActivation, fCancellation, staff]);
+  }, [rows, search, sourceTab, period, customStart, customEnd, fStatus, fCarrier, fProduct, fCampaign, fAssignee, fBranch, fActivation, fCancellation, staff, pcCareTab]);
 
   const PAGE_SIZE = 50;
   const [page, setPage] = useState(0);
@@ -984,6 +995,14 @@ export default function LeadsPage() {
       newCount: rows.filter((r) => r.status === "신규 접수").length,
     };
   }, [rows]);
+
+  // 도그마루 완료건 판단 (PC용)
+  function isDogmaruCompletePC(r: any): boolean {
+    return !!(r.activation_status || r.activation_number || r.pkg_number);
+  }
+
+  // 탭 전환시 pcCareTab 리셋
+  useEffect(() => { setPcCareTab("all"); }, [sourceTab]);
 
   // ── 경로별 성과 매트릭스 (메타 / 도그마루 / 기타) ──
   const matrix = useMemo(() => {
@@ -1529,6 +1548,44 @@ export default function LeadsPage() {
           </TabsTrigger>
         </TabsList>
       </Tabs>
+
+      {/* PC 상태 탭 */}
+      {sourceTab !== "other" && (() => {
+        const tabRows = rows.filter(r => {
+          const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
+          return sourceTab === "dogmaru" ? isDogmaru : !isDogmaru;
+        });
+        const absenceC = tabRows.filter(r => r.status === "부재케어" && !isDogmaruCompletePC(r)).length;
+        const recareC = tabRows.filter(r => r.status === "재케어" && !isDogmaruCompletePC(r)).length;
+        const failC = tabRows.filter(r => r.status === "실패" && !isDogmaruCompletePC(r)).length;
+        const completeC = tabRows.filter(r => isDogmaruCompletePC(r)).length;
+        const tabs = [
+          { key: "all", label: "전체", color: "" },
+          { key: "absence", label: `부재케어 ${absenceC}`, color: "orange" },
+          { key: "recare", label: `재케어 ${recareC}`, color: "purple" },
+          { key: "fail", label: `실패 ${failC}`, color: "red" },
+          ...(sourceTab === "dogmaru" ? [{ key: "complete", label: `완료 ${completeC}`, color: "blue" }] : []),
+        ] as const;
+        return (
+          <div className="flex gap-1.5 mb-3 flex-wrap">
+            {(tabs as any[]).map(t => (
+              <button key={t.key} onClick={() => setPcCareTab(t.key)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                  pcCareTab === t.key
+                    ? t.color === "orange" ? "bg-orange-100 text-orange-700 border-orange-300"
+                      : t.color === "purple" ? "bg-purple-100 text-purple-700 border-purple-300"
+                      : t.color === "red" ? "bg-red-100 text-red-700 border-red-300"
+                      : t.color === "blue" ? "bg-blue-100 text-blue-700 border-blue-300"
+                      : "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-muted-foreground border-border/60 hover:bg-muted/40"
+                }`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
+
       {sourceTab === "other" ? (
         <div key="other-intake" className="animate-fade-in">
           <Suspense fallback={<IntakeSkeleton />}>
