@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useRole } from "@/hooks/useRole";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { PaginationBar } from "@/components/ui/pagination-bar";
@@ -186,6 +187,7 @@ type SaleRow = {
 
 const SalesLedgerPage = () => {
   const { user } = useAuth();
+  const { isSuperAdmin } = useSuperAdmin();
   const { isAdmin } = useRole();
   const { startDate, endDate, label: periodLabel, setMode, setYear, setMonth } = usePeriod();
   const navigate = useNavigate();
@@ -447,6 +449,7 @@ const SalesLedgerPage = () => {
     let query = supabase
       .from("sales")
       .select("*", { count: "exact" })
+      .is("deleted_at", null)
       ;
     // 판매원장 리스트는 기본 전체 기간 조회.
     // 대시보드 deep-link 등으로 진입한 경우(viewAll=false)에만 기간 필터 적용.
@@ -798,12 +801,16 @@ const SalesLedgerPage = () => {
   };
 
   const onDelete = async (id: string) => {
-    if (!confirm("정말 삭제하시겠어요?")) return;
-    const { error } = await supabase.from("sales").delete().eq("id", id);
+    if (!confirm("정말 삭제하시겠어요? (휴지통으로 이동됩니다)")) return;
+    const deleterName = user?.user_metadata?.display_name ?? user?.email ?? "unknown";
+    const now = new Date().toISOString();
+    const { error } = await supabase.from("sales").update({ deleted_at: now, deleted_by: deleterName }).eq("id", id);
     if (error) {
       return toast.error("삭제 실패", { description: error.message });
     }
-    toast.success("삭제되었습니다");
+    toast.success("휴지통으로 이동되었습니다");
+    // 관리자 알림
+    try { await supabase.functions.invoke("leads-webhook", { body: { _admin_notify: true, type: "trash", table: "sales", count: 1, deleted_by: deleterName, deleted_at: now } }); } catch (_) {}
     load();
     loadSummary();
   };
@@ -811,11 +818,14 @@ const SalesLedgerPage = () => {
   const deleteSelected = async () => {
     if (selected.size === 0) return;
     const ids = Array.from(selected);
-    const { error } = await supabase.from("sales").delete().in("id", ids);
+    const deleterName = user?.user_metadata?.display_name ?? user?.email ?? "unknown";
+    const now = new Date().toISOString();
+    const { error } = await supabase.from("sales").update({ deleted_at: now, deleted_by: deleterName }).in("id", ids);
     if (error) {
       return toast.error("선택 삭제 실패", { description: error.message });
     }
-    toast.success(`${ids.length}건이 삭제되었습니다`);
+    toast.success(`${ids.length}건이 휴지통으로 이동되었습니다`);
+    try { await supabase.functions.invoke("leads-webhook", { body: { _admin_notify: true, type: "trash", table: "sales", count: ids.length, deleted_by: deleterName, deleted_at: now } }); } catch (_) {}
     setSelected(new Set());
     load();
     loadSummary();
