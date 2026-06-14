@@ -93,6 +93,8 @@ export default function ProfitPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 50;
+  const [selectedManager, setSelectedManager] = useState<string | null>(null);
+  const [mgPage, setMgPage] = useState(0);
 
   useEffect(() => {
     const load = async () => {
@@ -513,7 +515,8 @@ export default function ProfitPage() {
             {byManager.map((m) => (
               <div
                 key={m.name}
-                className={`rounded-xl p-4 border ${m.profit >= 0 ? "bg-emerald-50/50 border-emerald-200" : "bg-red-50/50 border-red-200"}`}
+                onClick={() => { setSelectedManager(m.name); setMgPage(0); }}
+                className={`rounded-xl p-4 border cursor-pointer transition-all hover:shadow-md ${m.profit >= 0 ? "bg-emerald-50/50 border-emerald-200 hover:border-emerald-400" : "bg-red-50/50 border-red-200 hover:border-red-400"}`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-semibold text-sm">{m.name}</span>
@@ -541,6 +544,120 @@ export default function ProfitPage() {
             ))}
           </div>
         </Card>
+
+        {/* 개인 상세 모달 */}
+        {selectedManager && (() => {
+          const mgRows = saleRows.filter(r => r.manager === selectedManager);
+          const mgSummary = {
+            count: mgRows.length,
+            netFee: mgRows.reduce((s, r) => s + r.netFee, 0),
+            incentive: mgRows.reduce((s, r) => s + r.incentive, 0),
+            profit: mgRows.reduce((s, r) => s + r.companyProfit, 0),
+          };
+          const monthMap: Record<string, { month: string; netFee: number; profit: number; count: number }> = {};
+          for (const r of mgRows) {
+            const m = r.open_date?.slice(0, 7) ?? "";
+            if (!m) continue;
+            if (!monthMap[m]) monthMap[m] = { month: m, netFee: 0, profit: 0, count: 0 };
+            monthMap[m].netFee += r.netFee;
+            monthMap[m].profit += r.companyProfit;
+            monthMap[m].count++;
+          }
+          // 전체 기간 월별도 포함
+          for (const s of sales.filter(s => s.manager === selectedManager)) {
+            const m = (s.open_month ?? s.open_date ?? "").slice(0, 7);
+            if (!m || monthMap[m]) continue;
+            monthMap[m] = { month: m, netFee: 0, profit: 0, count: 0 };
+          }
+          const monthData = Object.values(monthMap).sort((a, b) => a.month.localeCompare(b.month));
+          const MG_PAGE = 20;
+
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => { setSelectedManager(null); setMgPage(0); }}>
+              <div className="bg-background rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                <div className="sticky top-0 bg-background border-b px-6 py-4 flex items-center justify-between rounded-t-2xl">
+                  <div>
+                    <div className="font-bold text-lg">{selectedManager}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{period === "this_month" ? "이번달" : period === "last_month" ? "저번달" : period === "3months" ? "최근 3개월" : "전체"} 기준</div>
+                  </div>
+                  <button onClick={() => { setSelectedManager(null); setMgPage(0); }} className="text-muted-foreground hover:text-foreground text-xl font-bold px-2">✕</button>
+                </div>
+
+                <div className="p-6 space-y-6">
+                  {/* 요약 */}
+                  <div className="grid grid-cols-4 gap-3">
+                    {[
+                      { label: "판매건수", value: `${mgSummary.count}건`, color: "text-foreground" },
+                      { label: "순마진", value: wonFull(mgSummary.netFee), color: mgSummary.netFee >= 0 ? "text-indigo-600" : "text-red-500" },
+                      { label: "인센티브", value: `-${wonFull(mgSummary.incentive)}`, color: "text-amber-600" },
+                      { label: "회사 실이익", value: wonFull(mgSummary.profit), color: mgSummary.profit >= 0 ? "text-emerald-600" : "text-red-500" },
+                    ].map(c => (
+                      <div key={c.label} className="rounded-xl border bg-muted/20 p-3 text-center">
+                        <div className="text-xs text-muted-foreground mb-1">{c.label}</div>
+                        <div className={`font-bold text-sm tabular-nums ${c.color}`}>{c.value}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 월별 추이 차트 */}
+                  {monthData.length > 0 && (
+                    <div>
+                      <div className="text-xs font-semibold text-muted-foreground mb-2">월별 추이</div>
+                      <ResponsiveContainer width="100%" height={180}>
+                        <LineChart data={monthData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+                          <XAxis dataKey="month" tick={{ fontSize: 10 }} tickFormatter={v => v.slice(5)} />
+                          <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `${(v/10000).toFixed(0)}만`} />
+                          <Tooltip formatter={(v: number) => wonFull(v)} labelFormatter={v => `${v}월`} />
+                          <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />
+                          <Line type="monotone" dataKey="netFee" name="순마진" stroke="#6366f1" strokeWidth={2} dot={false} />
+                          <Line type="monotone" dataKey="profit" name="회사실이익" stroke="#10b981" strokeWidth={2} dot={false} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+
+                  {/* 건별 목록 */}
+                  <div>
+                    <div className="text-xs font-semibold text-muted-foreground mb-2">건별 상세 ({mgRows.length}건)</div>
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-muted-foreground border-b">
+                          <th className="text-left py-1.5 px-2">개통일</th>
+                          <th className="text-left py-1.5 px-2">단말/상품</th>
+                          <th className="text-right py-1.5 px-2">순마진</th>
+                          <th className="text-right py-1.5 px-2">실이익</th>
+                          <th className="text-center py-1.5 px-2">이동</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {mgRows.slice(mgPage * MG_PAGE, (mgPage + 1) * MG_PAGE).map(r => (
+                          <tr key={r.id} className="border-b border-border/30 hover:bg-muted/20">
+                            <td className="py-1.5 px-2 tabular-nums">{r.open_date?.slice(0, 10) ?? "-"}</td>
+                            <td className="py-1.5 px-2">{r.device_model ?? r.product ?? "-"}</td>
+                            <td className={`text-right py-1.5 px-2 tabular-nums ${r.netFee >= 0 ? "text-indigo-600" : "text-red-500"}`}>{wonFull(r.netFee)}</td>
+                            <td className={`text-right py-1.5 px-2 tabular-nums font-bold ${r.companyProfit >= 0 ? "text-emerald-600" : "text-red-500"}`}>{wonFull(r.companyProfit)}</td>
+                            <td className="text-center py-1.5 px-2">
+                              <button onClick={() => navigate(`/input?edit=${r.id}`)} className="text-primary hover:underline">→</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {mgRows.length > MG_PAGE && (
+                      <div className="flex items-center justify-between mt-3 pt-2 border-t">
+                        <span className="text-xs text-muted-foreground">{mgPage * MG_PAGE + 1}–{Math.min((mgPage + 1) * MG_PAGE, mgRows.length)} / {mgRows.length}건</span>
+                        <div className="flex gap-2">
+                          <button onClick={() => setMgPage(p => Math.max(0, p - 1))} disabled={mgPage === 0} className="px-2 py-1 text-xs rounded border disabled:opacity-30">← 이전</button>
+                          <button onClick={() => setMgPage(p => Math.min(Math.ceil(mgRows.length / MG_PAGE) - 1, p + 1))} disabled={(mgPage + 1) * MG_PAGE >= mgRows.length} className="px-2 py-1 text-xs rounded border disabled:opacity-30">다음 →</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
       </div>
     </div>
