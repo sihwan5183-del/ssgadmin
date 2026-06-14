@@ -545,7 +545,7 @@ export default function LeadsPage() {
       if (r.status === "실패" || r.status === "취소") other.fail += 1;
     }
     return { meta, dogmaru, other };
-  }, [rows, inquiryRows, period]);
+  }, [rows, inquiryRows, period, customStart, customEnd]);
 
   // ── 직원별 성과 매트릭스 (담당자/매니저 단위 집계) ──
   const staffMatrix = useMemo(() => {
