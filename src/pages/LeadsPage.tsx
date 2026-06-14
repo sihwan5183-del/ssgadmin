@@ -368,7 +368,10 @@ export default function LeadsPage() {
     const now = new Date();
     const getMonthStrF = (offset: number) => {
       const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
-      return d.toISOString().slice(0, 7);
+      // getMonth()는 0부터 시작(1월=0), toISOString은 UTC라 시차 보정
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      return `${y}-${m}`;
     };
     const getWeekRangeF = (offset: number) => {
       const d = new Date(now);
@@ -483,7 +486,9 @@ export default function LeadsPage() {
     const today = now.toISOString().slice(0, 10);
     const getMonthStr = (offset: number) => {
       const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
-      return d.toISOString().slice(0, 7);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      return `${y}-${m}`;
     };
     const getWeekRange = (offset: number) => {
       const d = new Date(now);
@@ -535,7 +540,9 @@ export default function LeadsPage() {
     const today = now.toISOString().slice(0, 10);
     const getMonthStr2 = (offset: number) => {
       const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
-      return d.toISOString().slice(0, 7);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      return `${y}-${m}`;
     };
     const getWeekRange2 = (offset: number) => {
       const d = new Date(now);
