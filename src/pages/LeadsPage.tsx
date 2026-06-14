@@ -700,7 +700,7 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru" | "other">("meta");
-  const [pcCareTab, setPcCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete">("all");
+  const [pcCareTab, setPcCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "care" | "cancel" | "complete_meta">("all");
   const [openLead, setOpenLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState<LeadNote[]>([]);
   const [newNote, setNewNote] = useState("");
@@ -908,11 +908,21 @@ export default function LeadsPage() {
         if (pcCareTab === "complete" && !complete) return false;
         if (pcCareTab !== "complete" && complete) return false;
       }
-      // 케어 탭 필터
-      if (pcCareTab === "new" && r.status !== "신규 접수" && r.status) return false;
-      if (pcCareTab === "absence" && r.status !== "부재케어") return false;
-      if (pcCareTab === "recare" && r.status !== "재케어") return false;
-      if (pcCareTab === "fail" && r.status !== "실패") return false;
+      // 케어 탭 필터 (메타/도그마루 상태값 분리)
+      if (isDogmaru) {
+        if (pcCareTab === "new" && r.status !== "신규 접수" && r.status) return false;
+        if (pcCareTab === "absence" && r.status !== "부재케어") return false;
+        if (pcCareTab === "recare" && r.status !== "재케어") return false;
+        if (pcCareTab === "fail" && r.status !== "실패") return false;
+      } else {
+        // 메타 상태값 그대로 사용
+        if (pcCareTab === "new" && r.status !== "신규 접수") return false;
+        if (pcCareTab === "absence" && r.status !== "부재 중") return false;
+        if (pcCareTab === "recare" && r.status !== "재케어") return false;
+        if (pcCareTab === "care" && r.status !== "케어중") return false;
+        if (pcCareTab === "cancel" && r.status !== "취소") return false;
+        if (pcCareTab === "complete_meta" && r.status !== "개통 완료") return false;
+      }
       if (q) {
         const hay = `${r.name ?? ""} ${r.phone ?? ""} ${r.customer_name ?? ""} ${r.customer_phone ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
@@ -1570,20 +1580,34 @@ export default function LeadsPage() {
         const recareC = tabRows.filter(r => r.status === "재케어" && !isDogmaruCompletePC(r)).length;
         const failC = tabRows.filter(r => r.status === "실패" && !isDogmaruCompletePC(r)).length;
         const completeC = tabRows.filter(r => isDogmaruCompletePC(r)).length;
-        const newC = tabRows.filter(r => (!r.status || r.status === "신규 접수") && !isDogmaruCompletePC(r)).length;
+        const newC = tabRows.filter(r => r.status === "신규 접수" && !isDogmaruCompletePC(r)).length;
         const pcTabs: { key: string; label: string; color: string }[] = [
           { key: "all", label: "전체", color: "" },
-          { key: "new", label: `신규 ${newC}`, color: "blue-light" },
-          { key: "absence", label: `부재케어 ${absenceC}`, color: "orange" },
-          { key: "recare", label: `재케어 ${recareC}`, color: "purple" },
-          { key: "fail", label: `실패 ${failC}`, color: "red" },
+          { key: "new", label: `신규 접수 ${newC}`, color: "blue-light" },
         ];
         if (sourceTab === "dogmaru") {
+          pcTabs.push({ key: "absence", label: `부재케어 ${absenceC}`, color: "orange" });
+          pcTabs.push({ key: "recare", label: `재케어 ${recareC}`, color: "purple" });
+          pcTabs.push({ key: "fail", label: `실패 ${failC}`, color: "red" });
           pcTabs.push({ key: "complete", label: `완료 ${completeC}`, color: "blue" });
+        } else {
+          // 메타 상태값 그대로
+          const careC = tabRows.filter(r => r.status === "케어중").length;
+          const absMetaC = tabRows.filter(r => r.status === "부재 중").length;
+          const recareMetaC = tabRows.filter(r => r.status === "재케어").length;
+          const cancelC = tabRows.filter(r => r.status === "취소").length;
+          const completeMetaC = tabRows.filter(r => r.status === "개통 완료").length;
+          pcTabs.push({ key: "care", label: `케어중 ${careC}`, color: "yellow" });
+          pcTabs.push({ key: "absence", label: `부재 중 ${absMetaC}`, color: "orange" });
+          pcTabs.push({ key: "recare", label: `재케어 ${recareMetaC}`, color: "purple" });
+          pcTabs.push({ key: "cancel", label: `취소 ${cancelC}`, color: "gray" });
+          pcTabs.push({ key: "complete_meta", label: `개통 완료 ${completeMetaC}`, color: "blue" });
         }
         function getTabClass(t: { key: string; color: string }) {
           if (pcCareTab !== t.key) return "bg-background text-muted-foreground border-border/60 hover:bg-muted/40";
           if (t.color === "blue-light") return "bg-blue-100 text-blue-700 border-blue-300";
+          if (t.color === "yellow") return "bg-yellow-100 text-yellow-700 border-yellow-300";
+          if (t.color === "gray") return "bg-gray-100 text-gray-600 border-gray-300";
           if (t.color === "orange") return "bg-orange-100 text-orange-700 border-orange-300";
           if (t.color === "purple") return "bg-purple-100 text-purple-700 border-purple-300";
           if (t.color === "red") return "bg-red-100 text-red-700 border-red-300";
