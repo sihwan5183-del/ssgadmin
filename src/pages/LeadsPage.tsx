@@ -26,6 +26,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -78,7 +84,7 @@ function MobileLeadsView({
   const [absenceModal, setAbsenceModal] = useState<Lead | null>(null);
   const [recareModal, setRecareModal] = useState<Lead | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
-  const [careTab, setCareTab] = useState<"all" | "absence" | "recare" | "fail" | "complete">("all");
+  const [careTab, setCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete">("all");
   const [completePage, setCompletePage] = useState(0);
   const COMPLETE_PAGE_SIZE = 50;
   const [completeSearch, setCompleteSearch] = useState("");
@@ -120,6 +126,7 @@ function MobileLeadsView({
         if (careTab !== "complete" && complete) return false; // 완료건은 완료탭에서만
       }
       // 케어 보관함 필터 (현재 탭 내에서만)
+      if (careTab === "new" && r.status !== "신규 접수" && r.status) return false;
       if (careTab === "absence" && r.status !== "부재케어") return false;
       if (careTab === "recare" && r.status !== "재케어") return false;
       if (careTab === "fail" && r.status !== "실패") return false;
@@ -144,6 +151,7 @@ function MobileLeadsView({
     if (sourceTab === "meta") return !isDogmaru;
     return !isDogmaru;
   }), [rows, sourceTab]);
+  const newCount = tabRows.filter(r => (!r.status || r.status === "신규 접수") && !isDogmaruComplete(r)).length;
   const absenceCount = tabRows.filter(r => r.status === "부재케어" && !isDogmaruComplete(r)).length;
   const recareCount = tabRows.filter(r => r.status === "재케어" && !isDogmaruComplete(r)).length;
   const failCount = tabRows.filter(r => r.status === "실패" && !isDogmaruComplete(r)).length;
@@ -212,21 +220,23 @@ function MobileLeadsView({
       <div className="flex gap-1.5 px-3 py-2 border-b overflow-x-auto bg-muted/10">
         {([
           { key: "all", label: "전체", color: "" },
+          { key: "new", label: `신규 ${newCount}`, color: "sky" },
           { key: "absence", label: `부재 ${absenceCount}`, color: "orange" },
           { key: "recare", label: `재케어 ${recareCount}`, color: "purple" },
           { key: "fail", label: `실패 ${failCount}`, color: "red" },
           ...(sourceTab === "dogmaru" ? [{ key: "complete", label: `완료 ${completeCount}`, color: "blue" }] : []),
         ] as const).map((t: any) => (
           <button key={t.key} onClick={() => { setCareTab(t.key); setCompletePage(0); }}
-            className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all active:scale-95 ${
+            className={"flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all active:scale-95 " + (
               careTab === t.key
-                ? t.color === "orange" ? "bg-orange-100 text-orange-700 shadow-sm"
+                ? t.color === "sky" ? "bg-sky-100 text-sky-700 shadow-sm"
+                  : t.color === "orange" ? "bg-orange-100 text-orange-700 shadow-sm"
                   : t.color === "purple" ? "bg-purple-100 text-purple-700 shadow-sm"
                   : t.color === "red" ? "bg-red-100 text-red-700 shadow-sm"
                   : t.color === "blue" ? "bg-blue-100 text-blue-700 shadow-sm"
                   : "bg-primary text-primary-foreground shadow-sm"
                 : "bg-background text-muted-foreground border border-border/40"
-            }`}>
+            )}>
             {t.label}
           </button>
         ))}
@@ -690,7 +700,7 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru" | "other">("meta");
-  const [pcCareTab, setPcCareTab] = useState<"all" | "absence" | "recare" | "fail" | "complete">("all");
+  const [pcCareTab, setPcCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete">("all");
   const [openLead, setOpenLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState<LeadNote[]>([]);
   const [newNote, setNewNote] = useState("");
@@ -899,6 +909,7 @@ export default function LeadsPage() {
         if (pcCareTab !== "complete" && complete) return false;
       }
       // 케어 탭 필터
+      if (pcCareTab === "new" && r.status !== "신규 접수" && r.status) return false;
       if (pcCareTab === "absence" && r.status !== "부재케어") return false;
       if (pcCareTab === "recare" && r.status !== "재케어") return false;
       if (pcCareTab === "fail" && r.status !== "실패") return false;
@@ -1559,8 +1570,10 @@ export default function LeadsPage() {
         const recareC = tabRows.filter(r => r.status === "재케어" && !isDogmaruCompletePC(r)).length;
         const failC = tabRows.filter(r => r.status === "실패" && !isDogmaruCompletePC(r)).length;
         const completeC = tabRows.filter(r => isDogmaruCompletePC(r)).length;
+        const newC = tabRows.filter(r => (!r.status || r.status === "신규 접수") && !isDogmaruCompletePC(r)).length;
         const pcTabs: { key: string; label: string; color: string }[] = [
           { key: "all", label: "전체", color: "" },
+          { key: "new", label: `신규 ${newC}`, color: "blue-light" },
           { key: "absence", label: `부재케어 ${absenceC}`, color: "orange" },
           { key: "recare", label: `재케어 ${recareC}`, color: "purple" },
           { key: "fail", label: `실패 ${failC}`, color: "red" },
@@ -1570,6 +1583,7 @@ export default function LeadsPage() {
         }
         function getTabClass(t: { key: string; color: string }) {
           if (pcCareTab !== t.key) return "bg-background text-muted-foreground border-border/60 hover:bg-muted/40";
+          if (t.color === "blue-light") return "bg-blue-100 text-blue-700 border-blue-300";
           if (t.color === "orange") return "bg-orange-100 text-orange-700 border-orange-300";
           if (t.color === "purple") return "bg-purple-100 text-purple-700 border-purple-300";
           if (t.color === "red") return "bg-red-100 text-red-700 border-red-300";
@@ -1936,26 +1950,26 @@ export default function LeadsPage() {
       )}
 
       {/* Detail Sheet */}
-      <Sheet open={!!openLead} onOpenChange={(o) => !o && setOpenLead(null)}>
-        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+      <Dialog open={!!openLead} onOpenChange={(o) => !o && setOpenLead(null)}>
+        <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           {openLead && (
             <>
               {/* Title block */}
-              <SheetHeader className="border-b border-border pb-4">
+              <DialogHeader className="border-b border-border pb-4">
                 <div className="text-xs font-semibold text-foreground/60">
                   인입 일시 ·{" "}
                   {new Date(openLead.created_at).toLocaleString("ko-KR")}
                 </div>
-                <SheetTitle className="text-2xl font-bold text-foreground flex items-center gap-2">
+                <DialogTitle className="text-2xl font-bold text-foreground flex items-center gap-2">
                   {openLead.name ?? "이름 없음"}
                   <Badge className={STATUS_COLOR[openLead.status] ?? ""}>
                     {openLead.status}
                   </Badge>
-                </SheetTitle>
+                </DialogTitle>
                 <SheetDescription className="sr-only">
                   잠재고객 상세 정보
                 </SheetDescription>
-              </SheetHeader>
+              </DialogHeader>
 
               {/* Info grid */}
               <div className="mt-5 rounded-lg border border-border overflow-hidden">
@@ -2053,15 +2067,15 @@ export default function LeadsPage() {
               </div>
             </>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       {/* Create Lead Sheet */}
-      <Sheet open={showCreate} onOpenChange={setShowCreate}>
-        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>리드 수동 추가</SheetTitle>
-          </SheetHeader>
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent className="w-full max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>리드 수동 추가</DialogTitle>
+          </DialogHeader>
           <div className="mt-4 space-y-3">
             {DRAFT_FIELDS.map(({ key, label }) => (
               <div key={key} className="space-y-1">
@@ -2087,8 +2101,8 @@ export default function LeadsPage() {
               <Button onClick={createLead}>등록</Button>
             </div>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       {sourceTab !== "other" && (
         <>
