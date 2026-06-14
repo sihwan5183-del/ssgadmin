@@ -77,30 +77,54 @@ function MobileLeadsView({
   const [absenceModal, setAbsenceModal] = useState<Lead | null>(null);
   const [recareModal, setRecareModal] = useState<Lead | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
-  const [templateModal, setTemplateModal] = useState<{ lead: Lead; reason: string } | null>(null);
+  const [careTab, setCareTab] = useState<"all" | "absence" | "recare" | "fail">("all");
+  const [memoLead, setMemoLead] = useState<Lead | null>(null);
+  const [memoDraft, setMemoDraft] = useState("");
+  const [memoSaving, setMemoSaving] = useState(false);
 
   useEffect(() => {
-    supabase.from("sms_templates").select("*").eq("active", true).eq("type", "absence")
+    supabase.from("sms_templates").select("*").eq("active", true)
       .then(({ data }) => setTemplates(data ?? []));
   }, []);
 
-  // 탭별 필터
+  // 탭 전환시 케어탭 리셋
+  useEffect(() => { setCareTab("all"); }, [sourceTab]);
+
+  // 탭별 필터 (메타/도그마루 완전 분리)
   const filtered = useMemo(() => {
     return rows.filter(r => {
       const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
       if (sourceTab === "dogmaru" && !isDogmaru) return false;
       if (sourceTab === "meta" && isDogmaru) return false;
+      if (sourceTab === "other" && isDogmaru) return false;
+      // 케어 보관함 필터 (현재 탭 내에서만)
+      if (careTab === "absence" && r.status !== "부재케어") return false;
+      if (careTab === "recare" && r.status !== "재케어") return false;
+      if (careTab === "fail" && r.status !== "실패") return false;
+      // 검색
       if (search) {
         const s = search.toLowerCase();
-        return (r.customer_name ?? "").toLowerCase().includes(s) ||
-               (r.customer_phone ?? "").includes(s);
+        return (r.customer_name ?? r.name ?? "").toLowerCase().includes(s) ||
+               (r.customer_phone ?? r.phone ?? "").includes(s);
       }
       return true;
     });
-  }, [rows, sourceTab, search]);
+  }, [rows, sourceTab, search, careTab]);
 
+  // 탭별 카운트
   const metaCount = rows.filter(r => r.campaign_name !== DOGMARU_CAMPAIGN).length;
   const dogmaruCount = rows.filter(r => r.campaign_name === DOGMARU_CAMPAIGN).length;
+
+  // 현재 탭 내 케어 카운트
+  const tabRows = useMemo(() => rows.filter(r => {
+    const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
+    if (sourceTab === "dogmaru") return isDogmaru;
+    if (sourceTab === "meta") return !isDogmaru;
+    return !isDogmaru;
+  }), [rows, sourceTab]);
+  const absenceCount = tabRows.filter(r => r.status === "부재케어").length;
+  const recareCount = tabRows.filter(r => r.status === "재케어").length;
+  const failCount = tabRows.filter(r => r.status === "실패").length;
 
   async function handleStatus(lead: Lead, status: string) {
     setStatusLoading(lead.id + status);
@@ -110,7 +134,16 @@ function MobileLeadsView({
     setRecareModal(null);
   }
 
-  // 채널 감지
+  async function saveMemo() {
+    if (!memoLead) return;
+    setMemoSaving(true);
+    const { error } = await supabase.from("leads").update({ memo: memoDraft }).eq("id", memoLead.id);
+    setMemoSaving(false);
+    if (error) return;
+    setMemoLead(null);
+    setMemoDraft("");
+  }
+
   function getChannel(lead: Lead): string {
     const camp = (lead.campaign_name ?? "").toLowerCase();
     if (camp.includes("도그마루")) return "도그마루";
@@ -118,154 +151,196 @@ function MobileLeadsView({
     return "유닥";
   }
 
+  const displayName = (lead: Lead) => lead.customer_name ?? (lead as any).name ?? "-";
+  const displayPhone = (lead: Lead) => lead.customer_phone ?? (lead as any).phone ?? null;
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* 상단 헤더 */}
+      {/* 헤더 */}
       <div className="sticky top-0 z-20 bg-background border-b px-4 py-3 flex items-center justify-between">
         <div className="font-bold text-base">잠재고객</div>
-        <button
-          onClick={onSwitchToFull}
-          className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border border-border/60 bg-muted/30 active:bg-muted/60 transition-colors"
-        >
-          🖥️ PC 전체 뷰
+        <button onClick={onSwitchToFull} className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-full border border-border/60 bg-muted/30 active:bg-muted/60 transition-colors">
+          🖥️ PC 뷰
         </button>
       </div>
 
-      {/* 탭 */}
+      {/* 채널 탭 */}
       <div className="sticky top-[53px] z-10 bg-background border-b flex">
         {([
           { key: "meta", label: "메타광고", count: metaCount },
           { key: "dogmaru", label: "도그마루", count: dogmaruCount },
           { key: "other", label: "기타인입", count: 0 },
-        ] as const).map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setSourceTab(t.key)}
-            className={`flex-1 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
-              sourceTab === t.key
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground"
-            }`}
-          >
-            {t.label} <span className="opacity-70">{t.count}</span>
+        ] as const).map(t => (
+          <button key={t.key} onClick={() => setSourceTab(t.key)}
+            className={`flex-1 py-2.5 text-xs font-semibold border-b-2 transition-colors ${sourceTab === t.key ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}>
+            {t.label} <span className="opacity-60">{t.count}</span>
           </button>
         ))}
       </div>
 
       {/* 검색 */}
-      <div className="px-3 py-2 border-b bg-muted/20">
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
+      <div className="px-3 py-2 border-b">
+        <input value={search} onChange={e => setSearch(e.target.value)}
           placeholder="이름 또는 연락처 검색..."
-          className="w-full text-sm px-3 py-2 rounded-lg border border-border/60 bg-background"
-        />
+          className="w-full text-sm px-3 py-2 rounded-lg border border-border/60 bg-background" />
+      </div>
+
+      {/* 케어 보관함 - 현재 채널 내 필터 */}
+      <div className="flex gap-1.5 px-3 py-2 border-b overflow-x-auto bg-muted/10">
+        {([
+          { key: "all", label: "전체", color: "" },
+          { key: "absence", label: `부재 ${absenceCount}`, color: "orange" },
+          { key: "recare", label: `재케어 ${recareCount}`, color: "purple" },
+          { key: "fail", label: `실패 ${failCount}`, color: "red" },
+        ] as const).map(t => (
+          <button key={t.key} onClick={() => setCareTab(t.key)}
+            className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all active:scale-95 ${
+              careTab === t.key
+                ? t.color === "orange" ? "bg-orange-100 text-orange-700 shadow-sm"
+                  : t.color === "purple" ? "bg-purple-100 text-purple-700 shadow-sm"
+                  : t.color === "red" ? "bg-red-100 text-red-700 shadow-sm"
+                  : "bg-primary text-primary-foreground shadow-sm"
+                : "bg-background text-muted-foreground border border-border/40"
+            }`}>
+            {t.label}
+          </button>
+        ))}
       </div>
 
       {/* 카드 목록 */}
       <div className="flex-1 overflow-y-auto divide-y divide-border/30">
         {loading ? (
-          <div className="space-y-2 p-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-20 rounded-xl bg-muted/40 animate-pulse" />
-            ))}
-          </div>
+          Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-20 m-3 rounded-xl bg-muted/40 animate-pulse" style={{ animationDelay: `${i*60}ms` }} />
+          ))
         ) : filtered.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground text-sm">리드가 없습니다</div>
-        ) : (
-          filtered.map((lead) => {
-            const isExpanded = expandedId === lead.id;
-            const statusInfo = MOBILE_STATUS_OPTIONS.find(s => s.value === lead.status) ?? MOBILE_STATUS_OPTIONS[0];
-            return (
-              <div key={lead.id} className="bg-background">
-                <div
-                  className="px-4 py-3 flex items-center gap-3 active:bg-muted/30 cursor-pointer"
-                  onClick={() => setExpandedId(isExpanded ? null : lead.id)}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="font-semibold text-sm truncate">{lead.customer_name ?? "-"}</span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${statusInfo.color}`}>
-                        {statusInfo.label}
-                      </span>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {lead.customer_phone ?? "번호 없음"} · {lead.registration_date ?? lead.created_at?.slice(0, 10) ?? "-"}
-                    </div>
-                    {lead.branch_name && (
-                      <div className="text-xs text-muted-foreground mt-0.5">{lead.branch_name}</div>
-                    )}
+        ) : filtered.map(lead => {
+          const isExpanded = expandedId === lead.id;
+          const statusInfo = MOBILE_STATUS_OPTIONS.find(s => s.value === lead.status) ?? MOBILE_STATUS_OPTIONS[0];
+          const phone = displayPhone(lead);
+          return (
+            <div key={lead.id}>
+              {/* 카드 헤더 */}
+              <div className="px-4 py-3 flex items-center gap-3 active:bg-muted/20 cursor-pointer"
+                onClick={() => setExpandedId(isExpanded ? null : lead.id)}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="font-semibold text-sm truncate">{displayName(lead)}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${statusInfo.color}`}>
+                      {statusInfo.label}
+                    </span>
                   </div>
-                  {lead.customer_phone && (
-                    <a
-                      href={`tel:${lead.customer_phone}`}
-                      onClick={e => e.stopPropagation()}
-                      className="flex-shrink-0 size-11 rounded-full bg-emerald-500 flex items-center justify-center shadow-md active:scale-90 transition-transform"
-                    >
-                      <span className="text-white text-xl">📞</span>
-                    </a>
+                  <div className="text-xs text-muted-foreground">
+                    {phone ?? "번호 없음"} · {lead.registration_date ?? lead.created_at?.slice(0,10) ?? "-"}
+                  </div>
+                  {lead.branch_name && <div className="text-xs text-muted-foreground mt-0.5">{lead.branch_name}</div>}
+                  {lead.memo && (
+                    <div className="text-xs text-muted-foreground mt-0.5 truncate">💬 {lead.memo}</div>
                   )}
-                  <span className={`text-muted-foreground text-xs transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}>▼</span>
                 </div>
+                {phone && (
+                  <a href={`tel:${phone}`} onClick={e => e.stopPropagation()}
+                    className="flex-shrink-0 size-11 rounded-full bg-emerald-500 flex items-center justify-center shadow-md active:scale-90 transition-transform">
+                    <span className="text-white text-xl">📞</span>
+                  </a>
+                )}
+                <span className={`text-muted-foreground text-xs transition-transform duration-200 flex-shrink-0 ${isExpanded ? "rotate-180" : ""}`}>▼</span>
+              </div>
 
-                {isExpanded && (
-                  <div className="px-4 pb-4 space-y-3 bg-muted/10 border-t border-border/20">
-                    <div className="pt-3">
-                      <div className="text-xs text-muted-foreground mb-2 font-medium">상태 변경</div>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {MOBILE_STATUS_OPTIONS.map(s => (
-                          <button
-                            key={s.value}
-                            onClick={() => {
-                              if (s.value === "부재케어") { setAbsenceModal(lead); return; }
-                              if (s.value === "재케어") { setRecareModal(lead); return; }
-                              handleStatus(lead, s.value);
-                            }}
-                            disabled={!!statusLoading}
-                            className={`py-2.5 rounded-xl text-xs font-medium border transition-all active:scale-95 ${
-                              lead.status === s.value
-                                ? `${s.color} border-current shadow-sm`
-                                : "bg-background border-border/60 text-muted-foreground active:bg-muted/40"
-                            } ${statusLoading ? "opacity-50" : ""}`}
-                          >
-                            {statusLoading === lead.id + s.value ? "⏳" : s.label}
-                          </button>
-                        ))}
-                      </div>
+              {/* 펼쳐지는 액션 */}
+              {isExpanded && (
+                <div className="px-4 pb-4 space-y-3 bg-muted/10 border-t border-border/20">
+                  {/* 상태 변경 */}
+                  <div className="pt-3">
+                    <div className="text-xs text-muted-foreground mb-2 font-medium">상태 변경</div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {MOBILE_STATUS_OPTIONS.map(s => (
+                        <button key={s.value}
+                          onClick={() => {
+                            if (s.value === "부재케어") { setAbsenceModal(lead); return; }
+                            if (s.value === "재케어") { setRecareModal(lead); return; }
+                            handleStatus(lead, s.value);
+                          }}
+                          disabled={!!statusLoading}
+                          className={`py-2.5 rounded-xl text-xs font-medium border transition-all active:scale-95 ${
+                            lead.status === s.value
+                              ? `${s.color} border-current shadow-sm`
+                              : "bg-background border-border/60 text-muted-foreground"
+                          } ${statusLoading ? "opacity-50" : ""}`}>
+                          {statusLoading === lead.id + s.value ? "⏳" : s.label}
+                        </button>
+                      ))}
                     </div>
+                  </div>
+                  {/* 메모 */}
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1.5 font-medium">메모</div>
                     {lead.memo && (
-                      <div className="text-xs text-muted-foreground bg-background rounded-lg p-2.5 border border-border/40">
+                      <div className="text-xs bg-background rounded-lg p-2.5 border border-border/40 mb-2">
                         💬 {lead.memo}
                       </div>
                     )}
+                    <button
+                      onClick={() => { setMemoLead(lead); setMemoDraft(lead.memo ?? ""); }}
+                      className="w-full py-2 rounded-lg border border-border/60 text-xs text-muted-foreground bg-background active:bg-muted/30 text-left px-3">
+                      ✏️ {lead.memo ? "메모 수정" : "메모 추가"}
+                    </button>
                   </div>
-                )}
-              </div>
-            );
-          })
-        )}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
+
+      {/* 메모 모달 */}
+      {memoLead && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setMemoLead(null)}>
+          <div className="bg-background rounded-2xl w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b font-bold text-base">메모 — {displayName(memoLead)}</div>
+            <div className="p-4">
+              <textarea
+                value={memoDraft}
+                onChange={e => setMemoDraft(e.target.value)}
+                rows={4}
+                placeholder="메모를 입력하세요..."
+                className="w-full text-sm px-3 py-2.5 rounded-xl border border-border/60 resize-none"
+                autoFocus
+              />
+              <div className="text-right text-xs text-muted-foreground mt-1">{memoDraft.length}자</div>
+            </div>
+            <div className="px-4 pb-4 flex gap-2">
+              <button onClick={() => setMemoLead(null)} className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground">취소</button>
+              <button onClick={saveMemo} disabled={memoSaving}
+                className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50">
+                {memoSaving ? "저장중..." : "저장"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 부재케어 모달 */}
       {absenceModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setAbsenceModal(null)}>
           <div className="bg-background rounded-2xl w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-4 border-b font-bold text-base">부재 사유 선택</div>
+            <div className="px-5 py-4 border-b">
+              <div className="font-bold text-base">부재 사유</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{displayName(absenceModal)}</div>
+            </div>
             <div className="p-4 space-y-2">
               {ABSENCE_REASONS.map(r => (
-                <button
-                  key={r}
+                <button key={r}
                   onClick={() => {
                     handleStatus(absenceModal, "부재케어");
                     const ch = getChannel(absenceModal);
-                    const tmpl = templates.find(t => t.channel === ch && t.title === r);
-                    const msg = tmpl?.content ?? `안녕하세요 고객님, ${ch}를 통해 연락드렸습니다. 편하신 시간에 연락 부탁드립니다 :)`;
-                    if (absenceModal.customer_phone) {
-                      window.location.href = `sms:${absenceModal.customer_phone}?body=${encodeURIComponent(msg)}`;
-                    }
+                    const tmpl = templates.find(t => t.channel === ch && t.title === r && t.type === "absence");
+                    const msg = tmpl?.content ?? `안녕하세요 고객님, 연락드렸으나 ${r === "통화중" ? "통화 중이신 것 같아" : "자리를 비우신 것 같아"} 문자 남깁니다. 편하신 시간에 연락 부탁드립니다 :)`;
+                    const phone = displayPhone(absenceModal);
+                    if (phone) window.location.href = `sms:${phone}?body=${encodeURIComponent(msg)}`;
                   }}
-                  className="w-full py-3 rounded-xl bg-orange-50 border border-orange-200 text-orange-700 font-medium text-sm active:scale-95 transition-transform"
-                >
+                  className="w-full py-3 rounded-xl bg-orange-50 border border-orange-200 text-orange-700 font-medium text-sm active:scale-95 transition-transform">
                   {r}
                 </button>
               ))}
@@ -281,14 +356,15 @@ function MobileLeadsView({
       {recareModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setRecareModal(null)}>
           <div className="bg-background rounded-2xl w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-4 border-b font-bold text-base">재케어 사유 선택</div>
+            <div className="px-5 py-4 border-b">
+              <div className="font-bold text-base">재케어 사유</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{displayName(recareModal)}</div>
+            </div>
             <div className="p-4 space-y-2">
               {RECARE_REASONS.map(r => (
-                <button
-                  key={r}
-                  onClick={() => { handleStatus(recareModal, "재케어"); }}
-                  className="w-full py-3 rounded-xl bg-purple-50 border border-purple-200 text-purple-700 font-medium text-sm active:scale-95 transition-transform"
-                >
+                <button key={r}
+                  onClick={() => handleStatus(recareModal, "재케어")}
+                  className="w-full py-3 rounded-xl bg-purple-50 border border-purple-200 text-purple-700 font-medium text-sm active:scale-95 transition-transform">
                   {r}
                 </button>
               ))}
