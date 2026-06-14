@@ -968,31 +968,76 @@ export default function LeadsPage() {
         </div>
       ) : (
       <Card key={sourceTab} className="overflow-hidden border-border animate-fade-in">
-        {/* 탭별 일별 추이 차트 */}
-        {sourceTab === "dogmaru" && (
-          <div className="p-4 border-b border-border">
-            <div className="text-xs font-semibold text-slate-700 mb-2">도그마루 일별 접수 추이 (최근 30일)</div>
-            <ResponsiveContainer width="100%" height={120}>
-              <LineChart data={dogmaruTrendData} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
-                <XAxis dataKey="label" tick={{ fontSize: 9 }} interval={4} />
-                <YAxis tick={{ fontSize: 9 }} allowDecimals={false} width={28} />
-                <Tooltip formatter={(v: number) => [v + "건", "접수"]} labelFormatter={(l) => l + "일"} contentStyle={{ fontSize: 11 }} />
-                <Line type="monotone" dataKey="count" stroke="#ec4899" strokeWidth={2} dot={{ r: 2.5, fill: "#ec4899", strokeWidth: 0 }} activeDot={{ r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-        {sourceTab === "meta" && (
-          <div className="p-4 border-b border-border">
-            <div className="text-xs font-semibold text-slate-700 mb-2">메타광고 일별 접수 추이 (최근 30일)</div>
-            <ResponsiveContainer width="100%" height={120}>
-              <LineChart data={metaTrendData} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
-                <XAxis dataKey="label" tick={{ fontSize: 9 }} interval={4} />
-                <YAxis tick={{ fontSize: 9 }} allowDecimals={false} width={28} />
-                <Tooltip formatter={(v: number) => [v + "건", "접수"]} labelFormatter={(l) => l + "일"} contentStyle={{ fontSize: 11 }} />
-                <Line type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={2} dot={{ r: 2.5, fill: "#6366f1", strokeWidth: 0 }} activeDot={{ r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
+        {/* 탭별 일별 추이 차트 + 날짜 필터 */}
+        {(sourceTab === "dogmaru" || sourceTab === "meta") && (
+          <div className="border-b border-border">
+            {/* 아코디언 헤더 */}
+            <div
+              className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-muted/30"
+              onClick={() => setDashOpen(v => !v)}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-slate-700">
+                  {sourceTab === "dogmaru" ? "도그마루" : "메타광고"} 일별 접수 추이 (최근 30일)
+                </span>
+                <span className={"text-xs text-muted-foreground transition-transform duration-200 inline-block " + (dashOpen ? "rotate-180" : "")}>▼</span>
+              </div>
+              {/* 기간 필터 */}
+              <div className="flex items-center gap-1.5 flex-wrap" onClick={e => e.stopPropagation()}>
+                {([
+                  { k: "all", l: "전체" },
+                  { k: "this_month", l: "이번달" },
+                  { k: "last_month", l: "저번달" },
+                  { k: "this_week", l: "이번주" },
+                  { k: "last_week", l: "지난주" },
+                  { k: "custom", l: "기간설정" },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.k}
+                    type="button"
+                    onClick={() => startTransition(() => setPeriod(opt.k))}
+                    className={
+                      "px-2.5 py-1 text-xs font-semibold rounded border transition-colors " +
+                      (period === opt.k
+                        ? "bg-primary text-white border-primary"
+                        : "border-border text-muted-foreground hover:text-foreground")
+                    }
+                  >
+                    {opt.l}
+                  </button>
+                ))}
+                {period === "custom" && (
+                  <div className="flex items-center gap-1">
+                    <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)} className="text-xs border border-border rounded px-2 py-1 bg-background" />
+                    <span className="text-xs text-muted-foreground">~</span>
+                    <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} className="text-xs border border-border rounded px-2 py-1 bg-background" />
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* 차트 - 아코디언으로 열림 */}
+            {dashOpen && (
+              <div className="px-4 pb-4">
+                <ResponsiveContainer width="100%" height={130}>
+                  <LineChart
+                    data={sourceTab === "dogmaru" ? dogmaruTrendData : metaTrendData}
+                    margin={{ top: 4, right: 8, bottom: 0, left: -20 }}
+                  >
+                    <XAxis dataKey="label" tick={{ fontSize: 9 }} interval={4} />
+                    <YAxis tick={{ fontSize: 9 }} allowDecimals={false} width={28} />
+                    <Tooltip formatter={(v: number) => [v + "건", "접수"]} labelFormatter={(l) => l + "일"} contentStyle={{ fontSize: 11 }} />
+                    <Line
+                      type="monotone"
+                      dataKey="count"
+                      stroke={sourceTab === "dogmaru" ? "#ec4899" : "#6366f1"}
+                      strokeWidth={2}
+                      dot={{ r: 2.5, fill: sourceTab === "dogmaru" ? "#ec4899" : "#6366f1", strokeWidth: 0 }}
+                      activeDot={{ r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
         )}
         {sourceTab === "dogmaru" ? (
