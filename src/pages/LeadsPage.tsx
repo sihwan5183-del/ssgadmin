@@ -1568,19 +1568,19 @@ export default function LeadsPage() {
         if (sourceTab === "dogmaru") {
           pcTabs.push({ key: "complete", label: `완료 ${completeC}`, color: "blue" });
         }
+        function getTabClass(t: { key: string; color: string }) {
+          if (pcCareTab !== t.key) return "bg-background text-muted-foreground border-border/60 hover:bg-muted/40";
+          if (t.color === "orange") return "bg-orange-100 text-orange-700 border-orange-300";
+          if (t.color === "purple") return "bg-purple-100 text-purple-700 border-purple-300";
+          if (t.color === "red") return "bg-red-100 text-red-700 border-red-300";
+          if (t.color === "blue") return "bg-blue-100 text-blue-700 border-blue-300";
+          return "bg-primary text-primary-foreground border-primary";
+        }
         return (
           <div className="flex gap-1.5 mb-3 flex-wrap">
             {pcTabs.map(t => (
               <button key={t.key} onClick={() => setPcCareTab(t.key as any)}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                  pcCareTab === t.key
-                    ? t.color === "orange" ? "bg-orange-100 text-orange-700 border-orange-300"
-                      : t.color === "purple" ? "bg-purple-100 text-purple-700 border-purple-300"
-                      : t.color === "red" ? "bg-red-100 text-red-700 border-red-300"
-                      : t.color === "blue" ? "bg-blue-100 text-blue-700 border-blue-300"
-                      : "bg-primary text-primary-foreground border-primary"
-                    : "bg-background text-muted-foreground border-border/60 hover:bg-muted/40"
-                }`}>
+                className={"px-3 py-1.5 rounded-full text-xs font-semibold border transition-all " + getTabClass(t)}>
                 {t.label}
               </button>
             ))}
@@ -2114,7 +2114,6 @@ export default function LeadsPage() {
         </>
       )}
       </div>
-    </div>
   );
 }
 
