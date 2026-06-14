@@ -1,5 +1,6 @@
 import { lazy, memo, startTransition, Suspense, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDashboardStaff } from "@/hooks/useDashboardStaff";
@@ -214,7 +215,10 @@ export default function LeadsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [intakeFormOpen, setIntakeFormOpen] = useState(false);
   const [inquiryRows, setInquiryRows] = useState<{ created_at: string; status: string | null; manager: string | null }[]>([]);
-  const [period, setPeriod] = useState<"all" | "this_month" | "last_month" | "two_months_ago" | "this_week" | "last_week" | "two_weeks_ago" | "day">("all");
+  const [period, setPeriod] = useState<"all" | "this_month" | "last_month" | "this_week" | "last_week" | "custom">("all");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
+  const [dashOpen, setDashOpen] = useState(false);
   const [personalView, setPersonalView] = useState(false);
   const [highlightId, setHighlightId] = useState<string | null>(null);
   // 엑셀형 컬럼 필터 (메타/도그마루 공통 + 각자 고유)
@@ -457,12 +461,12 @@ export default function LeadsPage() {
     };
     const inRange = (iso: string) => {
       if (period === "all") return true;
-      if (period === "day") return iso.slice(0, 10) === today;
       if (period === "this_month") return iso.slice(0, 7) === getMonthStr(0);
       if (period === "last_month") return iso.slice(0, 7) === getMonthStr(-1);
-      if (period === "two_months_ago") return iso.slice(0, 7) === getMonthStr(-2);
-      const w = getWeekRange(period === "this_week" ? 0 : period === "last_week" ? -1 : -2);
-      return iso.slice(0, 10) >= w.start && iso.slice(0, 10) <= w.end;
+      if (period === "this_week") { const w = getWeekRange(0); return iso.slice(0,10) >= w.start && iso.slice(0,10) <= w.end; }
+      if (period === "last_week") { const w = getWeekRange(-1); return iso.slice(0,10) >= w.start && iso.slice(0,10) <= w.end; }
+      if (period === "custom") return (!customStart || iso.slice(0,10) >= customStart) && (!customEnd || iso.slice(0,10) <= customEnd);
+      return true;
     };
     const empty = () => ({ total: 0, today: 0, done: 0, recare: 0, absent: 0, fail: 0 });
     const meta = empty();
@@ -509,12 +513,12 @@ export default function LeadsPage() {
     };
     const inRange = (iso: string) => {
       if (period === "all") return true;
-      if (period === "day") return iso.slice(0, 10) === today;
       if (period === "this_month") return iso.slice(0, 7) === getMonthStr2(0);
       if (period === "last_month") return iso.slice(0, 7) === getMonthStr2(-1);
-      if (period === "two_months_ago") return iso.slice(0, 7) === getMonthStr2(-2);
-      const w = getWeekRange2(period === "this_week" ? 0 : period === "last_week" ? -1 : -2);
-      return iso.slice(0, 10) >= w.start && iso.slice(0, 10) <= w.end;
+      if (period === "this_week") { const w = getWeekRange2(0); return iso.slice(0,10) >= w.start && iso.slice(0,10) <= w.end; }
+      if (period === "last_week") { const w = getWeekRange2(-1); return iso.slice(0,10) >= w.start && iso.slice(0,10) <= w.end; }
+      if (period === "custom") return (!customStart || iso.slice(0,10) >= customStart) && (!customEnd || iso.slice(0,10) <= customEnd);
+      return true;
     };
     const empty = () => ({ total: 0, today: 0, done: 0, recare: 0, absent: 0, fail: 0 });
     const map = new Map<string, ReturnType<typeof empty>>();
@@ -548,7 +552,29 @@ export default function LeadsPage() {
     return Array.from(map.entries())
       .map(([name, v]) => ({ name, ...v }))
       .sort((a, b) => b.total - a.total);
-  }, [rows, inquiryRows, period, staff]);
+  }, [rows, inquiryRows, period, customStart, customEnd, staff]);
+
+  // 일별 접수 추이 (최근 30일)
+  const trendData = useMemo(() => {
+    const now = new Date();
+    const days: { date: string; label: string; meta: number; dogmaru: number }[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const iso = d.toISOString().slice(0, 10);
+      const label = `${d.getMonth()+1}/${d.getDate()}`;
+      days.push({ date: iso, label, meta: 0, dogmaru: 0 });
+    }
+    for (const r of rows) {
+      const iso = (r.created_at ?? "").slice(0, 10);
+      const day = days.find(d => d.date === iso);
+      if (!day) continue;
+      const camp = r.campaign_name ?? "";
+      if (camp === "도그마루_홈캠") day.dogmaru++;
+      else day.meta++;
+    }
+    return days;
+  }, [rows]);
 
   // ── 엑셀형 헤더 필터에 들어갈 고유값 (탭별로 분리해 메타↔도그마루 섞이지 않게) ──
   const metaRows = useMemo(() => rows.filter((r) => r.campaign_name !== DOGMARU_CAMPAIGN), [rows]);
@@ -666,36 +692,18 @@ export default function LeadsPage() {
 
       {/* 종합 리드 성과 보드 — 경로별/기간별 매트릭스 */}
       <Card className="p-4">
-        <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="inline-flex rounded-md border border-border bg-muted/40 p-0.5">
-              {([
-                { k: "all", l: "누적" },
-                { k: "month", l: "월별" },
-                { k: "day", l: "일별" },
-              ] as const).map((opt) => (
-                <button
-                  key={opt.k}
-                  type="button"
-                  onClick={() => startTransition(() => setPeriod(opt.k))}
-                  className={
-                    "px-3 py-1.5 text-xs font-semibold rounded transition-colors " +
-                    (period === opt.k
-                      ? "bg-background text-slate-900 shadow-sm"
-                      : "text-muted-foreground hover:text-foreground")
-                  }
-                >
-                  {opt.l}
-                </button>
-              ))}
+        <div
+          className="flex items-center justify-between gap-3 flex-wrap cursor-pointer"
+          onClick={() => setDashOpen(v => !v)}
+        >
+          <div className="flex items-center gap-2">
+            <div className="text-sm font-semibold text-slate-900">종합 리드 성과 보드</div>
+            <div className="text-xs text-muted-foreground">
+              {personalView ? "직원별 · 기간별 처리 현황" : "경로별 · 기간별 접수/개통 매트릭스"}
             </div>
-            <div className="hidden sm:block">
-              <div className="text-sm font-semibold text-slate-900">종합 리드 성과 보드</div>
-              <div className="text-xs text-muted-foreground">
-                {personalView ? "직원별 · 기간별 처리 현황" : "경로별 · 기간별 접수/개통 매트릭스"}
-              </div>
-            </div>
+            <span className={"text-xs text-muted-foreground transition-transform " + (dashOpen ? "rotate-180" : "")}>▼</span>
           </div>
+          <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
           <label className="inline-flex items-center gap-2 cursor-pointer select-none">
             <span className="text-xs font-semibold text-slate-700">개인별 보기</span>
             <Switch
@@ -704,6 +712,85 @@ export default function LeadsPage() {
             />
           </label>
         </div>
+
+        {/* 아코디언 - 기간 필터 + 차트 */}
+        {dashOpen && (
+          <div className="mt-4 space-y-4">
+            {/* 기간 필터 */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="inline-flex rounded-md border border-border bg-muted/40 p-0.5">
+                {([
+                  { k: "all", l: "전체" },
+                  { k: "this_month", l: "이번달" },
+                  { k: "last_month", l: "저번달" },
+                  { k: "this_week", l: "이번주" },
+                  { k: "last_week", l: "지난주" },
+                  { k: "custom", l: "기간설정" },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.k}
+                    type="button"
+                    onClick={() => startTransition(() => setPeriod(opt.k))}
+                    className={
+                      "px-3 py-1.5 text-xs font-semibold rounded transition-colors " +
+                      (period === opt.k
+                        ? "bg-background text-slate-900 shadow-sm"
+                        : "text-muted-foreground hover:text-foreground")
+                    }
+                  >
+                    {opt.l}
+                  </button>
+                ))}
+              </div>
+              {period === "custom" && (
+                <div className="flex items-center gap-1">
+                  <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)} className="text-xs border border-border rounded px-2 py-1 bg-background" />
+                  <span className="text-xs text-muted-foreground">~</span>
+                  <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} className="text-xs border border-border rounded px-2 py-1 bg-background" />
+                </div>
+              )}
+            </div>
+            {/* 일별 접수 추이 차트 - 라인 */}
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="text-xs font-semibold text-slate-700">일별 접수 추이 (최근 30일)</div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="inline-block w-3 h-0.5 bg-indigo-500 rounded" /> 메타
+                  <span className="inline-block w-3 h-0.5 bg-pink-500 rounded ml-1" /> 도그마루
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={160}>
+                <LineChart data={trendData} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
+                  <XAxis dataKey="label" tick={{ fontSize: 9 }} interval={4} />
+                  <YAxis tick={{ fontSize: 9 }} allowDecimals={false} width={28} />
+                  <Tooltip
+                    formatter={(value: number, name: string) => [value + "건", name === "meta" ? "메타" : "도그마루"]}
+                    labelFormatter={(label) => label + "일"}
+                    contentStyle={{ fontSize: 11 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="meta"
+                    stroke="#6366f1"
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: "#6366f1", strokeWidth: 0 }}
+                    activeDot={{ r: 5 }}
+                    name="meta"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="dogmaru"
+                    stroke="#ec4899"
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: "#ec4899", strokeWidth: 0 }}
+                    activeDot={{ r: 5 }}
+                    name="dogmaru"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <div className="space-y-2">
