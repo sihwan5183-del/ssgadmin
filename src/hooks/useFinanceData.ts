@@ -355,7 +355,9 @@ export function useFinanceData(): FinanceData {
 
     // --- 항목별 세부 금액 (field_mapping 기반) ---
     const totalVasFee = settledSalesRows.reduce((s, r) => s + Number(r.vas_fee ?? 0), 0);
-    const totalNetFee = settledSalesRows.reduce((s, r) => s + Number(r.net_fee ?? 0), 0);
+    // ※ DB net_fee 직접합산 제거 → 공식 재계산값 사용 (직접입력 오류 방지)
+    const totalNetFee = sumCommission + sumVas + sumReceivable + sumVoucher + sumTradeIn
+      - (sumDistributor + sumCashOpen + sumExtraSubsidy + sumCustomerSupport + sumCorpCard + sumMoyoFee);
     const totalExtraSubsidy = settledSalesRows.reduce((s, r) => s + Number(r.extra_subsidy ?? 0), 0);
 
     const fieldAmountMap: Record<string, number> = {
