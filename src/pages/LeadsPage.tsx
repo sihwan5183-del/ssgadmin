@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useDashboardStaff } from "@/hooks/useDashboardStaff";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -193,6 +194,7 @@ type LeadNote = {
 
 export default function LeadsPage() {
   const { user } = useAuth();
+  const { isSuperAdmin } = useSuperAdmin();
   const { staff } = useDashboardStaff();
   // [기타인입] 탭 청크를 마운트 시 백그라운드로 미리 로드해
   // 사용자가 처음 클릭했을 때 흰 화면 없이 곧바로 리스트가 보이도록 한다.
@@ -245,6 +247,7 @@ export default function LeadsPage() {
     const { data, error } = await supabase
       .from("leads")
       .select(LEADS_SELECT)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .limit(1000);
     if (error) toast.error(error.message);
@@ -448,16 +451,37 @@ export default function LeadsPage() {
   async function bulkDelete() {
     setBulkBusy(true);
     const ids = bulk.selectedIds;
-    const { error } = await supabase.from("leads").delete().in("id", ids);
+    const deleterName = user?.user_metadata?.display_name ?? user?.email ?? "unknown";
+    const now = new Date().toISOString();
+
+    // soft-delete: 실제 삭제 대신 deleted_at, deleted_by 마킹
+    const { error } = await supabase
+      .from("leads")
+      .update({ deleted_at: now, deleted_by: deleterName })
+      .in("id", ids);
     setBulkBusy(false);
     if (error) {
-      toast.error("일괄 삭제 실패: " + error.message);
+      toast.error("삭제 실패: " + error.message);
       return;
     }
     setRows((prev) => prev.filter((r) => !ids.includes(r.id)));
-    toast.success(`${ids.length}건 삭제되었습니다`);
+    toast.success(`${ids.length}건이 휴지통으로 이동되었습니다`);
     setBulkDeleteOpen(false);
     bulk.clear();
+
+    // 관리자(김시환)에게 푸시 알림
+    try {
+      await supabase.functions.invoke("leads-webhook", {
+        body: {
+          _admin_notify: true,
+          type: "trash",
+          table: "leads",
+          count: ids.length,
+          deleted_by: deleterName,
+          deleted_at: now,
+        },
+      });
+    } catch (_) {}
   }
 
   const sourceCounts = useMemo(() => {
