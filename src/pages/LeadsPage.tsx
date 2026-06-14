@@ -58,6 +58,7 @@ const MOBILE_STATUS_OPTIONS = [
 
 const ABSENCE_REASONS = ["통화중", "부재"];
 const RECARE_REASONS = ["가격 재상담", "기기 미정", "타사 비교중", "시기 조율", "가족 상의", "기타"];
+const FAIL_REASONS = ["가격", "재고", "개통시기", "기타"];
 const DOGMARU_CAMPAIGN = "도그마루_홈캠";
 
 function MobileLeadsView({
@@ -81,6 +82,9 @@ function MobileLeadsView({
   const [memoLead, setMemoLead] = useState<Lead | null>(null);
   const [memoDraft, setMemoDraft] = useState("");
   const [memoSaving, setMemoSaving] = useState(false);
+  const [failModal, setFailModal] = useState<Lead | null>(null);
+  const [failReason, setFailReason] = useState("");
+  const [failMemo, setFailMemo] = useState("");
 
   useEffect(() => {
     supabase.from("sms_templates").select("*").eq("active", true)
@@ -260,6 +264,7 @@ function MobileLeadsView({
                           onClick={() => {
                             if (s.value === "부재케어") { setAbsenceModal(lead); return; }
                             if (s.value === "재케어") { setRecareModal(lead); return; }
+                            if (s.value === "실패") { setFailModal(lead); setFailReason(""); setFailMemo(""); return; }
                             handleStatus(lead, s.value);
                           }}
                           disabled={!!statusLoading}
@@ -371,6 +376,56 @@ function MobileLeadsView({
             </div>
             <div className="px-4 pb-4">
               <button onClick={() => setRecareModal(null)} className="w-full py-2.5 text-sm text-muted-foreground">취소</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 실패 모달 */}
+      {failModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setFailModal(null)}>
+          <div className="bg-background rounded-2xl w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b">
+              <div className="font-bold text-base">실패 사유</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{displayName(failModal)}</div>
+            </div>
+            <div className="p-4 space-y-2">
+              {FAIL_REASONS.map(r => (
+                <button key={r}
+                  onClick={() => setFailReason(r)}
+                  className={`w-full py-3 rounded-xl border font-medium text-sm active:scale-95 transition-all ${
+                    failReason === r
+                      ? "bg-red-100 border-red-400 text-red-700 shadow-sm"
+                      : "bg-red-50 border-red-200 text-red-600"
+                  }`}>
+                  {r}
+                </button>
+              ))}
+              <textarea
+                value={failMemo}
+                onChange={e => setFailMemo(e.target.value)}
+                placeholder="추가 메모 (선택)"
+                rows={3}
+                className="w-full text-sm px-3 py-2 rounded-xl border border-border/60 resize-none mt-1"
+              />
+            </div>
+            <div className="px-4 pb-4 flex gap-2">
+              <button onClick={() => setFailModal(null)} className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground">취소</button>
+              <button
+                disabled={!failReason}
+                onClick={async () => {
+                  await handleStatus(failModal, "실패");
+                  if (failMemo.trim()) {
+                    const memo = `[실패:${failReason}] ${failMemo.trim()}`;
+                    await supabase.from("leads").update({ memo }).eq("id", failModal.id);
+                  } else {
+                    await supabase.from("leads").update({ memo: `[실패:${failReason}]` }).eq("id", failModal.id);
+                  }
+                  setFailModal(null);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-medium disabled:opacity-30">
+                실패 확정
+              </button>
             </div>
           </div>
         </div>
