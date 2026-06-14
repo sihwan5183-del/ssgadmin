@@ -91,6 +91,8 @@ export default function ProfitPage() {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<Period>("this_month");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 50;
 
   useEffect(() => {
     const load = async () => {
@@ -112,6 +114,7 @@ export default function ProfitPage() {
   };
 
   const filtered = useMemo(() => {
+    setPage(0);
     return sales.filter((s) => {
       const m = (s.open_month ?? s.open_date ?? "").slice(0, 7);
       if (period === "this_month") return m === getMonthStr(0);
@@ -385,7 +388,7 @@ export default function ProfitPage() {
                 </tr>
               </thead>
               <tbody>
-                {saleRows.slice(0, 50).map((r) => {
+                {saleRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).map((r) => {
                   const anomalies = detectAnomalies(r);
                   const hasAnomaly = anomalies.length > 0;
                   return (
@@ -473,11 +476,69 @@ export default function ProfitPage() {
                 })}
               </tbody>
             </table>
-            {saleRows.length > 50 && (
-              <div className="text-center text-xs text-muted-foreground mt-3">
-                상위 50건만 표시 (전체 {saleRows.length}건)
+            {/* 페이지네이션 */}
+            {saleRows.length > PAGE_SIZE && (
+              <div className="flex items-center justify-between mt-4 pt-3 border-t">
+                <span className="text-xs text-muted-foreground">
+                  {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, saleRows.length)}건 / 전체 {saleRows.length}건
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPage(p => Math.max(0, p - 1))}
+                    disabled={page === 0}
+                    className="px-3 py-1 text-xs rounded border border-border/60 disabled:opacity-30 hover:bg-muted/40"
+                  >
+                    ← 이전
+                  </button>
+                  <span className="px-3 py-1 text-xs font-semibold">
+                    {page + 1} / {Math.ceil(saleRows.length / PAGE_SIZE)}
+                  </span>
+                  <button
+                    onClick={() => setPage(p => Math.min(Math.ceil(saleRows.length / PAGE_SIZE) - 1, p + 1))}
+                    disabled={(page + 1) * PAGE_SIZE >= saleRows.length}
+                    className="px-3 py-1 text-xs rounded border border-border/60 disabled:opacity-30 hover:bg-muted/40"
+                  >
+                    다음 →
+                  </button>
+                </div>
               </div>
             )}
+          </div>
+        </Card>
+
+        {/* 개인별 수익 기여도 */}
+        <Card className="p-4">
+          <div className="text-sm font-semibold mb-4">개인별 수익 기여도</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {byManager.map((m) => (
+              <div
+                key={m.name}
+                className={`rounded-xl p-4 border ${m.profit >= 0 ? "bg-emerald-50/50 border-emerald-200" : "bg-red-50/50 border-red-200"}`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-semibold text-sm">{m.name}</span>
+                  <span className="text-xs text-muted-foreground">{m.count}건</span>
+                </div>
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">순마진</span>
+                    <span className={`font-medium tabular-nums ${m.netFee >= 0 ? "text-indigo-600" : "text-red-500"}`}>
+                      {wonFull(m.netFee)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">인센티브</span>
+                    <span className="text-amber-600 tabular-nums">-{wonFull(m.incentive)}</span>
+                  </div>
+                  <div className="flex justify-between pt-1 border-t border-border/40 font-bold">
+                    <span>회사 실이익</span>
+                    <span className={`tabular-nums ${m.profit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                      {wonFull(m.profit)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
 
