@@ -118,6 +118,14 @@ function MobileLeadsView({
   useEffect(() => { setCareTab("all"); }, [sourceTab]);
 
   // 도그마루 완료건 판단
+  function getEffectiveDogmaruStatusMobile(r: any): string {
+    const status = (r.status ?? "").trim();
+    const autoStatus = getDogmaruAutoStatusMobile(r);
+    if (status && status !== "신규 접수") return status;
+    if (autoStatus) return autoStatus;
+    return "신규 접수";
+  }
+
   function getDogmaruAutoStatusMobile(r: any): string | null {
     const combined = [(r.activation_status ?? ""), (r.memo ?? "")].join(" ");
     if (!combined.trim()) return null;
@@ -138,13 +146,11 @@ function MobileLeadsView({
 
   function isDogmaruComplete(lead: Lead): boolean {
     const status = (lead as any).activation_status ?? "";
-    const isWithdraw = ["철회","해지","취소","불가","보류","철거"].some((k: string) => status.includes(k));
-    if (isWithdraw) return false;
-    return !!(
-      (lead as any).activation_status ||
-      (lead as any).activation_number ||
-      (lead as any).pkg_number
-    );
+    // 부정 키워드 있으면 완료 아님
+    const isNegative = ["철회","해지","취소","불가","보류","철거","반납","체납","철거"].some((k: string) => status.includes(k));
+    if (isNegative) return false;
+    // "완료" 키워드 있거나 activation_number 있을 때만 완료
+    return status.includes("완료") || !!((lead as any).activation_number);
   }
 
   // 탭별 필터 (메타/도그마루 완전 분리)
@@ -156,7 +162,7 @@ function MobileLeadsView({
       if (sourceTab === "other" && isDogmaru) return false;
       // 도그마루: effectiveStatus = DB status 우선, 없으면 memo 키워드 자동분류, 둘 다 없으면 신규 접수
       if (isDogmaru) {
-        const effectiveStatus = r.status || getDogmaruAutoStatusMobile(r) || "신규 접수";
+        const effectiveStatus = getEffectiveDogmaruStatusMobile(r);
         const complete = isDogmaruComplete(r);
         if (careTab === "complete" && !complete) return false;
         if (careTab !== "complete" && complete) return false;
@@ -196,7 +202,7 @@ function MobileLeadsView({
     return !isDogmaru;
   }), [rows, sourceTab]);
   // 도그마루 탭 카운트: effectiveStatus 기준 (DB status 우선, 없으면 memo 자동분류, 둘 다 없으면 신규 접수)
-  const getEffectiveStatusMob = (r: any) => r.status || getDogmaruAutoStatusMobile(r) || "신규 접수";
+  const getEffectiveStatusMob = (r: any) => getEffectiveDogmaruStatusMobile(r);
   const completeCount = tabRows.filter(r => isDogmaruComplete(r)).length;
   const newCount = sourceTab === "dogmaru"
     ? tabRows.filter(r => !isDogmaruComplete(r) && getEffectiveStatusMob(r) === "신규 접수").length
@@ -1032,7 +1038,7 @@ export default function LeadsPage() {
       if (!inPeriod(r)) return false;
       // 도그마루: effectiveStatus = DB status 우선, 없으면 memo 키워드 자동분류, 둘 다 없으면 신규 접수
       if (isDogmaru) {
-        const effectiveStatus = r.status || getDogmaruAutoStatus(r) || "신규 접수";
+        const effectiveStatus = getEffectiveDogmaruStatus(r);
         const complete = isDogmaruCompletePC(r);
         if (pcCareTab === "complete" && !complete) return false;
         if (pcCareTab !== "complete" && complete) return false;
@@ -1147,6 +1153,15 @@ export default function LeadsPage() {
 
   // 도그마루 완료건 판단 (PC용)
   // memo + activation_status 기반 상태 자동 분류
+  function getEffectiveDogmaruStatus(r: any): string {
+    const status = (r.status ?? "").trim();
+    const autoStatus = getDogmaruAutoStatus(r);
+    // 담당자가 실제로 변경한 상태만 우선 (신규 접수는 기본값이므로 자동분류 우선)
+    if (status && status !== "신규 접수") return status;
+    if (autoStatus) return autoStatus;
+    return "신규 접수";
+  }
+
   function getDogmaruAutoStatus(r: any): string | null {
     const combined = [(r.activation_status ?? ""), (r.memo ?? "")].join(" ");
     if (!combined.trim()) return null;
@@ -1167,9 +1182,11 @@ export default function LeadsPage() {
 
   function isDogmaruCompletePC(r: any): boolean {
     const status = r.activation_status ?? "";
-    const isWithdraw = ["철회","해지","취소","불가","보류","철거"].some(k => status.includes(k));
-    if (isWithdraw) return false;
-    return !!(r.activation_status || r.activation_number || r.pkg_number);
+    // 부정 키워드 있으면 완료 아님
+    const isNegative = ["철회","해지","취소","불가","보류","철거","반납","체납"].some(k => status.includes(k));
+    if (isNegative) return false;
+    // "완료" 키워드 있거나 activation_number 있을 때만 완료
+    return status.includes("완료") || !!(r.activation_number);
   }
 
   // 탭 전환시 pcCareTab 리셋
@@ -1776,7 +1793,7 @@ export default function LeadsPage() {
           return sourceTab === "dogmaru" ? isDogmaru : !isDogmaru;
         });
         // 도그마루 탭 카운트: effectiveStatus 기준 (DB status 우선, 없으면 memo 자동분류, 둘 다 없으면 신규 접수)
-        const getEffectiveStatusPC = (r: any) => r.status || getDogmaruAutoStatus(r) || "신규 접수";
+        const getEffectiveStatusPC = (r: any) => getEffectiveDogmaruStatus(r);
         const completeC = tabRows.filter(r => isDogmaruCompletePC(r)).length;
         const newC = sourceTab === "dogmaru"
           ? tabRows.filter(r => !isDogmaruCompletePC(r) && getEffectiveStatusPC(r) === "신규 접수").length
