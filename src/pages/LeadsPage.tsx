@@ -119,6 +119,9 @@ function MobileLeadsView({
 
   // 도그마루 완료건 판단
   function isDogmaruComplete(lead: Lead): boolean {
+    const status = (lead as any).activation_status ?? "";
+    const isWithdraw = ["철회","해지","취소","불가","보류","철거"].some((k: string) => status.includes(k));
+    if (isWithdraw) return false;
     return !!(
       (lead as any).activation_status ||
       (lead as any).activation_number ||
@@ -1127,6 +1130,9 @@ export default function LeadsPage() {
 
   // 도그마루 완료건 판단 (PC용)
   function isDogmaruCompletePC(r: any): boolean {
+    const status = r.activation_status ?? "";
+    const isWithdraw = ["철회","해지","취소","불가","보류","철거"].some(k => status.includes(k));
+    if (isWithdraw) return false;
     return !!(r.activation_status || r.activation_number || r.pkg_number);
   }
 
