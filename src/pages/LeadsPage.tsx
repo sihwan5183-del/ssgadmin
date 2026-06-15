@@ -133,7 +133,7 @@ function MobileLeadsView({
     if (["개통불가"].some((k: string) => combined.includes(k))) return "기타";
     if (["부재"].some((k: string) => combined.includes(k))) return "부재케어";
     if (["보류","고객요청","미납","진행","신분증","미성년","확인필요","확인 필요"].some((k: string) => combined.includes(k))) return "재케어";
-    if (combined.includes("완료")) return "개통완료";
+    // 완료 판단은 isDogmaruComplete로만 → 여기서 반환 안 함
     return null;
   }
 
@@ -1181,7 +1181,7 @@ export default function LeadsPage() {
     if (["개통불가"].some(k => combined.includes(k))) return "기타";
     if (["부재"].some(k => combined.includes(k))) return "부재케어";
     if (["보류","고객요청","미납","진행","신분증","미성년","확인필요","확인 필요"].some(k => combined.includes(k))) return "재케어";
-    if (combined.includes("완료")) return "개통완료";
+    // 완료 판단은 isDogmaruCompletePC로만 → 여기서 반환 안 함
     return null;
   }
 
