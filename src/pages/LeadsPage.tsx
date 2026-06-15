@@ -118,6 +118,11 @@ function MobileLeadsView({
   useEffect(() => { setCareTab("all"); }, [sourceTab]);
 
   // 도그마루 완료건 판단
+  function isDogmaruWithdraw(lead: Lead): boolean {
+    const status = (lead as any).activation_status ?? "";
+    return ["철회","해지","취소","불가","보류","철거"].some((k: string) => status.includes(k));
+  }
+
   function isDogmaruComplete(lead: Lead): boolean {
     const status = (lead as any).activation_status ?? "";
     const isWithdraw = ["철회","해지","취소","불가","보류","철거"].some((k: string) => status.includes(k));
@@ -136,11 +141,14 @@ function MobileLeadsView({
       if (sourceTab === "dogmaru" && !isDogmaru) return false;
       if (sourceTab === "meta" && isDogmaru) return false;
       if (sourceTab === "other" && isDogmaru) return false;
-      // 도그마루 완료건 처리
+      // 도그마루 완료/철회건 처리
       if (isDogmaru) {
+        const isWithdraw = isDogmaruWithdraw(r);
         const complete = isDogmaruComplete(r);
+        if (careTab === "withdraw" && !isWithdraw && r.status !== "개통철회") return false;
         if (careTab === "complete" && !complete) return false;
-        if (careTab !== "complete" && complete) return false; // 완료건은 완료탭에서만
+        if (careTab !== "complete" && careTab !== "withdraw" && complete) return false;
+        if (careTab !== "withdraw" && careTab !== "complete" && isWithdraw && r.status !== "개통철회") return false;
       }
       // 케어 보관함 필터 (현재 탭 내에서만, 메타/도그마루 상태값 분리)
       if (isDogmaru) {
@@ -259,7 +267,7 @@ function MobileLeadsView({
             { key: "new", label: `신규 접수 ${newCount}`, color: "sky" },
           ];
           if (sourceTab === "dogmaru") {
-            const withdrawCount = tabRows.filter(r => r.status === "개통철회" && !isDogmaruComplete(r)).length;
+            const withdrawCount = tabRows.filter(r => r.status === "개통철회" || isDogmaruWithdraw(r)).length;
             mobileTabs.push({ key: "absence", label: `부재케어 ${absenceCount}`, color: "orange" });
             mobileTabs.push({ key: "recare", label: `재케어 ${recareCount}`, color: "purple" });
             mobileTabs.push({ key: "fail", label: `실패 ${failCount}`, color: "red" });
@@ -1011,11 +1019,14 @@ export default function LeadsPage() {
       if (sourceTab === "dogmaru" && !isDogmaru) return false;
       if (sourceTab === "meta" && isDogmaru) return false;
       if (!inPeriod(r)) return false;
-      // 도그마루 완료건 처리
+      // 도그마루 완료/철회건 처리
       if (isDogmaru) {
+        const isWithdraw = isDogmaruWithdrawPC(r);
         const complete = isDogmaruCompletePC(r);
+        if (pcCareTab === "withdraw" && !isWithdraw && r.status !== "개통철회") return false;
         if (pcCareTab === "complete" && !complete) return false;
-        if (pcCareTab !== "complete" && complete) return false;
+        if (pcCareTab !== "complete" && pcCareTab !== "withdraw" && complete) return false;
+        if (pcCareTab !== "withdraw" && pcCareTab !== "complete" && isWithdraw && r.status !== "개통철회") return false;
       }
       // 케어 탭 필터 (메타/도그마루 상태값 분리)
       if (isDogmaru) {
@@ -1023,7 +1034,7 @@ export default function LeadsPage() {
         if (pcCareTab === "absence" && r.status !== "부재케어") return false;
         if (pcCareTab === "recare" && r.status !== "재케어") return false;
         if (pcCareTab === "fail" && r.status !== "실패") return false;
-        if (pcCareTab === "withdraw" && r.status !== "개통철회") return false;
+        if (pcCareTab === "withdraw" && r.status !== "개통철회" && !isDogmaruWithdrawPC(r)) return false;
         if (pcCareTab === "etc" && r.status !== "기타") return false;
       } else {
         // 메타 상태값 그대로 사용
@@ -1129,6 +1140,11 @@ export default function LeadsPage() {
   }, [rows]);
 
   // 도그마루 완료건 판단 (PC용)
+  function isDogmaruWithdrawPC(r: any): boolean {
+    const status = r.activation_status ?? "";
+    return ["철회","해지","취소","불가","보류","철거"].some((k: string) => status.includes(k));
+  }
+
   function isDogmaruCompletePC(r: any): boolean {
     const status = r.activation_status ?? "";
     const isWithdraw = ["철회","해지","취소","불가","보류","철거"].some(k => status.includes(k));
@@ -1752,7 +1768,7 @@ export default function LeadsPage() {
           pcTabs.push({ key: "absence", label: `부재케어 ${absenceC}`, color: "orange" });
           pcTabs.push({ key: "recare", label: `재케어 ${recareC}`, color: "purple" });
           pcTabs.push({ key: "fail", label: `실패 ${failC}`, color: "red" });
-          const withdrawC = tabRows.filter(r => r.status === "개통철회" && !isDogmaruCompletePC(r)).length;
+          const withdrawC = tabRows.filter(r => r.status === "개통철회" || isDogmaruWithdrawPC(r)).length;
           pcTabs.push({ key: "withdraw", label: `개통철회 ${withdrawC}`, color: "rose" });
           const etcC = tabRows.filter(r => r.status === "기타" && !isDogmaruCompletePC(r)).length;
           pcTabs.push({ key: "etc", label: `기타 ${etcC}`, color: "gray" });
