@@ -608,20 +608,27 @@ const IntakeSkeleton = memo(function IntakeSkeleton() {
 });
 import { ColumnFilter, matchesFilter, type FilterSelection } from "@/components/common/ColumnFilter";
 
-const STATUS_OPTIONS = [
+const STATUS_OPTIONS_META = [
   "신규 접수",
   "케어중",
   "부재 중",
   "재케어",
-  "개통 완료",
   "취소",
+  "개통 완료",
+] as const;
+
+const STATUS_OPTIONS_DOGMARU = [
+  "신규 접수",
   "상담중",
   "부재케어",
+  "재케어",
   "실패",
   "개통철회",
   "기타",
 ] as const;
-type Status = (typeof STATUS_OPTIONS)[number];
+
+const STATUS_OPTIONS = [...STATUS_OPTIONS_META, ...STATUS_OPTIONS_DOGMARU] as const;
+type Status = string;
 
 // 파스텔 배경 제거: 흰 배경 + 진한 텍스트/테두리로 명도 대비 확보
 const STATUS_COLOR: Record<string, string> = {
@@ -2129,7 +2136,7 @@ export default function LeadsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {STATUS_OPTIONS.map((s) => (
+                        {(openLead.campaign_name === "도그마루_홈캠" ? STATUS_OPTIONS_DOGMARU : STATUS_OPTIONS_META).map((s) => (
                           <SelectItem key={s} value={s}>
                             {s}
                           </SelectItem>
