@@ -98,7 +98,7 @@ function MobileLeadsView({
   const [absenceModal, setAbsenceModal] = useState<Lead | null>(null);
   const [recareModal, setRecareModal] = useState<Lead | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
-  const [careTab, setCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc">("all");
+  const [careTab, setCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "pending" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc">("all");
   const [completePage, setCompletePage] = useState(0);
   const COMPLETE_PAGE_SIZE = 50;
   const [completeSearch, setCompleteSearch] = useState("");
@@ -145,12 +145,17 @@ function MobileLeadsView({
   }
 
   function isDogmaruComplete(lead: Lead): boolean {
-    const status = (lead as any).activation_status ?? "";
-    // 부정 키워드 있으면 완료 아님
-    const isNegative = ["철회","해지","취소","불가","보류","철거","반납","체납","철거"].some((k: string) => status.includes(k));
-    if (isNegative) return false;
-    // "완료" 키워드 있거나 activation_number 있을 때만 완료
-    return status.includes("완료") || !!((lead as any).activation_number);
+    const manualStatus = ((lead as any).status ?? "").trim();
+    if (manualStatus && manualStatus !== "신규 접수" && manualStatus !== "개통완료") return false;
+    return ((lead as any).activation_status ?? "").includes("개통완료");
+  }
+
+  function isDogmaruPending(lead: Lead): boolean {
+    if (!(lead as any).activation_number) return false;
+    if (isDogmaruComplete(lead)) return false;
+    const manualStatus = ((lead as any).status ?? "").trim();
+    if (manualStatus && manualStatus !== "신규 접수") return false;
+    return true;
   }
 
   // 탭별 필터 (메타/도그마루 완전 분리)
@@ -164,8 +169,10 @@ function MobileLeadsView({
       if (isDogmaru) {
         const effectiveStatus = getEffectiveDogmaruStatusMobile(r);
         const complete = isDogmaruComplete(r);
+        const pending = isDogmaruPending(r);
         if (careTab === "complete" && !complete) return false;
-        if (careTab !== "complete" && complete) return false;
+        if (careTab === "pending" && !pending) return false;
+        if (careTab !== "complete" && careTab !== "pending" && (complete || pending)) return false;
         if (careTab === "new" && effectiveStatus !== "신규 접수") return false;
         if (careTab === "absence" && effectiveStatus !== "부재케어") return false;
         if (careTab === "recare" && effectiveStatus !== "재케어") return false;
@@ -204,12 +211,13 @@ function MobileLeadsView({
   // 도그마루 탭 카운트: effectiveStatus 기준 (DB status 우선, 없으면 memo 자동분류, 둘 다 없으면 신규 접수)
   const getEffectiveStatusMob = (r: any) => getEffectiveDogmaruStatusMobile(r);
   const completeCount = tabRows.filter(r => isDogmaruComplete(r)).length;
+  const pendingCount = tabRows.filter(r => isDogmaruPending(r)).length;
   const newCount = sourceTab === "dogmaru"
-    ? tabRows.filter(r => !isDogmaruComplete(r) && getEffectiveStatusMob(r) === "신규 접수").length
+    ? tabRows.filter(r => !isDogmaruComplete(r) && !isDogmaruPending(r) && getEffectiveStatusMob(r) === "신규 접수").length
     : tabRows.filter(r => r.status === "신규 접수").length;
-  const absenceCount = tabRows.filter(r => !isDogmaruComplete(r) && getEffectiveStatusMob(r) === "부재케어").length;
-  const recareCount = tabRows.filter(r => !isDogmaruComplete(r) && getEffectiveStatusMob(r) === "재케어").length;
-  const failCount = tabRows.filter(r => !isDogmaruComplete(r) && getEffectiveStatusMob(r) === "실패").length;
+  const absenceCount = tabRows.filter(r => !isDogmaruComplete(r) && !isDogmaruPending(r) && getEffectiveStatusMob(r) === "부재케어").length;
+  const recareCount = tabRows.filter(r => !isDogmaruComplete(r) && !isDogmaruPending(r) && getEffectiveStatusMob(r) === "재케어").length;
+  const failCount = tabRows.filter(r => !isDogmaruComplete(r) && !isDogmaruPending(r) && getEffectiveStatusMob(r) === "실패").length;
   // 메타 카운트
   const careCount = tabRows.filter(r => r.status === "케어중").length;
   const absMetaCount = tabRows.filter(r => r.status === "부재 중").length;
@@ -291,6 +299,7 @@ function MobileLeadsView({
             mobileTabs.push({ key: "withdraw", label: `개통철회 ${withdrawCount}`, color: "rose" });
             const etcCount = tabRows.filter(r => !isDogmaruComplete(r) && getEffectiveStatusMob(r) === "기타").length;
             mobileTabs.push({ key: "etc", label: `기타 ${etcCount}`, color: "gray" });
+            mobileTabs.push({ key: "pending", label: `개통대기 ${pendingCount}`, color: "teal" });
             mobileTabs.push({ key: "complete", label: `완료 ${completeCount}`, color: "blue" });
           } else {
             mobileTabs.push({ key: "care", label: `케어중 ${careCount}`, color: "yellow" });
@@ -310,6 +319,7 @@ function MobileLeadsView({
                     : t.color === "red" ? "bg-red-100 text-red-700 shadow-sm"
                     : t.color === "gray" ? "bg-gray-100 text-gray-600 shadow-sm"
                     : t.color === "rose" ? "bg-rose-100 text-rose-700 shadow-sm"
+                    : t.color === "teal" ? "bg-teal-100 text-teal-700 shadow-sm"
                     : t.color === "blue" ? "bg-blue-100 text-blue-700 shadow-sm"
                     : "bg-primary text-primary-foreground shadow-sm"
                   : "bg-background text-muted-foreground border border-border/40"
@@ -833,7 +843,7 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru" | "other">("meta");
-  const [pcCareTab, setPcCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc">("all");
+  const [pcCareTab, setPcCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "pending" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc">("all");
   const [openLead, setOpenLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState<LeadNote[]>([]);
   const [statusLogs, setStatusLogs] = useState<any[]>([]);
@@ -1040,8 +1050,10 @@ export default function LeadsPage() {
       if (isDogmaru) {
         const effectiveStatus = getEffectiveDogmaruStatus(r);
         const complete = isDogmaruCompletePC(r);
+        const pending = isDogmaruPendingPC(r);
         if (pcCareTab === "complete" && !complete) return false;
-        if (pcCareTab !== "complete" && complete) return false;
+        if (pcCareTab === "pending" && !pending) return false;
+        if (pcCareTab !== "complete" && pcCareTab !== "pending" && (complete || pending)) return false;
         if (pcCareTab === "new" && effectiveStatus !== "신규 접수") return false;
         if (pcCareTab === "absence" && effectiveStatus !== "부재케어") return false;
         if (pcCareTab === "recare" && effectiveStatus !== "재케어") return false;
@@ -1181,12 +1193,20 @@ export default function LeadsPage() {
   }
 
   function isDogmaruCompletePC(r: any): boolean {
-    const status = r.activation_status ?? "";
-    // 부정 키워드 있으면 완료 아님
-    const isNegative = ["철회","해지","취소","불가","보류","철거","반납","체납"].some(k => status.includes(k));
-    if (isNegative) return false;
-    // "완료" 키워드 있거나 activation_number 있을 때만 완료
-    return status.includes("완료") || !!(r.activation_number);
+    // 담당자가 명시적으로 다른 상태로 바꿨으면 완료 아님
+    const manualStatus = (r.status ?? "").trim();
+    if (manualStatus && manualStatus !== "신규 접수" && manualStatus !== "개통완료") return false;
+    // activation_status가 정확히 "개통완료"일 때만 완료
+    return (r.activation_status ?? "").includes("개통완료");
+  }
+
+  function isDogmaruPendingPC(r: any): boolean {
+    // 가입번호 있는데 개통완료 아닌 건 → 개통대기
+    if (!r.activation_number) return false;
+    if (isDogmaruCompletePC(r)) return false;
+    const manualStatus = (r.status ?? "").trim();
+    if (manualStatus && manualStatus !== "신규 접수") return false;
+    return true;
   }
 
   // 탭 전환시 pcCareTab 리셋
@@ -1795,12 +1815,13 @@ export default function LeadsPage() {
         // 도그마루 탭 카운트: effectiveStatus 기준 (DB status 우선, 없으면 memo 자동분류, 둘 다 없으면 신규 접수)
         const getEffectiveStatusPC = (r: any) => getEffectiveDogmaruStatus(r);
         const completeC = tabRows.filter(r => isDogmaruCompletePC(r)).length;
+        const pendingC = tabRows.filter(r => isDogmaruPendingPC(r)).length;
         const newC = sourceTab === "dogmaru"
-          ? tabRows.filter(r => !isDogmaruCompletePC(r) && getEffectiveStatusPC(r) === "신규 접수").length
+          ? tabRows.filter(r => !isDogmaruCompletePC(r) && !isDogmaruPendingPC(r) && getEffectiveStatusPC(r) === "신규 접수").length
           : tabRows.filter(r => r.status === "신규 접수").length;
-        const absenceC = tabRows.filter(r => !isDogmaruCompletePC(r) && getEffectiveStatusPC(r) === "부재케어").length;
-        const recareC = tabRows.filter(r => !isDogmaruCompletePC(r) && getEffectiveStatusPC(r) === "재케어").length;
-        const failC = tabRows.filter(r => !isDogmaruCompletePC(r) && getEffectiveStatusPC(r) === "실패").length;
+        const absenceC = tabRows.filter(r => !isDogmaruCompletePC(r) && !isDogmaruPendingPC(r) && getEffectiveStatusPC(r) === "부재케어").length;
+        const recareC = tabRows.filter(r => !isDogmaruCompletePC(r) && !isDogmaruPendingPC(r) && getEffectiveStatusPC(r) === "재케어").length;
+        const failC = tabRows.filter(r => !isDogmaruCompletePC(r) && !isDogmaruPendingPC(r) && getEffectiveStatusPC(r) === "실패").length;
         const pcTabs: { key: string; label: string; color: string }[] = [
           { key: "all", label: "전체", color: "" },
           { key: "new", label: `신규 접수 ${newC}`, color: "blue-light" },
@@ -1813,6 +1834,7 @@ export default function LeadsPage() {
           pcTabs.push({ key: "withdraw", label: `개통철회 ${withdrawC}`, color: "rose" });
           const etcC = tabRows.filter(r => !isDogmaruCompletePC(r) && getEffectiveStatusPC(r) === "기타").length;
           pcTabs.push({ key: "etc", label: `기타 ${etcC}`, color: "gray" });
+          pcTabs.push({ key: "pending", label: `개통대기 ${pendingC}`, color: "teal" });
           pcTabs.push({ key: "complete", label: `완료 ${completeC}`, color: "blue" });
         } else {
           // 메타 상태값 그대로
@@ -1836,6 +1858,7 @@ export default function LeadsPage() {
           if (t.color === "orange") return "bg-orange-100 text-orange-700 border-orange-300";
           if (t.color === "purple") return "bg-purple-100 text-purple-700 border-purple-300";
           if (t.color === "red") return "bg-red-100 text-red-700 border-red-300";
+          if (t.color === "teal") return "bg-teal-100 text-teal-700 border-teal-300";
           if (t.color === "blue") return "bg-blue-100 text-blue-700 border-blue-300";
           return "bg-primary text-primary-foreground border-primary";
         }
