@@ -67,6 +67,8 @@ const MOBILE_STATUS_DOGMARU = [
   { value: "부재케어", label: "부재케어", color: "bg-orange-100 text-orange-700" },
   { value: "재케어", label: "재케어", color: "bg-purple-100 text-purple-700" },
   { value: "실패", label: "실패", color: "bg-red-100 text-red-700" },
+  { value: "개통철회", label: "개통철회", color: "bg-rose-100 text-rose-700" },
+  { value: "기타", label: "기타", color: "bg-gray-100 text-gray-600" },
 ];
 // 호환용
 const MOBILE_STATUS_OPTIONS = MOBILE_STATUS_META;
@@ -613,6 +615,11 @@ const STATUS_OPTIONS = [
   "재케어",
   "개통 완료",
   "취소",
+  "상담중",
+  "부재케어",
+  "실패",
+  "개통철회",
+  "기타",
 ] as const;
 type Status = (typeof STATUS_OPTIONS)[number];
 
@@ -624,6 +631,11 @@ const STATUS_COLOR: Record<string, string> = {
   "재케어": "bg-background text-violet-700 border border-violet-600 font-bold dark:text-violet-300 dark:border-violet-400",
   "개통 완료": "bg-background text-emerald-700 border border-emerald-600 font-bold dark:text-emerald-300 dark:border-emerald-400",
   "취소": "bg-background text-rose-700 border border-rose-600 font-bold dark:text-rose-300 dark:border-rose-400",
+  "상담중": "bg-background text-yellow-700 border border-yellow-600 font-bold dark:text-yellow-300 dark:border-yellow-400",
+  "부재케어": "bg-background text-orange-700 border border-orange-600 font-bold dark:text-orange-300 dark:border-orange-400",
+  "실패": "bg-background text-red-700 border border-red-600 font-bold dark:text-red-300 dark:border-red-400",
+  "개통철회": "bg-background text-rose-700 border border-rose-600 font-bold dark:text-rose-300 dark:border-rose-400",
+  "기타": "bg-background text-gray-600 border border-gray-400 font-bold dark:text-gray-300 dark:border-gray-500",
 };
 
 
