@@ -771,6 +771,7 @@ export default function LeadsPage() {
   const [pcCareTab, setPcCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "care" | "cancel" | "complete_meta">("all");
   const [openLead, setOpenLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState<LeadNote[]>([]);
+  const [statusLogs, setStatusLogs] = useState<any[]>([]);
   const [newNote, setNewNote] = useState("");
   const [memoDraft, setMemoDraft] = useState("");
 
@@ -890,12 +891,12 @@ export default function LeadsPage() {
     }
     setMemoDraft(openLead.memo ?? "");
     (async () => {
-      const { data } = await supabase
-        .from("lead_notes")
-        .select("*")
-        .eq("lead_id", openLead.id)
-        .order("created_at", { ascending: false });
-      setNotes((data ?? []) as LeadNote[]);
+      const [{ data: notesData }, { data: logsData }] = await Promise.all([
+        supabase.from("lead_notes").select("*").eq("lead_id", openLead.id).order("created_at", { ascending: false }),
+        supabase.from("lead_status_logs").select("*").eq("lead_id", openLead.id).order("changed_at", { ascending: false }),
+      ]);
+      setNotes((notesData ?? []) as LeadNote[]);
+      setStatusLogs(logsData ?? []);
     })();
   }, [openLead?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1286,12 +1287,40 @@ export default function LeadsPage() {
   const valCancellation = useMemo(() => dogmaruRows.map((r) => r.cancellation_status ?? ""), [dogmaruRows]);
 
   async function updateStatus(id: string, status: string) {
-    const { error } = await supabase.from("leads").update({ status }).eq("id", id);
-    if (error) toast.error(error.message);
-    else {
-      setRows((p) => p.map((r) => (r.id === id ? { ...r, status } : r)));
-      if (openLead?.id === id) setOpenLead({ ...openLead, status });
+    const changedBy = user?.user_metadata?.display_name ?? user?.email ?? "unknown";
+
+    // 부재케어 카운팅 - 기존 횟수 확인
+    let absenceCount = 0;
+    if (status === "부재케어") {
+      const { count } = await supabase
+        .from("lead_status_logs")
+        .select("*", { count: "exact", head: true })
+        .eq("lead_id", id)
+        .eq("status", "부재케어");
+      absenceCount = (count ?? 0) + 1;
     }
+
+    // 상태 업데이트
+    const updateData: any = { status };
+    // 부재케어면 메모에 횟수 자동 기록
+    if (status === "부재케어") {
+      const currentRow = rows.find(r => r.id === id);
+      const baseMemo = (currentRow?.memo ?? "").replace(/부재\/\d+회/g, "").trim();
+      updateData.memo = [baseMemo, `부재/${absenceCount}회`].filter(Boolean).join(" / ");
+    }
+
+    const { error } = await supabase.from("leads").update(updateData).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+
+    // 상태 변경 로그 INSERT
+    await supabase.from("lead_status_logs").insert({
+      lead_id: id,
+      status,
+      changed_by: changedBy,
+    });
+
+    setRows((p) => p.map((r) => (r.id === id ? { ...r, ...updateData } : r)));
+    if (openLead?.id === id) setOpenLead({ ...openLead, ...updateData });
   }
 
   async function updateAssignee(id: string, assigned_to: string | null) {
@@ -2131,32 +2160,46 @@ export default function LeadsPage() {
                 </div>
 
                 <div className="mt-4 space-y-3">
-                  <div className="text-xs font-semibold text-foreground/70">
-                    누적 상담 이력 ({notes.length})
-                  </div>
-                  {notes.length === 0 && (
-                    <div className="text-sm text-foreground/50 italic py-4 text-center border border-dashed border-border rounded-lg">
-                      아직 기록된 상담 이력이 없습니다.
-                    </div>
-                  )}
-                  <ol className="relative border-l-2 border-border ml-2 space-y-3">
-                    {notes.map((n) => (
-                      <li key={n.id} className="ml-4">
-                        <div className="absolute -left-[7px] mt-1.5 size-3 rounded-full bg-primary border-2 border-background" />
-                        <div className="rounded-lg border border-border bg-background p-3">
-                          <div className="text-[11px] text-foreground/60 flex justify-between font-medium">
-                            <span className="font-semibold text-foreground">
-                              {n.author_name ?? "—"}
-                            </span>
-                            <span>{new Date(n.created_at).toLocaleString("ko-KR")}</span>
-                          </div>
-                          <div className="whitespace-pre-wrap mt-1.5 text-sm text-foreground">
-                            {n.content}
-                          </div>
+                  {(() => {
+                    // 노트 + 상태 로그 합쳐서 시간순 정렬
+                    const allItems = [
+                      ...notes.map(n => ({ type: "note" as const, id: n.id, at: n.created_at, author: n.author_name, content: n.content })),
+                      ...statusLogs.map(l => ({ type: "status" as const, id: l.id, at: l.changed_at, author: l.changed_by, content: l.status })),
+                    ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+                    return (
+                      <>
+                        <div className="text-xs font-semibold text-foreground/70">
+                          누적 상담 이력 ({allItems.length})
                         </div>
-                      </li>
-                    ))}
-                  </ol>
+                        {allItems.length === 0 && (
+                          <div className="text-sm text-foreground/50 italic py-4 text-center border border-dashed border-border rounded-lg">
+                            아직 기록된 상담 이력이 없습니다.
+                          </div>
+                        )}
+                        <ol className="relative border-l-2 border-border ml-2 space-y-3">
+                          {allItems.map(item => (
+                            <li key={item.type + item.id} className="ml-4">
+                              <div className={"absolute -left-[7px] mt-1.5 size-3 rounded-full border-2 border-background " + (item.type === "status" ? "bg-orange-400" : "bg-primary")} />
+                              <div className={"rounded-lg border p-3 " + (item.type === "status" ? "bg-orange-50 border-orange-200" : "bg-background border-border")}>
+                                <div className="text-[11px] text-foreground/60 flex justify-between font-medium">
+                                  <span className="font-semibold text-foreground flex items-center gap-1.5">
+                                    {item.author ?? "—"}
+                                    {item.type === "status" && (
+                                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700">상태변경</span>
+                                    )}
+                                  </span>
+                                  <span>{new Date(item.at).toLocaleString("ko-KR")}</span>
+                                </div>
+                                <div className={"whitespace-pre-wrap mt-1.5 text-sm " + (item.type === "status" ? "font-semibold text-orange-700" : "text-foreground")}>
+                                  {item.type === "status" ? "→ " + item.content : item.content}
+                                </div>
+                              </div>
+                            </li>
+                          ))}
+                        </ol>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </>
