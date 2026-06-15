@@ -200,11 +200,14 @@ function MobileLeadsView({
     if (sourceTab === "meta") return !isDogmaru;
     return !isDogmaru;
   }), [rows, sourceTab]);
-  const newCount = tabRows.filter(r => r.status === "신규 접수" && !isDogmaruComplete(r)).length;
-  // 도그마루 카운트
-  const absenceCount = tabRows.filter(r => r.status === "부재케어" && !isDogmaruComplete(r)).length;
-  const recareCount = tabRows.filter(r => r.status === "재케어" && !isDogmaruComplete(r)).length;
-  const failCount = tabRows.filter(r => r.status === "실패" && !isDogmaruComplete(r)).length;
+  // 신규 접수: 메타는 isDogmaruComplete 체크 없이, 도그마루만 완료건 제외
+  const newCount = sourceTab === "dogmaru"
+    ? tabRows.filter(r => r.status === "신규 접수" && !isDogmaruComplete(r)).length
+    : tabRows.filter(r => r.status === "신규 접수").length;
+  // 도그마루 카운트: DB status 값만 기준 (자동분류 로직 제거)
+  const absenceCount = tabRows.filter(r => r.status === "부재케어").length;
+  const recareCount = tabRows.filter(r => r.status === "재케어").length;
+  const failCount = tabRows.filter(r => r.status === "실패").length;
   const completeCount = tabRows.filter(r => isDogmaruComplete(r)).length;
   // 메타 카운트
   const careCount = tabRows.filter(r => r.status === "케어중").length;
@@ -1782,12 +1785,15 @@ export default function LeadsPage() {
           const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
           return sourceTab === "dogmaru" ? isDogmaru : !isDogmaru;
         });
-        const absenceC = tabRows.filter(r => (r.status === "부재케어" || getDogmaruAutoStatus(r) === "부재케어") && !isDogmaruCompletePC(r) && !isDogmaruWithdrawPC(r)).length;
-        const recareC = tabRows.filter(r => (r.status === "재케어" || getDogmaruAutoStatus(r) === "재케어") && !isDogmaruCompletePC(r) && !isDogmaruWithdrawPC(r)).length;
-        const failC = tabRows.filter(r => r.status === "실패" && !isDogmaruCompletePC(r)).length;
-        const etcAutoC = tabRows.filter(r => getDogmaruAutoStatus(r) === "기타" && r.status !== "기타").length;
+        // 도그마루: DB status 값만 기준으로 카운트 (자동분류 로직 제거)
+        const absenceC = tabRows.filter(r => r.status === "부재케어").length;
+        const recareC = tabRows.filter(r => r.status === "재케어").length;
+        const failC = tabRows.filter(r => r.status === "실패").length;
         const completeC = tabRows.filter(r => isDogmaruCompletePC(r)).length;
-        const newC = tabRows.filter(r => r.status === "신규 접수" && !isDogmaruCompletePC(r)).length;
+        // 신규 접수: 메타는 isDogmaruCompletePC 체크 없이, 도그마루만 완료건 제외
+        const newC = sourceTab === "dogmaru"
+          ? tabRows.filter(r => r.status === "신규 접수" && !isDogmaruCompletePC(r)).length
+          : tabRows.filter(r => r.status === "신규 접수").length;
         const pcTabs: { key: string; label: string; color: string }[] = [
           { key: "all", label: "전체", color: "" },
           { key: "new", label: `신규 접수 ${newC}`, color: "blue-light" },
