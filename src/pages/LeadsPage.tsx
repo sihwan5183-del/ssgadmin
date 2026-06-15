@@ -125,10 +125,11 @@ function MobileLeadsView({
     const memo = (r.memo ?? "");
     const combined = [actStatus, memo].join(" ");
 
-    // 1. 개통완료: activation_status에 "개통완료" 포함
-    if (actStatus.includes("개통완료")) return "완료";
+    // 1. 부정 키워드 없고 "완료" 키워드 있으면 → 완료
+    const isNegative = ["철회","해지","취소","불가","보류","철거","반납","체납"].some(k => actStatus.includes(k));
+    if (!isNegative && actStatus.includes("완료")) return "완료";
 
-    // 2. 개통대기: 가입번호 있고 개통완료 아닌 경우 (단, 담당자가 다른 상태로 바꾼 건 제외)
+    // 2. 가입번호 있고 완료 아닌 경우 → 개통대기 (담당자가 다른 상태로 바꾼 건 제외)
     if (r.activation_number && (!manualStatus || manualStatus === "신규 접수")) return "개통대기";
 
     // 3. 담당자가 직접 바꾼 상태 우선 (신규 접수 제외)
@@ -1152,10 +1153,11 @@ export default function LeadsPage() {
     const memo = (r.memo ?? "");
     const combined = [actStatus, memo].join(" ");
 
-    // 1. 개통완료: activation_status에 "개통완료" 포함
-    if (actStatus.includes("개통완료")) return "완료";
+    // 1. 부정 키워드 없고 "완료" 키워드 있으면 → 완료
+    const isNegative = ["철회","해지","취소","불가","보류","철거","반납","체납"].some(k => actStatus.includes(k));
+    if (!isNegative && actStatus.includes("완료")) return "완료";
 
-    // 2. 개통대기: 가입번호 있고 개통완료 아닌 경우 (단, 담당자가 다른 상태로 바꾼 건 제외)
+    // 2. 가입번호 있고 완료 아닌 경우 → 개통대기 (담당자가 다른 상태로 바꾼 건 제외)
     if (r.activation_number && (!manualStatus || manualStatus === "신규 접수")) return "개통대기";
 
     // 3. 담당자가 직접 바꾼 상태 우선 (신규 접수 제외)
