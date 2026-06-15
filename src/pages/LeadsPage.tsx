@@ -439,6 +439,26 @@ function MobileLeadsView({
                       ))}
                     </select>
                   </div>
+                  {/* 부재케어 카운터 */}
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1.5 font-medium">부재케어 횟수</div>
+                    <div className="flex items-center gap-3 bg-orange-50 rounded-xl px-4 py-2.5 border border-orange-200">
+                      <button
+                        onClick={() => adjustAbsenceCount(lead, -1)}
+                        className="size-8 rounded-full bg-white border border-orange-300 text-orange-700 font-bold text-lg active:scale-90 transition-transform flex items-center justify-center"
+                      >−</button>
+                      <div className="flex-1 text-center">
+                        <span className="text-lg font-bold text-orange-700">
+                          🚫 {(() => { const m = (lead.memo ?? "").match(/부재\/(\d+)회/); return m ? m[1] : 0; })()}회
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => adjustAbsenceCount(lead, 1)}
+                        className="size-8 rounded-full bg-white border border-orange-300 text-orange-700 font-bold text-lg active:scale-90 transition-transform flex items-center justify-center"
+                      >+</button>
+                    </div>
+                  </div>
+
                   {/* 메모 */}
                   <div>
                     <div className="text-xs text-muted-foreground mb-1.5 font-medium">메모</div>
@@ -1342,6 +1362,25 @@ export default function LeadsPage() {
     if (openLead?.id === id) setOpenLead({ ...openLead, ...updateData });
   }
 
+  // 부재케어 카운트 수동 조정
+  async function adjustAbsenceCount(lead: Lead, delta: number) {
+    const changedBy = user?.user_metadata?.display_name ?? user?.email ?? "unknown";
+    const match = (lead.memo ?? "").match(/부재\/(\d+)회/);
+    const current = match ? parseInt(match[1]) : 0;
+    const next = Math.max(0, current + delta);
+    const baseMemo = (lead.memo ?? "").replace(/부재\/\d+회\s*\/?/g, "").trim();
+    const newMemo = next > 0 ? [baseMemo, `부재/${next}회`].filter(Boolean).join(" / ") : baseMemo;
+    await supabase.from("leads").update({ memo: newMemo }).eq("id", lead.id);
+    // 로그 기록
+    await supabase.from("lead_status_logs").insert({
+      lead_id: lead.id,
+      status: delta > 0 ? `부재케어 +1 (${next}회)` : `부재케어 -1 (${next}회)`,
+      changed_by: changedBy,
+    });
+    setRows(p => p.map(r => r.id === lead.id ? { ...r, memo: newMemo } : r));
+    if (openLead?.id === lead.id) setOpenLead({ ...openLead, memo: newMemo });
+  }
+
   async function updateAssignee(id: string, assigned_to: string | null) {
     const { error } = await supabase
       .from("leads")
@@ -2180,6 +2219,23 @@ export default function LeadsPage() {
               {/* Consultation memo feed */}
               <div className="mt-6">
                 <div className="text-sm font-bold text-foreground mb-2">상담 메모</div>
+                {/* 부재케어 카운터 */}
+                <div className="flex items-center gap-3 bg-orange-50 rounded-xl px-4 py-2.5 border border-orange-200 mb-3">
+                  <span className="text-xs font-semibold text-orange-700 flex-shrink-0">🚫 부재케어</span>
+                  <div className="flex items-center gap-2 ml-auto">
+                    <button
+                      onClick={() => adjustAbsenceCount(openLead, -1)}
+                      className="size-7 rounded-full bg-white border border-orange-300 text-orange-700 font-bold active:scale-90 transition-transform flex items-center justify-center"
+                    >−</button>
+                    <span className="text-base font-bold text-orange-700 min-w-[2rem] text-center">
+                      {(() => { const m = (openLead.memo ?? "").match(/부재\/(\d+)회/); return (m ? m[1] : 0) + "회"; })()}
+                    </span>
+                    <button
+                      onClick={() => adjustAbsenceCount(openLead, 1)}
+                      className="size-7 rounded-full bg-white border border-orange-300 text-orange-700 font-bold active:scale-90 transition-transform flex items-center justify-center"
+                    >+</button>
+                  </div>
+                </div>
 
                 <div className="rounded-lg border border-border p-3 bg-muted/30">
                   <Textarea
