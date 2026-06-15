@@ -69,6 +69,7 @@ const MOBILE_STATUS_DOGMARU = [
   { value: "실패", label: "실패", color: "bg-red-100 text-red-700" },
   { value: "개통철회", label: "개통철회", color: "bg-rose-100 text-rose-700" },
   { value: "기타", label: "기타", color: "bg-gray-100 text-gray-600" },
+  { value: "개통완료", label: "개통완료", color: "bg-emerald-100 text-emerald-700" },
 ];
 // 호환용
 const MOBILE_STATUS_OPTIONS = MOBILE_STATUS_META;
@@ -97,7 +98,7 @@ function MobileLeadsView({
   const [absenceModal, setAbsenceModal] = useState<Lead | null>(null);
   const [recareModal, setRecareModal] = useState<Lead | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
-  const [careTab, setCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "care" | "cancel" | "complete_meta" | "withdraw">("all");
+  const [careTab, setCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc">("all");
   const [completePage, setCompletePage] = useState(0);
   const COMPLETE_PAGE_SIZE = 50;
   const [completeSearch, setCompleteSearch] = useState("");
@@ -145,6 +146,7 @@ function MobileLeadsView({
         if (careTab === "recare" && r.status !== "재케어") return false;
         if (careTab === "fail" && r.status !== "실패") return false;
         if (careTab === "withdraw" && r.status !== "개통철회") return false;
+        if (careTab === "etc" && r.status !== "기타") return false;
       } else {
         if (careTab === "new" && r.status !== "신규 접수") return false;
         if (careTab === "absence" && r.status !== "부재 중") return false;
@@ -259,6 +261,8 @@ function MobileLeadsView({
             mobileTabs.push({ key: "recare", label: `재케어 ${recareCount}`, color: "purple" });
             mobileTabs.push({ key: "fail", label: `실패 ${failCount}`, color: "red" });
             mobileTabs.push({ key: "withdraw", label: `개통철회 ${withdrawCount}`, color: "rose" });
+            const etcCount = tabRows.filter(r => r.status === "기타" && !isDogmaruComplete(r)).length;
+            mobileTabs.push({ key: "etc", label: `기타 ${etcCount}`, color: "gray" });
             mobileTabs.push({ key: "complete", label: `완료 ${completeCount}`, color: "blue" });
           } else {
             mobileTabs.push({ key: "care", label: `케어중 ${careCount}`, color: "yellow" });
@@ -629,6 +633,7 @@ const STATUS_OPTIONS_DOGMARU = [
   "실패",
   "개통철회",
   "기타",
+  "개통완료",
 ] as const;
 
 const STATUS_OPTIONS = [...STATUS_OPTIONS_META, ...STATUS_OPTIONS_DOGMARU] as const;
@@ -647,6 +652,7 @@ const STATUS_COLOR: Record<string, string> = {
   "실패": "bg-background text-red-700 border border-red-600 font-bold dark:text-red-300 dark:border-red-400",
   "개통철회": "bg-background text-rose-700 border border-rose-600 font-bold dark:text-rose-300 dark:border-rose-400",
   "기타": "bg-background text-gray-600 border border-gray-400 font-bold dark:text-gray-300 dark:border-gray-500",
+  "개통완료": "bg-background text-emerald-700 border border-emerald-600 font-bold dark:text-emerald-300 dark:border-emerald-400",
 };
 
 
@@ -779,7 +785,7 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru" | "other">("meta");
-  const [pcCareTab, setPcCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "care" | "cancel" | "complete_meta" | "withdraw">("all");
+  const [pcCareTab, setPcCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc">("all");
   const [openLead, setOpenLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState<LeadNote[]>([]);
   const [statusLogs, setStatusLogs] = useState<any[]>([]);
@@ -995,6 +1001,7 @@ export default function LeadsPage() {
         if (pcCareTab === "recare" && r.status !== "재케어") return false;
         if (pcCareTab === "fail" && r.status !== "실패") return false;
         if (pcCareTab === "withdraw" && r.status !== "개통철회") return false;
+        if (pcCareTab === "etc" && r.status !== "기타") return false;
       } else {
         // 메타 상태값 그대로 사용
         if (pcCareTab === "new" && r.status !== "신규 접수") return false;
@@ -1700,6 +1707,10 @@ export default function LeadsPage() {
           pcTabs.push({ key: "absence", label: `부재케어 ${absenceC}`, color: "orange" });
           pcTabs.push({ key: "recare", label: `재케어 ${recareC}`, color: "purple" });
           pcTabs.push({ key: "fail", label: `실패 ${failC}`, color: "red" });
+          const withdrawC = tabRows.filter(r => r.status === "개통철회" && !isDogmaruCompletePC(r)).length;
+          pcTabs.push({ key: "withdraw", label: `개통철회 ${withdrawC}`, color: "rose" });
+          const etcC = tabRows.filter(r => r.status === "기타" && !isDogmaruCompletePC(r)).length;
+          pcTabs.push({ key: "etc", label: `기타 ${etcC}`, color: "gray" });
           pcTabs.push({ key: "complete", label: `완료 ${completeC}`, color: "blue" });
         } else {
           // 메타 상태값 그대로
