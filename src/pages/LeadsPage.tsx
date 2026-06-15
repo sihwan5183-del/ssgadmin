@@ -53,14 +53,23 @@ import { Trash2 } from "lucide-react";
 // 메타/도그마루 탭의 초기 진입과 탭 전환 응답성을 잡아준다.
 const ChannelIntakePage = lazy(() => import("@/pages/ChannelIntakePage"));
 // ─── 모바일 영업 전용 뷰 ───────────────────────────────────────────────────
-const MOBILE_STATUS_OPTIONS = [
-  { value: "신규 접수", label: "신규", color: "bg-blue-100 text-blue-700" },
+const MOBILE_STATUS_META = [
+  { value: "신규 접수", label: "신규 접수", color: "bg-blue-100 text-blue-700" },
+  { value: "케어중", label: "케어중", color: "bg-yellow-100 text-yellow-700" },
+  { value: "부재 중", label: "부재 중", color: "bg-orange-100 text-orange-700" },
+  { value: "재케어", label: "재케어", color: "bg-purple-100 text-purple-700" },
+  { value: "취소", label: "취소", color: "bg-gray-100 text-gray-600" },
+  { value: "개통 완료", label: "개통 완료", color: "bg-emerald-100 text-emerald-700" },
+];
+const MOBILE_STATUS_DOGMARU = [
+  { value: "신규 접수", label: "신규 접수", color: "bg-blue-100 text-blue-700" },
   { value: "상담중", label: "상담중", color: "bg-yellow-100 text-yellow-700" },
-  { value: "성공", label: "성공", color: "bg-emerald-100 text-emerald-700" },
-  { value: "실패", label: "실패", color: "bg-red-100 text-red-700" },
   { value: "부재케어", label: "부재케어", color: "bg-orange-100 text-orange-700" },
   { value: "재케어", label: "재케어", color: "bg-purple-100 text-purple-700" },
+  { value: "실패", label: "실패", color: "bg-red-100 text-red-700" },
 ];
+// 호환용
+const MOBILE_STATUS_OPTIONS = MOBILE_STATUS_META;
 
 const ABSENCE_REASONS = ["통화중", "부재"];
 const RECARE_REASONS = ["가격 재상담", "기기 미정", "타사 비교중", "시기 조율", "가족 상의", "기타"];
@@ -68,7 +77,7 @@ const FAIL_REASONS = ["가격", "재고", "개통시기", "기타"];
 const DOGMARU_CAMPAIGN = "도그마루_홈캠";
 
 function MobileLeadsView({
-  rows, loading, sourceTab, setSourceTab, search, setSearch, updateStatus, onSwitchToFull
+  rows, loading, sourceTab, setSourceTab, search, setSearch, updateStatus, updateAssignee, staff, onSwitchToFull
 }: {
   rows: Lead[];
   loading: boolean;
@@ -77,6 +86,8 @@ function MobileLeadsView({
   search: string;
   setSearch: (s: string) => void;
   updateStatus: (id: string, status: string) => Promise<void>;
+  updateAssignee: (id: string, assigned_to: string | null) => Promise<void>;
+  staff: { user_id: string; display_name: string }[];
   onSwitchToFull: () => void;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -84,7 +95,7 @@ function MobileLeadsView({
   const [absenceModal, setAbsenceModal] = useState<Lead | null>(null);
   const [recareModal, setRecareModal] = useState<Lead | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
-  const [careTab, setCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete">("all");
+  const [careTab, setCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "care" | "cancel" | "complete_meta">("all");
   const [completePage, setCompletePage] = useState(0);
   const COMPLETE_PAGE_SIZE = 50;
   const [completeSearch, setCompleteSearch] = useState("");
@@ -125,11 +136,20 @@ function MobileLeadsView({
         if (careTab === "complete" && !complete) return false;
         if (careTab !== "complete" && complete) return false; // 완료건은 완료탭에서만
       }
-      // 케어 보관함 필터 (현재 탭 내에서만)
-      if (careTab === "new" && r.status !== "신규 접수" && r.status) return false;
-      if (careTab === "absence" && r.status !== "부재케어") return false;
-      if (careTab === "recare" && r.status !== "재케어") return false;
-      if (careTab === "fail" && r.status !== "실패") return false;
+      // 케어 보관함 필터 (현재 탭 내에서만, 메타/도그마루 상태값 분리)
+      if (isDogmaru) {
+        if (careTab === "new" && r.status !== "신규 접수") return false;
+        if (careTab === "absence" && r.status !== "부재케어") return false;
+        if (careTab === "recare" && r.status !== "재케어") return false;
+        if (careTab === "fail" && r.status !== "실패") return false;
+      } else {
+        if (careTab === "new" && r.status !== "신규 접수") return false;
+        if (careTab === "absence" && r.status !== "부재 중") return false;
+        if (careTab === "recare" && r.status !== "재케어") return false;
+        if (careTab === "care" && r.status !== "케어중") return false;
+        if (careTab === "cancel" && r.status !== "취소") return false;
+        if (careTab === "complete_meta" && r.status !== "개통 완료") return false;
+      }
       // 검색
       if (search) {
         const s = search.toLowerCase();
@@ -151,11 +171,18 @@ function MobileLeadsView({
     if (sourceTab === "meta") return !isDogmaru;
     return !isDogmaru;
   }), [rows, sourceTab]);
-  const newCount = tabRows.filter(r => (!r.status || r.status === "신규 접수") && !isDogmaruComplete(r)).length;
+  const newCount = tabRows.filter(r => r.status === "신규 접수" && !isDogmaruComplete(r)).length;
+  // 도그마루 카운트
   const absenceCount = tabRows.filter(r => r.status === "부재케어" && !isDogmaruComplete(r)).length;
   const recareCount = tabRows.filter(r => r.status === "재케어" && !isDogmaruComplete(r)).length;
   const failCount = tabRows.filter(r => r.status === "실패" && !isDogmaruComplete(r)).length;
   const completeCount = tabRows.filter(r => isDogmaruComplete(r)).length;
+  // 메타 카운트
+  const careCount = tabRows.filter(r => r.status === "케어중").length;
+  const absMetaCount = tabRows.filter(r => r.status === "부재 중").length;
+  const recareMetaCount = tabRows.filter(r => r.status === "재케어").length;
+  const cancelCount = tabRows.filter(r => r.status === "취소").length;
+  const completeMetaCount = tabRows.filter(r => r.status === "개통 완료").length;
 
   async function handleStatus(lead: Lead, status: string) {
     setStatusLoading(lead.id + status);
@@ -218,28 +245,41 @@ function MobileLeadsView({
 
       {/* 케어 보관함 - 현재 채널 내 필터 */}
       <div className="flex gap-1.5 px-3 py-2 border-b overflow-x-auto bg-muted/10">
-        {([
-          { key: "all", label: "전체", color: "" },
-          { key: "new", label: `신규 ${newCount}`, color: "sky" },
-          { key: "absence", label: `부재 ${absenceCount}`, color: "orange" },
-          { key: "recare", label: `재케어 ${recareCount}`, color: "purple" },
-          { key: "fail", label: `실패 ${failCount}`, color: "red" },
-          ...(sourceTab === "dogmaru" ? [{ key: "complete", label: `완료 ${completeCount}`, color: "blue" }] : []),
-        ] as const).map((t: any) => (
-          <button key={t.key} onClick={() => { setCareTab(t.key); setCompletePage(0); }}
-            className={"flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all active:scale-95 " + (
-              careTab === t.key
-                ? t.color === "sky" ? "bg-sky-100 text-sky-700 shadow-sm"
-                  : t.color === "orange" ? "bg-orange-100 text-orange-700 shadow-sm"
-                  : t.color === "purple" ? "bg-purple-100 text-purple-700 shadow-sm"
-                  : t.color === "red" ? "bg-red-100 text-red-700 shadow-sm"
-                  : t.color === "blue" ? "bg-blue-100 text-blue-700 shadow-sm"
-                  : "bg-primary text-primary-foreground shadow-sm"
-                : "bg-background text-muted-foreground border border-border/40"
-            )}>
-            {t.label}
-          </button>
-        ))}
+        {(() => {
+          const mobileTabs: { key: string; label: string; color: string }[] = [
+            { key: "all", label: "전체", color: "" },
+            { key: "new", label: `신규 접수 ${newCount}`, color: "sky" },
+          ];
+          if (sourceTab === "dogmaru") {
+            mobileTabs.push({ key: "absence", label: `부재케어 ${absenceCount}`, color: "orange" });
+            mobileTabs.push({ key: "recare", label: `재케어 ${recareCount}`, color: "purple" });
+            mobileTabs.push({ key: "fail", label: `실패 ${failCount}`, color: "red" });
+            mobileTabs.push({ key: "complete", label: `완료 ${completeCount}`, color: "blue" });
+          } else {
+            mobileTabs.push({ key: "care", label: `케어중 ${careCount}`, color: "yellow" });
+            mobileTabs.push({ key: "absence", label: `부재 중 ${absMetaCount}`, color: "orange" });
+            mobileTabs.push({ key: "recare", label: `재케어 ${recareMetaCount}`, color: "purple" });
+            mobileTabs.push({ key: "cancel", label: `취소 ${cancelCount}`, color: "gray" });
+            mobileTabs.push({ key: "complete_meta", label: `개통 완료 ${completeMetaCount}`, color: "blue" });
+          }
+          return mobileTabs.map(t => (
+            <button key={t.key} onClick={() => { setCareTab(t.key as any); setCompletePage(0); }}
+              className={"flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all active:scale-95 " + (
+                careTab === t.key
+                  ? t.color === "sky" ? "bg-sky-100 text-sky-700 shadow-sm"
+                    : t.color === "yellow" ? "bg-yellow-100 text-yellow-700 shadow-sm"
+                    : t.color === "orange" ? "bg-orange-100 text-orange-700 shadow-sm"
+                    : t.color === "purple" ? "bg-purple-100 text-purple-700 shadow-sm"
+                    : t.color === "red" ? "bg-red-100 text-red-700 shadow-sm"
+                    : t.color === "gray" ? "bg-gray-100 text-gray-600 shadow-sm"
+                    : t.color === "blue" ? "bg-blue-100 text-blue-700 shadow-sm"
+                    : "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-background text-muted-foreground border border-border/40"
+              )}>
+              {t.label}
+            </button>
+          ));
+        })()}
       </div>
 
       {/* 완료건 전용 뷰 */}
@@ -354,7 +394,7 @@ function MobileLeadsView({
                   <div className="pt-3">
                     <div className="text-xs text-muted-foreground mb-2 font-medium">상태 변경</div>
                     <div className="grid grid-cols-3 gap-1.5">
-                      {MOBILE_STATUS_OPTIONS.map(s => (
+                      {(sourceTab === "dogmaru" ? MOBILE_STATUS_DOGMARU : MOBILE_STATUS_META).map(s => (
                         <button key={s.value}
                           onClick={() => {
                             if (s.value === "부재케어") { setAbsenceModal(lead); return; }
@@ -363,15 +403,31 @@ function MobileLeadsView({
                             handleStatus(lead, s.value);
                           }}
                           disabled={!!statusLoading}
-                          className={`py-2.5 rounded-xl text-xs font-medium border transition-all active:scale-95 ${
+                          className={"py-2.5 rounded-xl text-xs font-medium border transition-all active:scale-95 " + (
                             lead.status === s.value
-                              ? `${s.color} border-current shadow-sm`
+                              ? s.color + " border-current shadow-sm"
                               : "bg-background border-border/60 text-muted-foreground"
-                          } ${statusLoading ? "opacity-50" : ""}`}>
+                          ) + (statusLoading ? " opacity-50" : "")}>
                           {statusLoading === lead.id + s.value ? "⏳" : s.label}
                         </button>
                       ))}
                     </div>
+                  </div>
+                  {/* 담당자 배정 */}
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1.5 font-medium">담당자</div>
+                    <select
+                      value={lead.assigned_to ?? ""}
+                      onChange={async e => {
+                        await updateAssignee(lead.id, e.target.value || null);
+                      }}
+                      className="w-full text-sm px-3 py-2 rounded-xl border border-border/60 bg-background"
+                    >
+                      <option value="">미지정</option>
+                      {staff.map(s => (
+                        <option key={s.user_id} value={s.user_id}>{s.display_name}</option>
+                      ))}
+                    </select>
                   </div>
                   {/* 메모 */}
                   <div>
@@ -1306,6 +1362,8 @@ export default function LeadsPage() {
       search={search}
       setSearch={setSearch}
       updateStatus={updateStatus}
+      updateAssignee={updateAssignee}
+      staff={staff}
       onSwitchToFull={() => setMobileFullView(true)}
     />;
   }
