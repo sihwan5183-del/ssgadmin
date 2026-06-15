@@ -97,7 +97,7 @@ function MobileLeadsView({
   const [absenceModal, setAbsenceModal] = useState<Lead | null>(null);
   const [recareModal, setRecareModal] = useState<Lead | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
-  const [careTab, setCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "care" | "cancel" | "complete_meta">("all");
+  const [careTab, setCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "care" | "cancel" | "complete_meta" | "withdraw">("all");
   const [completePage, setCompletePage] = useState(0);
   const COMPLETE_PAGE_SIZE = 50;
   const [completeSearch, setCompleteSearch] = useState("");
@@ -144,6 +144,7 @@ function MobileLeadsView({
         if (careTab === "absence" && r.status !== "부재케어") return false;
         if (careTab === "recare" && r.status !== "재케어") return false;
         if (careTab === "fail" && r.status !== "실패") return false;
+        if (careTab === "withdraw" && r.status !== "개통철회") return false;
       } else {
         if (careTab === "new" && r.status !== "신규 접수") return false;
         if (careTab === "absence" && r.status !== "부재 중") return false;
@@ -253,9 +254,11 @@ function MobileLeadsView({
             { key: "new", label: `신규 접수 ${newCount}`, color: "sky" },
           ];
           if (sourceTab === "dogmaru") {
+            const withdrawCount = tabRows.filter(r => r.status === "개통철회" && !isDogmaruComplete(r)).length;
             mobileTabs.push({ key: "absence", label: `부재케어 ${absenceCount}`, color: "orange" });
             mobileTabs.push({ key: "recare", label: `재케어 ${recareCount}`, color: "purple" });
             mobileTabs.push({ key: "fail", label: `실패 ${failCount}`, color: "red" });
+            mobileTabs.push({ key: "withdraw", label: `개통철회 ${withdrawCount}`, color: "rose" });
             mobileTabs.push({ key: "complete", label: `완료 ${completeCount}`, color: "blue" });
           } else {
             mobileTabs.push({ key: "care", label: `케어중 ${careCount}`, color: "yellow" });
@@ -274,6 +277,7 @@ function MobileLeadsView({
                     : t.color === "purple" ? "bg-purple-100 text-purple-700 shadow-sm"
                     : t.color === "red" ? "bg-red-100 text-red-700 shadow-sm"
                     : t.color === "gray" ? "bg-gray-100 text-gray-600 shadow-sm"
+                    : t.color === "rose" ? "bg-rose-100 text-rose-700 shadow-sm"
                     : t.color === "blue" ? "bg-blue-100 text-blue-700 shadow-sm"
                     : "bg-primary text-primary-foreground shadow-sm"
                   : "bg-background text-muted-foreground border border-border/40"
@@ -775,7 +779,7 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru" | "other">("meta");
-  const [pcCareTab, setPcCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "care" | "cancel" | "complete_meta">("all");
+  const [pcCareTab, setPcCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "care" | "cancel" | "complete_meta" | "withdraw">("all");
   const [openLead, setOpenLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState<LeadNote[]>([]);
   const [statusLogs, setStatusLogs] = useState<any[]>([]);
@@ -990,6 +994,7 @@ export default function LeadsPage() {
         if (pcCareTab === "absence" && r.status !== "부재케어") return false;
         if (pcCareTab === "recare" && r.status !== "재케어") return false;
         if (pcCareTab === "fail" && r.status !== "실패") return false;
+        if (pcCareTab === "withdraw" && r.status !== "개통철회") return false;
       } else {
         // 메타 상태값 그대로 사용
         if (pcCareTab === "new" && r.status !== "신규 접수") return false;
@@ -1714,6 +1719,7 @@ export default function LeadsPage() {
           if (t.color === "blue-light") return "bg-blue-100 text-blue-700 border-blue-300";
           if (t.color === "yellow") return "bg-yellow-100 text-yellow-700 border-yellow-300";
           if (t.color === "gray") return "bg-gray-100 text-gray-600 border-gray-300";
+          if (t.color === "rose") return "bg-rose-100 text-rose-700 border-rose-300";
           if (t.color === "orange") return "bg-orange-100 text-orange-700 border-orange-300";
           if (t.color === "purple") return "bg-purple-100 text-purple-700 border-purple-300";
           if (t.color === "red") return "bg-red-100 text-red-700 border-red-300";
@@ -2058,7 +2064,20 @@ export default function LeadsPage() {
                     setOpenLead(r);
                   }}
                 >
-                  {r.memo || <span className="italic text-foreground/40">메모 추가…</span>}
+                  {(() => {
+                    const absenceMatch = (r.memo ?? "").match(/부재\/(\d+)회/);
+                    const absenceNum = absenceMatch ? parseInt(absenceMatch[1]) : 0;
+                    return (
+                      <div className="flex items-center gap-1.5">
+                        {absenceNum > 0 && (
+                          <span className="flex-shrink-0 text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200">
+                            🚫 {absenceNum}회
+                          </span>
+                        )}
+                        <span>{r.memo?.replace(/부재\/\d+회\s*\/?/g, "").trim() || <span className="italic text-foreground/40">메모 추가…</span>}</span>
+                      </div>
+                    );
+                  })()}
                 </TableCell>
                 <TableCell className="text-center py-1.5" onClick={(e) => e.stopPropagation()}>
                   <Button size="sm" variant="ghost" onClick={() => setOpenLead(r)}>
