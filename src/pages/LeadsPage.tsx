@@ -119,7 +119,7 @@ function MobileLeadsView({
 
   // 도그마루 완료건 판단
   // 도그마루 건 하나를 정확히 하나의 탭으로 분류하는 단일 함수 (모바일용)
-  function classifyDogmaruLead(r: any): string {
+  function getDogmaruTab(r: any): string {
     const status = String(r.status ?? "").trim();
     const activationStatus = String(r.activation_status ?? "").trim();
     const cancellationStatus = String(r.cancellation_status ?? "").trim();
@@ -138,7 +138,7 @@ function MobileLeadsView({
   }
 
   function getDogmaruTabMobile(r: any): string {
-    return classifyDogmaruLead(r);
+    return getDogmaruTab(r);
   }
 
   // 탭별 필터 (메타/도그마루 완전 분리)
@@ -1145,7 +1145,7 @@ export default function LeadsPage() {
   // memo + activation_status 기반 상태 자동 분류
   // 도그마루 건 하나를 정확히 하나의 탭으로 분류하는 단일 함수 (PC용)
   function getDogmaruTabPC(r: any): string {
-    return classifyDogmaruLead(r);
+    return getDogmaruTab(r);
   }
 
   // 탭 전환시 pcCareTab 리셋
