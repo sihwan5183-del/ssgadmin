@@ -488,7 +488,7 @@ const SalesLedgerPage = () => {
       query = query.or(orParts.join(","));
     }
     const { data, error, count } = await query
-      .order("open_date", { ascending: false, nullsFirst: false })
+      .order("open_date", { ascending: showPending, nullsFirst: showPending })
       .order("created_at", { ascending: false })
       .range(from, to);
     if (error) {
@@ -584,7 +584,7 @@ const SalesLedgerPage = () => {
       .not("voucher", "is", null)
       .neq("voucher_returned", "유");
     setUnreturnedCount(urc ?? 0);
-  }, [startDate, endDate, colFilters, managerValues]);
+  }, [startDate, endDate, colFilters, managerValues, showPending]);
 
   // 개통 예정 건 앞으로 정렬 (showPending 모드)
   const displayRows = useMemo(() => {
