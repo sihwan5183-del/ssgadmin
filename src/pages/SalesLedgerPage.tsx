@@ -586,6 +586,11 @@ const SalesLedgerPage = () => {
     setUnreturnedCount(urc ?? 0);
   }, [startDate, endDate, colFilters, managerValues, showPending]);
 
+  // showPending 변경 시 명시적 reload
+  useEffect(() => {
+    load();
+  }, [showPending]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // 개통 예정 건 앞으로 정렬 (showPending 모드)
   const displayRows = useMemo(() => {
     const DONE_STATUSES = ["개통완료","설치완료","변경완료(업셀용)","취소","개통취소","반려"];
