@@ -308,6 +308,8 @@ function MobileLeadsView({
                     : t.color === "red" ? "bg-red-100 text-red-700 shadow-sm"
                     : t.color === "gray" ? "bg-gray-100 text-gray-600 shadow-sm"
                     : t.color === "rose" ? "bg-rose-100 text-rose-700 shadow-sm"
+                    : t.color === "indigo" ? "bg-indigo-100 text-indigo-700 shadow-sm"
+                    : t.color === "cyan" ? "bg-cyan-100 text-cyan-700 shadow-sm"
                     : t.color === "teal" ? "bg-teal-100 text-teal-700 shadow-sm"
                     : t.color === "blue" ? "bg-blue-100 text-blue-700 shadow-sm"
                     : "bg-primary text-primary-foreground shadow-sm"
@@ -1780,6 +1782,8 @@ export default function LeadsPage() {
         // 도그마루 탭 카운트: effectiveStatus 기준 (DB status 우선, 없으면 memo 자동분류, 둘 다 없으면 신규 접수)
         const completeC = tabRows.filter(r => getDogmaruTabPC(r) === "완료").length;
         const pendingC = tabRows.filter(r => getDogmaruTabPC(r) === "개통대기").length;
+        const deliveryC = tabRows.filter(r => getDogmaruTabPC(r) === "택배발송").length;
+        const subscribeC = tabRows.filter(r => getDogmaruTabPC(r) === "청약대기").length;
         const newC = sourceTab === "dogmaru"
           ? tabRows.filter(r => getDogmaruTabPC(r) === "신규 접수").length
           : tabRows.filter(r => r.status === "신규 접수").length;
@@ -1798,6 +1802,8 @@ export default function LeadsPage() {
           pcTabs.push({ key: "withdraw", label: `개통철회 ${withdrawC}`, color: "rose" });
           const etcC = tabRows.filter(r => getDogmaruTabPC(r) === "기타").length;
           pcTabs.push({ key: "etc", label: `기타 ${etcC}`, color: "gray" });
+          pcTabs.push({ key: "delivery", label: `택배발송 ${deliveryC}`, color: "indigo" });
+          pcTabs.push({ key: "subscribe", label: `청약대기 ${subscribeC}`, color: "cyan" });
           pcTabs.push({ key: "pending", label: `개통대기 ${pendingC}`, color: "teal" });
           pcTabs.push({ key: "complete", label: `완료 ${completeC}`, color: "blue" });
         } else {
@@ -1822,6 +1828,8 @@ export default function LeadsPage() {
           if (t.color === "orange") return "bg-orange-100 text-orange-700 border-orange-300";
           if (t.color === "purple") return "bg-purple-100 text-purple-700 border-purple-300";
           if (t.color === "red") return "bg-red-100 text-red-700 border-red-300";
+          if (t.color === "indigo") return "bg-indigo-100 text-indigo-700 border-indigo-300";
+          if (t.color === "cyan") return "bg-cyan-100 text-cyan-700 border-cyan-300";
           if (t.color === "teal") return "bg-teal-100 text-teal-700 border-teal-300";
           if (t.color === "blue") return "bg-blue-100 text-blue-700 border-blue-300";
           return "bg-primary text-primary-foreground border-primary";
