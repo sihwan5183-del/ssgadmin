@@ -182,7 +182,7 @@ function MobileLeadsView({
   }, [rows, sourceTab, search, careTab]);
 
   // 탭별 카운트
-  const metaCount = rows.filter(r => r.campaign_name !== DOGMARU_CAMPAIGN).length;
+  const metaCount = rows.filter(r => r.campaign_name && r.campaign_name !== DOGMARU_CAMPAIGN).length;
   const dogmaruCount = rows.filter(r => r.campaign_name === DOGMARU_CAMPAIGN).length;
 
   // 현재 탭 내 케어 카운트
@@ -1129,7 +1129,7 @@ export default function LeadsPage() {
     let meta = 0;
     for (const r of rows) {
       if (r.campaign_name === DOGMARU_CAMPAIGN) dogmaru++;
-      else meta++;
+      else if (r.campaign_name) meta++;
     }
     return { meta, dogmaru };
   }, [rows]);
