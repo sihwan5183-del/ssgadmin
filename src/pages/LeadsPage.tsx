@@ -129,17 +129,17 @@ function MobileLeadsView({
     const isNegative = ["철회","해지","취소","불가","보류","철거","반납","체납"].some(k => actStatus.includes(k));
     if (!isNegative && actStatus.includes("완료")) return "완료";
 
-    // 2. 가입번호 있고 완료 아닌 경우 → 개통대기 (담당자가 다른 상태로 바꾼 건 제외)
-    if (r.activation_number && (!manualStatus || manualStatus === "신규 접수")) return "개통대기";
-
-    // 3. 담당자가 직접 바꾼 상태 우선 (신규 접수 제외)
-    if (manualStatus && manualStatus !== "신규 접수") return manualStatus;
-
-    // 4. activation_status + memo 키워드 자동분류
+    // 2. activation_status + memo 키워드 자동분류 (가입번호보다 우선)
     if (["철회","해지","취소","철거","반납"].some(k => combined.includes(k))) return "개통철회";
     if (["개통불가"].some(k => combined.includes(k))) return "기타";
     if (["부재"].some(k => combined.includes(k))) return "부재케어";
     if (["보류","고객요청","미납","진행","신분증","미성년","확인필요","확인 필요"].some(k => combined.includes(k))) return "재케어";
+
+    // 3. 담당자가 직접 바꾼 상태 우선 (신규 접수 제외)
+    if (manualStatus && manualStatus !== "신규 접수") return manualStatus;
+
+    // 4. 가입번호 있고 완료 아닌 경우 → 개통대기
+    if (r.activation_number && (!manualStatus || manualStatus === "신규 접수")) return "개통대기";
 
     return "신규 접수";
   }
@@ -182,7 +182,7 @@ function MobileLeadsView({
   }, [rows, sourceTab, search, careTab]);
 
   // 탭별 카운트
-  const metaCount = rows.filter(r => r.campaign_name && r.campaign_name !== DOGMARU_CAMPAIGN).length;
+  const metaCount = rows.filter(r => r.campaign_name !== DOGMARU_CAMPAIGN).length;
   const dogmaruCount = rows.filter(r => r.campaign_name === DOGMARU_CAMPAIGN).length;
 
   // 현재 탭 내 케어 카운트
@@ -1129,7 +1129,7 @@ export default function LeadsPage() {
     let meta = 0;
     for (const r of rows) {
       if (r.campaign_name === DOGMARU_CAMPAIGN) dogmaru++;
-      else if (r.campaign_name) meta++;
+      else meta++;
     }
     return { meta, dogmaru };
   }, [rows]);
@@ -1157,17 +1157,17 @@ export default function LeadsPage() {
     const isNegative = ["철회","해지","취소","불가","보류","철거","반납","체납"].some(k => actStatus.includes(k));
     if (!isNegative && actStatus.includes("완료")) return "완료";
 
-    // 2. 가입번호 있고 완료 아닌 경우 → 개통대기 (담당자가 다른 상태로 바꾼 건 제외)
-    if (r.activation_number && (!manualStatus || manualStatus === "신규 접수")) return "개통대기";
-
-    // 3. 담당자가 직접 바꾼 상태 우선 (신규 접수 제외)
-    if (manualStatus && manualStatus !== "신규 접수") return manualStatus;
-
-    // 4. activation_status + memo 키워드 자동분류
+    // 2. activation_status + memo 키워드 자동분류 (가입번호보다 우선)
     if (["철회","해지","취소","철거","반납"].some(k => combined.includes(k))) return "개통철회";
     if (["개통불가"].some(k => combined.includes(k))) return "기타";
     if (["부재"].some(k => combined.includes(k))) return "부재케어";
     if (["보류","고객요청","미납","진행","신분증","미성년","확인필요","확인 필요"].some(k => combined.includes(k))) return "재케어";
+
+    // 3. 담당자가 직접 바꾼 상태 우선 (신규 접수 제외)
+    if (manualStatus && manualStatus !== "신규 접수") return manualStatus;
+
+    // 4. 가입번호 있고 완료 아닌 경우 → 개통대기
+    if (r.activation_number && (!manualStatus || manualStatus === "신규 접수")) return "개통대기";
 
     return "신규 접수";
   }
