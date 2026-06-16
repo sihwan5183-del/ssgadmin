@@ -80,21 +80,43 @@ const FAIL_REASONS = ["가격", "재고", "개통시기", "기타"];
 const DOGMARU_CAMPAIGN = "도그마루_홈캠";
 
 // ── 도그마루 상태 분류 함수 (PC/모바일 공통) ──
+// 구글시트 최신값 기준으로 매번 해석 - status 컬럼 신뢰하지 않음
 function getDogmaruTab(r: any): string {
-  const status = String(r.status ?? "").trim();
   const activationStatus = String(r.activation_status ?? "").trim();
   const cancellationStatus = String(r.cancellation_status ?? "").trim();
   const memo = String(r.memo ?? "").trim();
   const activationNumber = String(r.activation_number ?? "").trim();
-  const text = [status, activationStatus, cancellationStatus, memo].join(" ");
+  // 시트에서 넘어온 값들만 기준 (status 제외)
+  const text = [activationStatus, cancellationStatus, memo].join(" ");
   const hasAny = (keywords: string[]) => keywords.some(k => text.includes(k));
-  if (hasAny(["개통철회","철회","철회완료","고객철회","해지","취소","취소완료","철거","반납"])) return "개통철회";
-  if (hasAny(["실패","개통불가","불가","거절","연락불가","포기","미진행","진행불가"])) return "실패";
-  if (hasAny(["부재케어","부재","부재중","통화중","연락안됨","미응답","연락두절"])) return "부재케어";
-  if (hasAny(["재케어","재상담","보류","고객요청","미납","진행","신분증","미성년","확인필요","확인 필요","검토","추후","다음주","나중","대기","상담중"])) return "재케어";
-  if (activationStatus.includes("완료") || activationStatus.includes("개통완료") || status.includes("개통완료") || status.includes("완료")) return "완료";
-  if (activationNumber) return "개통대기";
-  if (hasAny(["기타","예외","확인불가"])) return "기타";
+
+  // 1. 개통철회
+  if (hasAny(["철회","개통철회","고객철회","해지","취소","취소요청","취소 요청","취소완료","반납","철거"])) return "개통철회";
+
+  // 2. 실패
+  if (hasAny(["개통불가","불가","실패","거절","진행불가","미진행","포기"])) return "실패";
+
+  // 3. 부재케어
+  if (hasAny(["부재","부재중","통화중","연락안됨","미응답","연락두절"])) return "부재케어";
+
+  // 4. 재케어
+  if (hasAny(["신분증","신분증첨부필요","첨부필요","미납","보류","확인필요","확인 필요","고객요청","재상담","검토","추후","나중","재연락"])) return "재케어";
+
+  // 5. 완료 - "개통완료" 포함 (단, 택배/배송/기사출동신청완료는 완료 아님)
+  const deliveryKeywords = ["택배신청완료","배송신청완료","기사출동신청완료","기사 출동신청완료"];
+  const isDeliveryComplete = deliveryKeywords.some(k => text.includes(k));
+  if (!isDeliveryComplete && text.includes("개통완료")) return "완료";
+
+  // 6. 택배발송 - 택배/배송/발송/기사출동 관련
+  if (hasAny(["택배","배송","발송","기사출동","기사 출동"])) return "택배발송";
+
+  // 7. 청약대기 - 가입번호 있음
+  if (activationNumber) return "청약대기";
+
+  // 8. 기타 - 값은 있으나 위 조건 안 걸림
+  if (text.trim()) return "기타";
+
+  // 9. 신규접수
   return "신규 접수";
 }
 
@@ -117,7 +139,7 @@ function MobileLeadsView({
   const [absenceModal, setAbsenceModal] = useState<Lead | null>(null);
   const [recareModal, setRecareModal] = useState<Lead | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
-  const [careTab, setCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "pending" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc">("all");
+  const [careTab, setCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "delivery" | "subscribe" | "pending" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc">("all");
   const [completePage, setCompletePage] = useState(0);
   const COMPLETE_PAGE_SIZE = 50;
   const [completeSearch, setCompleteSearch] = useState("");
@@ -160,6 +182,8 @@ function MobileLeadsView({
         else if (careTab === "withdraw" && tab !== "개통철회") return false;
         else if (careTab === "etc" && tab !== "기타") return false;
         else if (careTab === "pending" && tab !== "개통대기") return false;
+        else if (careTab === "delivery" && tab !== "택배발송") return false;
+        else if (careTab === "subscribe" && tab !== "청약대기") return false;
         else if (careTab === "complete" && tab !== "완료") return false;
       } else {
         if (careTab === "new" && r.status !== "신규 접수") return false;
@@ -193,6 +217,8 @@ function MobileLeadsView({
   // 도그마루 탭 카운트: effectiveStatus 기준 (DB status 우선, 없으면 memo 자동분류, 둘 다 없으면 신규 접수)
   const completeCount = tabRows.filter(r => getDogmaruTabMobile(r) === "완료").length;
   const pendingCount = tabRows.filter(r => getDogmaruTabMobile(r) === "개통대기").length;
+  const deliveryCount = tabRows.filter(r => getDogmaruTabMobile(r) === "택배발송").length;
+  const subscribeCount = tabRows.filter(r => getDogmaruTabMobile(r) === "청약대기").length;
   const newCount = sourceTab === "dogmaru"
     ? tabRows.filter(r => getDogmaruTabMobile(r) === "신규 접수").length
     : tabRows.filter(r => r.status === "신규 접수").length;
@@ -280,6 +306,8 @@ function MobileLeadsView({
             mobileTabs.push({ key: "withdraw", label: `개통철회 ${withdrawCount}`, color: "rose" });
             const etcCount = tabRows.filter(r => getDogmaruTabMobile(r) === "기타").length;
             mobileTabs.push({ key: "etc", label: `기타 ${etcCount}`, color: "gray" });
+            mobileTabs.push({ key: "delivery", label: `택배발송 ${deliveryCount}`, color: "indigo" });
+            mobileTabs.push({ key: "subscribe", label: `청약대기 ${subscribeCount}`, color: "cyan" });
             mobileTabs.push({ key: "pending", label: `개통대기 ${pendingCount}`, color: "teal" });
             mobileTabs.push({ key: "complete", label: `완료 ${completeCount}`, color: "blue" });
           } else {
@@ -300,6 +328,8 @@ function MobileLeadsView({
                     : t.color === "red" ? "bg-red-100 text-red-700 shadow-sm"
                     : t.color === "gray" ? "bg-gray-100 text-gray-600 shadow-sm"
                     : t.color === "rose" ? "bg-rose-100 text-rose-700 shadow-sm"
+                    : t.color === "indigo" ? "bg-indigo-100 text-indigo-700 shadow-sm"
+                    : t.color === "cyan" ? "bg-cyan-100 text-cyan-700 shadow-sm"
                     : t.color === "teal" ? "bg-teal-100 text-teal-700 shadow-sm"
                     : t.color === "blue" ? "bg-blue-100 text-blue-700 shadow-sm"
                     : "bg-primary text-primary-foreground shadow-sm"
@@ -824,7 +854,7 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru" | "other">("meta");
-  const [pcCareTab, setPcCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "pending" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc">("all");
+  const [pcCareTab, setPcCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "delivery" | "subscribe" | "pending" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc">("all");
   const [openLead, setOpenLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState<LeadNote[]>([]);
   const [statusLogs, setStatusLogs] = useState<any[]>([]);
@@ -1038,6 +1068,8 @@ export default function LeadsPage() {
         else if (pcCareTab === "withdraw" && tab !== "개통철회") return false;
         else if (pcCareTab === "etc" && tab !== "기타") return false;
         else if (pcCareTab === "pending" && tab !== "개통대기") return false;
+        else if (pcCareTab === "delivery" && tab !== "택배발송") return false;
+        else if (pcCareTab === "subscribe" && tab !== "청약대기") return false;
         else if (pcCareTab === "complete" && tab !== "완료") return false;
       } else {
         // 메타 상태값 그대로 사용
@@ -1185,7 +1217,12 @@ export default function LeadsPage() {
     const other = empty();
 
     for (const r of rows) {
-      // 도그마루는 registration_date 기준, 메타는 created_at 기준
+      const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
+      // sourceTab에 맞는 건만 집계
+      if (sourceTab === "dogmaru" && !isDogmaru) continue;
+      if (sourceTab === "meta" && isDogmaru) continue;
+      if (sourceTab === "other") continue;
+
       let dateIso = "";
       const rd = r.registration_date;
       if (rd && rd.includes("/")) {
@@ -1199,25 +1236,37 @@ export default function LeadsPage() {
         dateIso = r.created_at.slice(0, 10);
       }
       if (!inRange(dateIso)) continue;
-      const bucket = r.campaign_name === DOGMARU_CAMPAIGN ? dogmaru : meta;
+      const bucket = isDogmaru ? dogmaru : meta;
       bucket.total += 1;
       if (dateIso === today) bucket.today += 1;
-      if (r.status === "개통 완료" || r.activation_status?.includes("완료")) bucket.done += 1;
-      if (r.status === "재케어") bucket.recare += 1;
-      if (r.status === "부재 중") bucket.absent += 1;
-      if (r.status === "실패" || r.status === "취소") bucket.fail += 1;
+      if (isDogmaru) {
+        // 도그마루는 getDogmaruTab 기준
+        const tab = getDogmaruTab(r);
+        if (tab === "완료") bucket.done += 1;
+        else if (tab === "재케어") bucket.recare += 1;
+        else if (tab === "부재케어") bucket.absent += 1;
+        else if (tab === "실패") bucket.fail += 1;
+      } else {
+        // 메타는 status 기준
+        if (r.status === "개통 완료") bucket.done += 1;
+        if (r.status === "재케어") bucket.recare += 1;
+        if (r.status === "부재 중") bucket.absent += 1;
+        if (r.status === "실패" || r.status === "취소") bucket.fail += 1;
+      }
     }
-    for (const r of inquiryRows) {
-      if (!inRange(r.created_at)) continue;
-      other.total += 1;
-      if (r.created_at.slice(0, 10) === today) other.today += 1;
-      if (r.status === "개통완료") other.done += 1;
-      if (r.status === "재케어") other.recare += 1;
-      if (r.status === "부재") other.absent += 1;
-      if (r.status === "실패" || r.status === "취소") other.fail += 1;
+    if (sourceTab === "other") {
+      for (const r of inquiryRows) {
+        if (!inRange(r.created_at)) continue;
+        other.total += 1;
+        if (r.created_at.slice(0, 10) === today) other.today += 1;
+        if (r.status === "개통완료") other.done += 1;
+        if (r.status === "재케어") other.recare += 1;
+        if (r.status === "부재") other.absent += 1;
+        if (r.status === "실패" || r.status === "취소") other.fail += 1;
+      }
     }
     return { meta, dogmaru, other };
-  }, [rows, inquiryRows, period, customStart, customEnd]);
+  }, [rows, inquiryRows, period, customStart, customEnd, sourceTab]);
 
   // ── 직원별 성과 매트릭스 (담당자/매니저 단위 집계) ──
   const staffMatrix = useMemo(() => {
@@ -1755,6 +1804,8 @@ export default function LeadsPage() {
         // 도그마루 탭 카운트: effectiveStatus 기준 (DB status 우선, 없으면 memo 자동분류, 둘 다 없으면 신규 접수)
         const completeC = tabRows.filter(r => getDogmaruTabPC(r) === "완료").length;
         const pendingC = tabRows.filter(r => getDogmaruTabPC(r) === "개통대기").length;
+        const deliveryC = tabRows.filter(r => getDogmaruTabPC(r) === "택배발송").length;
+        const subscribeC = tabRows.filter(r => getDogmaruTabPC(r) === "청약대기").length;
         const newC = sourceTab === "dogmaru"
           ? tabRows.filter(r => getDogmaruTabPC(r) === "신규 접수").length
           : tabRows.filter(r => r.status === "신규 접수").length;
@@ -1773,6 +1824,8 @@ export default function LeadsPage() {
           pcTabs.push({ key: "withdraw", label: `개통철회 ${withdrawC}`, color: "rose" });
           const etcC = tabRows.filter(r => getDogmaruTabPC(r) === "기타").length;
           pcTabs.push({ key: "etc", label: `기타 ${etcC}`, color: "gray" });
+          pcTabs.push({ key: "delivery", label: `택배발송 ${deliveryC}`, color: "indigo" });
+          pcTabs.push({ key: "subscribe", label: `청약대기 ${subscribeC}`, color: "cyan" });
           pcTabs.push({ key: "pending", label: `개통대기 ${pendingC}`, color: "teal" });
           pcTabs.push({ key: "complete", label: `완료 ${completeC}`, color: "blue" });
         } else {
@@ -1797,6 +1850,8 @@ export default function LeadsPage() {
           if (t.color === "orange") return "bg-orange-100 text-orange-700 border-orange-300";
           if (t.color === "purple") return "bg-purple-100 text-purple-700 border-purple-300";
           if (t.color === "red") return "bg-red-100 text-red-700 border-red-300";
+          if (t.color === "indigo") return "bg-indigo-100 text-indigo-700 border-indigo-300";
+          if (t.color === "cyan") return "bg-cyan-100 text-cyan-700 border-cyan-300";
           if (t.color === "teal") return "bg-teal-100 text-teal-700 border-teal-300";
           if (t.color === "blue") return "bg-blue-100 text-blue-700 border-blue-300";
           return "bg-primary text-primary-foreground border-primary";
