@@ -119,29 +119,26 @@ function MobileLeadsView({
 
   // 도그마루 완료건 판단
   // 도그마루 건 하나를 정확히 하나의 탭으로 분류하는 단일 함수 (모바일용)
-  function getDogmaruTabMobile(r: any): string {
-    const manualStatus = (r.status ?? "").trim();
-    const actStatus = (r.activation_status ?? "");
-    const memo = (r.memo ?? "");
-    const combined = [actStatus, memo].join(" ");
-
-    // 1. 부정 키워드 없고 "완료" 키워드 있으면 → 완료
-    const isNegative = ["철회","해지","취소","불가","보류","철거","반납","체납"].some(k => actStatus.includes(k));
-    if (!isNegative && actStatus.includes("완료")) return "완료";
-
-    // 2. activation_status + memo 키워드 자동분류 (가입번호보다 우선)
-    if (["철회","해지","취소","철거","반납"].some(k => combined.includes(k))) return "개통철회";
-    if (["개통불가"].some(k => combined.includes(k))) return "기타";
-    if (["부재"].some(k => combined.includes(k))) return "부재케어";
-    if (["보류","고객요청","미납","진행","신분증","미성년","확인필요","확인 필요"].some(k => combined.includes(k))) return "재케어";
-
-    // 3. 담당자가 직접 바꾼 상태 우선 (신규 접수 제외)
-    if (manualStatus && manualStatus !== "신규 접수") return manualStatus;
-
-    // 4. 가입번호 있고 완료 아닌 경우 → 개통대기
-    if (r.activation_number && (!manualStatus || manualStatus === "신규 접수")) return "개통대기";
-
+  function classifyDogmaruLead(r: any): string {
+    const status = String(r.status ?? "").trim();
+    const activationStatus = String(r.activation_status ?? "").trim();
+    const cancellationStatus = String(r.cancellation_status ?? "").trim();
+    const memo = String(r.memo ?? "").trim();
+    const activationNumber = String(r.activation_number ?? "").trim();
+    const text = [status, activationStatus, cancellationStatus, memo].join(" ");
+    const hasAny = (keywords: string[]) => keywords.some(k => text.includes(k));
+    if (hasAny(["개통철회","철회","철회완료","고객철회","해지","취소","취소완료","철거","반납"])) return "개통철회";
+    if (hasAny(["실패","개통불가","불가","거절","연락불가","포기","미진행","진행불가"])) return "실패";
+    if (hasAny(["부재케어","부재","부재중","통화중","연락안됨","미응답","연락두절"])) return "부재케어";
+    if (hasAny(["재케어","재상담","보류","고객요청","미납","진행","신분증","미성년","확인필요","확인 필요","검토","추후","다음주","나중","대기","상담중"])) return "재케어";
+    if (activationStatus.includes("완료") || activationStatus.includes("개통완료") || status.includes("개통완료") || status.includes("완료")) return "완료";
+    if (activationNumber) return "개통대기";
+    if (hasAny(["기타","예외","확인불가"])) return "기타";
     return "신규 접수";
+  }
+
+  function getDogmaruTabMobile(r: any): string {
+    return classifyDogmaruLead(r);
   }
 
   // 탭별 필터 (메타/도그마루 완전 분리)
@@ -1148,28 +1145,7 @@ export default function LeadsPage() {
   // memo + activation_status 기반 상태 자동 분류
   // 도그마루 건 하나를 정확히 하나의 탭으로 분류하는 단일 함수 (PC용)
   function getDogmaruTabPC(r: any): string {
-    const manualStatus = (r.status ?? "").trim();
-    const actStatus = (r.activation_status ?? "");
-    const memo = (r.memo ?? "");
-    const combined = [actStatus, memo].join(" ");
-
-    // 1. 부정 키워드 없고 "완료" 키워드 있으면 → 완료
-    const isNegative = ["철회","해지","취소","불가","보류","철거","반납","체납"].some(k => actStatus.includes(k));
-    if (!isNegative && actStatus.includes("완료")) return "완료";
-
-    // 2. activation_status + memo 키워드 자동분류 (가입번호보다 우선)
-    if (["철회","해지","취소","철거","반납"].some(k => combined.includes(k))) return "개통철회";
-    if (["개통불가"].some(k => combined.includes(k))) return "기타";
-    if (["부재"].some(k => combined.includes(k))) return "부재케어";
-    if (["보류","고객요청","미납","진행","신분증","미성년","확인필요","확인 필요"].some(k => combined.includes(k))) return "재케어";
-
-    // 3. 담당자가 직접 바꾼 상태 우선 (신규 접수 제외)
-    if (manualStatus && manualStatus !== "신규 접수") return manualStatus;
-
-    // 4. 가입번호 있고 완료 아닌 경우 → 개통대기
-    if (r.activation_number && (!manualStatus || manualStatus === "신규 접수")) return "개통대기";
-
-    return "신규 접수";
+    return classifyDogmaruLead(r);
   }
 
   // 탭 전환시 pcCareTab 리셋
