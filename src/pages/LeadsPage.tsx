@@ -79,6 +79,25 @@ const RECARE_REASONS = ["가격 재상담", "기기 미정", "타사 비교중",
 const FAIL_REASONS = ["가격", "재고", "개통시기", "기타"];
 const DOGMARU_CAMPAIGN = "도그마루_홈캠";
 
+// ── 도그마루 상태 분류 함수 (PC/모바일 공통) ──
+function getDogmaruTab(r: any): string {
+  const status = String(r.status ?? "").trim();
+  const activationStatus = String(r.activation_status ?? "").trim();
+  const cancellationStatus = String(r.cancellation_status ?? "").trim();
+  const memo = String(r.memo ?? "").trim();
+  const activationNumber = String(r.activation_number ?? "").trim();
+  const text = [status, activationStatus, cancellationStatus, memo].join(" ");
+  const hasAny = (keywords: string[]) => keywords.some(k => text.includes(k));
+  if (hasAny(["개통철회","철회","철회완료","고객철회","해지","취소","취소완료","철거","반납"])) return "개통철회";
+  if (hasAny(["실패","개통불가","불가","거절","연락불가","포기","미진행","진행불가"])) return "실패";
+  if (hasAny(["부재케어","부재","부재중","통화중","연락안됨","미응답","연락두절"])) return "부재케어";
+  if (hasAny(["재케어","재상담","보류","고객요청","미납","진행","신분증","미성년","확인필요","확인 필요","검토","추후","다음주","나중","대기","상담중"])) return "재케어";
+  if (activationStatus.includes("완료") || activationStatus.includes("개통완료") || status.includes("개통완료") || status.includes("완료")) return "완료";
+  if (activationNumber) return "개통대기";
+  if (hasAny(["기타","예외","확인불가"])) return "기타";
+  return "신규 접수";
+}
+
 function MobileLeadsView({
   rows, loading, sourceTab, setSourceTab, search, setSearch, updateStatus, updateAssignee, staff, onSwitchToFull
 }: {
@@ -119,24 +138,6 @@ function MobileLeadsView({
 
   // 도그마루 완료건 판단
   // 도그마루 건 하나를 정확히 하나의 탭으로 분류하는 단일 함수 (모바일용)
-  function getDogmaruTab(r: any): string {
-    const status = String(r.status ?? "").trim();
-    const activationStatus = String(r.activation_status ?? "").trim();
-    const cancellationStatus = String(r.cancellation_status ?? "").trim();
-    const memo = String(r.memo ?? "").trim();
-    const activationNumber = String(r.activation_number ?? "").trim();
-    const text = [status, activationStatus, cancellationStatus, memo].join(" ");
-    const hasAny = (keywords: string[]) => keywords.some(k => text.includes(k));
-    if (hasAny(["개통철회","철회","철회완료","고객철회","해지","취소","취소완료","철거","반납"])) return "개통철회";
-    if (hasAny(["실패","개통불가","불가","거절","연락불가","포기","미진행","진행불가"])) return "실패";
-    if (hasAny(["부재케어","부재","부재중","통화중","연락안됨","미응답","연락두절"])) return "부재케어";
-    if (hasAny(["재케어","재상담","보류","고객요청","미납","진행","신분증","미성년","확인필요","확인 필요","검토","추후","다음주","나중","대기","상담중"])) return "재케어";
-    if (activationStatus.includes("완료") || activationStatus.includes("개통완료") || status.includes("개통완료") || status.includes("완료")) return "완료";
-    if (activationNumber) return "개통대기";
-    if (hasAny(["기타","예외","확인불가"])) return "기타";
-    return "신규 접수";
-  }
-
   function getDogmaruTabMobile(r: any): string {
     return getDogmaruTab(r);
   }
