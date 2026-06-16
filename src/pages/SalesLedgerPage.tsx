@@ -747,7 +747,7 @@ const SalesLedgerPage = () => {
       if (realVals.length > 0) q = q.in("manager", realVals);
       else if (colFilters.manager.includes("__none__")) q = q.or("manager.is.null,manager.eq.");
     }
-    const { data, error } = await q.order("open_date", { ascending: false, nullsFirst: false });
+    const { data, error } = await q.order("open_date", { ascending: showPending, nullsFirst: showPending });
     if (error) return toast.error("엑셀 내보내기 실패", { description: error.message });
     let sales = (data ?? []) as any[];
     // 클라이언트 측 검색어 보조 필터
@@ -787,7 +787,7 @@ const SalesLedgerPage = () => {
       )
       .gte("open_date", startDate)
       .lte("open_date", endDate)
-      .order("open_date", { ascending: false, nullsFirst: false });
+      .order("open_date", { ascending: showPending, nullsFirst: showPending });
     if (error) return toast.error("오퍼 내보내기 실패", { description: error.message });
     const filtered = (data ?? []).filter((r: any) =>
       Number(r.distributor_amount ?? 0) > 0 ||
