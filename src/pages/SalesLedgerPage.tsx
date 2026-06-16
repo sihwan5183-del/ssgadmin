@@ -320,6 +320,10 @@ const SalesLedgerPage = () => {
   // 이달 실적(개통완료·설치완료) 카운트
   const [monthDoneCount, setMonthDoneCount] = useState(0);
   const [showPending, setShowPending] = useState(false);
+  const handleTogglePending = () => {
+    setPage(0);
+    setShowPending((v) => !v);
+  };
 
   // 담당자 필드에 UUID가 들어간 경우 프로필 display_name으로 치환하기 위한 맵
   const [managerNameMap, setManagerNameMap] = useState<Record<string, string>>({});
@@ -586,11 +590,6 @@ const SalesLedgerPage = () => {
     setUnreturnedCount(urc ?? 0);
   }, [startDate, endDate, colFilters, managerValues, showPending]);
 
-  // showPending 변경 시 명시적 reload
-  useEffect(() => {
-    load();
-  }, [showPending]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // 개통 예정 건 앞으로 정렬 (showPending 모드)
   const displayRows = useMemo(() => {
     const DONE_STATUSES = ["개통완료","설치완료","변경완료(업셀용)","취소","개통취소","반려"];
@@ -642,7 +641,7 @@ const SalesLedgerPage = () => {
       .subscribe();
     return () => { supabase.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [load, loadSummary]);
+  }, [load, loadSummary, showPending]);
 
   // 디바운스 (300ms) — 입력 중에는 스피너 표시
   useEffect(() => {
@@ -1012,7 +1011,7 @@ const SalesLedgerPage = () => {
             이달 실적(개통/설치완료) {monthDoneCount.toLocaleString()}건
           </Badge>
           <button
-            onClick={() => setShowPending(v => !v)}
+            onClick={handleTogglePending}
             className={`h-7 px-2.5 rounded-full text-[11px] font-medium border transition ${
               showPending
                 ? "bg-amber-500 text-white border-amber-500"
