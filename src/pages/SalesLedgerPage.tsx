@@ -320,9 +320,13 @@ const SalesLedgerPage = () => {
   // 이달 실적(개통완료·설치완료) 카운트
   const [monthDoneCount, setMonthDoneCount] = useState(0);
   const [showPending, setShowPending] = useState(false);
+  const showPendingRef = React.useRef(false);
   const handleTogglePending = () => {
+    const next = !showPendingRef.current;
+    showPendingRef.current = next;
+    setShowPending(next);
     setPage(0);
-    setShowPending((v) => !v);
+    load(next);
   };
 
   // 담당자 필드에 UUID가 들어간 경우 프로필 display_name으로 치환하기 위한 맵
@@ -448,7 +452,8 @@ const SalesLedgerPage = () => {
   const hasDeductions = (r: SaleRow) =>
     offerOf(r) > 0;
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (pendingMode?: boolean) => {
+    const isPending = pendingMode !== undefined ? pendingMode : showPendingRef.current;
     const from = page * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
     let query = supabase
@@ -492,7 +497,7 @@ const SalesLedgerPage = () => {
       query = query.or(orParts.join(","));
     }
     const { data, error, count } = await query
-      .order("open_date", { ascending: showPending, nullsFirst: showPending })
+      .order("open_date", { ascending: isPending, nullsFirst: isPending })
       .order("created_at", { ascending: false })
       .range(from, to);
     if (error) {
@@ -588,7 +593,7 @@ const SalesLedgerPage = () => {
       .not("voucher", "is", null)
       .neq("voucher_returned", "유");
     setUnreturnedCount(urc ?? 0);
-  }, [startDate, endDate, colFilters, managerValues, showPending]);
+  }, [startDate, endDate, colFilters, managerValues]);
 
   // 개통 예정 건 앞으로 정렬 (showPending 모드)
   const displayRows = useMemo(() => {
@@ -641,7 +646,7 @@ const SalesLedgerPage = () => {
       .subscribe();
     return () => { supabase.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [load, loadSummary, showPending]);
+  }, [load, loadSummary]);
 
   // 디바운스 (300ms) — 입력 중에는 스피너 표시
   useEffect(() => {
@@ -751,7 +756,7 @@ const SalesLedgerPage = () => {
       if (realVals.length > 0) q = q.in("manager", realVals);
       else if (colFilters.manager.includes("__none__")) q = q.or("manager.is.null,manager.eq.");
     }
-    const { data, error } = await q.order("open_date", { ascending: showPending, nullsFirst: showPending });
+    const { data, error } = await q.order("open_date", { ascending: isPending, nullsFirst: isPending });
     if (error) return toast.error("엑셀 내보내기 실패", { description: error.message });
     let sales = (data ?? []) as any[];
     // 클라이언트 측 검색어 보조 필터
@@ -791,7 +796,7 @@ const SalesLedgerPage = () => {
       )
       .gte("open_date", startDate)
       .lte("open_date", endDate)
-      .order("open_date", { ascending: showPending, nullsFirst: showPending });
+      .order("open_date", { ascending: isPending, nullsFirst: isPending });
     if (error) return toast.error("오퍼 내보내기 실패", { description: error.message });
     const filtered = (data ?? []).filter((r: any) =>
       Number(r.distributor_amount ?? 0) > 0 ||
