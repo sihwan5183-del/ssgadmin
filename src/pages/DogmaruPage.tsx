@@ -81,20 +81,22 @@ const DOGMARU_CAMPAIGN = "도그마루_홈캠";
 
 // ── 도그마루 상태 분류 함수 (PC/모바일 공통) ──
 function getDogmaruTab(r: any): string {
-  const status = String(r.status ?? "").trim();
   const activationStatus = String(r.activation_status ?? "").trim();
   const cancellationStatus = String(r.cancellation_status ?? "").trim();
   const memo = String(r.memo ?? "").trim();
   const activationNumber = String(r.activation_number ?? "").trim();
-  const text = [status, activationStatus, cancellationStatus, memo].join(" ");
+  const text = [activationStatus, cancellationStatus, memo].join(" ");
   const hasAny = (keywords: string[]) => keywords.some(k => text.includes(k));
-  if (hasAny(["개통철회","철회","철회완료","고객철회","해지","취소","취소완료","철거","반납"])) return "개통철회";
-  if (hasAny(["실패","개통불가","불가","거절","연락불가","포기","미진행","진행불가"])) return "실패";
-  if (hasAny(["부재케어","부재","부재중","통화중","연락안됨","미응답","연락두절"])) return "부재케어";
-  if (hasAny(["재케어","재상담","보류","고객요청","미납","진행","신분증","미성년","확인필요","확인 필요","검토","추후","다음주","나중","대기","상담중"])) return "재케어";
-  if (activationStatus.includes("완료") || activationStatus.includes("개통완료") || status.includes("개통완료") || status.includes("완료")) return "완료";
-  if (activationNumber) return "개통대기";
-  if (hasAny(["기타","예외","확인불가"])) return "기타";
+  if (hasAny(["철회","개통철회","고객철회","해지","취소","취소요청","취소 요청","취소완료","반납","철거"])) return "개통철회";
+  if (hasAny(["개통불가","불가","실패","거절","진행불가","미진행","포기"])) return "실패";
+  if (hasAny(["부재","부재중","통화중","연락안됨","미응답","연락두절"])) return "부재케어";
+  if (hasAny(["신분증","신분증첨부필요","첨부필요","미납","보류","확인필요","확인 필요","고객요청","재상담","검토","추후","나중","재연락"])) return "재케어";
+  const deliveryKeywords = ["택배신청완료","배송신청완료","기사출동신청완료"];
+  const isDeliveryComplete = deliveryKeywords.some(k => text.includes(k));
+  if (!isDeliveryComplete && text.includes("개통완료")) return "완료";
+  if (hasAny(["택배","배송","발송","기사출동","기사 출동"])) return "택배발송";
+  if (activationNumber) return "청약대기";
+  if (text.trim()) return "기타";
   return "신규 접수";
 }
 
@@ -117,7 +119,7 @@ function MobileLeadsView({
   const [absenceModal, setAbsenceModal] = useState<Lead | null>(null);
   const [recareModal, setRecareModal] = useState<Lead | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
-  const [careTab, setCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "pending" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc">("all");
+  const [careTab, setCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "delivery" | "subscribe" | "pending" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc">("all");
   const [completePage, setCompletePage] = useState(0);
   const COMPLETE_PAGE_SIZE = 50;
   const [completeSearch, setCompleteSearch] = useState("");
@@ -160,6 +162,8 @@ function MobileLeadsView({
         else if (careTab === "withdraw" && tab !== "개통철회") return false;
         else if (careTab === "etc" && tab !== "기타") return false;
         else if (careTab === "pending" && tab !== "개통대기") return false;
+        else if (careTab === "delivery" && tab !== "택배발송") return false;
+        else if (careTab === "subscribe" && tab !== "청약대기") return false;
         else if (careTab === "complete" && tab !== "완료") return false;
       } else {
         if (careTab === "new" && r.status !== "신규 접수") return false;
@@ -193,6 +197,8 @@ function MobileLeadsView({
   // 도그마루 탭 카운트: effectiveStatus 기준 (DB status 우선, 없으면 memo 자동분류, 둘 다 없으면 신규 접수)
   const completeCount = tabRows.filter(r => getDogmaruTabMobile(r) === "완료").length;
   const pendingCount = tabRows.filter(r => getDogmaruTabMobile(r) === "개통대기").length;
+  const deliveryCount = tabRows.filter(r => getDogmaruTabMobile(r) === "택배발송").length;
+  const subscribeCount = tabRows.filter(r => getDogmaruTabMobile(r) === "청약대기").length;
   const newCount = sourceTab === "dogmaru"
     ? tabRows.filter(r => getDogmaruTabMobile(r) === "신규 접수").length
     : tabRows.filter(r => r.status === "신규 접수").length;
@@ -280,6 +286,8 @@ function MobileLeadsView({
             mobileTabs.push({ key: "withdraw", label: `개통철회 ${withdrawCount}`, color: "rose" });
             const etcCount = tabRows.filter(r => getDogmaruTabMobile(r) === "기타").length;
             mobileTabs.push({ key: "etc", label: `기타 ${etcCount}`, color: "gray" });
+            mobileTabs.push({ key: "delivery", label: `택배발송 ${deliveryCount}`, color: "indigo" });
+            mobileTabs.push({ key: "subscribe", label: `청약대기 ${subscribeCount}`, color: "cyan" });
             mobileTabs.push({ key: "pending", label: `개통대기 ${pendingCount}`, color: "teal" });
             mobileTabs.push({ key: "complete", label: `완료 ${completeCount}`, color: "blue" });
           } else {
