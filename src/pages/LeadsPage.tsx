@@ -82,11 +82,17 @@ const DOGMARU_CAMPAIGN = "도그마루_홈캠";
 // ── 도그마루 상태 분류 함수 (PC/모바일 공통) ──
 // 구글시트 최신값 기준으로 매번 해석 - status 컬럼 신뢰하지 않음
 function getDogmaruTab(r: any): string {
+  const manualStatus = String(r.status ?? "").trim();
   const activationStatus = String(r.activation_status ?? "").trim();
   const cancellationStatus = String(r.cancellation_status ?? "").trim();
   const memo = String(r.memo ?? "").trim();
   const activationNumber = String(r.activation_number ?? "").trim();
-  // 시트에서 넘어온 값들만 기준 (status 제외)
+
+  // 담당자가 수동으로 바꾼 status 최우선 반영 (신규 접수 제외)
+  const MANUAL_STATUSES = ["개통완료","개통철회","부재케어","재케어","실패","기타","청약대기","택배발송"];
+  if (manualStatus && MANUAL_STATUSES.includes(manualStatus)) return manualStatus;
+
+  // 시트에서 넘어온 값들 기준
   const text = [activationStatus, cancellationStatus, memo].join(" ");
   const hasAny = (keywords: string[]) => keywords.some(k => text.includes(k));
 
