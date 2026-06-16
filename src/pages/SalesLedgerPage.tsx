@@ -319,6 +319,7 @@ const SalesLedgerPage = () => {
   });
   // 이달 실적(개통완료·설치완료) 카운트
   const [monthDoneCount, setMonthDoneCount] = useState(0);
+  const [showPending, setShowPending] = useState(false);
 
   // 담당자 필드에 UUID가 들어간 경우 프로필 display_name으로 치환하기 위한 맵
   const [managerNameMap, setManagerNameMap] = useState<Record<string, string>>({});
@@ -585,6 +586,14 @@ const SalesLedgerPage = () => {
     setUnreturnedCount(urc ?? 0);
   }, [startDate, endDate, colFilters, managerValues]);
 
+  // 개통 예정 건 앞으로 정렬 (showPending 모드)
+  const displayRows = useMemo(() => {
+    const DONE_STATUSES = ["개통완료","설치완료","변경완료(업셀용)","취소","개통취소","반려"];
+    const pending = rows.filter(r => !DONE_STATUSES.includes(r.status ?? ""));
+    const done = rows.filter(r => DONE_STATUSES.includes(r.status ?? ""));
+    return showPending ? [...pending, ...done] : rows;
+  }, [rows, showPending]);
+
   // 이달 실적 카운트: 상태가 '개통완료' 또는 '설치완료' 를 포함하는 건만 집계
   const loadMonthDone = useCallback(async () => {
     const { count } = await supabase
@@ -683,7 +692,7 @@ const SalesLedgerPage = () => {
 
   const filteredRows = useMemo(() => {
     const q = debouncedSearchQ.trim().toLowerCase().replace(/\s+/g, "");
-    let result = rows;
+    let result = displayRows;
     if (dayFilter) {
       result = result.filter((r) => r.open_date === dayFilter);
     }
@@ -997,6 +1006,17 @@ const SalesLedgerPage = () => {
           <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30">
             이달 실적(개통/설치완료) {monthDoneCount.toLocaleString()}건
           </Badge>
+          <button
+            onClick={() => setShowPending(v => !v)}
+            className={`h-7 px-2.5 rounded-full text-[11px] font-medium border transition ${
+              showPending
+                ? "bg-amber-500 text-white border-amber-500"
+                : "bg-background text-muted-foreground border-border hover:text-foreground"
+            }`}
+            title="개통 예정 건 앞으로 보기"
+          >
+            {showPending ? "✓ 개통 예정 우선" : "개통 예정 우선"}
+          </button>
           {isAdmin && selected.size > 0 && (
             <div className="flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-50 dark:bg-amber-500/10 px-2 py-1">
               <span className="text-[11px] font-medium text-amber-700 dark:text-amber-300">담당자 일괄지정({selected.size})</span>
