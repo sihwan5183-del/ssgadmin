@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   format, startOfWeek, startOfMonth, startOfDay, subDays, addDays,
 } from "date-fns";
@@ -66,6 +66,34 @@ export default function CustomProposalsPage() {
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [rankPeriod, setRankPeriod] = useState<"month" | "all">("month");
+
+  // CSV(엑셀) 다운로드 비밀번호 모달 — 다른 페이지(판매실적장표 등)와 동일한 관리자 비밀번호 사용
+  const [csvPwModal, setCsvPwModal] = useState(false);
+  const [csvPwInput, setCsvPwInput] = useState("");
+  const csvPwCallbackRef = useRef<(() => void) | null>(null);
+  const CSV_PASSWORD = "a312017!";
+
+  const requireCsvPassword = (callback: () => void) => {
+    setCsvPwInput("");
+    csvPwCallbackRef.current = callback;
+    setCsvPwModal(true);
+  };
+  const confirmCsvPassword = () => {
+    if (csvPwInput !== CSV_PASSWORD) {
+      toast.error("비밀번호가 올바르지 않습니다");
+      return;
+    }
+    const callback = csvPwCallbackRef.current;
+    setCsvPwModal(false);
+    try {
+      callback?.();
+    } catch (e) {
+      console.error("[EXCEL EXPORT ERROR]", e);
+      toast.error("엑셀 다운로드 실패", {
+        description: e instanceof Error ? e.message : String(e),
+      });
+    }
+  };
 
   // form state
   const [editId, setEditId] = useState<string | null>(null);
@@ -315,6 +343,7 @@ export default function CustomProposalsPage() {
   };
 
   return (
+    <>
     <div className="space-y-4">
       <Header title="맞춤제안 실적관리" subtitle="요금제 변경 업셀 실시간 계산 · 누적 실적 관리" />
 
@@ -738,7 +767,7 @@ export default function CustomProposalsPage() {
               />
             </div>
 
-            <Button variant="outline" size="sm" onClick={handleExport}>
+            <Button variant="outline" size="sm" onClick={() => requireCsvPassword(handleExport)}>
               <Download className="size-4 mr-1" />
               엑셀 다운로드
             </Button>
@@ -814,5 +843,34 @@ export default function CustomProposalsPage() {
         </div>
       </Card>
     </div>
+
+    {/* CSV 다운로드 비밀번호 모달 */}
+    {csvPwModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setCsvPwModal(false)}>
+        <form
+          className="bg-background rounded-2xl w-full max-w-sm shadow-2xl p-6"
+          onClick={(e) => e.stopPropagation()}
+          onSubmit={(e) => { e.preventDefault(); confirmCsvPassword(); }}
+          autoComplete="off"
+        >
+          <div className="font-bold text-base mb-1">다운로드 확인</div>
+          <div className="text-xs text-muted-foreground mb-4">관리자 비밀번호를 입력하세요</div>
+          <input
+            type="password"
+            value={csvPwInput}
+            onChange={(e) => setCsvPwInput(e.target.value)}
+            className="w-full text-sm px-3 py-2 rounded-lg border border-border/60 bg-background mb-4"
+            placeholder="비밀번호 입력"
+            autoComplete="new-password"
+            autoFocus
+          />
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setCsvPwModal(false)} className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground">취소</button>
+            <button type="submit" className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium">확인</button>
+          </div>
+        </form>
+      </div>
+    )}
+    </>
   );
-}0
+}
