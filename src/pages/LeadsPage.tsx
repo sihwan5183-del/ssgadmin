@@ -830,6 +830,7 @@ type Lead = {
   activation_status: string | null;
   cancellation_status: string | null;
   activation_number: string | null;
+  pkg_number: string | null;
 };
 
 type LeadNote = {
