@@ -198,7 +198,11 @@ const SalesLedgerPage = () => {
   const { staff: dashboardStaff, isDashboardStaff } = useDashboardStaff();
 
   const [rows, setRows] = useState<SaleRow[]>([]);
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState<number>(() => {
+    const p = parseInt(searchParams.get("page") || "1", 10);
+    return Number.isFinite(p) ? Math.max(0, p - 1) : 0;
+  });
+  const prevPageRef = useRef(page);
   const [total, setTotal] = useState(0);
   const [dayFilter, setDayFilter] = useState<string | null>(null);
   // q 파라미터가 이메일 형태면 잘못 생성된 링크이므로 무시
@@ -277,10 +281,10 @@ const SalesLedgerPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // === 필터/검색 상태 → URL 동기화 (상세 진입 후 복귀 시 그대로 유지) ===
+  // === 필터/검색/페이지 상태 → URL 동기화 (상세 진입 후 복귀 시 그대로 유지) ===
+  // 페이지 변경은 push(뒤로가기로 이전 페이지 복귀 가능), 필터/검색 변경은 replace(history 스팸 방지)
   useEffect(() => {
     const next = new URLSearchParams(searchParams);
-    // 기존 dashboard deep-link 키는 유지
     const q = searchQ.trim();
     if (q) next.set("q", q); else next.delete("q");
     COL_KEYS.forEach((k) => {
@@ -288,9 +292,25 @@ const SalesLedgerPage = () => {
       if (v && v.length > 0) next.set(`f_${k}`, v.join("||"));
       else next.delete(`f_${k}`);
     });
-    setSearchParams(next, { replace: true });
+    if (page > 0) next.set("page", String(page + 1)); else next.delete("page");
+
+    const isPageNavigation = prevPageRef.current !== page;
+    prevPageRef.current = page;
+
+    setSearchParams(next, { replace: !isPageNavigation });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQ, colFilters]);
+  }, [searchQ, colFilters, page]);
+
+  // === URL → 페이지 상태 동기화 (브라우저 뒤로가기/앞으로가기 대응) ===
+  useEffect(() => {
+    const p = parseInt(searchParams.get("page") || "1", 10);
+    const target = Number.isFinite(p) ? Math.max(0, p - 1) : 0;
+    if (target !== page) {
+      prevPageRef.current = target;
+      setPage(target);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const isMobile = useIsMobile();
 
