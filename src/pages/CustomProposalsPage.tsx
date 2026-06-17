@@ -705,73 +705,72 @@ export default function CustomProposalsPage() {
 
       {/* 리스트 */}
       <Card className="p-5 space-y-4">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="text-sm font-semibold">맞춤제안 실적 리스트</div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={cn("justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}
-                >
-                  <CalendarIcon className="mr-2 size-4" />
-                  {dateFrom ? format(dateFrom, "yyyy-MM-dd") : "시작일"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={dateFrom}
-                  onSelect={(d) => setDateFrom(d ?? undefined)}
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                />
-              </PopoverContent>
-            </Popover>
-            <span className="text-xs text-muted-foreground">~</span>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={cn("justify-start text-left font-normal", !dateTo && "text-muted-foreground")}
-                >
-                  <CalendarIcon className="mr-2 size-4" />
-                  {dateTo ? format(dateTo, "yyyy-MM-dd") : "종료일"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={dateTo}
-                  onSelect={(d) => setDateTo(d ?? undefined)}
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                />
-              </PopoverContent>
-            </Popover>
-            {(dateFrom || dateTo) && (
-              <Button variant="ghost" size="icon" onClick={resetDateFilter} title="기간 필터 초기화">
-                <RotateCcw className="size-4" />
+        <div className="text-sm font-semibold">맞춤제안 실적 리스트</div>
+
+        <div className="flex items-center gap-2 flex-nowrap overflow-x-auto pb-1">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn("shrink-0 justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}
+              >
+                <CalendarIcon className="mr-2 size-4" />
+                {dateFrom ? format(dateFrom, "yyyy-MM-dd") : "시작일"}
               </Button>
-            )}
-
-            <div className="relative w-full max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="고객명 · 담당자 · 고객가입번호 검색"
-                className="pl-9"
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={dateFrom}
+                onSelect={(d) => setDateFrom(d ?? undefined)}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
               />
-            </div>
-
-            <Button variant="outline" size="sm" onClick={() => requireCsvPassword(handleExport)}>
-              <Download className="size-4 mr-1" />
-              엑셀 다운로드
+            </PopoverContent>
+          </Popover>
+          <span className="text-xs text-muted-foreground shrink-0">~</span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn("shrink-0 justify-start text-left font-normal", !dateTo && "text-muted-foreground")}
+              >
+                <CalendarIcon className="mr-2 size-4" />
+                {dateTo ? format(dateTo, "yyyy-MM-dd") : "종료일"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={dateTo}
+                onSelect={(d) => setDateTo(d ?? undefined)}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+          {(dateFrom || dateTo) && (
+            <Button variant="ghost" size="icon" className="shrink-0" onClick={resetDateFilter} title="기간 필터 초기화">
+              <RotateCcw className="size-4" />
             </Button>
+          )}
+
+          <div className="relative flex-1 min-w-[180px] max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="고객명 · 담당자 · 고객가입번호 검색"
+              className="pl-9"
+            />
           </div>
+
+          <Button variant="outline" size="sm" className="shrink-0" onClick={() => requireCsvPassword(handleExport)}>
+            <Download className="size-4 mr-1" />
+            엑셀 다운로드
+          </Button>
         </div>
 
         <div className="overflow-x-auto">
