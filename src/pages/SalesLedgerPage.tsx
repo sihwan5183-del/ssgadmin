@@ -317,6 +317,13 @@ const SalesLedgerPage = () => {
     if (sp.get("staffName") || sp.get("from_dashboard") === "1" || sp.get("status")) return false;
     return true;
   });
+  // 직접 기간 지정 필터 (시작일~종료일). 설정 시 전역 기간선택/전체기간 보기를 무시하고 우선 적용됨.
+  const [customStart, setCustomStart] = useState<string>("");
+  const [customEnd, setCustomEnd] = useState<string>("");
+  const hasCustomRange = !!(customStart && customEnd);
+  const qStart = hasCustomRange ? customStart : startDate;
+  const qEnd = hasCustomRange ? customEnd : endDate;
+  const qViewAll = hasCustomRange ? false : viewAll;
   // 이달 실적(개통완료·설치완료) 카운트
   const [monthDoneCount, setMonthDoneCount] = useState(0);
   const [showPending, setShowPending] = useState(false);
@@ -490,10 +497,10 @@ const SalesLedgerPage = () => {
       ;
     // 판매원장 리스트는 기본 전체 기간 조회.
     // 대시보드 deep-link 등으로 진입한 경우(viewAll=false)에만 기간 필터 적용.
-    if (!viewAll) {
+    if (!qViewAll) {
       query = query.or(
-        `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
-        `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
+        `and(open_date.gte.${qStart},open_date.lte.${qEnd}),` +
+        `and(open_date.is.null,created_at.gte.${qStart}T00:00:00,created_at.lte.${qEnd}T23:59:59.999)`
       );
     }
     // === 엑셀형 컬럼 필터 적용 (서버 사이드) ===
@@ -535,7 +542,7 @@ const SalesLedgerPage = () => {
     setRows((data ?? []) as SaleRow[]);
     setTotal(count ?? 0);
     setSearching(false);
-  }, [page, startDate, endDate, viewAll, colFilters, managerValues, debouncedSearchQ]);
+  }, [page, qStart, qEnd, qViewAll, colFilters, managerValues, debouncedSearchQ]);
 
   const loadSummary = useCallback(async () => {
     // 정책: 저장된 모든 실적은 즉시 합계에 반영. (status·approval_status·검수상태와 무관)
@@ -544,8 +551,8 @@ const SalesLedgerPage = () => {
       .from("sales")
       .select("unit_price, vas_fee, distributor_amount, extra_subsidy, cash_support_amount, receivable_amount, trade_in_enabled, trade_in_confirmed, voucher, voucher_returned, customer_support_amount, corp_card_amount, custom_fields, channel, moyo_excluded, manager, product, approval_status, status")
       .or(
-        `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
-        `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
+        `and(open_date.gte.${qStart},open_date.lte.${qEnd}),` +
+        `and(open_date.is.null,created_at.gte.${qStart}T00:00:00,created_at.lte.${qEnd}T23:59:59.999)`
       );
     if (colFilters.status.length > 0) q = q.in("status", colFilters.status);
     if (colFilters.channel.length > 0) q = q.in("channel", colFilters.channel);
@@ -603,8 +610,8 @@ const SalesLedgerPage = () => {
       .from("sales")
       .select("id", { count: "exact", head: true })
       .or(
-        `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
-        `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
+        `and(open_date.gte.${qStart},open_date.lte.${qEnd}),` +
+        `and(open_date.is.null,created_at.gte.${qStart}T00:00:00,created_at.lte.${qEnd}T23:59:59.999)`
       )
       .gt("receivable_amount", 0)
       .neq("receivable_paid", "완료");
@@ -613,14 +620,14 @@ const SalesLedgerPage = () => {
       .from("sales")
       .select("id", { count: "exact", head: true })
       .or(
-        `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
-        `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
+        `and(open_date.gte.${qStart},open_date.lte.${qEnd}),` +
+        `and(open_date.is.null,created_at.gte.${qStart}T00:00:00,created_at.lte.${qEnd}T23:59:59.999)`
       )
       .neq("voucher", "")
       .not("voucher", "is", null)
       .neq("voucher_returned", "유");
     setUnreturnedCount(urc ?? 0);
-  }, [startDate, endDate, colFilters, managerValues]);
+  }, [qStart, qEnd, colFilters, managerValues]);
 
   // 개통 예정 건 앞으로 정렬 (showPending 모드)
   const displayRows = useMemo(() => {
@@ -636,21 +643,21 @@ const SalesLedgerPage = () => {
       .from("sales")
       .select("id", { count: "exact", head: true })
       .or(
-        `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
-        `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
+        `and(open_date.gte.${qStart},open_date.lte.${qEnd}),` +
+        `and(open_date.is.null,created_at.gte.${qStart}T00:00:00,created_at.lte.${qEnd}T23:59:59.999)`
       )
       .or("status.ilike.%개통완료%,status.ilike.%설치완료%");
     setMonthDoneCount(count ?? 0);
-  }, [startDate, endDate]);
+  }, [qStart, qEnd]);
 
   useEffect(() => {
     load();
     loadSummary();
     loadMonthDone();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, startDate, endDate, viewAll, colFilters, managerValues, debouncedSearchQ]);
+  }, [page, qStart, qEnd, qViewAll, colFilters, managerValues, debouncedSearchQ]);
 
-  useEffect(() => { setPage(0); }, [startDate, endDate, viewAll, colFilters, managerValues, debouncedSearchQ]);
+  useEffect(() => { setPage(0); }, [qStart, qEnd, qViewAll, colFilters, managerValues, debouncedSearchQ]);
 
   // 실적 입력 후 navigate로 진입 시 즉시 강제 리로드 (캐시 우회)
   useEffect(() => {
@@ -772,8 +779,8 @@ const SalesLedgerPage = () => {
       .from("sales")
       .select("*")
       .or(
-        `and(open_date.gte.${startDate},open_date.lte.${endDate}),` +
-        `and(open_date.is.null,created_at.gte.${startDate}T00:00:00,created_at.lte.${endDate}T23:59:59.999)`
+        `and(open_date.gte.${qStart},open_date.lte.${qEnd}),` +
+        `and(open_date.is.null,created_at.gte.${qStart}T00:00:00,created_at.lte.${qEnd}T23:59:59.999)`
       );
     if (colFilters.status.length > 0) q = q.in("status", colFilters.status);
     if (colFilters.channel.length > 0) q = q.in("channel", colFilters.channel);
@@ -823,8 +830,8 @@ const SalesLedgerPage = () => {
       .select(
         "seq, open_date, channel, manager, customer_name, phone, product, sale_type, device_model, rate_plan, unit_price, vas_fee, distributor_amount, extra_subsidy, cash_support_amount, receivable_amount, receivable_paid, cash_open, cash_bank, cash_account, cash_holder, voucher, voucher_returned, net_fee, approval_status, note",
       )
-      .gte("open_date", startDate)
-      .lte("open_date", endDate)
+      .gte("open_date", qStart)
+      .lte("open_date", qEnd)
       .order("open_date", { ascending: isPending, nullsFirst: isPending });
     if (error) return toast.error("오퍼 내보내기 실패", { description: error.message });
     const filtered = (data ?? []).filter((r: any) =>
@@ -882,8 +889,8 @@ const SalesLedgerPage = () => {
     const { error, count } = await supabase
       .from("sales")
       .delete({ count: "exact" })
-      .gte("open_date", startDate)
-      .lte("open_date", endDate);
+      .gte("open_date", qStart)
+      .lte("open_date", qEnd);
     if (error) {
       return toast.error("전체 삭제 실패", { description: error.message });
     }
@@ -977,6 +984,8 @@ const SalesLedgerPage = () => {
             onChange={(e) => setSearchQ(e.target.value)}
             placeholder="고객명·연락처 뒷자리·모델명 검색…"
             className="h-10 pl-9 pr-9 bg-input/60 border-border/60"
+            autoComplete="off"
+            name="sales-ledger-search"
           />
           {searching ? (
             <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground animate-spin" />
@@ -991,6 +1000,35 @@ const SalesLedgerPage = () => {
             </button>
           ) : null}
         </div>
+
+        {/* 직접 기간 지정 필터 */}
+        <div className="flex items-center gap-1.5">
+          <input
+            type="date"
+            value={customStart}
+            onChange={(e) => setCustomStart(e.target.value)}
+            className="h-9 px-2 text-xs rounded-lg border border-border/60 bg-input/60"
+            aria-label="조회 시작일"
+          />
+          <span className="text-xs text-muted-foreground">~</span>
+          <input
+            type="date"
+            value={customEnd}
+            onChange={(e) => setCustomEnd(e.target.value)}
+            className="h-9 px-2 text-xs rounded-lg border border-border/60 bg-input/60"
+            aria-label="조회 종료일"
+          />
+          {hasCustomRange && (
+            <button
+              type="button"
+              onClick={() => { setCustomStart(""); setCustomEnd(""); }}
+              className="h-9 px-2 text-xs rounded-lg border border-border/60 text-muted-foreground hover:text-foreground"
+            >
+              기간 초기화
+            </button>
+          )}
+        </div>
+
         {hasActiveFilter && (
           <Badge variant="outline" className="h-7 px-2 text-[11px] border-primary/40 text-primary gap-1">
             <Filter className="size-3" /> 컬럼 필터 적용중
@@ -1013,7 +1051,7 @@ const SalesLedgerPage = () => {
         </Button>
         <Button
           variant="outline" size="sm"
-          onClick={() => requireCsvPassword(() => quickExport.exportNow("sales", { start_date: startDate, end_date: endDate }))}
+          onClick={() => requireCsvPassword(() => quickExport.exportNow("sales", { start_date: qStart, end_date: qEnd }))}
           disabled={quickExport.busy === "sales"}
           className="rounded-xl gap-2"
         >
