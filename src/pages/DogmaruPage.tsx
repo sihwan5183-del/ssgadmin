@@ -101,7 +101,7 @@ function getDogmaruTab(r: any): string {
 }
 
 function MobileLeadsView({
-  rows, loading, sourceTab, setSourceTab, search, setSearch, updateStatus, updateAssignee, staff, onSwitchToFull
+  rows, loading, sourceTab, setSourceTab, search, setSearch, updateStatus, updateAssignee, adjustAbsenceCount, staff, onSwitchToFull
 }: {
   rows: Lead[];
   loading: boolean;
@@ -111,6 +111,7 @@ function MobileLeadsView({
   setSearch: (s: string) => void;
   updateStatus: (id: string, status: string) => Promise<void>;
   updateAssignee: (id: string, assigned_to: string | null) => Promise<void>;
+  adjustAbsenceCount: (lead: Lead, delta: number) => Promise<void>;
   staff: { user_id: string; display_name: string }[];
   onSwitchToFull: () => void;
 }) {
@@ -1432,7 +1433,7 @@ export default function LeadsPage() {
       .from("leads")
       .update({ assigned_to })
       .eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setRows((p) => p.map((r) => (r.id === id ? { ...r, assigned_to } : r)));
     if (openLead?.id === id) setOpenLead({ ...openLead, assigned_to });
   }
@@ -1508,6 +1509,7 @@ export default function LeadsPage() {
       setSearch={setSearch}
       updateStatus={updateStatus}
       updateAssignee={updateAssignee}
+      adjustAbsenceCount={adjustAbsenceCount}
       staff={staff}
       onSwitchToFull={() => setMobileFullView(true)}
     />;
