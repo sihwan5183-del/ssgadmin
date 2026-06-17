@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { useMemo, useState, useEffect } from "react";
-import { ChevronDown, LogOut, Sparkles } from "lucide-react";
+import { ChevronDown, LogOut, Sparkles, KeyRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
@@ -17,8 +17,6 @@ export const Sidebar = () => {
 
   const currentRole: MenuRole = isAdmin ? "admin" : isManager ? "manager" : "user";
 
-  // 권한 단순화: 일반 영업 메뉴는 모두 동일하게 접근.
-  // 사이드바의 '관리자 전용(is_admin_only)' 항목만 [관리자/대표]에게만 노출.
   const visibleGroups = useMemo(() => {
     return groups
       .filter((g) => g.active && g.visible_roles.includes(currentRole))
@@ -38,14 +36,17 @@ export const Sidebar = () => {
   }, [groups, items, currentRole, isAdmin]);
 
   const [openIds, setOpenIds] = useState<Record<string, boolean>>({});
-
-  // Realtime count of unhandled new leads — shown as a red badge next to /leads
   const [newLeadCount, setNewLeadCount] = useState(0);
+
+  // 비밀번호 변경 모달
+  const [pwModalOpen, setPwModalOpen] = useState(false);
+  const [currentPw, setCurrentPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [pwLoading, setPwLoading] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
-    // 오후 8시 마감 기준 24시간 만료:
-    // 등록 시각 + 24h 이후 도래하는 첫 20:00 에 배지에서 제외.
-    // 동치: created_at >= (가장 최근 지나간 20:00) - 24h
     const computeSinceIso = () => {
       const now = new Date();
       const cutoff = new Date(now);
@@ -62,15 +63,10 @@ export const Sidebar = () => {
       if (!cancelled) setNewLeadCount(count ?? 0);
     };
     fetchCount();
-    // 1분마다 시간 동기화 (만료된 건 자동 차감)
     const tick = setInterval(fetchCount, 60 * 1000);
     const ch = supabase
       .channel("sidebar-leads-count")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "leads" },
-        fetchCount,
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, fetchCount)
       .subscribe();
     return () => {
       cancelled = true;
@@ -79,7 +75,6 @@ export const Sidebar = () => {
     };
   }, []);
 
-  // Auto-open the group containing the active route
   useEffect(() => {
     const activeGroup = visibleGroups.find((g) =>
       g.items.some((i) => i.path === location.pathname)
@@ -87,7 +82,6 @@ export const Sidebar = () => {
     if (activeGroup && openIds[activeGroup.id] === undefined) {
       setOpenIds((p) => ({ ...p, [activeGroup.id]: true }));
     }
-    // Default: open all on first load
     if (Object.keys(openIds).length === 0 && visibleGroups.length > 0) {
       const init: Record<string, boolean> = {};
       visibleGroups.forEach((g) => (init[g.id] = true));
@@ -102,16 +96,37 @@ export const Sidebar = () => {
     toast.success("로그아웃 되었습니다");
   };
 
+  const handleChangePassword = async () => {
+    if (!newPw || !confirmPw) return toast.error("새 비밀번호를 입력해주세요");
+    if (newPw !== confirmPw) return toast.error("새 비밀번호가 일치하지 않습니다");
+    if (newPw.length < 6) return toast.error("비밀번호는 6자 이상이어야 합니다");
+    setPwLoading(true);
+    // 현재 비밀번호 확인 (재로그인)
+    const email = user?.email ?? "";
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: currentPw });
+    if (signInError) {
+      setPwLoading(false);
+      return toast.error("현재 비밀번호가 올바르지 않습니다");
+    }
+    // 비밀번호 변경
+    const { error } = await supabase.auth.updateUser({ password: newPw });
+    setPwLoading(false);
+    if (error) return toast.error("변경 실패: " + error.message);
+    toast.success("비밀번호가 변경되었습니다");
+    setPwModalOpen(false);
+    setCurrentPw(""); setNewPw(""); setConfirmPw("");
+  };
+
   return (
     <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-[13.5rem] flex-col glass-strong border-r border-border/40 z-40">
       <div className="px-4 py-4 flex items-center gap-2.5">
         <div className="size-10 rounded-xl bg-gradient-primary grid place-items-center shadow-glow">
           <Sparkles className="size-5 text-primary-foreground" />
         </div>
-         <div>
-           <div className="text-sm text-muted-foreground leading-none">U+다이렉트</div>
-           <div className="text-base font-semibold tracking-tight mt-1">영업기획팀</div>
-         </div>
+        <div>
+          <div className="text-sm text-muted-foreground leading-none">U+다이렉트</div>
+          <div className="text-base font-semibold tracking-tight mt-1">영업기획팀</div>
+        </div>
       </div>
 
       <nav className="px-3 py-2 flex-1 overflow-y-auto space-y-1">
@@ -128,16 +143,12 @@ export const Sidebar = () => {
                 onClick={() => toggle(g.id)}
                 className={cn(
                   "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] uppercase tracking-wider font-semibold transition-colors",
-                  hasActive
-                    ? "text-primary-glow"
-                    : "text-muted-foreground hover:text-foreground"
+                  hasActive ? "text-primary-glow" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 <GroupIcon className="size-3.5" />
                 <span className="flex-1 text-left">{g.name}</span>
-                <ChevronDown
-                  className={cn("size-3.5 transition-transform", !isOpen && "-rotate-90")}
-                />
+                <ChevronDown className={cn("size-3.5 transition-transform", !isOpen && "-rotate-90")} />
               </button>
               {isOpen && (
                 <div className="mt-0.5 space-y-0.5">
@@ -181,12 +192,71 @@ export const Sidebar = () => {
         <div className="text-xs text-muted-foreground">로그인 계정</div>
         <div className="mt-1 font-semibold text-sm truncate">{user?.email ?? "-"}</div>
         <button
-          onClick={handleSignOut}
+          onClick={() => setPwModalOpen(true)}
           className="mt-3 w-full flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground py-2 rounded-lg border border-border/40 hover:border-primary/40 transition-colors"
+        >
+          <KeyRound className="size-3.5" /> 비밀번호 변경
+        </button>
+        <button
+          onClick={handleSignOut}
+          className="mt-2 w-full flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground py-2 rounded-lg border border-border/40 hover:border-primary/40 transition-colors"
         >
           <LogOut className="size-3.5" /> 로그아웃
         </button>
       </div>
+
+      {/* 비밀번호 변경 모달 */}
+      {pwModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setPwModalOpen(false)}>
+          <div className="bg-background rounded-2xl w-full max-w-sm shadow-2xl p-6" onClick={e => e.stopPropagation()}>
+            <div className="font-bold text-base mb-4">비밀번호 변경</div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">현재 비밀번호</label>
+                <input
+                  type="password"
+                  value={currentPw}
+                  onChange={e => setCurrentPw(e.target.value)}
+                  className="w-full text-sm px-3 py-2 rounded-lg border border-border/60 bg-background"
+                  placeholder="현재 비밀번호"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">새 비밀번호</label>
+                <input
+                  type="password"
+                  value={newPw}
+                  onChange={e => setNewPw(e.target.value)}
+                  className="w-full text-sm px-3 py-2 rounded-lg border border-border/60 bg-background"
+                  placeholder="새 비밀번호 (6자 이상)"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">새 비밀번호 확인</label>
+                <input
+                  type="password"
+                  value={confirmPw}
+                  onChange={e => setConfirmPw(e.target.value)}
+                  className="w-full text-sm px-3 py-2 rounded-lg border border-border/60 bg-background"
+                  placeholder="새 비밀번호 재입력"
+                  onKeyDown={e => e.key === "Enter" && handleChangePassword()}
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button
+                onClick={() => { setPwModalOpen(false); setCurrentPw(""); setNewPw(""); setConfirmPw(""); }}
+                className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground"
+              >취소</button>
+              <button
+                onClick={handleChangePassword}
+                disabled={pwLoading}
+                className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
+              >{pwLoading ? "변경 중..." : "변경"}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 };
