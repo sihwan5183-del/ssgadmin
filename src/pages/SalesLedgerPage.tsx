@@ -331,13 +331,21 @@ const SalesLedgerPage = () => {
     csvPwCallbackRef.current = callback;
     setCsvPwModal(true);
   };
-  const confirmCsvPassword = () => {
+  const confirmCsvPassword = async () => {
     if (csvPwInput !== CSV_PASSWORD) {
       toast.error("비밀번호가 올바르지 않습니다");
       return;
     }
+    const callback = csvPwCallbackRef.current;
     setCsvPwModal(false);
-    csvPwCallbackRef.current?.();
+    try {
+      await callback?.();
+    } catch (e) {
+      console.error("[EXCEL EXPORT ERROR]", e);
+      toast.error("엑셀 다운로드 실패", {
+        description: e instanceof Error ? e.message : String(e),
+      });
+    }
   };
   const showPendingRef = React.useRef(false);
   const handleTogglePending = () => {
@@ -759,6 +767,7 @@ const SalesLedgerPage = () => {
     });
 
   const handleExport = async () => {
+    const isPending = showPendingRef.current;
     let q = supabase
       .from("sales")
       .select("*")
@@ -808,6 +817,7 @@ const SalesLedgerPage = () => {
   };
 
   const handleExportOffers = async () => {
+    const isPending = showPendingRef.current;
     const { data, error } = await supabase
       .from("sales")
       .select(
