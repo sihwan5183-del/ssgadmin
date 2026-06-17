@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
-import { CalendarIcon, Plus, Search, Trash2, Pencil, X, Download, RotateCcw } from "lucide-react";
+import {
+  format, startOfWeek, startOfMonth, startOfDay, subDays, addDays,
+} from "date-fns";
+import {
+  CalendarIcon, Plus, Search, Trash2, Pencil, X, Download, RotateCcw,
+  Crown, Trophy, Medal, TrendingUp, BarChart3, Users,
+} from "lucide-react";
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
+} from "recharts";
 import { Header } from "@/components/layout/Header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -57,6 +65,7 @@ export default function CustomProposalsPage() {
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [rankPeriod, setRankPeriod] = useState<"month" | "all">("month");
 
   // form state
   const [editId, setEditId] = useState<string | null>(null);
@@ -217,9 +226,231 @@ export default function CustomProposalsPage() {
     exportToExcel(filtered, proposalExportColumns, "맞춤제안실적", "맞춤제안실적");
   };
 
+  /* ───────────── 대시보드 집계 (검색/기간 필터와 무관하게 전체 rows 기준) ───────────── */
+  const dashboard = useMemo(() => {
+    const today = startOfDay(new Date());
+    const todayStr2 = format(today, "yyyy-MM-dd");
+    const weekStart = format(startOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd");
+    const monthStart = format(startOfMonth(today), "yyyy-MM-dd");
+    const last30Start = format(subDays(today, 29), "yyyy-MM-dd");
+
+    const todayCount = rows.filter((r) => r.change_date === todayStr2).length;
+    const weekCount = rows.filter((r) => r.change_date >= weekStart).length;
+    const monthRows = rows.filter((r) => r.change_date >= monthStart);
+    const monthCount = monthRows.length;
+    const monthUpsell = monthRows.reduce((s, r) => s + (r.final_upsell || 0), 0);
+    const last30Count = rows.filter((r) => r.change_date >= last30Start).length;
+    const dailyAvg = Math.round((last30Count / 30) * 10) / 10;
+
+    // 최근 8주 추이 (월요일 시작)
+    const weeklyTrend: { label: string; count: number; upsell: number }[] = [];
+    for (let i = 7; i >= 0; i--) {
+      const wStart = startOfWeek(subDays(today, i * 7), { weekStartsOn: 1 });
+      const wEnd = addDays(wStart, 6);
+      const wStartStr = format(wStart, "yyyy-MM-dd");
+      const wEndStr = format(wEnd, "yyyy-MM-dd");
+      const inWeek = rows.filter((r) => r.change_date >= wStartStr && r.change_date <= wEndStr);
+      weeklyTrend.push({
+        label: format(wStart, "MM/dd"),
+        count: inWeek.length,
+        upsell: inWeek.reduce((s, r) => s + (r.final_upsell || 0), 0),
+      });
+    }
+
+    // 변경요금 금액대별 분포 (요금제명이 DB에 없어 금액대로 군집 추정)
+    const tierLabel = (fee: number) => {
+      if (fee <= 0) return "미입력";
+      if (fee < 50000) return "5만원 미만";
+      const tier = Math.floor(fee / 10000);
+      if (tier >= 10) return "10만원 이상";
+      return `${tier}만원대`;
+    };
+    const tierOrder = ["5만원 미만", "5만원대", "6만원대", "7만원대", "8만원대", "9만원대", "10만원 이상", "미입력"];
+    const tierMap = new Map<string, { count: number; upsell: number }>();
+    rows.forEach((r) => {
+      const label = tierLabel(r.new_fee || 0);
+      const cur = tierMap.get(label) ?? { count: 0, upsell: 0 };
+      cur.count += 1;
+      cur.upsell += r.final_upsell || 0;
+      tierMap.set(label, cur);
+    });
+    const feeTiers = tierOrder
+      .filter((t) => tierMap.has(t))
+      .map((label) => ({ label, ...tierMap.get(label)! }));
+
+    // 담당자 랭킹
+    const rankSourceRows = rankPeriod === "month" ? monthRows : rows;
+    const mgrMap = new Map<string, { count: number; upsell: number }>();
+    rankSourceRows.forEach((r) => {
+      const name = resolveName(r.manager, r.manager ?? "미지정");
+      const cur = mgrMap.get(name) ?? { count: 0, upsell: 0 };
+      cur.count += 1;
+      cur.upsell += r.final_upsell || 0;
+      mgrMap.set(name, cur);
+    });
+    const managerRanking = Array.from(mgrMap.entries())
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => b.upsell - a.upsell);
+
+    return {
+      todayCount, weekCount, monthCount, monthUpsell, dailyAvg,
+      weeklyTrend, feeTiers, managerRanking,
+    };
+  }, [rows, rankPeriod, resolveName]);
+
+  const rankMedalStyle = [
+    { wrap: "bg-gradient-to-br from-amber-100 to-orange-100 ring-1 ring-amber-400", icon: Crown, color: "text-amber-700" },
+    { wrap: "bg-gradient-to-br from-slate-200 to-slate-100 ring-1 ring-slate-400", icon: Trophy, color: "text-slate-600" },
+    { wrap: "bg-gradient-to-br from-orange-100 to-amber-50 ring-1 ring-orange-400", icon: Medal, color: "text-orange-700" },
+  ];
+
+  const DashboardTooltip = ({ active, payload }: any) => {
+    if (!active || !payload?.length) return null;
+    const d = payload[0].payload as { label: string; count: number; upsell: number };
+    return (
+      <div className="rounded-md border bg-background px-3 py-2 text-xs shadow-md">
+        <div className="font-medium mb-0.5">{d.label}</div>
+        <div className="text-muted-foreground">{d.count}건 · {won(d.upsell)}</div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4">
       <Header title="맞춤제안 실적관리" subtitle="요금제 변경 업셀 실시간 계산 · 누적 실적 관리" />
+
+      {/* 대시보드 */}
+      <Card className="p-5 space-y-5">
+        <div className="flex items-center gap-2">
+          <BarChart3 className="size-4 text-primary" />
+          <div className="text-sm font-semibold">맞춤제안 실적 대시보드</div>
+        </div>
+
+        {/* KPI 카드 */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Card className="p-3 bg-muted/30">
+            <div className="text-xs text-muted-foreground">오늘 건수</div>
+            <div className="text-xl font-bold mt-1">{dashboard.todayCount}건</div>
+          </Card>
+          <Card className="p-3 bg-muted/30">
+            <div className="text-xs text-muted-foreground">이번주 건수</div>
+            <div className="text-xl font-bold mt-1">{dashboard.weekCount}건</div>
+          </Card>
+          <Card className="p-3 bg-muted/30">
+            <div className="text-xs text-muted-foreground">일평균(최근 30일)</div>
+            <div className="text-xl font-bold mt-1">{dashboard.dailyAvg}건</div>
+          </Card>
+          <Card className="p-3 border-primary/30 bg-primary/5">
+            <div className="text-xs text-muted-foreground">이번달 누적 업셀</div>
+            <div className="text-xl font-bold mt-1 text-primary">{won(dashboard.monthUpsell)}</div>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* 주별 추이 */}
+          <Card className="p-4">
+            <div className="flex items-center gap-1.5 mb-3">
+              <TrendingUp className="size-3.5 text-muted-foreground" />
+              <div className="text-xs font-semibold text-muted-foreground">최근 8주 추이 (건수)</div>
+            </div>
+            <div className="h-[220px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dashboard.weeklyTrend} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+                  <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                  <Tooltip content={<DashboardTooltip />} />
+                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+
+          {/* 변경요금 금액대 분포 */}
+          <Card className="p-4">
+            <div className="text-xs font-semibold text-muted-foreground mb-1">변경요금 금액대별 분포</div>
+            <div className="text-[10px] text-muted-foreground mb-3">
+              ※ 요금제명은 별도 저장되지 않아, 변경 후 요금(원 단위) 기준 금액대로 집계한 근사치예요.
+            </div>
+            <div className="h-[220px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dashboard.feeTiers} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.3} />
+                  <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
+                  <YAxis type="category" dataKey="label" tick={{ fontSize: 11 }} width={70} />
+                  <Tooltip content={<DashboardTooltip />} />
+                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
+
+        {/* 담당자 랭킹 */}
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div className="flex items-center gap-1.5">
+              <Users className="size-3.5 text-muted-foreground" />
+              <div className="text-xs font-semibold text-muted-foreground">담당자 랭킹 (최종업셀 합계 기준)</div>
+            </div>
+            <div className="flex p-1 rounded-lg bg-muted/60 text-xs">
+              {([["month", "이번달"], ["all", "전체기간"]] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setRankPeriod(key)}
+                  className={cn(
+                    "px-3 py-1 rounded-md font-medium transition-all",
+                    rankPeriod === key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {dashboard.managerRanking.length === 0 ? (
+            <div className="text-center text-muted-foreground py-8 text-sm">집계할 데이터가 없습니다</div>
+          ) : (
+            <>
+              {/* Top 3 */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                {dashboard.managerRanking.slice(0, 3).map((r, i) => {
+                  const S = rankMedalStyle[i];
+                  const Icon = S.icon;
+                  return (
+                    <div key={r.name} className={cn("rounded-xl p-3", S.wrap)}>
+                      <div className="flex items-center justify-between">
+                        <Icon className={cn("size-4", S.color)} />
+                        <span className={cn("text-[10px] font-bold", S.color)}>#{i + 1}</span>
+                      </div>
+                      <div className="mt-2 text-sm font-semibold truncate">{r.name}</div>
+                      <div className="text-[10px] text-muted-foreground">{r.count}건</div>
+                      <div className="mt-1 text-base font-bold">{won(r.upsell)}</div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 4위 이하 */}
+              {dashboard.managerRanking.length > 3 && (
+                <ul className="space-y-1">
+                  {dashboard.managerRanking.slice(3).map((r, i) => (
+                    <li key={r.name} className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-muted/40 transition-colors text-sm">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-muted-foreground tabular-nums w-6">{i + 4}</span>
+                        <span className="font-medium">{r.name}</span>
+                        <span className="text-[10px] text-muted-foreground">{r.count}건</span>
+                      </div>
+                      <span className="font-semibold tabular-nums">{won(r.upsell)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+        </Card>
+      </Card>
 
       {/* 입력 폼 */}
       <Card className="p-4 space-y-4">
@@ -555,4 +786,4 @@ export default function CustomProposalsPage() {
       </Card>
     </div>
   );
-}
+}0
