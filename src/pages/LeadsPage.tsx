@@ -127,7 +127,7 @@ function getDogmaruTab(r: any): string {
 }
 
 function MobileLeadsView({
-  rows, loading, sourceTab, setSourceTab, search, setSearch, updateStatus, updateAssignee, staff, onSwitchToFull
+  rows, loading, sourceTab, setSourceTab, search, setSearch, updateStatus, updateAssignee, adjustAbsenceCount, staff, onSwitchToFull
 }: {
   rows: Lead[];
   loading: boolean;
@@ -137,6 +137,7 @@ function MobileLeadsView({
   setSearch: (s: string) => void;
   updateStatus: (id: string, status: string) => Promise<void>;
   updateAssignee: (id: string, assigned_to: string | null) => Promise<void>;
+  adjustAbsenceCount: (lead: Lead, delta: number) => Promise<void>;
   staff: { user_id: string; display_name: string }[];
   onSwitchToFull: () => void;
 }) {
@@ -579,7 +580,11 @@ function MobileLeadsView({
                     const tmpl = templates.find(t => t.channel === ch && t.title === r && t.type === "absence");
                     const msg = tmpl?.content ?? `안녕하세요 고객님, 연락드렸으나 ${r === "통화중" ? "통화 중이신 것 같아" : "자리를 비우신 것 같아"} 문자 남깁니다. 편하신 시간에 연락 부탁드립니다 :)`;
                     const phone = displayPhone(absenceModal);
-                    if (phone) window.location.href = `sms:${phone}?body=${encodeURIComponent(msg)}`;
+                    if (phone) {
+                      const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+                      const sep = isIOS ? "&" : "?";
+                      window.location.href = `sms:${phone}${sep}body=${encodeURIComponent(msg)}`;
+                    }
                   }}
                   className="w-full py-3 rounded-xl bg-orange-50 border border-orange-200 text-orange-700 font-medium text-sm active:scale-95 transition-transform">
                   {r}
@@ -1536,6 +1541,7 @@ export default function LeadsPage() {
       setSearch={setSearch}
       updateStatus={updateStatus}
       updateAssignee={updateAssignee}
+      adjustAbsenceCount={adjustAbsenceCount}
       staff={staff}
       onSwitchToFull={() => setMobileFullView(true)}
     />;
