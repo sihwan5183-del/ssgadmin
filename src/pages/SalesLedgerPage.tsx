@@ -201,8 +201,13 @@ const SalesLedgerPage = () => {
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
   const [dayFilter, setDayFilter] = useState<string | null>(null);
-  const [searchQ, setSearchQ] = useState(() => searchParams.get("q") ?? "");
-  const [debouncedSearchQ, setDebouncedSearchQ] = useState(() => searchParams.get("q") ?? "");
+  // q 파라미터가 이메일 형태면 잘못 생성된 링크이므로 무시
+  const initialQ = (() => {
+    const v = searchParams.get("q") ?? "";
+    return v.includes("@") ? "" : v;
+  })();
+  const [searchQ, setSearchQ] = useState(initialQ);
+  const [debouncedSearchQ, setDebouncedSearchQ] = useState(initialQ);
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -1511,23 +1516,28 @@ const SalesLedgerPage = () => {
       {/* CSV 다운로드 비밀번호 모달 */}
       {csvPwModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setCsvPwModal(false)}>
-          <div className="bg-background rounded-2xl w-full max-w-sm shadow-2xl p-6" onClick={e => e.stopPropagation()}>
+          <form
+            className="bg-background rounded-2xl w-full max-w-sm shadow-2xl p-6"
+            onClick={e => e.stopPropagation()}
+            onSubmit={e => { e.preventDefault(); confirmCsvPassword(); }}
+            autoComplete="off"
+          >
             <div className="font-bold text-base mb-1">다운로드 확인</div>
             <div className="text-xs text-muted-foreground mb-4">관리자 비밀번호를 입력하세요</div>
             <input
               type="password"
               value={csvPwInput}
               onChange={e => setCsvPwInput(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); confirmCsvPassword(); } }}
               className="w-full text-sm px-3 py-2 rounded-lg border border-border/60 bg-background mb-4"
               placeholder="비밀번호 입력"
+              autoComplete="new-password"
               autoFocus
             />
             <div className="flex gap-2">
               <button type="button" onClick={() => setCsvPwModal(false)} className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground">취소</button>
-              <button type="button" onClick={confirmCsvPassword} className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium">확인</button>
+              <button type="submit" className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium">확인</button>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </>
