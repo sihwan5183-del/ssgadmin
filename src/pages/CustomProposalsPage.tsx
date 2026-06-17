@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Plus, Search, Trash2, Pencil, X } from "lucide-react";
+import { CalendarIcon, Plus, Search, Trash2, Pencil, X, Download, RotateCcw } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useDashboardStaff } from "@/hooks/useDashboardStaff";
 import { useStaffNames } from "@/hooks/useStaffNames";
 import { cn } from "@/lib/utils";
+import { exportToExcel, type ColumnDef } from "@/lib/excelExport";
 import { toast } from "sonner";
 
 type Row = {
@@ -54,6 +55,8 @@ export default function CustomProposalsPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
 
   // form state
   const [editId, setEditId] = useState<string | null>(null);
@@ -177,14 +180,42 @@ export default function CustomProposalsPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return rows;
+    const fromStr = dateFrom ? format(dateFrom, "yyyy-MM-dd") : null;
+    const toStr = dateTo ? format(dateTo, "yyyy-MM-dd") : null;
     return rows.filter((r) => {
+      if (fromStr && r.change_date < fromStr) return false;
+      if (toStr && r.change_date > toStr) return false;
+      if (!q) return true;
       const m = (r.manager ?? "").toLowerCase();
       const c = (r.customer_name ?? "").toLowerCase();
       const j = (r.customer_join_number ?? "").toLowerCase();
       return m.includes(q) || c.includes(q) || j.includes(q);
     });
-  }, [rows, search]);
+  }, [rows, search, dateFrom, dateTo]);
+
+  const resetDateFilter = () => {
+    setDateFrom(undefined);
+    setDateTo(undefined);
+  };
+
+  const proposalExportColumns: ColumnDef[] = [
+    ["change_date", "변경일"],
+    ["manager", "담당자", (r: Row) => resolveName(r.manager, r.manager ?? "-")],
+    ["customer_name", "고객명"],
+    ["customer_join_number", "가입번호"],
+    ["prev_fee", "기존요금"],
+    ["prev_select_discount", "기존선약여부", (r: Row) => (r.prev_select_discount ? "선약" : "일반")],
+    ["new_fee", "변경요금"],
+    ["new_select_discount", "변경선약여부", (r: Row) => (r.new_select_discount ? "선약" : "일반")],
+    ["pure_upsell", "순수업셀"],
+    ["final_upsell", "최종업셀"],
+    ["offer_provided", "오퍼여부", (r: Row) => (r.offer_provided ? "오퍼 제공" : "미제공")],
+    ["note", "상담메모"],
+  ];
+
+  const handleExport = () => {
+    exportToExcel(filtered, proposalExportColumns, "맞춤제안실적", "맞춤제안실적");
+  };
 
   return (
     <div className="space-y-4">
@@ -387,14 +418,70 @@ export default function CustomProposalsPage() {
       <Card className="p-5 space-y-4">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="text-sm font-semibold">맞춤제안 실적 리스트</div>
-          <div className="relative w-full max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="고객명 · 담당자 · 고객가입번호 검색"
-              className="pl-9"
-            />
+          <div className="flex items-center gap-2 flex-wrap">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn("justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}
+                >
+                  <CalendarIcon className="mr-2 size-4" />
+                  {dateFrom ? format(dateFrom, "yyyy-MM-dd") : "시작일"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateFrom}
+                  onSelect={(d) => setDateFrom(d ?? undefined)}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+            <span className="text-xs text-muted-foreground">~</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn("justify-start text-left font-normal", !dateTo && "text-muted-foreground")}
+                >
+                  <CalendarIcon className="mr-2 size-4" />
+                  {dateTo ? format(dateTo, "yyyy-MM-dd") : "종료일"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateTo}
+                  onSelect={(d) => setDateTo(d ?? undefined)}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+            {(dateFrom || dateTo) && (
+              <Button variant="ghost" size="icon" onClick={resetDateFilter} title="기간 필터 초기화">
+                <RotateCcw className="size-4" />
+              </Button>
+            )}
+
+            <div className="relative w-full max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="고객명 · 담당자 · 고객가입번호 검색"
+                className="pl-9"
+              />
+            </div>
+
+            <Button variant="outline" size="sm" onClick={handleExport}>
+              <Download className="size-4 mr-1" />
+              엑셀 다운로드
+            </Button>
           </div>
         </div>
 
