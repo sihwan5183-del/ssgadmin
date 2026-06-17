@@ -320,6 +320,25 @@ const SalesLedgerPage = () => {
   // 이달 실적(개통완료·설치완료) 카운트
   const [monthDoneCount, setMonthDoneCount] = useState(0);
   const [showPending, setShowPending] = useState(false);
+  // CSV 다운로드 비밀번호 모달
+  const [csvPwModal, setCsvPwModal] = useState(false);
+  const [csvPwInput, setCsvPwInput] = useState("");
+  const [csvPwCallback, setCsvPwCallback] = useState<(() => void) | null>(null);
+  const CSV_PASSWORD = "a312017!";
+
+  const requireCsvPassword = (callback: () => void) => {
+    setCsvPwInput("");
+    setCsvPwCallback(() => callback);
+    setCsvPwModal(true);
+  };
+  const confirmCsvPassword = () => {
+    if (csvPwInput !== CSV_PASSWORD) {
+      toast.error("비밀번호가 올바르지 않습니다");
+      return;
+    }
+    setCsvPwModal(false);
+    csvPwCallback?.();
+  };
   const showPendingRef = React.useRef(false);
   const handleTogglePending = () => {
     const next = !showPendingRef.current;
@@ -976,15 +995,15 @@ const SalesLedgerPage = () => {
           </button>
         )}
 
-        <Button variant="outline" size="sm" onClick={handleExport} className="rounded-xl gap-2">
+        <Button variant="outline" size="sm" onClick={() => requireCsvPassword(handleExport)} className="rounded-xl gap-2">
           <Download className="size-4" /> 실적 엑셀
         </Button>
-        <Button variant="outline" size="sm" onClick={handleExportOffers} className="rounded-xl gap-2 border-amber-400 text-amber-700 hover:bg-amber-50">
+        <Button variant="outline" size="sm" onClick={() => requireCsvPassword(handleExportOffers)} className="rounded-xl gap-2 border-amber-400 text-amber-700 hover:bg-amber-50">
           <Download className="size-4" /> 오퍼(지원금)
         </Button>
         <Button
           variant="outline" size="sm"
-          onClick={() => quickExport.exportNow("sales", { start_date: startDate, end_date: endDate })}
+          onClick={() => requireCsvPassword(() => quickExport.exportNow("sales", { start_date: startDate, end_date: endDate }))}
           disabled={quickExport.busy === "sales"}
           className="rounded-xl gap-2"
         >
@@ -1440,6 +1459,29 @@ const SalesLedgerPage = () => {
         </div>
         <PaginationBar page={page} pageSize={PAGE_SIZE} total={total} onChange={setPage} />
       </section>
+
+      {/* CSV 다운로드 비밀번호 모달 */}
+      {csvPwModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setCsvPwModal(false)}>
+          <div className="bg-background rounded-2xl w-full max-w-sm shadow-2xl p-6" onClick={e => e.stopPropagation()}>
+            <div className="font-bold text-base mb-1">다운로드 확인</div>
+            <div className="text-xs text-muted-foreground mb-4">관리자 비밀번호를 입력하세요</div>
+            <input
+              type="password"
+              value={csvPwInput}
+              onChange={e => setCsvPwInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && confirmCsvPassword()}
+              className="w-full text-sm px-3 py-2 rounded-lg border border-border/60 bg-background mb-4"
+              placeholder="비밀번호 입력"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <button onClick={() => setCsvPwModal(false)} className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground">취소</button>
+              <button onClick={confirmCsvPassword} className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium">확인</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
