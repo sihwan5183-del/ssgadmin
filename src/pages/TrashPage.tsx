@@ -122,7 +122,7 @@ export default function TrashPage() {
   if (!isSuperAdmin) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        <Header title="휴지통" />
         <div className="flex items-center justify-center h-[60vh]">
           <div className="text-center text-muted-foreground">
             <AlertTriangle className="size-10 mx-auto mb-3 text-amber-500" />
@@ -136,7 +136,7 @@ export default function TrashPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <Header title="휴지통" />
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-4">
         <div className="flex items-center gap-2">
           <Trash2 className="size-5 text-red-500" />

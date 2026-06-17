@@ -91,7 +91,7 @@ export default function SmsTemplatePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <Header title="문자 템플릿 관리" />
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

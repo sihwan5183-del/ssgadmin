@@ -830,6 +830,7 @@ type Lead = {
   activation_status: string | null;
   cancellation_status: string | null;
   activation_number: string | null;
+  pkg_number: string | null;
 };
 
 type LeadNote = {
@@ -1465,7 +1466,7 @@ export default function LeadsPage() {
       .from("leads")
       .update({ assigned_to })
       .eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setRows((p) => p.map((r) => (r.id === id ? { ...r, assigned_to } : r)));
     if (openLead?.id === id) setOpenLead({ ...openLead, assigned_to });
   }

@@ -1377,6 +1377,38 @@ export type Database = {
           },
         ]
       }
+      lead_status_logs: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: string
+          lead_id: string
+          status: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          lead_id: string
+          status: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          lead_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_status_logs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           activation_number: string | null
@@ -1389,12 +1421,15 @@ export type Database = {
           current_carrier: string | null
           customer_name: string | null
           customer_phone: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           desired_device: string | null
           desired_product: string | null
           id: string
           memo: string | null
           name: string | null
           phone: string | null
+          pkg_number: string | null
           registration_date: string | null
           source: string | null
           status: string
@@ -1411,12 +1446,15 @@ export type Database = {
           current_carrier?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           desired_device?: string | null
           desired_product?: string | null
           id?: string
           memo?: string | null
           name?: string | null
           phone?: string | null
+          pkg_number?: string | null
           registration_date?: string | null
           source?: string | null
           status?: string
@@ -1433,12 +1471,15 @@ export type Database = {
           current_carrier?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           desired_device?: string | null
           desired_product?: string | null
           id?: string
           memo?: string | null
           name?: string | null
           phone?: string | null
+          pkg_number?: string | null
           registration_date?: string | null
           source?: string | null
           status?: string
@@ -2259,6 +2300,8 @@ export type Database = {
           custom_fields: Json
           customer_name: string | null
           customer_support_amount: number | null
+          deleted_at: string | null
+          deleted_by: string | null
           delivery_type: string | null
           device_model: string | null
           device_serial: string | null
@@ -2333,6 +2376,8 @@ export type Database = {
           custom_fields?: Json
           customer_name?: string | null
           customer_support_amount?: number | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           delivery_type?: string | null
           device_model?: string | null
           device_serial?: string | null
@@ -2407,6 +2452,8 @@ export type Database = {
           custom_fields?: Json
           customer_name?: string | null
           customer_support_amount?: number | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           delivery_type?: string | null
           device_model?: string | null
           device_serial?: string | null
@@ -2718,6 +2765,39 @@ export type Database = {
           id?: string
           note?: string | null
           status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sms_templates: {
+        Row: {
+          active: boolean
+          channel: string
+          content: string
+          created_at: string
+          id: string
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          channel: string
+          content: string
+          created_at?: string
+          id?: string
+          title: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          channel?: string
+          content?: string
+          created_at?: string
+          id?: string
+          title?: string
+          type?: string
           updated_at?: string
         }
         Relationships: []
