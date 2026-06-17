@@ -1480,14 +1480,14 @@ const SalesLedgerPage = () => {
               type="password"
               value={csvPwInput}
               onChange={e => setCsvPwInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && confirmCsvPassword()}
+              onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); confirmCsvPassword(); } }}
               className="w-full text-sm px-3 py-2 rounded-lg border border-border/60 bg-background mb-4"
               placeholder="비밀번호 입력"
               autoFocus
             />
             <div className="flex gap-2">
-              <button onClick={() => setCsvPwModal(false)} className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground">취소</button>
-              <button onClick={confirmCsvPassword} className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium">확인</button>
+              <button type="button" onClick={() => setCsvPwModal(false)} className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground">취소</button>
+              <button type="button" onClick={confirmCsvPassword} className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium">확인</button>
             </div>
           </div>
         </div>
