@@ -323,12 +323,12 @@ const SalesLedgerPage = () => {
   // CSV 다운로드 비밀번호 모달
   const [csvPwModal, setCsvPwModal] = useState(false);
   const [csvPwInput, setCsvPwInput] = useState("");
-  const [csvPwCallback, setCsvPwCallback] = useState<(() => void) | null>(null);
+  const csvPwCallbackRef = React.useRef<(() => void) | null>(null);
   const CSV_PASSWORD = "a312017!";
 
   const requireCsvPassword = (callback: () => void) => {
     setCsvPwInput("");
-    setCsvPwCallback(() => callback);
+    csvPwCallbackRef.current = callback;
     setCsvPwModal(true);
   };
   const confirmCsvPassword = () => {
@@ -337,7 +337,7 @@ const SalesLedgerPage = () => {
       return;
     }
     setCsvPwModal(false);
-    csvPwCallback?.();
+    csvPwCallbackRef.current?.();
   };
   const showPendingRef = React.useRef(false);
   const handleTogglePending = () => {
