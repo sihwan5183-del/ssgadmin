@@ -4,10 +4,10 @@ import {
 } from "date-fns";
 import {
   CalendarIcon, Plus, Search, Trash2, Pencil, X, Download, RotateCcw,
-  Crown, Trophy, Medal, TrendingUp, BarChart3, Users,
+  Crown, Trophy, Medal, TrendingUp, BarChart3, Users, Flame, ArrowDown, Minus,
 } from "lucide-react";
 import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
+  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
 import { Header } from "@/components/layout/Header";
 import { Card } from "@/components/ui/card";
@@ -257,26 +257,25 @@ export default function CustomProposalsPage() {
       });
     }
 
-    // 변경요금 금액대별 분포 (요금제명이 DB에 없어 금액대로 군집 추정)
-    const tierLabel = (fee: number) => {
-      if (fee <= 0) return "미입력";
-      if (fee < 50000) return "5만원 미만";
-      const tier = Math.floor(fee / 10000);
-      if (tier >= 10) return "10만원 이상";
-      return `${tier}만원대`;
-    };
-    const tierOrder = ["5만원 미만", "5만원대", "6만원대", "7만원대", "8만원대", "9만원대", "10만원 이상", "미입력"];
-    const tierMap = new Map<string, { count: number; upsell: number }>();
-    rows.forEach((r) => {
-      const label = tierLabel(r.new_fee || 0);
-      const cur = tierMap.get(label) ?? { count: 0, upsell: 0 };
-      cur.count += 1;
-      cur.upsell += r.final_upsell || 0;
-      tierMap.set(label, cur);
-    });
-    const feeTiers = tierOrder
-      .filter((t) => tierMap.has(t))
-      .map((label) => ({ label, ...tierMap.get(label)! }));
+    // 추이 모멘텀 (게임 랭크식 연속 상승/하락 스트릭)
+    let momentumDir: "up" | "down" | "flat" = "flat";
+    let momentumStreak = 0;
+    for (let i = weeklyTrend.length - 1; i > 0; i--) {
+      const diff = weeklyTrend[i].count - weeklyTrend[i - 1].count;
+      const dir: "up" | "down" | "flat" = diff > 0 ? "up" : diff < 0 ? "down" : "flat";
+      if (i === weeklyTrend.length - 1) {
+        momentumDir = dir;
+        if (dir !== "flat") momentumStreak = 1;
+      } else if (dir === momentumDir && dir !== "flat") {
+        momentumStreak += 1;
+      } else {
+        break;
+      }
+    }
+    const thisWeekCount = weeklyTrend[weeklyTrend.length - 1].count;
+    const lastWeekCount = weeklyTrend[weeklyTrend.length - 2].count;
+    const weekDelta = thisWeekCount - lastWeekCount;
+    const peakWeek = weeklyTrend.reduce((max, w) => (w.count > max.count ? w : max), weeklyTrend[0]);
 
     // 담당자 랭킹
     const rankSourceRows = rankPeriod === "month" ? monthRows : rows;
@@ -294,7 +293,7 @@ export default function CustomProposalsPage() {
 
     return {
       todayCount, weekCount, monthCount, monthUpsell, dailyAvg,
-      weeklyTrend, feeTiers, managerRanking,
+      weeklyTrend, momentumDir, momentumStreak, weekDelta, peakWeek, managerRanking,
     };
   }, [rows, rankPeriod, resolveName]);
 
@@ -346,45 +345,75 @@ export default function CustomProposalsPage() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* 주별 추이 */}
-          <Card className="p-4">
-            <div className="flex items-center gap-1.5 mb-3">
+        {/* 추이 흐름 */}
+        <Card className="p-4">
+          <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
+            <div className="flex items-center gap-1.5">
               <TrendingUp className="size-3.5 text-muted-foreground" />
-              <div className="text-xs font-semibold text-muted-foreground">최근 8주 추이 (건수)</div>
+              <div className="text-xs font-semibold text-muted-foreground">최근 8주 추이</div>
             </div>
-            <div className="h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dashboard.weeklyTrend} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-                  <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                  <Tooltip content={<DashboardTooltip />} />
-                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
 
-          {/* 변경요금 금액대 분포 */}
-          <Card className="p-4">
-            <div className="text-xs font-semibold text-muted-foreground mb-1">변경요금 금액대별 분포</div>
-            <div className="text-[10px] text-muted-foreground mb-3">
-              ※ 요금제명은 별도 저장되지 않아, 변경 후 요금(원 단위) 기준 금액대로 집계한 근사치예요.
+            {/* 모멘텀 배지 (게임 랭크식 연속 상승/하락 표시) */}
+            <div className={cn(
+              "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold",
+              dashboard.momentumDir === "up" && dashboard.momentumStreak >= 2
+                ? "bg-gradient-to-r from-rose-500 to-orange-400 text-white shadow-glow"
+                : dashboard.momentumDir === "down" && dashboard.momentumStreak >= 2
+                ? "bg-muted text-muted-foreground"
+                : "bg-muted/60 text-muted-foreground",
+            )}>
+              {dashboard.momentumDir === "up" && dashboard.momentumStreak >= 2 ? (
+                <>
+                  <Flame className="size-3.5" />
+                  {dashboard.momentumStreak}주 연속 상승세
+                </>
+              ) : dashboard.momentumDir === "down" && dashboard.momentumStreak >= 2 ? (
+                <>
+                  <ArrowDown className="size-3.5" />
+                  {dashboard.momentumStreak}주 연속 하락세
+                </>
+              ) : (
+                <>
+                  <Minus className="size-3.5" />
+                  보합
+                </>
+              )}
+              <span className="opacity-80 font-medium">
+                · 전주 대비 {dashboard.weekDelta > 0 ? "+" : ""}{dashboard.weekDelta}건
+              </span>
             </div>
-            <div className="h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dashboard.feeTiers} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.3} />
-                  <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
-                  <YAxis type="category" dataKey="label" tick={{ fontSize: 11 }} width={70} />
-                  <Tooltip content={<DashboardTooltip />} />
-                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </div>
+          </div>
+
+          <div className="h-[260px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={dashboard.weeklyTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="trendFlow" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.45} />
+                    <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                <Tooltip content={<DashboardTooltip />} />
+                <Area
+                  type="monotone"
+                  dataKey="count"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2.5}
+                  fill="url(#trendFlow)"
+                  dot={{ r: 3, fill: "hsl(var(--primary))" }}
+                  activeDot={{ r: 5 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="text-[10px] text-muted-foreground mt-2">
+            최고 기록: {dashboard.peakWeek.label} 주 {dashboard.peakWeek.count}건
+          </div>
+        </Card>
 
         {/* 담당자 랭킹 */}
         <Card className="p-4">
