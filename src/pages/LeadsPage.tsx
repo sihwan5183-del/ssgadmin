@@ -127,7 +127,7 @@ function getDogmaruTab(r: any): string {
 }
 
 function MobileLeadsView({
-  rows, loading, sourceTab, setSourceTab, search, setSearch, updateStatus, updateAssignee, adjustAbsenceCount, staff, onSwitchToFull
+  rows, loading, sourceTab, setSourceTab, search, setSearch, updateStatus, updateAssignee, adjustAbsenceCount, staff, onSwitchToFull, saveHappyCall
 }: {
   rows: Lead[];
   loading: boolean;
@@ -140,13 +140,14 @@ function MobileLeadsView({
   adjustAbsenceCount: (lead: Lead, delta: number) => Promise<void>;
   staff: { user_id: string; display_name: string }[];
   onSwitchToFull: () => void;
+  saveHappyCall: (lead: Lead, happy_call: string | null, happy_call_result: string | null) => Promise<void>;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [statusLoading, setStatusLoading] = useState<string | null>(null);
   const [absenceModal, setAbsenceModal] = useState<Lead | null>(null);
   const [recareModal, setRecareModal] = useState<Lead | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
-  const [careTab, setCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "delivery" | "subscribe" | "pending" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc">("all");
+  const [careTab, setCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "delivery" | "subscribe" | "pending" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc" | "happy_call" | "happy_call_result">("all");
   const [completePage, setCompletePage] = useState(0);
   const COMPLETE_PAGE_SIZE = 50;
   const [completeSearch, setCompleteSearch] = useState("");
@@ -1575,6 +1576,7 @@ export default function LeadsPage() {
       adjustAbsenceCount={adjustAbsenceCount}
       staff={staff}
       onSwitchToFull={() => setMobileFullView(true)}
+      saveHappyCall={saveHappyCall}
     />;
   }
 
