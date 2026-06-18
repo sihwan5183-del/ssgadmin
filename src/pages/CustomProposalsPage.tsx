@@ -428,7 +428,7 @@ export default function CustomProposalsPage() {
               <div className="text-xs font-semibold text-muted-foreground">담당자 랭킹 (최종업셀 합계 기준)</div>
             </div>
             <div className="flex p-1 rounded-lg bg-muted/60 text-xs">
-              {([[\"month\", \"이번달\"], [\"all\", \"전체기간\"]] as const).map(([key, label]) => (
+              {([["month", "이번달"], ["all", "전체기간"]] as const).map(([key, label]) => (
                 <button key={key} onClick={() => setRankPeriod(key)} className={cn("px-3 py-1 rounded-md font-medium transition-all", rankPeriod === key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>{label}</button>
               ))}
             </div>
