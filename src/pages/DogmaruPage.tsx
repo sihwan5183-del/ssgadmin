@@ -500,32 +500,30 @@ function MobileLeadsView({
                     </div>
                   </div>
 
-                  {/* 해피콜/영업 */}
-                  <div className="p-3 rounded-xl border border-border bg-muted/20 space-y-2">
-                    <div className="text-xs text-muted-foreground font-medium">해피콜 · 영업</div>
-                    <div className="flex gap-2">
-                      <div className="flex-1 space-y-1">
-                        <div className="text-[10px] text-muted-foreground">해피콜</div>
-                        <div className="flex gap-1">
-                          <button
-                            onClick={() => saveHappyCall(lead, lead.happy_call === "O" ? null : "O", lead.happy_call_result)}
-                            className={`flex-1 py-2 rounded-lg border text-xs font-bold transition-colors ${lead.happy_call === "O" ? "bg-emerald-100 text-emerald-700 border-emerald-400" : "bg-background border-border text-muted-foreground"}`}
-                          >✅ O</button>
-                          <button
-                            onClick={() => saveHappyCall(lead, lead.happy_call === "X" ? null : "X", lead.happy_call_result)}
-                            className={`flex-1 py-2 rounded-lg border text-xs font-bold transition-colors ${lead.happy_call === "X" ? "bg-rose-100 text-rose-700 border-rose-400" : "bg-background border-border text-muted-foreground"}`}
-                          >❌ X</button>
-                        </div>
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <div className="text-[10px] text-muted-foreground">영업 결과</div>
-                        <div className="flex gap-1">
-                          <button onClick={() => saveHappyCall(lead, lead.happy_call, lead.happy_call_result === "성공" ? null : "성공")} className={`flex-1 py-2 rounded-lg border text-xs font-bold transition-colors ${lead.happy_call_result === "성공" ? "bg-emerald-100 text-emerald-700 border-emerald-400" : "bg-background border-border text-muted-foreground"}`}>✅</button>
-                          <button onClick={() => saveHappyCall(lead, lead.happy_call, lead.happy_call_result === "실패" ? null : "실패")} className={`flex-1 py-2 rounded-lg border text-xs font-bold transition-colors ${lead.happy_call_result === "실패" ? "bg-rose-100 text-rose-700 border-rose-400" : "bg-background border-border text-muted-foreground"}`}>❌</button>
-                          <button onClick={() => saveHappyCall(lead, lead.happy_call, lead.happy_call_result === "부재" ? null : "부재")} className={`flex-1 py-2 rounded-lg border text-xs font-bold transition-colors ${lead.happy_call_result === "부재" ? "bg-orange-100 text-orange-700 border-orange-400" : "bg-background border-border text-muted-foreground"}`}>📵</button>
-                        </div>
-                      </div>
+                  {/* 해피콜 */}
+                  <div className="p-3 rounded-xl border border-border bg-muted/20 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-semibold">📞 해피콜</div>
+                      <div className="text-[10px] text-muted-foreground">해피콜 팀 작성</div>
                     </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => saveHappyCall(lead, lead.happy_call === "O" ? null : "O", lead.happy_call_result)} className={`flex-1 py-2.5 rounded-lg border text-xs font-bold transition-colors ${lead.happy_call === "O" ? "bg-emerald-100 text-emerald-700 border-emerald-400" : "bg-background border-border text-muted-foreground"}`}>✅ O (상담 원함)</button>
+                      <button onClick={() => saveHappyCall(lead, lead.happy_call === "X" ? null : "X", lead.happy_call_result)} className={`flex-1 py-2.5 rounded-lg border text-xs font-bold transition-colors ${lead.happy_call === "X" ? "bg-rose-100 text-rose-700 border-rose-400" : "bg-background border-border text-muted-foreground"}`}>❌ X (거절)</button>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">{lead.happy_call === "O" ? "✅ 인터넷 상담 받을게요!" : lead.happy_call === "X" ? "❌ 필요 없어요" : "미설정"}</div>
+                  </div>
+                  {/* 영업 결과 */}
+                  <div className={`p-3 rounded-xl border space-y-1.5 transition-opacity ${lead.happy_call === "O" ? "border-border bg-muted/20 opacity-100" : "border-dashed border-border/40 bg-muted/10 opacity-40 pointer-events-none"}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-semibold">💼 영업 결과</div>
+                      <div className="text-[10px] text-muted-foreground">해피콜 O만 활성</div>
+                    </div>
+                    <div className="flex gap-1.5">
+                      <button onClick={() => saveHappyCall(lead, lead.happy_call, lead.happy_call_result === "성공" ? null : "성공")} className={`flex-1 py-2.5 rounded-lg border text-xs font-bold transition-colors ${lead.happy_call_result === "성공" ? "bg-emerald-100 text-emerald-700 border-emerald-400" : "bg-background border-border text-muted-foreground"}`}>✅ 성공</button>
+                      <button onClick={() => saveHappyCall(lead, lead.happy_call, lead.happy_call_result === "실패" ? null : "실패")} className={`flex-1 py-2.5 rounded-lg border text-xs font-bold transition-colors ${lead.happy_call_result === "실패" ? "bg-rose-100 text-rose-700 border-rose-400" : "bg-background border-border text-muted-foreground"}`}>❌ 실패</button>
+                      <button onClick={() => saveHappyCall(lead, lead.happy_call, lead.happy_call_result === "부재" ? null : "부재")} className={`flex-1 py-2.5 rounded-lg border text-xs font-bold transition-colors ${lead.happy_call_result === "부재" ? "bg-orange-100 text-orange-700 border-orange-400" : "bg-background border-border text-muted-foreground"}`}>📵 부재</button>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">{lead.happy_call_result ? `현재: ${lead.happy_call_result}` : "⚠️ 미설정 — 재케어 대상"}</div>
                   </div>
 
                   {/* 메모 */}
@@ -1237,7 +1235,7 @@ export default function LeadsPage() {
       if (period === "custom") return (!customStart || iso.slice(0,10) >= customStart) && (!customEnd || iso.slice(0,10) <= customEnd);
       return true;
     };
-    const empty = () => ({ total: 0, today: 0, done: 0, recare: 0, absent: 0, fail: 0 });
+    const empty = () => ({ total: 0, today: 0, done: 0, recare: 0, absent: 0, fail: 0, happyO: 0, salesOk: 0, salesFail: 0, salesAbsent: 0, recare4happy: 0 });
     const meta = empty();
     const dogmaru = empty();
     const other = empty();
@@ -1266,19 +1264,25 @@ export default function LeadsPage() {
       bucket.total += 1;
       if (dateIso === today) bucket.today += 1;
       if (isDogmaru) {
-        // 도그마루는 getDogmaruTab 기준
         const tab = getDogmaruTab(r);
         if (tab === "완료") bucket.done += 1;
         else if (tab === "재케어") bucket.recare += 1;
         else if (tab === "부재케어") bucket.absent += 1;
         else if (tab === "실패") bucket.fail += 1;
       } else {
-        // 메타는 status 기준
         if (r.status === "개통 완료") bucket.done += 1;
         if (r.status === "재케어") bucket.recare += 1;
         if (r.status === "부재 중") bucket.absent += 1;
         if (r.status === "실패" || r.status === "취소") bucket.fail += 1;
       }
+      // 해피콜/영업 집계
+      if ((r as any).happy_call === "O") {
+        bucket.happyO += 1;
+        if (!(r as any).happy_call_result) bucket.recare4happy += 1;
+      }
+      if ((r as any).happy_call_result === "성공") bucket.salesOk += 1;
+      else if ((r as any).happy_call_result === "실패") bucket.salesFail += 1;
+      else if ((r as any).happy_call_result === "부재") bucket.salesAbsent += 1;
     }
     if (sourceTab === "other") {
       for (const r of inquiryRows) {
@@ -1321,7 +1325,7 @@ export default function LeadsPage() {
       if (period === "custom") return (!customStart || iso.slice(0,10) >= customStart) && (!customEnd || iso.slice(0,10) <= customEnd);
       return true;
     };
-    const empty = () => ({ total: 0, today: 0, done: 0, recare: 0, absent: 0, fail: 0 });
+    const empty = () => ({ total: 0, today: 0, done: 0, recare: 0, absent: 0, fail: 0, happyO: 0, salesOk: 0, salesFail: 0, salesAbsent: 0, recare4happy: 0 });
     const map = new Map<string, ReturnType<typeof empty>>();
     const bump = (name: string) => {
       let b = map.get(name);
@@ -1707,6 +1711,9 @@ export default function LeadsPage() {
                 { label: "전체 접수", icon: UserCheck, key: "total" as const, tone: "text-primary" },
                 { label: "오늘 신규", icon: PhoneCall, key: "today" as const, tone: "text-orange-600 dark:text-orange-400" },
                 { label: "개통 완료", icon: CheckCircle2, key: "done" as const, tone: "text-emerald-600 dark:text-emerald-400" },
+            { label: "해피콜 O", icon: CheckCircle2, key: "happyO" as const, tone: "text-green-600" },
+            { label: "영업 성공", icon: CheckCircle2, key: "salesOk" as const, tone: "text-emerald-600" },
+            { label: "재케어 대상", icon: CheckCircle2, key: "recare4happy" as const, tone: "text-amber-600" },
                 { label: "재케어", icon: RotateCw, key: "recare" as const, tone: "text-zinc-600 dark:text-zinc-300" },
                 { label: "부재", icon: Ban, key: "absent" as const, tone: "text-orange-600 dark:text-orange-400" },
                 { label: "실패", icon: XCircle, key: "fail" as const, tone: "text-rose-600 dark:text-rose-400" },
