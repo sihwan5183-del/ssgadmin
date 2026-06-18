@@ -52,6 +52,7 @@ type Row = {
   payment_type: string | null;
   payback_date: string | null;
   payback_paid: boolean | null;
+  payback_amount: number | null;
   care_3month: boolean | null;
   care_date: string | null;
 };
@@ -113,6 +114,7 @@ export default function CustomProposalsPage() {
   const [paymentType, setPaymentType] = useState<"수납" | "후납">("수납");
   const [paybackDate, setPaybackDate] = useState<Date | undefined>(undefined);
   const [paybackPaid, setPaybackPaid] = useState(false);
+  const [paybackAmount, setPaybackAmount] = useState("");
   const [care3month, setCare3month] = useState(false);
 
   // 3개월 케어 날짜 자동 계산
@@ -164,6 +166,7 @@ export default function CustomProposalsPage() {
     setPaymentType("수납");
     setPaybackDate(undefined);
     setPaybackPaid(false);
+    setPaybackAmount("");
     setCare3month(false);
   };
 
@@ -188,6 +191,7 @@ export default function CustomProposalsPage() {
       payment_type: paymentType,
       payback_date: paybackDate ? format(paybackDate, "yyyy-MM-dd") : null,
       payback_paid: paybackPaid,
+      payback_amount: paybackAmount !== "" ? Number(paybackAmount) : null,
       care_3month: care3month,
       care_date: careDate ? format(careDate, "yyyy-MM-dd") : null,
     };
@@ -217,6 +221,7 @@ export default function CustomProposalsPage() {
     setPaymentType((r.payment_type as "수납" | "후납") ?? "수납");
     setPaybackDate(r.payback_date ? new Date(r.payback_date) : undefined);
     setPaybackPaid(!!r.payback_paid);
+    setPaybackAmount(r.payback_amount != null ? String(r.payback_amount) : "");
     setCare3month(!!r.care_3month);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -265,12 +270,12 @@ export default function CustomProposalsPage() {
     ["pure_upsell", "순수업셀"],
     ["final_upsell", "최종업셀"],
     ["offer_provided", "오퍼여부", (r: Row) => (r.offer_provided ? "오퍼 제공" : "미제공")],
-    ["offer_amount", "오퍼금액"],
-    ["payback_date", "페이백날짜"],
-    ["payback_paid", "페이백입금", (r: Row) => (r.payback_paid ? "완료" : "미완료")],
-    ["care_3month", "3개월케어", (r: Row) => (r.care_3month ? "케어필요" : "-")],
-    ["care_date", "케어날짜"],
-    ["note", "상담메모"],
+    ["offer_amount", "오퍼금액", (r: Row) => (r.offer_amount ?? 0)],
+    ["payback_amount", "페이백금액", (r: Row) => r.payback_amount ?? ""],
+    ["payback_date", "입금 예정일"],
+    ["payback_paid", "입금여부", (r: Row) => (r.payback_paid ? "완료" : "미완료")],
+    ["care_date", "케어 예정일"],
+    ["note", "메모"],
   ];
 
   const handleExport = () => {
@@ -594,6 +599,16 @@ export default function CustomProposalsPage() {
         {/* 페이백 날짜 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="space-y-1.5">
+            <Label className="text-xs">페이백 금액</Label>
+            <Input
+              inputMode="numeric"
+              value={paybackAmount}
+              onChange={(e) => setPaybackAmount(onlyDigits(e.target.value, 10))}
+              placeholder="직접 입력"
+            />
+          </div>
+
+          <div className="space-y-1.5">
             <Label className="text-xs">페이백 날짜 (입금 예정일)</Label>
             <Popover>
               <PopoverTrigger asChild>
@@ -689,7 +704,7 @@ export default function CustomProposalsPage() {
                 <TableHead className="text-right">변경요금(선약)</TableHead>
                 <TableHead className="text-right">순수업셀</TableHead>
                 <TableHead className="text-right">최종업셀</TableHead>
-                <TableHead className="text-right">지출예정(×3)</TableHead>
+                <TableHead className="text-right">페이백금액</TableHead>
                 <TableHead className="text-right">오퍼금액</TableHead>
                 <TableHead className="text-center">페이백</TableHead>
                 <TableHead className="text-center">3개월케어</TableHead>
@@ -727,7 +742,7 @@ export default function CustomProposalsPage() {
                     {r.final_upsell > 0 ? "+" : ""}{won(r.final_upsell)}
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap font-semibold text-rose-600">
-                    {won((r.final_upsell || 0) * 3)}
+                    {r.payback_amount != null ? won(r.payback_amount) : <span className="text-muted-foreground text-[11px]">-</span>}
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap">
                     {r.offer_provided && r.offer_amount
