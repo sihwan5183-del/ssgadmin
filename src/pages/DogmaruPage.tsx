@@ -1867,7 +1867,7 @@ export default function LeadsPage() {
           const recare4HappyC = tabRows.filter(r => (r as any).happy_call === "O" && !(r as any).happy_call_result).length;
           pcTabs.push({ key: "happy_call", label: `해피콜 ${happyCallC}`, color: "green" });
           pcTabs.push({ key: "happy_call_result", label: `영업 ${happyCallResultC}`, color: "emerald" });
-          if (recare4HappyC > 0) pcTabs.push({ key: "recare4happy", label: `재케어대상 ${recare4HappyC}`, color: "amber" });
+          pcTabs.push({ key: "recare4happy", label: `재케어대상 ${recare4HappyC}`, color: "amber" });
         } else {
           // 메타 상태값 그대로
           const careC = tabRows.filter(r => r.status === "케어중").length;
@@ -2396,13 +2396,12 @@ export default function LeadsPage() {
                   <span className="text-[10px] text-muted-foreground">
                     {openLead.happy_call === "O" ? "✅ 인터넷 상담 받을게요!" : openLead.happy_call === "X" ? "❌ 필요 없어요" : "미설정"}
                   </span>
-                  <button
-                    onClick={() => saveHappyCall(openLead, openLead.happy_call, openLead.happy_call_result)}
-                    disabled={happyCallSaving}
-                    className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50"
-                  >
-                    {happyCallSaving ? "저장 중..." : "저장"}
-                  </button>
+                  <div className="flex gap-2">
+                    {openLead.happy_call && <button onClick={() => saveHappyCall(openLead, null, openLead.happy_call_result)} className="px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:bg-muted/60">초기화</button>}
+                    <button onClick={() => saveHappyCall(openLead, openLead.happy_call, openLead.happy_call_result)} disabled={happyCallSaving} className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50">
+                      {happyCallSaving ? "저장 중..." : "저장"}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -2430,13 +2429,12 @@ export default function LeadsPage() {
                   <span className="text-[10px] text-muted-foreground">
                     {openLead.happy_call_result ? `현재: ${openLead.happy_call_result}` : "⚠️ 미설정 — 재케어 대상"}
                   </span>
-                  <button
-                    onClick={() => saveHappyCall(openLead, openLead.happy_call, openLead.happy_call_result)}
-                    disabled={happyCallSaving}
-                    className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50"
-                  >
-                    {happyCallSaving ? "저장 중..." : "저장"}
-                  </button>
+                  <div className="flex gap-2">
+                    {openLead.happy_call_result && <button onClick={() => saveHappyCall(openLead, openLead.happy_call, null)} className="px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:bg-muted/60">초기화</button>}
+                    <button onClick={() => saveHappyCall(openLead, openLead.happy_call, openLead.happy_call_result)} disabled={happyCallSaving} className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50">
+                      {happyCallSaving ? "저장 중..." : "저장"}
+                    </button>
+                  </div>
                 </div>
               </div>
 
