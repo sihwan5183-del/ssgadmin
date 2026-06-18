@@ -322,9 +322,9 @@ function MobileLeadsView({
             const happyCallMC = tabRows.filter(r => (r as any).happy_call === "O").length;
             const happyResultMC = tabRows.filter(r => !!(r as any).happy_call_result).length;
             const recare4MC = tabRows.filter(r => (r as any).happy_call === "O" && !(r as any).happy_call_result).length;
-            if (happyCallMC > 0) mobileTabs.push({ key: "happy_call", label: `해피콜 ${happyCallMC}`, color: "green" });
-            if (happyResultMC > 0) mobileTabs.push({ key: "happy_call_result", label: `영업 ${happyResultMC}`, color: "emerald" });
-            if (recare4MC > 0) mobileTabs.push({ key: "recare4happy", label: `재케어대상 ${recare4MC}`, color: "amber" });
+            mobileTabs.push({ key: "happy_call", label: `해피콜 ${happyCallMC}`, color: "green" });
+            mobileTabs.push({ key: "happy_call_result", label: `영업 ${happyResultMC}`, color: "emerald" });
+            mobileTabs.push({ key: "recare4happy", label: `재케어대상 ${recare4MC}`, color: "amber" });
           } else {
             mobileTabs.push({ key: "care", label: `케어중 ${careCount}`, color: "yellow" });
             mobileTabs.push({ key: "absence", label: `부재 중 ${absMetaCount}`, color: "orange" });
@@ -1913,9 +1913,9 @@ export default function LeadsPage() {
           const happyCallC = tabRows.filter(r => (r as any).happy_call === "O").length;
           const happyResultC = tabRows.filter(r => !!(r as any).happy_call_result).length;
           const recare4happyC = tabRows.filter(r => (r as any).happy_call === "O" && !(r as any).happy_call_result).length;
-          if (happyCallC > 0) pcTabs.push({ key: "happy_call", label: `해피콜 ${happyCallC}`, color: "green" });
-          if (happyResultC > 0) pcTabs.push({ key: "happy_call_result", label: `영업 ${happyResultC}`, color: "emerald" });
-          if (recare4happyC > 0) pcTabs.push({ key: "recare4happy", label: `재케어대상 ${recare4happyC}`, color: "amber" });
+          pcTabs.push({ key: "happy_call", label: `해피콜 ${happyCallC}`, color: "green" });
+          pcTabs.push({ key: "happy_call_result", label: `영업 ${happyResultC}`, color: "emerald" });
+          pcTabs.push({ key: "recare4happy", label: `재케어대상 ${recare4happyC}`, color: "amber" });
         } else {
           // 메타 상태값 그대로
           const careC = tabRows.filter(r => r.status === "케어중").length;
@@ -2435,9 +2435,12 @@ export default function LeadsPage() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[10px] text-muted-foreground">{openLead.happy_call === "O" ? "✅ 인터넷 상담 받을게요!" : openLead.happy_call === "X" ? "❌ 필요 없어요" : "미설정"}</span>
-                  <button onClick={() => saveHappyCall(openLead, openLead.happy_call, openLead.happy_call_result)} disabled={happyCallSaving} className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50">
-                    {happyCallSaving ? "저장 중..." : "저장"}
-                  </button>
+                  <div className="flex gap-2">
+                    {openLead.happy_call && <button onClick={() => { setOpenLead({ ...openLead, happy_call: null }); saveHappyCall(openLead, null, openLead.happy_call_result); }} className="px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:bg-muted/60">초기화</button>}
+                    <button onClick={() => saveHappyCall(openLead, openLead.happy_call, openLead.happy_call_result)} disabled={happyCallSaving} className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50">
+                      {happyCallSaving ? "저장 중..." : "저장"}
+                    </button>
+                  </div>
                 </div>
               </div>
               {/* 영업 결과 */}
@@ -2456,9 +2459,12 @@ export default function LeadsPage() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[10px] text-muted-foreground">{openLead.happy_call_result ? `현재: ${openLead.happy_call_result}` : "⚠️ 미설정 — 재케어 대상"}</span>
-                  <button onClick={() => saveHappyCall(openLead, openLead.happy_call, openLead.happy_call_result)} disabled={happyCallSaving} className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50">
-                    {happyCallSaving ? "저장 중..." : "저장"}
-                  </button>
+                  <div className="flex gap-2">
+                    {openLead.happy_call_result && <button onClick={() => { setOpenLead({ ...openLead, happy_call_result: null }); saveHappyCall(openLead, openLead.happy_call, null); }} className="px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:bg-muted/60">초기화</button>}
+                    <button onClick={() => saveHappyCall(openLead, openLead.happy_call, openLead.happy_call_result)} disabled={happyCallSaving} className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50">
+                      {happyCallSaving ? "저장 중..." : "저장"}
+                    </button>
+                  </div>
                 </div>
               </div>
 
