@@ -52,7 +52,6 @@ type Row = {
   payment_type: string | null;
   payback_date: string | null;
   payback_paid: boolean | null;
-  payback_amount: number | null;
   care_3month: boolean | null;
   care_date: string | null;
 };
@@ -111,10 +110,9 @@ export default function CustomProposalsPage() {
   const [memo, setMemo] = useState("");
   const [saving, setSaving] = useState(false);
   // 신규 필드
-  const [paymentType, setPaymentType] = useState<"수납" | "후납">("수납");
+  const [paymentType, setPaymentType] = useState<"수납" | "후납" | "입금">("수납");
   const [paybackDate, setPaybackDate] = useState<Date | undefined>(undefined);
   const [paybackPaid, setPaybackPaid] = useState(false);
-  const [paybackAmount, setPaybackAmount] = useState("");
   const [care3month, setCare3month] = useState(false);
 
   // 3개월 케어 날짜 자동 계산
@@ -166,7 +164,6 @@ export default function CustomProposalsPage() {
     setPaymentType("수납");
     setPaybackDate(undefined);
     setPaybackPaid(false);
-    setPaybackAmount("");
     setCare3month(false);
   };
 
@@ -191,7 +188,6 @@ export default function CustomProposalsPage() {
       payment_type: paymentType,
       payback_date: paybackDate ? format(paybackDate, "yyyy-MM-dd") : null,
       payback_paid: paybackPaid,
-      payback_amount: paybackAmount !== "" ? Number(paybackAmount) : null,
       care_3month: care3month,
       care_date: careDate ? format(careDate, "yyyy-MM-dd") : null,
     };
@@ -221,7 +217,6 @@ export default function CustomProposalsPage() {
     setPaymentType((r.payment_type as "수납" | "후납") ?? "수납");
     setPaybackDate(r.payback_date ? new Date(r.payback_date) : undefined);
     setPaybackPaid(!!r.payback_paid);
-    setPaybackAmount(r.payback_amount != null ? String(r.payback_amount) : "");
     setCare3month(!!r.care_3month);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -271,7 +266,6 @@ export default function CustomProposalsPage() {
     ["final_upsell", "최종업셀"],
     ["offer_provided", "오퍼여부", (r: Row) => (r.offer_provided ? "오퍼 제공" : "미제공")],
     ["offer_amount", "오퍼금액", (r: Row) => (r.offer_amount ?? 0)],
-    ["payback_amount", "페이백금액", (r: Row) => r.payback_amount ?? ""],
     ["payback_date", "입금 예정일"],
     ["payback_paid", "입금여부", (r: Row) => (r.payback_paid ? "완료" : "미완료")],
     ["care_date", "케어 예정일"],
@@ -485,7 +479,7 @@ export default function CustomProposalsPage() {
           <div className="flex items-center gap-3 flex-wrap">
             {/* 수납/후납 */}
             <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-              {(["수납", "후납"] as const).map((t) => (
+              {(["수납", "후납", "입금"] as const).map((t) => (
                 <button key={t} onClick={() => setPaymentType(t)}
                   className={cn("px-3 py-1.5 text-xs font-semibold rounded-md transition-colors",
                     paymentType === t ? "bg-background shadow text-foreground" : "text-muted-foreground")}
@@ -599,16 +593,6 @@ export default function CustomProposalsPage() {
         {/* 페이백 날짜 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label className="text-xs">페이백 금액</Label>
-            <Input
-              inputMode="numeric"
-              value={paybackAmount}
-              onChange={(e) => setPaybackAmount(onlyDigits(e.target.value, 10))}
-              placeholder="직접 입력"
-            />
-          </div>
-
-          <div className="space-y-1.5">
             <Label className="text-xs">페이백 날짜 (입금 예정일)</Label>
             <Popover>
               <PopoverTrigger asChild>
@@ -704,7 +688,6 @@ export default function CustomProposalsPage() {
                 <TableHead className="text-right">변경요금(선약)</TableHead>
                 <TableHead className="text-right">순수업셀</TableHead>
                 <TableHead className="text-right">최종업셀</TableHead>
-                <TableHead className="text-right">페이백금액</TableHead>
                 <TableHead className="text-right">오퍼금액</TableHead>
                 <TableHead className="text-center">페이백</TableHead>
                 <TableHead className="text-center">3개월케어</TableHead>
@@ -713,9 +696,9 @@ export default function CustomProposalsPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={14} className="text-center text-muted-foreground py-8">불러오는 중…</TableCell></TableRow>
+                <TableRow><TableCell colSpan={13} className="text-center text-muted-foreground py-8">불러오는 중…</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={14} className="text-center text-muted-foreground py-8">등록된 맞춤제안이 없습니다</TableCell></TableRow>
+                <TableRow><TableCell colSpan={13} className="text-center text-muted-foreground py-8">등록된 맞춤제안이 없습니다</TableCell></TableRow>
               ) : filtered.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="whitespace-nowrap">{r.change_date}</TableCell>
@@ -723,7 +706,7 @@ export default function CustomProposalsPage() {
                   <TableCell className="whitespace-nowrap">{r.customer_name ?? "-"}</TableCell>
                   <TableCell className="whitespace-nowrap font-mono text-xs">{r.customer_join_number ?? "-"}</TableCell>
                   <TableCell className="text-center">
-                    <Badge variant={r.payment_type === "후납" ? "secondary" : "outline"} className="text-[9px]">
+                    <Badge variant={r.payment_type === "후납" ? "secondary" : r.payment_type === "입금" ? "default" : "outline"} className="text-[9px]">
                       {r.payment_type ?? "수납"}
                     </Badge>
                   </TableCell>
@@ -740,9 +723,6 @@ export default function CustomProposalsPage() {
                   </TableCell>
                   <TableCell className={cn("text-right whitespace-nowrap font-semibold", r.final_upsell > 0 ? "text-primary" : r.final_upsell < 0 ? "text-destructive" : "")}>
                     {r.final_upsell > 0 ? "+" : ""}{won(r.final_upsell)}
-                  </TableCell>
-                  <TableCell className="text-right whitespace-nowrap font-semibold text-rose-600">
-                    {r.payback_amount != null ? won(r.payback_amount) : <span className="text-muted-foreground text-[11px]">-</span>}
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap">
                     {r.offer_provided && r.offer_amount
