@@ -689,7 +689,8 @@ export default function CustomProposalsPage() {
                 <TableHead className="text-right">변경요금(선약)</TableHead>
                 <TableHead className="text-right">순수업셀</TableHead>
                 <TableHead className="text-right">최종업셀</TableHead>
-                <TableHead className="text-center">오퍼</TableHead>
+                <TableHead className="text-right">지출예정(×3)</TableHead>
+                <TableHead className="text-right">오퍼금액</TableHead>
                 <TableHead className="text-center">페이백</TableHead>
                 <TableHead className="text-center">3개월케어</TableHead>
                 <TableHead className="w-[80px]"></TableHead>
@@ -697,9 +698,9 @@ export default function CustomProposalsPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={13} className="text-center text-muted-foreground py-8">불러오는 중…</TableCell></TableRow>
+                <TableRow><TableCell colSpan={14} className="text-center text-muted-foreground py-8">불러오는 중…</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={13} className="text-center text-muted-foreground py-8">등록된 맞춤제안이 없습니다</TableCell></TableRow>
+                <TableRow><TableCell colSpan={14} className="text-center text-muted-foreground py-8">등록된 맞춤제안이 없습니다</TableCell></TableRow>
               ) : filtered.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="whitespace-nowrap">{r.change_date}</TableCell>
@@ -725,15 +726,13 @@ export default function CustomProposalsPage() {
                   <TableCell className={cn("text-right whitespace-nowrap font-semibold", r.final_upsell > 0 ? "text-primary" : r.final_upsell < 0 ? "text-destructive" : "")}>
                     {r.final_upsell > 0 ? "+" : ""}{won(r.final_upsell)}
                   </TableCell>
-                  <TableCell className="text-center">
-                    {r.offer_provided ? (
-                      <div className="flex flex-col items-center gap-0.5">
-                        <Badge variant="default" className="text-[9px]">오퍼 제공</Badge>
-                        {r.offer_amount ? <span className="text-[9px] text-muted-foreground">{won(r.offer_amount)}</span> : null}
-                      </div>
-                    ) : (
-                      <Badge variant="secondary" className="text-[9px]">미제공</Badge>
-                    )}
+                  <TableCell className="text-right whitespace-nowrap font-semibold text-rose-600">
+                    {won((r.final_upsell || 0) * 3)}
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    {r.offer_provided && r.offer_amount
+                      ? <span className="font-semibold text-orange-600">{won(r.offer_amount)}</span>
+                      : <span className="text-muted-foreground text-[11px]">-</span>}
                   </TableCell>
                   <TableCell className="text-center">
                     {r.payback_date ? (
