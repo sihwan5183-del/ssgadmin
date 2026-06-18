@@ -899,6 +899,7 @@ export default function LeadsPage() {
   const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru" | "other">("meta");
   const [pcCareTab, setPcCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "delivery" | "subscribe" | "pending" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc">("all");
   const [openLead, setOpenLead] = useState<Lead | null>(null);
+  const [happyCallSaving, setHappyCallSaving] = useState(false);
   const [notes, setNotes] = useState<LeadNote[]>([]);
   const [statusLogs, setStatusLogs] = useState<any[]>([]);
   const [newNote, setNewNote] = useState("");
@@ -1474,6 +1475,18 @@ export default function LeadsPage() {
   }
 
   // 부재케어 카운트 수동 조정
+  async function saveHappyCall(lead: Lead, happy_call: string | null, happy_call_result: string | null) {
+    setHappyCallSaving(true);
+    const { error } = await supabase.from("leads")
+      .update({ happy_call, happy_call_result })
+      .eq("id", lead.id);
+    if (!error) {
+      setRows((p) => p.map((r) => r.id === lead.id ? { ...r, happy_call, happy_call_result } : r));
+      if (openLead?.id === lead.id) setOpenLead({ ...lead, happy_call, happy_call_result });
+    }
+    setHappyCallSaving(false);
+  }
+
   async function adjustAbsenceCount(lead: Lead, delta: number) {
     const changedBy = user?.user_metadata?.display_name ?? user?.email ?? "unknown";
     const match = (lead.memo ?? "").match(/부재\/(\d+)회/);
