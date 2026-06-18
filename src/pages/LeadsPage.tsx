@@ -147,7 +147,7 @@ function MobileLeadsView({
   const [absenceModal, setAbsenceModal] = useState<Lead | null>(null);
   const [recareModal, setRecareModal] = useState<Lead | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
-  const [careTab, setCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "delivery" | "subscribe" | "pending" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc" | "happy_call" | "happy_call_result">("all");
+  const [careTab, setCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "delivery" | "subscribe" | "pending" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc" | "happy_call" | "happy_call_result" | "recare4happy">("all");
   const [completePage, setCompletePage] = useState(0);
   const COMPLETE_PAGE_SIZE = 50;
   const [completeSearch, setCompleteSearch] = useState("");
@@ -319,6 +319,12 @@ function MobileLeadsView({
             mobileTabs.push({ key: "subscribe", label: `청약대기 ${subscribeCount}`, color: "cyan" });
             mobileTabs.push({ key: "pending", label: `개통대기 ${pendingCount}`, color: "teal" });
             mobileTabs.push({ key: "complete", label: `완료 ${completeCount}`, color: "blue" });
+            const happyCallMC = tabRows.filter(r => (r as any).happy_call === "O").length;
+            const happyResultMC = tabRows.filter(r => !!(r as any).happy_call_result).length;
+            const recare4MC = tabRows.filter(r => (r as any).happy_call === "O" && !(r as any).happy_call_result).length;
+            if (happyCallMC > 0) mobileTabs.push({ key: "happy_call", label: `해피콜 ${happyCallMC}`, color: "green" });
+            if (happyResultMC > 0) mobileTabs.push({ key: "happy_call_result", label: `영업 ${happyResultMC}`, color: "emerald" });
+            if (recare4MC > 0) mobileTabs.push({ key: "recare4happy", label: `재케어대상 ${recare4MC}`, color: "amber" });
           } else {
             mobileTabs.push({ key: "care", label: `케어중 ${careCount}`, color: "yellow" });
             mobileTabs.push({ key: "absence", label: `부재 중 ${absMetaCount}`, color: "orange" });
@@ -521,26 +527,30 @@ function MobileLeadsView({
                     </div>
                   </div>
 
-                  {/* 해피콜/영업 */}
-                  <div className="p-3 rounded-xl border border-border bg-muted/20 space-y-2">
-                    <div className="text-xs text-muted-foreground font-medium">해피콜 · 영업</div>
-                    <div className="flex gap-2">
-                      <div className="flex-1 space-y-1">
-                        <div className="text-[10px] text-muted-foreground">해피콜</div>
-                        <div className="flex gap-1">
-                          <button onClick={() => saveHappyCall(lead, (lead as any).happy_call === "O" ? null : "O", (lead as any).happy_call_result)} className={`flex-1 py-2 rounded-lg border text-xs font-bold transition-colors ${(lead as any).happy_call === "O" ? "bg-emerald-100 text-emerald-700 border-emerald-400" : "bg-background border-border text-muted-foreground"}`}>✅ O</button>
-                          <button onClick={() => saveHappyCall(lead, (lead as any).happy_call === "X" ? null : "X", (lead as any).happy_call_result)} className={`flex-1 py-2 rounded-lg border text-xs font-bold transition-colors ${(lead as any).happy_call === "X" ? "bg-rose-100 text-rose-700 border-rose-400" : "bg-background border-border text-muted-foreground"}`}>❌ X</button>
-                        </div>
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <div className="text-[10px] text-muted-foreground">영업 결과</div>
-                        <div className="flex gap-1">
-                          <button onClick={() => saveHappyCall(lead, (lead as any).happy_call, (lead as any).happy_call_result === "성공" ? null : "성공")} className={`flex-1 py-2 rounded-lg border text-xs font-bold transition-colors ${(lead as any).happy_call_result === "성공" ? "bg-emerald-100 text-emerald-700 border-emerald-400" : "bg-background border-border text-muted-foreground"}`}>✅</button>
-                          <button onClick={() => saveHappyCall(lead, (lead as any).happy_call, (lead as any).happy_call_result === "실패" ? null : "실패")} className={`flex-1 py-2 rounded-lg border text-xs font-bold transition-colors ${(lead as any).happy_call_result === "실패" ? "bg-rose-100 text-rose-700 border-rose-400" : "bg-background border-border text-muted-foreground"}`}>❌</button>
-                          <button onClick={() => saveHappyCall(lead, (lead as any).happy_call, (lead as any).happy_call_result === "부재" ? null : "부재")} className={`flex-1 py-2 rounded-lg border text-xs font-bold transition-colors ${(lead as any).happy_call_result === "부재" ? "bg-orange-100 text-orange-700 border-orange-400" : "bg-background border-border text-muted-foreground"}`}>📵</button>
-                        </div>
-                      </div>
+                  {/* 해피콜 */}
+                  <div className="p-3 rounded-xl border border-border bg-muted/20 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-semibold">📞 해피콜</div>
+                      <div className="text-[10px] text-muted-foreground">해피콜 팀 작성</div>
                     </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => saveHappyCall(lead, (lead as any).happy_call === "O" ? null : "O", (lead as any).happy_call_result)} className={`flex-1 py-2.5 rounded-lg border text-xs font-bold transition-colors ${(lead as any).happy_call === "O" ? "bg-emerald-100 text-emerald-700 border-emerald-400" : "bg-background border-border text-muted-foreground"}`}>✅ O (상담 원함)</button>
+                      <button onClick={() => saveHappyCall(lead, (lead as any).happy_call === "X" ? null : "X", (lead as any).happy_call_result)} className={`flex-1 py-2.5 rounded-lg border text-xs font-bold transition-colors ${(lead as any).happy_call === "X" ? "bg-rose-100 text-rose-700 border-rose-400" : "bg-background border-border text-muted-foreground"}`}>❌ X (거절)</button>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">{(lead as any).happy_call === "O" ? "✅ 인터넷 상담 받을게요!" : (lead as any).happy_call === "X" ? "❌ 필요 없어요" : "미설정"}</div>
+                  </div>
+                  {/* 영업 결과 */}
+                  <div className={`p-3 rounded-xl border space-y-1.5 transition-opacity ${(lead as any).happy_call === "O" ? "border-border bg-muted/20 opacity-100" : "border-dashed border-border/40 bg-muted/10 opacity-40 pointer-events-none"}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-semibold">💼 영업 결과</div>
+                      <div className="text-[10px] text-muted-foreground">해피콜 O만 활성</div>
+                    </div>
+                    <div className="flex gap-1.5">
+                      <button onClick={() => saveHappyCall(lead, (lead as any).happy_call, (lead as any).happy_call_result === "성공" ? null : "성공")} className={`flex-1 py-2.5 rounded-lg border text-xs font-bold transition-colors ${(lead as any).happy_call_result === "성공" ? "bg-emerald-100 text-emerald-700 border-emerald-400" : "bg-background border-border text-muted-foreground"}`}>✅ 성공</button>
+                      <button onClick={() => saveHappyCall(lead, (lead as any).happy_call, (lead as any).happy_call_result === "실패" ? null : "실패")} className={`flex-1 py-2.5 rounded-lg border text-xs font-bold transition-colors ${(lead as any).happy_call_result === "실패" ? "bg-rose-100 text-rose-700 border-rose-400" : "bg-background border-border text-muted-foreground"}`}>❌ 실패</button>
+                      <button onClick={() => saveHappyCall(lead, (lead as any).happy_call, (lead as any).happy_call_result === "부재" ? null : "부재")} className={`flex-1 py-2.5 rounded-lg border text-xs font-bold transition-colors ${(lead as any).happy_call_result === "부재" ? "bg-orange-100 text-orange-700 border-orange-400" : "bg-background border-border text-muted-foreground"}`}>📵 부재</button>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">{(lead as any).happy_call_result ? `현재: ${(lead as any).happy_call_result}` : "⚠️ 미설정 — 재케어 대상"}</div>
                   </div>
 
                   {/* 메모 */}
@@ -1116,6 +1126,9 @@ export default function LeadsPage() {
         else if (pcCareTab === "delivery" && tab !== "택배발송") return false;
         else if (pcCareTab === "subscribe" && tab !== "청약대기") return false;
         else if (pcCareTab === "complete" && tab !== "완료") return false;
+        else if (pcCareTab === "happy_call" && r.happy_call !== "O") return false;
+        else if (pcCareTab === "happy_call_result" && !r.happy_call_result) return false;
+        else if (pcCareTab === "recare4happy" && !(r.happy_call === "O" && !r.happy_call_result)) return false;
       } else {
         // 메타 상태값 그대로 사용
         if (pcCareTab === "new" && r.status !== "신규 접수") return false;
@@ -1478,10 +1491,20 @@ export default function LeadsPage() {
   // 부재케어 카운트 수동 조정
   async function saveHappyCall(lead: Lead, happy_call: string | null, happy_call_result: string | null) {
     setHappyCallSaving(true);
+    const changedBy = user?.user_metadata?.display_name ?? user?.email ?? "unknown";
     const { error } = await supabase.from("leads")
       .update({ happy_call, happy_call_result })
       .eq("id", lead.id);
     if (!error) {
+      const logStatus = happy_call_result
+        ? `영업:${happy_call_result}`
+        : happy_call ? `해피콜:${happy_call}` : "해피콜/영업 초기화";
+      await supabase.from("lead_status_logs").insert({
+        lead_id: lead.id,
+        status: logStatus,
+        changed_by: changedBy,
+      });
+      toast.success("저장되었습니다 ✅");
       setRows((p) => p.map((r) => r.id === lead.id ? { ...r, happy_call, happy_call_result } : r));
       if (openLead?.id === lead.id) setOpenLead({ ...lead, happy_call, happy_call_result });
     }
@@ -1887,6 +1910,12 @@ export default function LeadsPage() {
           pcTabs.push({ key: "subscribe", label: `청약대기 ${subscribeC}`, color: "cyan" });
           pcTabs.push({ key: "pending", label: `개통대기 ${pendingC}`, color: "teal" });
           pcTabs.push({ key: "complete", label: `완료 ${completeC}`, color: "blue" });
+          const happyCallC = tabRows.filter(r => (r as any).happy_call === "O").length;
+          const happyResultC = tabRows.filter(r => !!(r as any).happy_call_result).length;
+          const recare4happyC = tabRows.filter(r => (r as any).happy_call === "O" && !(r as any).happy_call_result).length;
+          if (happyCallC > 0) pcTabs.push({ key: "happy_call", label: `해피콜 ${happyCallC}`, color: "green" });
+          if (happyResultC > 0) pcTabs.push({ key: "happy_call_result", label: `영업 ${happyResultC}`, color: "emerald" });
+          if (recare4happyC > 0) pcTabs.push({ key: "recare4happy", label: `재케어대상 ${recare4happyC}`, color: "amber" });
         } else {
           // 메타 상태값 그대로
           const careC = tabRows.filter(r => r.status === "케어중").length;
@@ -1913,6 +1942,9 @@ export default function LeadsPage() {
           if (t.color === "cyan") return "bg-cyan-100 text-cyan-700 border-cyan-300";
           if (t.color === "teal") return "bg-teal-100 text-teal-700 border-teal-300";
           if (t.color === "blue") return "bg-blue-100 text-blue-700 border-blue-300";
+          if (t.color === "green") return "bg-green-100 text-green-700 border-green-300";
+          if (t.color === "emerald") return "bg-emerald-100 text-emerald-700 border-emerald-300";
+          if (t.color === "amber") return "bg-amber-100 text-amber-700 border-amber-300";
           return "bg-primary text-primary-foreground border-primary";
         }
         return (
