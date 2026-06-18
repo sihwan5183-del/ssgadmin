@@ -535,8 +535,9 @@ function MobileLeadsView({
                       <div className="flex-1 space-y-1">
                         <div className="text-[10px] text-muted-foreground">영업 결과</div>
                         <div className="flex gap-1">
-                          <button onClick={() => saveHappyCall(lead, (lead as any).happy_call, (lead as any).happy_call_result === "성공" ? null : "성공")} className={`flex-1 py-2 rounded-lg border text-xs font-bold transition-colors ${(lead as any).happy_call_result === "성공" ? "bg-emerald-100 text-emerald-700 border-emerald-400" : "bg-background border-border text-muted-foreground"}`}>성공</button>
-                          <button onClick={() => saveHappyCall(lead, (lead as any).happy_call, (lead as any).happy_call_result === "실패" ? null : "실패")} className={`flex-1 py-2 rounded-lg border text-xs font-bold transition-colors ${(lead as any).happy_call_result === "실패" ? "bg-rose-100 text-rose-700 border-rose-400" : "bg-background border-border text-muted-foreground"}`}>실패</button>
+                          <button onClick={() => saveHappyCall(lead, (lead as any).happy_call, (lead as any).happy_call_result === "성공" ? null : "성공")} className={`flex-1 py-2 rounded-lg border text-xs font-bold transition-colors ${(lead as any).happy_call_result === "성공" ? "bg-emerald-100 text-emerald-700 border-emerald-400" : "bg-background border-border text-muted-foreground"}`}>✅</button>
+                          <button onClick={() => saveHappyCall(lead, (lead as any).happy_call, (lead as any).happy_call_result === "실패" ? null : "실패")} className={`flex-1 py-2 rounded-lg border text-xs font-bold transition-colors ${(lead as any).happy_call_result === "실패" ? "bg-rose-100 text-rose-700 border-rose-400" : "bg-background border-border text-muted-foreground"}`}>❌</button>
+                          <button onClick={() => saveHappyCall(lead, (lead as any).happy_call, (lead as any).happy_call_result === "부재" ? null : "부재")} className={`flex-1 py-2 rounded-lg border text-xs font-bold transition-colors ${(lead as any).happy_call_result === "부재" ? "bg-orange-100 text-orange-700 border-orange-400" : "bg-background border-border text-muted-foreground"}`}>📵</button>
                         </div>
                       </div>
                     </div>
@@ -2386,49 +2387,44 @@ export default function LeadsPage() {
                 </div>
               </div>
 
-              {/* 해피콜 / 영업 */}
-              <div className="mt-4 p-4 rounded-xl border border-border bg-muted/30 space-y-3">
-                <div className="text-sm font-bold text-foreground">해피콜 · 영업</div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <div className="text-xs text-muted-foreground font-medium">해피콜</div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setOpenLead({ ...openLead, happy_call: openLead.happy_call === "O" ? null : "O" })}
-                        className={`flex-1 py-2 rounded-lg border text-sm font-bold transition-colors ${openLead.happy_call === "O" ? "bg-emerald-100 text-emerald-700 border-emerald-400" : "bg-background border-border text-muted-foreground hover:bg-emerald-50"}`}
-                      >✅ O</button>
-                      <button
-                        onClick={() => setOpenLead({ ...openLead, happy_call: openLead.happy_call === "X" ? null : "X" })}
-                        className={`flex-1 py-2 rounded-lg border text-sm font-bold transition-colors ${openLead.happy_call === "X" ? "bg-rose-100 text-rose-700 border-rose-400" : "bg-background border-border text-muted-foreground hover:bg-rose-50"}`}
-                      >❌ X</button>
-                    </div>
-                    <div className="text-[10px] text-muted-foreground">
-                      {openLead.happy_call === "O" ? "✅ 인터넷 상담 받을게요!" : openLead.happy_call === "X" ? "❌ 필요 없어요" : "미설정"}
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="text-xs text-muted-foreground font-medium">영업 결과</div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setOpenLead({ ...openLead, happy_call_result: openLead.happy_call_result === "성공" ? null : "성공" })}
-                        className={`flex-1 py-2 rounded-lg border text-sm font-bold transition-colors ${openLead.happy_call_result === "성공" ? "bg-emerald-100 text-emerald-700 border-emerald-400" : "bg-background border-border text-muted-foreground hover:bg-emerald-50"}`}
-                      >성공</button>
-                      <button
-                        onClick={() => setOpenLead({ ...openLead, happy_call_result: openLead.happy_call_result === "실패" ? null : "실패" })}
-                        className={`flex-1 py-2 rounded-lg border text-sm font-bold transition-colors ${openLead.happy_call_result === "실패" ? "bg-rose-100 text-rose-700 border-rose-400" : "bg-background border-border text-muted-foreground hover:bg-rose-50"}`}
-                      >실패</button>
-                    </div>
-                    <div className="text-[10px] text-muted-foreground">
-                      {openLead.happy_call_result === "성공" ? "✅ 영업 성공" : openLead.happy_call_result === "실패" ? "❌ 영업 실패" : "미설정"}
-                    </div>
-                  </div>
+              {/* 해피콜 */}
+              <div className="mt-4 p-4 rounded-xl border border-border bg-muted/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-bold text-foreground">📞 해피콜</div>
+                  <div className="text-[10px] text-muted-foreground">해피콜 팀 작성</div>
                 </div>
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => saveHappyCall(openLead, openLead.happy_call, openLead.happy_call_result)}
-                    disabled={happyCallSaving}
-                    className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50"
-                  >
+                <div className="flex gap-2">
+                  {(["O", "X"] as const).map((v) => (
+                    <button key={v} onClick={() => setOpenLead({ ...openLead, happy_call: openLead.happy_call === v ? null : v })}
+                      className={`flex-1 py-2.5 rounded-lg border text-sm font-bold transition-colors ${openLead.happy_call === v ? (v === "O" ? "bg-emerald-100 text-emerald-700 border-emerald-400" : "bg-rose-100 text-rose-700 border-rose-400") : "bg-background border-border text-muted-foreground hover:bg-muted/60"}`}>
+                      {v === "O" ? "✅ O (상담 원함)" : "❌ X (거절)"}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-muted-foreground">{openLead.happy_call === "O" ? "✅ 인터넷 상담 받을게요!" : openLead.happy_call === "X" ? "❌ 필요 없어요" : "미설정"}</span>
+                  <button onClick={() => saveHappyCall(openLead, openLead.happy_call, openLead.happy_call_result)} disabled={happyCallSaving} className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50">
+                    {happyCallSaving ? "저장 중..." : "저장"}
+                  </button>
+                </div>
+              </div>
+              {/* 영업 결과 */}
+              <div className={`mt-2 p-4 rounded-xl border space-y-2 transition-opacity ${openLead.happy_call === "O" ? "border-border bg-muted/30 opacity-100" : "border-dashed border-border/50 bg-muted/10 opacity-40 pointer-events-none"}`}>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-bold text-foreground">💼 영업 결과</div>
+                  <div className="text-[10px] text-muted-foreground">해피콜 O인 경우만 활성</div>
+                </div>
+                <div className="flex gap-2">
+                  {([["성공","bg-emerald-100 text-emerald-700 border-emerald-400"],["실패","bg-rose-100 text-rose-700 border-rose-400"],["부재","bg-orange-100 text-orange-700 border-orange-400"]] as const).map(([v, ac]) => (
+                    <button key={v} onClick={() => setOpenLead({ ...openLead, happy_call_result: openLead.happy_call_result === v ? null : v })}
+                      className={`flex-1 py-2.5 rounded-lg border text-sm font-bold transition-colors ${openLead.happy_call_result === v ? ac : "bg-background border-border text-muted-foreground"}`}>
+                      {v === "성공" ? "✅ 성공" : v === "실패" ? "❌ 실패" : "📵 부재"}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-muted-foreground">{openLead.happy_call_result ? `현재: ${openLead.happy_call_result}` : "⚠️ 미설정 — 재케어 대상"}</span>
+                  <button onClick={() => saveHappyCall(openLead, openLead.happy_call, openLead.happy_call_result)} disabled={happyCallSaving} className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50">
                     {happyCallSaving ? "저장 중..." : "저장"}
                   </button>
                 </div>
