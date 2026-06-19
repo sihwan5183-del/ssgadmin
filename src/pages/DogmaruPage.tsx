@@ -2460,6 +2460,36 @@ export default function LeadsPage() {
                 </div>
 
                 <div className="rounded-lg border border-border p-3 bg-muted/30">
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      onClick={() => {
+                        const date = openLead.registration_date ?? openLead.created_at?.slice(0,10) ?? "0000-00-00";
+                        const month = date.slice(5,7).replace(/^0/, "");
+                        const day = date.slice(8,10).replace(/^0/, "");
+                        const msg = `고객님 안녕하세요.\n${month}월 ${day}일 설치하신 홈캠 관련하여 해피콜 연락드린 유플러스 상담원 입니다\n*추가적인 문의사항은 편히 연락 남겨주세요`;
+                        const phone = (openLead.phone ?? "").replace(/[^0-9]/g, "");
+                        const url = `sms:${phone}?body=${encodeURIComponent(msg)}`;
+                        window.open(url, "_blank");
+                      }}
+                      className="flex-1 py-2 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors"
+                    >
+                      📞 해피콜 문자
+                    </button>
+                    <button
+                      onClick={() => {
+                        const date = openLead.registration_date ?? openLead.created_at?.slice(0,10) ?? "0000-00-00";
+                        const month = date.slice(5,7).replace(/^0/, "");
+                        const day = date.slice(8,10).replace(/^0/, "");
+                        const msg = `고객님 안녕하세요.\n${month}월 ${day}일 설치하신 홈캠 관련하여 해피콜 연락드렸으나 부재로 문자 남깁니다\n*통화 가능하신 시간 남겨주시면 연락드리겠습니다`;
+                        const phone = (openLead.phone ?? "").replace(/[^0-9]/g, "");
+                        const url = `sms:${phone}?body=${encodeURIComponent(msg)}`;
+                        window.open(url, "_blank");
+                      }}
+                      className="flex-1 py-2 rounded-lg border border-orange-300 bg-orange-50 text-orange-700 text-xs font-semibold hover:bg-orange-100 transition-colors"
+                    >
+                      📵 부재중 문자
+                    </button>
+                  </div>
                   <Textarea
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
