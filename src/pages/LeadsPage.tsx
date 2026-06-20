@@ -131,8 +131,8 @@ function MobileLeadsView({
 }: {
   rows: Lead[];
   loading: boolean;
-  sourceTab: "meta" | "dogmaru" | "other";
-  setSourceTab: (t: "meta" | "dogmaru" | "other") => void;
+  sourceTab: "meta" | "dogmaru" | "udak" | "other";
+  setSourceTab: (t: "meta" | "dogmaru" | "udak" | "other") => void;
   search: string;
   setSearch: (s: string) => void;
   updateStatus: (id: string, status: string) => Promise<void>;
@@ -177,9 +177,11 @@ function MobileLeadsView({
   const filtered = useMemo(() => {
     return rows.filter(r => {
       const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
+      const isUdak = r.channel === "유닥";
       if (sourceTab === "dogmaru" && !isDogmaru) return false;
-      if (sourceTab === "meta" && isDogmaru) return false;
-      if (sourceTab === "other" && isDogmaru) return false;
+      if (sourceTab === "meta" && (isDogmaru || isUdak)) return false;
+      if (sourceTab === "udak" && !isUdak) return false;
+      if (sourceTab === "other" && (isDogmaru || isUdak)) return false;
       // 도그마루: 단일 분류 함수로 정확히 하나의 탭에만 배치
       if (isDogmaru) {
         const tab = getDogmaruTabMobile(r);
@@ -213,15 +215,18 @@ function MobileLeadsView({
   }, [rows, sourceTab, search, careTab]);
 
   // 탭별 카운트
-  const metaCount = rows.filter(r => r.campaign_name && r.campaign_name !== DOGMARU_CAMPAIGN).length;
+  const isUdakRow = (r: Lead) => r.channel === "유닥";
+  const metaCount = rows.filter(r => !isUdakRow(r) && r.campaign_name && r.campaign_name !== DOGMARU_CAMPAIGN).length;
   const dogmaruCount = rows.filter(r => r.campaign_name === DOGMARU_CAMPAIGN).length;
+  const udakCount = rows.filter(r => isUdakRow(r)).length;
 
   // 현재 탭 내 케어 카운트
   const tabRows = useMemo(() => rows.filter(r => {
     const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
     if (sourceTab === "dogmaru") return isDogmaru;
-    if (sourceTab === "meta") return !isDogmaru;
-    return !isDogmaru;
+    if (sourceTab === "udak") return isUdakRow(r);
+    if (sourceTab === "meta") return !isDogmaru && !isUdakRow(r);
+    return !isDogmaru && !isUdakRow(r);
   }), [rows, sourceTab]);
   // 도그마루 탭 카운트: effectiveStatus 기준 (DB status 우선, 없으면 memo 자동분류, 둘 다 없으면 신규 접수)
   const completeCount = tabRows.filter(r => getDogmaruTabMobile(r) === "완료").length;
@@ -284,6 +289,7 @@ function MobileLeadsView({
         {([
           { key: "meta", label: "메타광고", count: metaCount },
           { key: "dogmaru", label: "도그마루", count: dogmaruCount },
+          { key: "udak", label: "유닥", count: udakCount },
           { key: "other", label: "기타인입", count: 0 },
         ] as const).map(t => (
           <button key={t.key} onClick={() => setSourceTab(t.key)}
@@ -795,7 +801,9 @@ const LEADS_SELECT = `
   cancellation_status,
   activation_number,
   happy_call,
-  happy_call_result
+  happy_call_result,
+  channel,
+  utm_campaign
 `;
 
 const cleanText = (value: unknown) => {
@@ -873,6 +881,8 @@ type Lead = {
   pkg_number: string | null;
   happy_call: string | null;
   happy_call_result: string | null;
+  channel: string | null;
+  utm_campaign: string | null;
 };
 
 type LeadNote = {
@@ -907,7 +917,7 @@ export default function LeadsPage() {
   const [rows, setRows] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru" | "other">("meta");
+  const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru" | "udak" | "other">("meta");
   const [pcCareTab, setPcCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "delivery" | "subscribe" | "pending" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc">("all");
   const [openLead, setOpenLead] = useState<Lead | null>(null);
   const [happyCallSaving, setHappyCallSaving] = useState(false);
@@ -1044,8 +1054,8 @@ export default function LeadsPage() {
   // ── 전역 토스트 알림 클릭 시 진입하는 ?tab=meta|dogmaru&highlight=<id> 동기화 ──
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab === "meta" || tab === "dogmaru" || tab === "other") {
-      setSourceTab(tab as "meta" | "dogmaru" | "other");
+    if (tab === "meta" || tab === "dogmaru" || tab === "udak" || tab === "other") {
+      setSourceTab(tab as "meta" | "dogmaru" | "udak" | "other");
     }
     const hid = searchParams.get("highlight");
     if (hid) {
@@ -1109,8 +1119,11 @@ export default function LeadsPage() {
     };
     return rows.filter((r) => {
       const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
+      const isUdak = r.channel === "유닥";
       if (sourceTab === "dogmaru" && !isDogmaru) return false;
-      if (sourceTab === "meta" && isDogmaru) return false;
+      if (sourceTab === "udak" && !isUdak) return false;
+      if (sourceTab === "meta" && (isDogmaru || isUdak)) return false;
+      if (sourceTab === "other" && (isDogmaru || isUdak)) return false;
       if (!inPeriod(r)) return false;
       // 도그마루: 단일 분류 함수로 정확히 하나의 탭에만 배치
       if (isDogmaru) {
@@ -1215,11 +1228,13 @@ export default function LeadsPage() {
   const sourceCounts = useMemo(() => {
     let dogmaru = 0;
     let meta = 0;
+    let udak = 0;
     for (const r of rows) {
-      if (r.campaign_name === DOGMARU_CAMPAIGN) dogmaru++;
+      if (r.channel === "유닥") udak++;
+      else if (r.campaign_name === DOGMARU_CAMPAIGN) dogmaru++;
       else if (r.campaign_name) meta++;
     }
-    return { meta, dogmaru };
+    return { meta, dogmaru, udak };
   }, [rows]);
 
   const stats = useMemo(() => {
@@ -1277,8 +1292,10 @@ export default function LeadsPage() {
     for (const r of rows) {
       const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
       // sourceTab에 맞는 건만 집계
+      const isUdakR = r.channel === "유닥";
       if (sourceTab === "dogmaru" && !isDogmaru) continue;
-      if (sourceTab === "meta" && isDogmaru) continue;
+      if (sourceTab === "udak" && !isUdakR) continue;
+      if (sourceTab === "meta" && (isDogmaru || isUdakR)) continue;
       if (sourceTab === "other") continue;
 
       let dateIso = "";
@@ -1294,7 +1311,7 @@ export default function LeadsPage() {
         dateIso = r.created_at.slice(0, 10);
       }
       if (!inRange(dateIso)) continue;
-      const bucket = isDogmaru ? dogmaru : meta;
+      const bucket = isDogmaru ? dogmaru : isUdakRC ? { newC: 0, absence: 0, recare: 0, complete: 0 } : meta;
       bucket.total += 1;
       if (dateIso === today) bucket.today += 1;
       if (isDogmaru) {
@@ -1312,7 +1329,7 @@ export default function LeadsPage() {
         if (r.status === "실패" || r.status === "취소") bucket.fail += 1;
       }
     }
-    if (sourceTab === "other") {
+    if (sourceTab === "udak" || sourceTab === "other") {
       for (const r of inquiryRows) {
         if (!inRange(r.created_at)) continue;
         other.total += 1;
@@ -1410,7 +1427,7 @@ export default function LeadsPage() {
       const iso = d.toISOString().slice(0, 10);
       days.push({ date: iso, label: `${d.getMonth()+1}/${d.getDate()}`, count: 0 });
     }
-    for (const r of rows.filter(r => r.campaign_name !== DOGMARU_CAMPAIGN)) {
+    for (const r of rows.filter(r => r.channel !== "유닥" && r.campaign_name !== DOGMARU_CAMPAIGN)) {
       const iso = parseLeadDate(r);
       const day = days.find(d => d.date === iso);
       if (day) day.count++;
@@ -1437,8 +1454,9 @@ export default function LeadsPage() {
   }, [rows]);
 
   // ── 엑셀형 헤더 필터에 들어갈 고유값 (탭별로 분리해 메타↔도그마루 섞이지 않게) ──
-  const metaRows = useMemo(() => rows.filter((r) => r.campaign_name !== DOGMARU_CAMPAIGN), [rows]);
+  const metaRows = useMemo(() => rows.filter((r) => r.channel !== "유닥" && r.campaign_name !== DOGMARU_CAMPAIGN), [rows]);
   const dogmaruRows = useMemo(() => rows.filter((r) => r.campaign_name === DOGMARU_CAMPAIGN), [rows]);
+  const udakRows = useMemo(() => rows.filter((r) => r.channel === "유닥"), [rows]);
   const valStatus = useMemo(() => metaRows.map((r) => r.status ?? ""), [metaRows]);
   const valCarrier = useMemo(() => metaRows.map((r) => r.current_carrier ?? ""), [metaRows]);
   const valProduct = useMemo(() => metaRows.map((r) => r.desired_product ?? ""), [metaRows]);
@@ -1859,10 +1877,10 @@ export default function LeadsPage() {
       <Tabs
         value={sourceTab}
         onValueChange={(v) =>
-          startTransition(() => setSourceTab(v as "meta" | "dogmaru" | "other"))
+          startTransition(() => setSourceTab(v as "meta" | "dogmaru" | "udak" | "other"))
         }
       >
-        <TabsList className="grid grid-cols-3 w-full max-w-2xl h-12 bg-muted/60 mb-3">
+        <TabsList className="grid grid-cols-4 w-full max-w-3xl h-12 bg-muted/60 mb-3">
           <TabsTrigger value="meta" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
             메타광고
             <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.meta}</Badge>
@@ -1870,6 +1888,10 @@ export default function LeadsPage() {
           <TabsTrigger value="dogmaru" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
             도그마루
             <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.dogmaru}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="udak" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
+            유닥
+            <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.udak ?? 0}</Badge>
           </TabsTrigger>
           <TabsTrigger value="other" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
             기타인입
@@ -1881,7 +1903,10 @@ export default function LeadsPage() {
       {sourceTab !== "other" && (() => {
         const tabRows = rows.filter(r => {
           const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
-          return sourceTab === "dogmaru" ? isDogmaru : !isDogmaru;
+          const isUdakR = r.channel === "유닥";
+          if (sourceTab === "dogmaru") return isDogmaru;
+          if (sourceTab === "udak") return isUdakR;
+          return !isDogmaru && !isUdakR;
         });
         // 도그마루 탭 카운트: effectiveStatus 기준 (DB status 우선, 없으면 memo 자동분류, 둘 다 없으면 신규 접수)
         const completeC = tabRows.filter(r => getDogmaruTabPC(r) === "완료").length;
@@ -2258,6 +2283,9 @@ export default function LeadsPage() {
                 <TableCell className="text-foreground text-xs whitespace-nowrap py-1.5" title={r.desired_product ?? ""}>{r.desired_product ?? "-"}</TableCell>
                 <TableCell className="text-xs text-foreground whitespace-nowrap py-1.5" title={r.campaign_name ?? ""}>
                   {r.campaign_name ?? "-"}
+                  {sourceTab === "udak" && r.utm_campaign && (
+                    <span className="ml-1 inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-600 border border-orange-200">{r.utm_campaign}</span>
+                  )}
                 </TableCell>
                 <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
                   <Select
