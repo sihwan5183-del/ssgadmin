@@ -688,7 +688,7 @@ export default function CustomProposalsPage() {
                 <TableHead className="text-right">변경요금(선약)</TableHead>
                 <TableHead className="text-right">순수업셀</TableHead>
                 <TableHead className="text-right">최종업셀</TableHead>
-                <TableHead className="text-right">오퍼금액</TableHead>
+                <TableHead className="text-center">오퍼</TableHead>
                 <TableHead className="text-center">페이백</TableHead>
                 <TableHead className="text-center">3개월케어</TableHead>
                 <TableHead className="w-[80px]"></TableHead>
@@ -724,10 +724,21 @@ export default function CustomProposalsPage() {
                   <TableCell className={cn("text-right whitespace-nowrap font-semibold", r.final_upsell > 0 ? "text-primary" : r.final_upsell < 0 ? "text-destructive" : "")}>
                     {r.final_upsell > 0 ? "+" : ""}{won(r.final_upsell)}
                   </TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    {r.offer_provided && r.offer_amount
-                      ? <span className="font-semibold text-orange-600">{won(r.offer_amount)}</span>
-                      : <span className="text-muted-foreground text-[11px]">-</span>}
+                  <TableCell className="text-center whitespace-nowrap">
+                    {r.offer_provided ? (
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-600 border border-orange-300">
+                          오퍼제공
+                        </span>
+                        {r.offer_amount ? (
+                          <span className="text-[10px] font-semibold text-orange-600">{won(r.offer_amount)}</span>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-400 border border-gray-200">
+                        오퍼미제공
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="text-center">
                     {r.payback_date ? (
