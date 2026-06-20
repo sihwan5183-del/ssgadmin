@@ -533,7 +533,8 @@ function MobileLeadsView({
                     </div>
                   </div>
 
-                  {/* 해피콜 */}
+                  {/* 해피콜 - 유닥/메타광고는 불필요하여 숨김 */}
+                  {(openLead.channel !== "유닥" && openLead.channel !== "메타광고") && (
                   <div className="p-3 rounded-xl border border-border bg-muted/20 space-y-1.5">
                     <div className="flex items-center justify-between">
                       <div className="text-xs font-semibold">📞 해피콜</div>
@@ -545,7 +546,9 @@ function MobileLeadsView({
                     </div>
                     <div className="text-[10px] text-muted-foreground">{(lead as any).happy_call === "O" ? "✅ 인터넷 상담 받을게요!" : (lead as any).happy_call === "X" ? "❌ 필요 없어요" : "미설정"}</div>
                   </div>
-                  {/* 영업 결과 */}
+                  )}
+                  {/* 영업 결과 - 유닥/메타광고는 숨김 */}
+                  {(openLead.channel !== "유닥" && openLead.channel !== "메타광고") && (
                   <div className={`p-3 rounded-xl border space-y-1.5 transition-opacity ${(lead as any).happy_call === "O" ? "border-border bg-muted/20 opacity-100" : "border-dashed border-border/40 bg-muted/10 opacity-40 pointer-events-none"}`}>
                     <div className="flex items-center justify-between">
                       <div className="text-xs font-semibold">💼 영업 결과</div>
@@ -604,6 +607,7 @@ function MobileLeadsView({
               </button>
             </div>
           </div>
+                  )}
         </div>
       )}
 
@@ -803,7 +807,14 @@ const LEADS_SELECT = `
   happy_call,
   happy_call_result,
   channel,
-  utm_campaign
+  utm_campaign,
+  storage,
+  color,
+  discount,
+  additional_benefits,
+  jointype,
+  birth,
+  consult_time
 `;
 
 const cleanText = (value: unknown) => {
@@ -883,6 +894,14 @@ type Lead = {
   happy_call_result: string | null;
   channel: string | null;
   utm_campaign: string | null;
+  // 유닥 랜딩 전용 필드
+  storage: string | null;
+  color: string | null;
+  discount: string | null;
+  additional_benefits: string | null;
+  jointype: string | null;
+  birth: string | null;
+  consult_time: string | null;
 };
 
 type LeadNote = {
