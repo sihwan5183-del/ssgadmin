@@ -1181,6 +1181,10 @@ export default function LeadsPage() {
         if (pcCareTab === "care" && r.status !== "케어중") return false;
         if (pcCareTab === "cancel" && r.status !== "취소") return false;
         if (pcCareTab === "complete_meta" && r.status !== "개통 완료") return false;
+        if (pcCareTab === "udak_success" && r.status !== "성공") return false;
+        if (pcCareTab === "udak_fail" && r.status !== "실패") return false;
+        if (pcCareTab === "udak_delivery" && r.status !== "택배발송") return false;
+        if (pcCareTab === "udak_complete" && r.status !== "개통완료") return false;
       }
       if (q) {
         const hay = `${r.name ?? ""} ${r.phone ?? ""} ${r.customer_name ?? ""} ${r.customer_phone ?? ""}`.toLowerCase();
@@ -1966,6 +1970,19 @@ export default function LeadsPage() {
           pcTabs.push({ key: "happy_call", label: `해피콜 ${happyCallC}`, color: "green" });
           pcTabs.push({ key: "happy_call_result", label: `영업 ${happyResultC}`, color: "emerald" });
           pcTabs.push({ key: "recare4happy", label: `재케어대상 ${recare4happyC}`, color: "amber" });
+        } else if (sourceTab === "udak") {
+          const successC = tabRows.filter(r => r.status === "성공").length;
+          const failC2 = tabRows.filter(r => r.status === "실패").length;
+          const absUdakC = tabRows.filter(r => r.status === "부재케어").length;
+          const recareUdakC = tabRows.filter(r => r.status === "재케어").length;
+          const deliveryUdakC = tabRows.filter(r => r.status === "택배발송").length;
+          const completeUdakC = tabRows.filter(r => r.status === "개통완료").length;
+          pcTabs.push({ key: "udak_success", label: `성공 ${successC}`, color: "emerald" });
+          pcTabs.push({ key: "udak_fail", label: `실패 ${failC2}`, color: "red" });
+          pcTabs.push({ key: "absence", label: `부재케어 ${absUdakC}`, color: "orange" });
+          pcTabs.push({ key: "recare", label: `재케어 ${recareUdakC}`, color: "purple" });
+          pcTabs.push({ key: "udak_delivery", label: `택배발송 ${deliveryUdakC}`, color: "sky" });
+          pcTabs.push({ key: "udak_complete", label: `개통완료 ${completeUdakC}`, color: "blue" });
         } else {
           // 메타 상태값 그대로
           const careC = tabRows.filter(r => r.status === "케어중").length;
@@ -1995,6 +2012,8 @@ export default function LeadsPage() {
           if (t.color === "green") return "bg-green-100 text-green-700 border-green-300";
           if (t.color === "emerald") return "bg-emerald-100 text-emerald-700 border-emerald-300";
           if (t.color === "amber") return "bg-amber-100 text-amber-700 border-amber-300";
+          if (t.color === "sky") return "bg-sky-100 text-sky-700 border-sky-300";
+          if (t.color === "emerald") return "bg-emerald-100 text-emerald-700 border-emerald-300";
           return "bg-primary text-primary-foreground border-primary";
         }
         return (
@@ -2260,8 +2279,11 @@ export default function LeadsPage() {
                 <ColumnFilter label="상담 상태" values={valStatus} selected={fStatus} onChange={setFStatus} />
               </TableHead>
               <TableHead className="text-foreground font-bold w-[200px]">메모</TableHead>
-              <TableHead className="text-foreground font-bold w-16 text-center">해피콜</TableHead>
-              <TableHead className="text-foreground font-bold w-16 text-center">영업</TableHead>
+              {sourceTab !== "udak" && <TableHead className="text-foreground font-bold w-16 text-center">해피콜</TableHead>}
+              {sourceTab !== "udak" && <TableHead className="text-foreground font-bold w-16 text-center">영업</TableHead>}
+              {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-16 text-center text-xs">2ND</TableHead>}
+              {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-16 text-center text-xs">인터넷</TableHead>}
+              {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-16 text-center text-xs">OTT</TableHead>}
               <TableHead className="text-foreground font-bold w-20 text-center">관리</TableHead>
             </TableRow>
           </TableHeader>
@@ -2371,20 +2393,57 @@ export default function LeadsPage() {
                     );
                   })()}
                 </TableCell>
-                <TableCell className="text-center py-1.5">
-                  {r.happy_call === "O" ? (
-                    <span className="inline-flex items-center justify-center size-6 rounded-full bg-emerald-100 text-emerald-700 font-bold text-xs border border-emerald-300">O</span>
-                  ) : r.happy_call === "X" ? (
-                    <span className="inline-flex items-center justify-center size-6 rounded-full bg-rose-100 text-rose-700 font-bold text-xs border border-rose-300">X</span>
-                  ) : <span className="text-muted-foreground text-[11px]">-</span>}
-                </TableCell>
-                <TableCell className="text-center py-1.5">
-                  {r.happy_call_result === "성공" ? (
-                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold text-[10px] border border-emerald-300">성공</span>
-                  ) : r.happy_call_result === "실패" ? (
-                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-bold text-[10px] border border-rose-300">실패</span>
-                  ) : <span className="text-muted-foreground text-[11px]">-</span>}
-                </TableCell>
+                {sourceTab !== "udak" && (
+                  <TableCell className="text-center py-1.5">
+                    {r.happy_call === "O" ? (
+                      <span className="inline-flex items-center justify-center size-6 rounded-full bg-emerald-100 text-emerald-700 font-bold text-xs border border-emerald-300">O</span>
+                    ) : r.happy_call === "X" ? (
+                      <span className="inline-flex items-center justify-center size-6 rounded-full bg-rose-100 text-rose-700 font-bold text-xs border border-rose-300">X</span>
+                    ) : <span className="text-muted-foreground text-[11px]">-</span>}
+                  </TableCell>
+                )}
+                {sourceTab !== "udak" && (
+                  <TableCell className="text-center py-1.5">
+                    {r.happy_call_result === "성공" ? (
+                      <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold text-[10px] border border-emerald-300">성공</span>
+                    ) : r.happy_call_result === "실패" ? (
+                      <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-bold text-[10px] border border-rose-300">실패</span>
+                    ) : <span className="text-muted-foreground text-[11px]">-</span>}
+                  </TableCell>
+                )}
+                {sourceTab === "udak" && (() => {
+                  const benefits = (r.additional_benefits ?? "").split(",").map(b => b.trim());
+                  const has = (k: string) => benefits.includes(k);
+                  const plan = r.desired_product ?? "";
+                  const is95or115 = plan.includes("95") || plan.includes("115");
+                  const ott = benefits.find(b => b.startsWith("ott_"));
+                  const ottMap: Record<string,string> = { ott_disney:"디즈니+", ott_netflix:"넷플릭스", ott_tving:"티빙", ott_youtube:"유튜브" };
+                  return (
+                    <>
+                      <TableCell className="text-center py-1.5 text-[10px]">
+                        {is95or115 ? (
+                          <div className="flex flex-col gap-0.5 items-center">
+                            {has("watch") && <span className="text-emerald-600 font-bold">⌚</span>}
+                            {has("tab") && <span className="text-blue-600 font-bold">📱</span>}
+                            {!has("watch") && !has("tab") && <span className="text-muted-foreground">-</span>}
+                          </div>
+                        ) : <span className="text-muted-foreground">-</span>}
+                      </TableCell>
+                      <TableCell className="text-center py-1.5 text-[10px]">
+                        {is95or115 ? (
+                          has("internet")
+                            ? <span className="text-emerald-600 font-bold">O</span>
+                            : <span className="text-rose-500 font-bold">X</span>
+                        ) : <span className="text-muted-foreground">-</span>}
+                      </TableCell>
+                      <TableCell className="text-center py-1.5 text-[10px]">
+                        {is95or115 && ott
+                          ? <span className="text-purple-600 font-bold">{ottMap[ott] ?? ott}</span>
+                          : <span className="text-muted-foreground">-</span>}
+                      </TableCell>
+                    </>
+                  );
+                })()}
                 <TableCell className="text-center py-1.5" onClick={(e) => e.stopPropagation()}>
                   <Button size="sm" variant="ghost" onClick={() => setOpenLead(r)}>
                     상세
