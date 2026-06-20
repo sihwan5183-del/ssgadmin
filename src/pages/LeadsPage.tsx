@@ -533,8 +533,7 @@ function MobileLeadsView({
                     </div>
                   </div>
 
-                  {/* 해피콜 - 유닥/메타광고는 불필요하여 숨김 */}
-                  {(openLead.channel !== "유닥" && openLead.channel !== "메타광고") && (
+                  {/* 해피콜 */}
                   <div className="p-3 rounded-xl border border-border bg-muted/20 space-y-1.5">
                     <div className="flex items-center justify-between">
                       <div className="text-xs font-semibold">📞 해피콜</div>
@@ -546,9 +545,7 @@ function MobileLeadsView({
                     </div>
                     <div className="text-[10px] text-muted-foreground">{(lead as any).happy_call === "O" ? "✅ 인터넷 상담 받을게요!" : (lead as any).happy_call === "X" ? "❌ 필요 없어요" : "미설정"}</div>
                   </div>
-                  )}
-                  {/* 영업 결과 - 유닥/메타광고는 숨김 */}
-                  {(openLead.channel !== "유닥" && openLead.channel !== "메타광고") && (
+                  {/* 영업 결과 */}
                   <div className={`p-3 rounded-xl border space-y-1.5 transition-opacity ${(lead as any).happy_call === "O" ? "border-border bg-muted/20 opacity-100" : "border-dashed border-border/40 bg-muted/10 opacity-40 pointer-events-none"}`}>
                     <div className="flex items-center justify-between">
                       <div className="text-xs font-semibold">💼 영업 결과</div>
@@ -607,7 +604,6 @@ function MobileLeadsView({
               </button>
             </div>
           </div>
-                  )}
         </div>
       )}
 
@@ -894,7 +890,6 @@ type Lead = {
   happy_call_result: string | null;
   channel: string | null;
   utm_campaign: string | null;
-  // 유닥 랜딩 전용 필드
   storage: string | null;
   color: string | null;
   discount: string | null;
@@ -2454,9 +2449,50 @@ export default function LeadsPage() {
                     )}
                   </div>
                 )}
+                {/* 유닥 스냅샷 카드 */}
+                {(openLead.channel === "유닥" || openLead.channel === "메타광고") && openLead.desired_device && (
+                  <div className="mx-3 my-3 rounded-xl border border-orange-200 bg-orange-50 p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-base">📱</span>
+                      <span className="font-bold text-sm">{openLead.desired_device}</span>
+                      <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 border border-orange-200">{openLead.channel}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {openLead.current_carrier && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.current_carrier}</span>}
+                      {openLead.storage && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.storage}</span>}
+                      {openLead.color && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.color}</span>}
+                      {openLead.desired_product && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.desired_product}</span>}
+                      {openLead.discount && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.discount}</span>}
+                    </div>
+                    {openLead.additional_benefits && (
+                      <div className="flex flex-wrap gap-1">
+                        {openLead.additional_benefits.split(",").filter(Boolean).map((b, i) => {
+                          const bonusMap: Record<string,string> = {
+                            watch:"갤럭시 워치", tab:"갤럭시 탭", internet:"인터넷",
+                            ott_disney:"디즈니+", ott_netflix:"넷플릭스", ott_tving:"티빙", ott_youtube:"유튜브 프리미엄",
+                          };
+                          return <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 font-medium">🎁 {bonusMap[b.trim()] ?? b.trim()}</span>;
+                        })}
+                      </div>
+                    )}
+                    {openLead.utm_campaign && <div className="mt-2 text-[10px] text-orange-500 font-medium">📣 {openLead.utm_campaign}</div>}
+                  </div>
+                )}
                 <InfoRow label="고객명" value={openLead.name} right={{ label: "연락처", value: openLead.phone }} />
                 <InfoRow label="현재 통신사" value={openLead.current_carrier} right={{ label: "희망 기종", value: openLead.desired_device }} />
                 <InfoRow label="희망 상품" value={openLead.desired_product} right={{ label: "인입 경로", value: openLead.campaign_name ?? openLead.source }} />
+                {(openLead.storage || openLead.color) && (
+                  <InfoRow label="용량" value={openLead.storage} right={{ label: "색상", value: openLead.color }} />
+                )}
+                {openLead.discount && (
+                  <InfoRow label="할인방식" value={openLead.discount} right={{ label: "가입유형", value: openLead.jointype }} />
+                )}
+                {(openLead.birth || openLead.consult_time) && (
+                  <InfoRow label="생년월일" value={openLead.birth} right={{ label: "상담 희망 시간", value: openLead.consult_time }} />
+                )}
+                {(openLead.channel || openLead.utm_campaign) && (
+                  <InfoRow label="채널" value={openLead.channel} right={{ label: "UTM", value: openLead.utm_campaign }} />
+                )}
                 {/* 유닥 랜딩 전용 필드 */}
                 {(openLead.storage || openLead.color) && (
                   <InfoRow label="용량" value={openLead.storage} right={{ label: "색상", value: openLead.color }} />
