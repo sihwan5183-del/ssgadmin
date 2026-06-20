@@ -71,6 +71,15 @@ const MOBILE_STATUS_DOGMARU = [
   { value: "기타", label: "기타", color: "bg-gray-100 text-gray-600" },
   { value: "개통완료", label: "개통완료", color: "bg-emerald-100 text-emerald-700" },
 ];
+const MOBILE_STATUS_UDAK = [
+  { value: "신규 접수", label: "신규 접수", color: "bg-blue-100 text-blue-700" },
+  { value: "성공", label: "성공", color: "bg-emerald-100 text-emerald-700" },
+  { value: "실패", label: "실패", color: "bg-red-100 text-red-700" },
+  { value: "부재케어", label: "부재케어", color: "bg-orange-100 text-orange-700" },
+  { value: "재케어", label: "재케어", color: "bg-purple-100 text-purple-700" },
+  { value: "택배발송", label: "택배발송", color: "bg-sky-100 text-sky-700" },
+  { value: "개통완료", label: "개통완료", color: "bg-emerald-100 text-emerald-700" },
+];
 // 호환용
 const MOBILE_STATUS_OPTIONS = MOBILE_STATUS_META;
 
@@ -478,7 +487,7 @@ function MobileLeadsView({
                   <div className="pt-3">
                     <div className="text-xs text-muted-foreground mb-2 font-medium">상태 변경</div>
                     <div className="grid grid-cols-3 gap-1.5">
-                      {(sourceTab === "dogmaru" ? MOBILE_STATUS_DOGMARU : MOBILE_STATUS_META).map(s => (
+                      {(sourceTab === "dogmaru" ? MOBILE_STATUS_DOGMARU : sourceTab === "udak" ? MOBILE_STATUS_UDAK : MOBILE_STATUS_META).map(s => (
                         <button key={s.value}
                           onClick={() => {
                             if (s.value === "부재케어") { setAbsenceModal(lead); return; }
@@ -760,7 +769,17 @@ const STATUS_OPTIONS_DOGMARU = [
   "개통완료",
 ] as const;
 
-const STATUS_OPTIONS = [...STATUS_OPTIONS_META, ...STATUS_OPTIONS_DOGMARU] as const;
+const STATUS_OPTIONS_UDAK = [
+  "신규 접수",
+  "성공",
+  "실패",
+  "부재케어",
+  "재케어",
+  "택배발송",
+  "개통완료",
+] as const;
+
+const STATUS_OPTIONS = [...STATUS_OPTIONS_META, ...STATUS_OPTIONS_DOGMARU, ...STATUS_OPTIONS_UDAK] as const;
 type Status = string;
 
 // 파스텔 배경 제거: 흰 배경 + 진한 텍스트/테두리로 명도 대비 확보
@@ -777,6 +796,8 @@ const STATUS_COLOR: Record<string, string> = {
   "개통철회": "bg-background text-rose-700 border border-rose-600 font-bold dark:text-rose-300 dark:border-rose-400",
   "기타": "bg-background text-gray-600 border border-gray-400 font-bold dark:text-gray-300 dark:border-gray-500",
   "개통완료": "bg-background text-emerald-700 border border-emerald-600 font-bold dark:text-emerald-300 dark:border-emerald-400",
+  "성공": "bg-background text-emerald-700 border border-emerald-600 font-bold dark:text-emerald-300 dark:border-emerald-400",
+  "택배발송": "bg-background text-sky-700 border border-sky-600 font-bold dark:text-sky-300 dark:border-sky-400",
 };
 
 
@@ -810,7 +831,8 @@ const LEADS_SELECT = `
   additional_benefits,
   jointype,
   birth,
-  consult_time
+  consult_time,
+  estimated_fee
 `;
 
 const cleanText = (value: unknown) => {
@@ -897,6 +919,7 @@ type Lead = {
   jointype: string | null;
   birth: string | null;
   consult_time: string | null;
+  estimated_fee: number | null;
 };
 
 type LeadNote = {
@@ -1780,7 +1803,6 @@ export default function LeadsPage() {
                 <th className="text-right font-medium py-2 px-2">도그마루</th>
                 <th className="text-right font-medium py-2 px-2">유닥</th>
                 <th className="text-right font-medium py-2 px-2">기타</th>
-                <th className="text-right font-semibold py-2 px-2 text-foreground">총합</th>
               </tr>
             </thead>
             <tbody className="tabular-nums">
@@ -1797,8 +1819,7 @@ export default function LeadsPage() {
                 const d = matrix.dogmaru[row.key];
                 const u = matrix.udak[row.key];
                 const o = matrix.other[row.key];
-                const sum = m + d + u + o;
-                return (
+                    return (
                   <tr key={row.key} className="border-b border-border/40 last:border-0">
                     <td className="py-1.5 px-2">
                       <div className="flex items-center gap-2">
@@ -1810,7 +1831,6 @@ export default function LeadsPage() {
                     <td className="text-right py-1.5 px-2">{d.toLocaleString()}</td>
                     <td className="text-right py-1.5 px-2">{u.toLocaleString()}</td>
                     <td className="text-right py-1.5 px-2">{o.toLocaleString()}</td>
-                    <td className="text-right py-1.5 px-2 font-bold text-base">{sum.toLocaleString()}</td>
                   </tr>
                 );
               })}
@@ -1833,7 +1853,6 @@ export default function LeadsPage() {
             const d = matrix.dogmaru[row.key];
             const u = matrix.udak[row.key];
             const o = matrix.other[row.key];
-            const sum = m + d + u + o;
             return (
               <div key={row.key} className="rounded-lg border border-border bg-background p-3">
                 <div className="flex items-center justify-between mb-2">
@@ -1841,7 +1860,7 @@ export default function LeadsPage() {
                     <Icon className={"size-4 " + row.tone} />
                     <span className="text-sm font-semibold">{row.label}</span>
                   </div>
-                  <span className="text-lg font-bold tabular-nums">{sum.toLocaleString()}</span>
+                  
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-center">
                   {[
@@ -2414,41 +2433,7 @@ export default function LeadsPage() {
 
               {/* Info grid */}
               <div className="mt-5 rounded-lg border border-border overflow-hidden">
-                {/* 유닥 랜딩 스냅샷 카드 */}
-                {(openLead.channel === "유닥" || openLead.channel === "메타광고") && openLead.desired_device && (
-                  <div className="mx-3 my-3 rounded-xl border border-orange-200 bg-orange-50 p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-base">📱</span>
-                      <span className="font-bold text-sm text-foreground">{openLead.desired_device}</span>
-                      {openLead.channel && (
-                        <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 border border-orange-200">{openLead.channel}</span>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {openLead.current_carrier && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 text-foreground font-medium">{openLead.current_carrier}</span>}
-                      {openLead.storage && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 text-foreground font-medium">{openLead.storage}</span>}
-                      {openLead.color && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 text-foreground font-medium">{openLead.color}</span>}
-                      {openLead.desired_product && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 text-foreground font-medium">{openLead.desired_product}</span>}
-                      {openLead.discount && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 text-foreground font-medium">{openLead.discount}</span>}
-                    </div>
-                    {openLead.additional_benefits && (
-                      <div className="flex flex-wrap gap-1">
-                        {openLead.additional_benefits.split(",").filter(Boolean).map((b, i) => {
-                          const bonusMap: Record<string,string> = {
-                            watch:"갤럭시 워치", tab:"갤럭시 탭", internet:"인터넷",
-                            ott_disney:"디즈니+", ott_netflix:"넷플릭스",
-                            ott_tving:"티빙", ott_youtube:"유튜브 프리미엄",
-                          };
-                          const label = bonusMap[b.trim()] ?? b.trim();
-                          return <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 font-medium">🎁 {label}</span>;
-                        })}
-                      </div>
-                    )}
-                    {openLead.utm_campaign && (
-                      <div className="mt-2 text-[10px] text-orange-500 font-medium">📣 {openLead.utm_campaign}</div>
-                    )}
-                  </div>
-                )}
+                
                 {/* 유닥 스냅샷 카드 */}
                 {(openLead.channel === "유닥" || openLead.channel === "메타광고") && openLead.desired_device && (
                   <div className="mx-3 my-3 rounded-xl border border-orange-200 bg-orange-50 p-3">
@@ -2473,6 +2458,14 @@ export default function LeadsPage() {
                           };
                           return <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 font-medium">🎁 {bonusMap[b.trim()] ?? b.trim()}</span>;
                         })}
+                      </div>
+                    )}
+                    {openLead.estimated_fee && (
+                      <div className="mt-2 pt-2 border-t border-orange-200">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[11px] text-orange-700 font-semibold">💰 예상 월 부담금</span>
+                          <span className="text-sm font-black text-orange-600">{openLead.estimated_fee.toLocaleString()}원/월</span>
+                        </div>
                       </div>
                     )}
                     {openLead.utm_campaign && <div className="mt-2 text-[10px] text-orange-500 font-medium">📣 {openLead.utm_campaign}</div>}
@@ -2546,7 +2539,7 @@ export default function LeadsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {(openLead.campaign_name === "도그마루_홈캠" ? STATUS_OPTIONS_DOGMARU : STATUS_OPTIONS_META).map((s) => (
+                        {(openLead.campaign_name === "도그마루_홈캠" ? STATUS_OPTIONS_DOGMARU : (openLead.channel === "유닥" || openLead.channel === "메타광고") ? STATUS_OPTIONS_UDAK : STATUS_OPTIONS_META).map((s) => (
                           <SelectItem key={s} value={s}>
                             {s}
                           </SelectItem>
