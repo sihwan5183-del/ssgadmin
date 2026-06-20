@@ -1287,16 +1287,12 @@ export default function LeadsPage() {
     const empty = () => ({ total: 0, today: 0, done: 0, recare: 0, absent: 0, fail: 0 });
     const meta = empty();
     const dogmaru = empty();
+    const udak = empty();
     const other = empty();
 
     for (const r of rows) {
       const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
-      // sourceTab에 맞는 건만 집계
-      const isUdakR = r.channel === "유닥";
-      if (sourceTab === "dogmaru" && !isDogmaru) continue;
-      if (sourceTab === "udak" && !isUdakR) continue;
-      if (sourceTab === "meta" && (isDogmaru || isUdakR)) continue;
-      if (sourceTab === "other") continue;
+      const isUdakR = r.channel === "유닥" || r.channel === "메타광고";
 
       let dateIso = "";
       const rd = r.registration_date;
@@ -1311,36 +1307,33 @@ export default function LeadsPage() {
         dateIso = r.created_at.slice(0, 10);
       }
       if (!inRange(dateIso)) continue;
-      const bucket = isDogmaru ? dogmaru : isUdakR ? { newC: 0, absence: 0, recare: 0, complete: 0 } : meta;
+
+      const bucket = isDogmaru ? dogmaru : isUdakR ? udak : meta;
       bucket.total += 1;
       if (dateIso === today) bucket.today += 1;
       if (isDogmaru) {
-        // 도그마루는 getDogmaruTab 기준
         const tab = getDogmaruTab(r);
         if (tab === "완료") bucket.done += 1;
         else if (tab === "재케어") bucket.recare += 1;
         else if (tab === "부재케어") bucket.absent += 1;
         else if (tab === "실패") bucket.fail += 1;
       } else {
-        // 메타는 status 기준
         if (r.status === "개통 완료") bucket.done += 1;
         if (r.status === "재케어") bucket.recare += 1;
         if (r.status === "부재 중") bucket.absent += 1;
         if (r.status === "실패" || r.status === "취소") bucket.fail += 1;
       }
     }
-    if (sourceTab === "udak" || sourceTab === "other") {
-      for (const r of inquiryRows) {
-        if (!inRange(r.created_at)) continue;
-        other.total += 1;
-        if (r.created_at.slice(0, 10) === today) other.today += 1;
-        if (r.status === "개통완료") other.done += 1;
-        if (r.status === "재케어") other.recare += 1;
-        if (r.status === "부재") other.absent += 1;
-        if (r.status === "실패" || r.status === "취소") other.fail += 1;
-      }
+    for (const r of inquiryRows) {
+      if (!inRange(r.created_at)) continue;
+      other.total += 1;
+      if (r.created_at.slice(0, 10) === today) other.today += 1;
+      if (r.status === "개통완료") other.done += 1;
+      if (r.status === "재케어") other.recare += 1;
+      if (r.status === "부재") other.absent += 1;
+      if (r.status === "실패" || r.status === "취소") other.fail += 1;
     }
-    return { meta, dogmaru, other };
+    return { meta, dogmaru, udak, other };
   }, [rows, inquiryRows, period, customStart, customEnd, sourceTab]);
 
   // ── 직원별 성과 매트릭스 (담당자/매니저 단위 집계) ──
@@ -1771,6 +1764,7 @@ export default function LeadsPage() {
                 <th className="text-left font-medium py-2 px-2 w-32">지표</th>
                 <th className="text-right font-medium py-2 px-2">메타</th>
                 <th className="text-right font-medium py-2 px-2">도그마루</th>
+                <th className="text-right font-medium py-2 px-2">유닥</th>
                 <th className="text-right font-medium py-2 px-2">기타</th>
                 <th className="text-right font-semibold py-2 px-2 text-foreground">총합</th>
               </tr>
@@ -1787,8 +1781,9 @@ export default function LeadsPage() {
                 const Icon = row.icon;
                 const m = matrix.meta[row.key];
                 const d = matrix.dogmaru[row.key];
+                const u = matrix.udak[row.key];
                 const o = matrix.other[row.key];
-                const sum = m + d + o;
+                const sum = m + d + u + o;
                 return (
                   <tr key={row.key} className="border-b border-border/40 last:border-0">
                     <td className="py-1.5 px-2">
@@ -1799,6 +1794,7 @@ export default function LeadsPage() {
                     </td>
                     <td className="text-right py-1.5 px-2">{m.toLocaleString()}</td>
                     <td className="text-right py-1.5 px-2">{d.toLocaleString()}</td>
+                    <td className="text-right py-1.5 px-2">{u.toLocaleString()}</td>
                     <td className="text-right py-1.5 px-2">{o.toLocaleString()}</td>
                     <td className="text-right py-1.5 px-2 font-bold text-base">{sum.toLocaleString()}</td>
                   </tr>
@@ -1821,8 +1817,9 @@ export default function LeadsPage() {
             const Icon = row.icon;
             const m = matrix.meta[row.key];
             const d = matrix.dogmaru[row.key];
+            const u = matrix.udak[row.key];
             const o = matrix.other[row.key];
-            const sum = m + d + o;
+            const sum = m + d + u + o;
             return (
               <div key={row.key} className="rounded-lg border border-border bg-background p-3">
                 <div className="flex items-center justify-between mb-2">
