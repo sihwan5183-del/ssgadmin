@@ -2276,7 +2276,7 @@ export default function LeadsPage() {
                 <TableCell className="tabular-nums text-xs text-foreground font-medium whitespace-nowrap py-1.5">
                   {fmtCompactDate(r.created_at)}
                 </TableCell>
-                <TableCell className="font-bold text-foreground py-1.5">{r.name ?? "-"}</TableCell>
+                <TableCell className="font-bold text-foreground py-1.5 whitespace-nowrap">{r.name ?? "-"}</TableCell>
                 <TableCell className="tabular-nums text-foreground font-medium py-1.5 whitespace-nowrap">{r.phone ?? "-"}</TableCell>
                 <TableCell className="text-foreground py-1.5">{r.current_carrier ?? "-"}</TableCell>
                 <TableCell className="text-foreground text-xs whitespace-nowrap py-1.5" title={r.desired_device ?? ""}>{r.desired_device ?? "-"}</TableCell>
@@ -2403,9 +2403,61 @@ export default function LeadsPage() {
 
               {/* Info grid */}
               <div className="mt-5 rounded-lg border border-border overflow-hidden">
+                {/* 유닥 랜딩 스냅샷 카드 */}
+                {(openLead.channel === "유닥" || openLead.channel === "메타광고") && openLead.desired_device && (
+                  <div className="mx-3 my-3 rounded-xl border border-orange-200 bg-orange-50 p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-base">📱</span>
+                      <span className="font-bold text-sm text-foreground">{openLead.desired_device}</span>
+                      {openLead.channel && (
+                        <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 border border-orange-200">{openLead.channel}</span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {openLead.current_carrier && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 text-foreground font-medium">{openLead.current_carrier}</span>}
+                      {openLead.storage && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 text-foreground font-medium">{openLead.storage}</span>}
+                      {openLead.color && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 text-foreground font-medium">{openLead.color}</span>}
+                      {openLead.desired_product && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 text-foreground font-medium">{openLead.desired_product}</span>}
+                      {openLead.discount && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 text-foreground font-medium">{openLead.discount}</span>}
+                    </div>
+                    {openLead.additional_benefits && (
+                      <div className="flex flex-wrap gap-1">
+                        {openLead.additional_benefits.split(",").filter(Boolean).map((b, i) => (
+                          <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 font-medium">🎁 {b.trim()}</span>
+                        ))}
+                      </div>
+                    )}
+                    {openLead.utm_campaign && (
+                      <div className="mt-2 text-[10px] text-orange-500 font-medium">📣 {openLead.utm_campaign}</div>
+                    )}
+                  </div>
+                )}
                 <InfoRow label="고객명" value={openLead.name} right={{ label: "연락처", value: openLead.phone }} />
                 <InfoRow label="현재 통신사" value={openLead.current_carrier} right={{ label: "희망 기종", value: openLead.desired_device }} />
                 <InfoRow label="희망 상품" value={openLead.desired_product} right={{ label: "인입 경로", value: openLead.campaign_name ?? openLead.source }} />
+                {/* 유닥 랜딩 전용 필드 */}
+                {(openLead.storage || openLead.color) && (
+                  <InfoRow label="용량" value={openLead.storage} right={{ label: "색상", value: openLead.color }} />
+                )}
+                {(openLead.discount || openLead.jointype) && (
+                  <InfoRow label="할인방식" value={openLead.discount} right={{ label: "가입유형", value: openLead.jointype }} />
+                )}
+                {openLead.additional_benefits && (
+                  <div className="px-3 py-2 border-b border-border">
+                    <div className="text-[11px] font-semibold text-foreground/60 mb-1">추가 혜택</div>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {openLead.additional_benefits.split(",").filter(Boolean).map((b, i) => (
+                        <span key={i} className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200">🎁 {b.trim()}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(openLead.birth || openLead.consult_time) && (
+                  <InfoRow label="생년월일" value={openLead.birth} right={{ label: "상담 희망 시간", value: openLead.consult_time }} />
+                )}
+                {(openLead.channel || openLead.utm_campaign) && (
+                  <InfoRow label="채널" value={openLead.channel} right={{ label: "UTM 캠페인", value: openLead.utm_campaign }} />
+                )}
                 <div className="grid grid-cols-2 divide-x divide-border">
                   <div className="p-3">
                     <div className="text-[11px] font-semibold text-foreground/60 mb-1">담당자</div>
