@@ -826,7 +826,8 @@ const LEADS_SELECT = `
   jointype,
   birth,
   consult_time,
-  estimated_fee
+  estimated_fee,
+  estimated_fee_memo
 `;
 
 const cleanText = (value: unknown) => {
@@ -914,6 +915,7 @@ type Lead = {
   birth: string | null;
   consult_time: string | null;
   estimated_fee: number | null;
+  estimated_fee_memo: string | null;
 };
 
 type LeadNote = {
@@ -2515,9 +2517,14 @@ export default function LeadsPage() {
                       </div>
                     )}
                     {openLead.estimated_fee && (
-                      <div className="mt-2 pt-2 border-t border-orange-200 flex justify-between items-center">
-                        <span className="text-[11px] text-orange-700 font-semibold">💰 예상 월 부담금</span>
-                        <span className="text-sm font-black text-orange-600">{openLead.estimated_fee.toLocaleString()}원/월</span>
+                      <div className="mt-2 pt-2 border-t border-orange-200">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[11px] text-orange-700 font-semibold">💰 예상 월 부담금</span>
+                          <span className="text-sm font-black text-orange-600">{openLead.estimated_fee.toLocaleString()}원/월</span>
+                        </div>
+                        {openLead.estimated_fee_memo && (
+                          <div className="text-[10px] text-orange-500 mt-0.5 text-right">({openLead.estimated_fee_memo})</div>
+                        )}
                       </div>
                     )}
                     {openLead.utm_campaign && <div className="mt-2 text-[10px] text-orange-500 font-medium">📣 {openLead.utm_campaign}</div>}
