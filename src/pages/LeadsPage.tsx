@@ -2363,7 +2363,7 @@ export default function LeadsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {STATUS_OPTIONS.map((s) => (
+                      {(r.campaign_name === "도그마루_홈캠" ? STATUS_OPTIONS_DOGMARU : (r.channel === "유닥" || r.channel === "메타광고") ? STATUS_OPTIONS_UDAK : STATUS_OPTIONS_META).map((s) => (
                         <SelectItem key={s} value={s}>
                           {s}
                         </SelectItem>
