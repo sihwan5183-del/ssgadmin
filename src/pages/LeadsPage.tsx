@@ -770,13 +770,7 @@ const STATUS_OPTIONS_DOGMARU = [
 ] as const;
 
 const STATUS_OPTIONS_UDAK = [
-  "신규 접수",
-  "성공",
-  "실패",
-  "부재케어",
-  "재케어",
-  "택배발송",
-  "개통완료",
+  "신규 접수", "성공", "실패", "부재케어", "재케어", "택배발송", "개통완료",
 ] as const;
 
 const STATUS_OPTIONS = [...STATUS_OPTIONS_META, ...STATUS_OPTIONS_DOGMARU, ...STATUS_OPTIONS_UDAK] as const;
@@ -1271,7 +1265,7 @@ export default function LeadsPage() {
       else if (r.campaign_name === DOGMARU_CAMPAIGN) dogmaru++;
       else if (r.campaign_name) meta++;
     }
-    return { meta, dogmaru, udak };
+    return { meta, dogmaru, udak, other };
   }, [rows]);
 
   const stats = useMemo(() => {
@@ -1819,7 +1813,7 @@ export default function LeadsPage() {
                 const d = matrix.dogmaru[row.key];
                 const u = matrix.udak[row.key];
                 const o = matrix.other[row.key];
-                    return (
+                return (
                   <tr key={row.key} className="border-b border-border/40 last:border-0">
                     <td className="py-1.5 px-2">
                       <div className="flex items-center gap-2">
@@ -1853,6 +1847,7 @@ export default function LeadsPage() {
             const d = matrix.dogmaru[row.key];
             const u = matrix.udak[row.key];
             const o = matrix.other[row.key];
+            const sum = m + d + u + o;
             return (
               <div key={row.key} className="rounded-lg border border-border bg-background p-3">
                 <div className="flex items-center justify-between mb-2">
@@ -2433,7 +2428,41 @@ export default function LeadsPage() {
 
               {/* Info grid */}
               <div className="mt-5 rounded-lg border border-border overflow-hidden">
-                
+                {/* 유닥 랜딩 스냅샷 카드 */}
+                {(openLead.channel === "유닥" || openLead.channel === "메타광고") && openLead.desired_device && (
+                  <div className="mx-3 my-3 rounded-xl border border-orange-200 bg-orange-50 p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-base">📱</span>
+                      <span className="font-bold text-sm text-foreground">{openLead.desired_device}</span>
+                      {openLead.channel && (
+                        <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 border border-orange-200">{openLead.channel}</span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {openLead.current_carrier && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 text-foreground font-medium">{openLead.current_carrier}</span>}
+                      {openLead.storage && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 text-foreground font-medium">{openLead.storage}</span>}
+                      {openLead.color && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 text-foreground font-medium">{openLead.color}</span>}
+                      {openLead.desired_product && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 text-foreground font-medium">{openLead.desired_product}</span>}
+                      {openLead.discount && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 text-foreground font-medium">{openLead.discount}</span>}
+                    </div>
+                    {openLead.additional_benefits && (
+                      <div className="flex flex-wrap gap-1">
+                        {openLead.additional_benefits.split(",").filter(Boolean).map((b, i) => {
+                          const bonusMap: Record<string,string> = {
+                            watch:"갤럭시 워치", tab:"갤럭시 탭", internet:"인터넷",
+                            ott_disney:"디즈니+", ott_netflix:"넷플릭스",
+                            ott_tving:"티빙", ott_youtube:"유튜브 프리미엄",
+                          };
+                          const label = bonusMap[b.trim()] ?? b.trim();
+                          return <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 font-medium">🎁 {label}</span>;
+                        })}
+                      </div>
+                    )}
+                    {openLead.utm_campaign && (
+                      <div className="mt-2 text-[10px] text-orange-500 font-medium">📣 {openLead.utm_campaign}</div>
+                    )}
+                  </div>
+                )}
                 {/* 유닥 스냅샷 카드 */}
                 {(openLead.channel === "유닥" || openLead.channel === "메타광고") && openLead.desired_device && (
                   <div className="mx-3 my-3 rounded-xl border border-orange-200 bg-orange-50 p-3">
@@ -2461,11 +2490,9 @@ export default function LeadsPage() {
                       </div>
                     )}
                     {openLead.estimated_fee && (
-                      <div className="mt-2 pt-2 border-t border-orange-200">
-                        <div className="flex justify-between items-center">
-                          <span className="text-[11px] text-orange-700 font-semibold">💰 예상 월 부담금</span>
-                          <span className="text-sm font-black text-orange-600">{openLead.estimated_fee.toLocaleString()}원/월</span>
-                        </div>
+                      <div className="mt-2 pt-2 border-t border-orange-200 flex justify-between items-center">
+                        <span className="text-[11px] text-orange-700 font-semibold">💰 예상 월 부담금</span>
+                        <span className="text-sm font-black text-orange-600">{openLead.estimated_fee.toLocaleString()}원/월</span>
                       </div>
                     )}
                     {openLead.utm_campaign && <div className="mt-2 text-[10px] text-orange-500 font-medium">📣 {openLead.utm_campaign}</div>}
