@@ -1265,8 +1265,8 @@ export default function LeadsPage() {
       else if (r.campaign_name === DOGMARU_CAMPAIGN) dogmaru++;
       else if (r.campaign_name) meta++;
     }
-    return { meta, dogmaru, udak, other };
-  }, [rows, inquiryRows, period, customStart, customEnd, sourceTab]);
+    return { meta, dogmaru, udak };
+  }, [rows]);
 
   const stats = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
