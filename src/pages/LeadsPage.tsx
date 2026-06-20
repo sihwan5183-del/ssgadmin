@@ -1311,7 +1311,7 @@ export default function LeadsPage() {
         dateIso = r.created_at.slice(0, 10);
       }
       if (!inRange(dateIso)) continue;
-      const bucket = isDogmaru ? dogmaru : isUdakRC ? { newC: 0, absence: 0, recare: 0, complete: 0 } : meta;
+      const bucket = isDogmaru ? dogmaru : isUdakR ? { newC: 0, absence: 0, recare: 0, complete: 0 } : meta;
       bucket.total += 1;
       if (dateIso === today) bucket.today += 1;
       if (isDogmaru) {
