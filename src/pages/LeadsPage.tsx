@@ -2422,9 +2422,15 @@ export default function LeadsPage() {
                     </div>
                     {openLead.additional_benefits && (
                       <div className="flex flex-wrap gap-1">
-                        {openLead.additional_benefits.split(",").filter(Boolean).map((b, i) => (
-                          <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 font-medium">🎁 {b.trim()}</span>
-                        ))}
+                        {openLead.additional_benefits.split(",").filter(Boolean).map((b, i) => {
+                          const bonusMap: Record<string,string> = {
+                            watch:"갤럭시 워치", tab:"갤럭시 탭", internet:"인터넷",
+                            ott_disney:"디즈니+", ott_netflix:"넷플릭스",
+                            ott_tving:"티빙", ott_youtube:"유튜브 프리미엄",
+                          };
+                          const label = bonusMap[b.trim()] ?? b.trim();
+                          return <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 font-medium">🎁 {label}</span>;
+                        })}
                       </div>
                     )}
                     {openLead.utm_campaign && (
