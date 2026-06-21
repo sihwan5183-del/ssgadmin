@@ -1,210 +1,152 @@
 // ============================================================
-// 팀 업무 현황 — mock data 기반 레이아웃 (1단계)
+// 팀 업무 현황 — 관리자: 전체 / 직원: 본인만
 // ============================================================
-import { useState } from 'react';
-import { AlertTriangle } from 'lucide-react';
-import { WorkReportHeader, KpiCard, SectionCard, FilterButtons, WRBadge } from './_shared';
+import { useState, useEffect, useCallback } from 'react';
+import { RefreshCw, AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRole } from '@/hooks/useRole';
+import { WorkReportHeader, SectionCard, FilterButtons, WRBadge } from './_shared';
 import {
-  mockTeamSummary,
-  mockTeamCompare,
-  mockTeamMembers,
-  mockAnomalyLogs,
-} from '@/data/workReportMockData';
+  getTeamWorkDashboardData,
+  aggregateByAction,
+  aggregateByStaff,
+} from '@/services/workReport/workReportService';
 
 const PERIOD_OPTIONS = ['오늘', '이번주', '이번달'];
-const STAFF_OPTIONS = ['전체', '최윤정', '김경환', '오미나'];
-const CHANNEL_OPTIONS = ['전체', '모요', '대표번호', 'SNS', '도그마루'];
 
-const anomalyTypeLabel: Record<string, string> = {
-  '10분내_중복통화': '10분 내 중복통화',
-  '부재4회이상': '부재 4회 이상',
-  '실패사유_미입력': '실패사유 미입력',
-  '진행예정_다음액션없음': '진행예정 다음액션 없음',
-  '상담성공_택배미발송_2일초과': '상담성공→택배미발송 2일 초과',
-  '택배발송_개통미완료_4일초과': '택배발송→개통미완료 4일 초과',
-  '개통완료_정산미확정_3일초과': '개통완료→정산미확정 3일 초과',
-};
-
-function DeltaBadge({ now, prev }: { now: number; prev: number }) {
-  const diff = now - prev;
-  if (diff === 0) return <span className="text-gray-400 text-xs">-</span>;
-  return (
-    <span className={`text-xs font-semibold ${diff > 0 ? 'text-green-600' : 'text-red-500'}`}>
-      {diff > 0 ? '+' : ''}{diff}
-    </span>
-  );
+function getDateRange(period: string): { from: string; to: string } {
+  const today = new Date();
+  const fmt = (d: Date) => d.toISOString().split('T')[0];
+  if (period === '오늘') return { from: fmt(today), to: fmt(today) };
+  if (period === '이번주') {
+    const mon = new Date(today);
+    mon.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+    return { from: fmt(mon), to: fmt(today) };
+  }
+  const first = new Date(today.getFullYear(), today.getMonth(), 1);
+  return { from: fmt(first), to: fmt(today) };
 }
 
 export default function TeamWorkDashboard() {
-  const [period, setPeriod] = useState('오늘');
-  const [staff, setStaff] = useState('전체');
-  const [channel, setChannel] = useState('전체');
+  const { user } = useAuth();
+  const { isAdmin, isManager } = useRole();
+  const canViewAll = isAdmin || isManager;
 
-  const tc = mockTeamCompare;
+  const [period, setPeriod] = useState('오늘');
+  const [loading, setLoading] = useState(false);
+  const [staffRows, setStaffRows] = useState<ReturnType<typeof aggregateByStaff>>([]);
+  const [totalAgg, setTotalAgg] = useState<ReturnType<typeof aggregateByAction> | null>(null);
+
+  const load = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const { from, to } = getDateRange(period);
+      const logs = await getTeamWorkDashboardData(user.id, canViewAll, from, to);
+      setTotalAgg(aggregateByAction(logs));
+      setStaffRows(aggregateByStaff(logs));
+    } catch (e: any) {
+      toast.error('데이터 조회 실패: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [user, canViewAll, period]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const kpiItems = [
+    { label: '통화시도',  key: 'call_attempt',         color: 'text-blue-600' },
+    { label: '연결완료',  key: 'call_connected',        color: 'text-indigo-600' },
+    { label: '부재',      key: 'absent',                color: 'text-orange-500' },
+    { label: '재케어',    key: 'recare_registered',     color: 'text-yellow-600' },
+    { label: '실패',      key: 'failed',                color: 'text-red-500' },
+    { label: '상담성공',  key: 'consultation_success',  color: 'text-green-600' },
+    { label: '개통완료',  key: 'activation_completed',  color: 'text-pink-600' },
+    { label: '정산확정',  key: 'settlement_confirmed',  color: 'text-purple-600' },
+  ] as const;
 
   return (
     <div className="space-y-5">
       <WorkReportHeader
         title="팀 업무 현황"
-        description="팀 전체 업무량, 담당자별 성과, 전일/전주 비교, 이상 로그를 확인합니다."
+        description={canViewAll ? '전체 팀원 업무량과 성과를 확인합니다.' : '본인 업무 현황입니다.'}
         rightSlot={
           <>
             <FilterButtons options={PERIOD_OPTIONS} value={period} onChange={setPeriod} />
-            <select
-              value={staff}
-              onChange={(e) => setStaff(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none"
+            <button
+              onClick={load}
+              className="flex items-center gap-1 text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-500 hover:text-gray-700"
             >
-              {STAFF_OPTIONS.map((s) => <option key={s}>{s}</option>)}
-            </select>
-            <select
-              value={channel}
-              onChange={(e) => setChannel(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none"
-            >
-              {CHANNEL_OPTIONS.map((c) => <option key={c}>{c}</option>)}
-            </select>
+              <RefreshCw className={`size-3 ${loading ? 'animate-spin' : ''}`} />
+            </button>
           </>
         }
       />
 
-      {/* 전체 요약 카드 */}
-      <SectionCard title="전체 요약">
-        <div className="grid grid-cols-3 lg:grid-cols-9 gap-3">
-          {mockTeamSummary.map((card, i) => {
-            const colors = ['gray','blue','indigo','orange','yellow','red','green','pink','purple'] as const;
-            return <KpiCard key={card.label} label={card.label} value={card.count} color={colors[i] as any} />;
-          })}
+      {!canViewAll && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 text-xs text-yellow-700 flex items-center gap-2">
+          <AlertTriangle className="size-3.5 shrink-0" />
+          팀 업무 현황은 관리자/팀장만 전체 조회 가능합니다. 본인 데이터만 표시됩니다.
         </div>
-      </SectionCard>
+      )}
 
-      {/* 전일/전주 비교 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <SectionCard title="전일 비교 (현재 시간 기준)">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs text-gray-500 border-b border-gray-100">
-                <th className="text-left py-2 font-medium">항목</th>
-                <th className="text-right py-2 font-medium">오늘</th>
-                <th className="text-right py-2 font-medium">어제</th>
-                <th className="text-right py-2 font-medium">차이</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {[
-                { label: '통화시도', now: tc.today.callAttempt, prev: tc.yesterday.callAttempt },
-                { label: '연결완료', now: tc.today.connected, prev: tc.yesterday.connected },
-                { label: '부재', now: tc.today.absence, prev: tc.yesterday.absence },
-                { label: '상담성공', now: tc.today.success, prev: tc.yesterday.success },
-                { label: '개통완료', now: tc.today.opening, prev: tc.yesterday.opening },
-              ].map((row) => (
-                <tr key={row.label} className="text-gray-700">
-                  <td className="py-2 text-gray-600 text-xs">{row.label}</td>
-                  <td className="py-2 text-right font-semibold">{row.now}</td>
-                  <td className="py-2 text-right text-gray-400">{row.prev}</td>
-                  <td className="py-2 text-right"><DeltaBadge now={row.now} prev={row.prev} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </SectionCard>
-
-        <SectionCard title="전주 비교 (같은 요일·시간 기준)">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs text-gray-500 border-b border-gray-100">
-                <th className="text-left py-2 font-medium">항목</th>
-                <th className="text-right py-2 font-medium">이번주</th>
-                <th className="text-right py-2 font-medium">저번주</th>
-                <th className="text-right py-2 font-medium">차이</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {[
-                { label: '통화시도', now: tc.thisWeek.callAttempt, prev: tc.lastWeek.callAttempt },
-                { label: '연결완료', now: tc.thisWeek.connected, prev: tc.lastWeek.connected },
-                { label: '부재', now: tc.thisWeek.absence, prev: tc.lastWeek.absence },
-                { label: '상담성공', now: tc.thisWeek.success, prev: tc.lastWeek.success },
-                { label: '개통완료', now: tc.thisWeek.opening, prev: tc.lastWeek.opening },
-              ].map((row) => (
-                <tr key={row.label} className="text-gray-700">
-                  <td className="py-2 text-gray-600 text-xs">{row.label}</td>
-                  <td className="py-2 text-right font-semibold">{row.now}</td>
-                  <td className="py-2 text-right text-gray-400">{row.prev}</td>
-                  <td className="py-2 text-right"><DeltaBadge now={row.now} prev={row.prev} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </SectionCard>
-      </div>
-
-      {/* 담당자별 표 */}
-      <SectionCard title="담당자별 업무 현황">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs text-gray-500 border-b border-gray-100 bg-gray-50">
-                {['담당자', '배정', '시도', '연결', '부재', '재케어', '실패', '상담성공', '개통완료', '정산확정', '전환율'].map((h) => (
-                  <th key={h} className={`py-2.5 px-3 font-medium ${h === '담당자' ? 'text-left' : 'text-right'}`}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {mockTeamMembers.map((m) => (
-                <tr key={m.user_id} className="hover:bg-gray-50 transition-colors">
-                  <td className="py-3 px-3 font-medium text-gray-800">{m.user_name}</td>
-                  <td className="py-3 px-3 text-right text-gray-600">{m.assigned}</td>
-                  <td className="py-3 px-3 text-right text-gray-700 font-medium">{m.callAttempt}</td>
-                  <td className="py-3 px-3 text-right text-indigo-600">{m.callConnected}</td>
-                  <td className="py-3 px-3 text-right text-orange-500">{m.noAnswer}</td>
-                  <td className="py-3 px-3 text-right text-yellow-600">{m.recare}</td>
-                  <td className="py-3 px-3 text-right text-red-500">{m.failed}</td>
-                  <td className="py-3 px-3 text-right text-green-600 font-semibold">{m.consultSuccess}</td>
-                  <td className="py-3 px-3 text-right text-pink-600 font-semibold">{m.openingComplete}</td>
-                  <td className="py-3 px-3 text-right text-purple-600 font-bold">{m.settlementConfirmed}</td>
-                  <td className="py-3 px-3 text-right">
-                    <span className="text-xs font-semibold text-pink-500">{m.conversionRate}%</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </SectionCard>
-
-      {/* 이상 로그 */}
-      <SectionCard
-        title="이상 로그"
-        rightSlot={
-          <span className="text-xs text-red-500 font-medium flex items-center gap-1">
-            <AlertTriangle className="size-3" />
-            {mockAnomalyLogs.length}건
-          </span>
-        }
-      >
-        {mockAnomalyLogs.length === 0 ? (
-          <p className="text-sm text-gray-400 py-4 text-center">이상 로그가 없습니다.</p>
+      {/* 전체 요약 */}
+      <SectionCard title={`${period} 전체 요약`}>
+        {loading ? (
+          <div className="py-8 text-center text-sm text-gray-400">로딩 중...</div>
         ) : (
-          <div className="space-y-2">
-            {mockAnomalyLogs.map((log) => (
-              <div key={log.log_id} className="flex items-start gap-3 bg-red-50 border border-red-100 rounded-lg px-4 py-3">
-                <AlertTriangle className="size-4 text-red-400 mt-0.5 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <WRBadge variant="danger">{anomalyTypeLabel[log.anomaly_type] ?? log.anomaly_type}</WRBadge>
-                    <span className="text-xs font-semibold text-gray-700">{log.user_name}</span>
-                    <span className="text-xs text-gray-400">/</span>
-                    <span className="text-xs text-gray-600">{log.customer_name}</span>
-                    <span className="text-xs text-gray-400 ml-auto">{log.occurred_at}</span>
-                  </div>
-                  <p className="text-xs text-gray-600 mt-1">{log.description}</p>
-                </div>
+          <div className="grid grid-cols-4 lg:grid-cols-8 gap-3">
+            {kpiItems.map(({ label, key, color }) => (
+              <div key={key} className="bg-gray-50 rounded-xl border border-gray-100 p-4 text-center">
+                <div className={`text-2xl font-bold ${color}`}>{totalAgg?.[key]?.counted ?? 0}</div>
+                <div className="text-xs text-gray-500 mt-1">{label}</div>
               </div>
             ))}
           </div>
         )}
       </SectionCard>
+
+      {/* 담당자별 표 — 관리자/팀장만 */}
+      {canViewAll && (
+        <SectionCard title="담당자별 업무 현황">
+          {loading ? (
+            <div className="py-8 text-center text-sm text-gray-400">로딩 중...</div>
+          ) : staffRows.length === 0 ? (
+            <div className="py-8 text-center text-sm text-gray-400">데이터가 없습니다.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-gray-500 border-b border-gray-100 bg-gray-50">
+                    {['담당자', '시도', '연결', '부재', '재케어', '실패', '상담성공', '개통완료', '정산확정', '전환율'].map((h) => (
+                      <th key={h} className={`py-2.5 px-3 font-medium ${h === '담당자' ? 'text-left' : 'text-right'}`}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {staffRows.map((r) => (
+                    <tr key={r.staff_id} className="hover:bg-gray-50 transition-colors">
+                      <td className="py-3 px-3 font-medium text-gray-800">{r.staff_name}</td>
+                      <td className="py-3 px-3 text-right text-gray-700">{r.call_attempt}</td>
+                      <td className="py-3 px-3 text-right text-indigo-600">{r.call_connected}</td>
+                      <td className="py-3 px-3 text-right text-orange-500">{r.absent}</td>
+                      <td className="py-3 px-3 text-right text-yellow-600">{r.recare}</td>
+                      <td className="py-3 px-3 text-right text-red-500">{r.failed}</td>
+                      <td className="py-3 px-3 text-right text-green-600 font-semibold">{r.consultation_success}</td>
+                      <td className="py-3 px-3 text-right text-pink-600 font-semibold">{r.activation_completed}</td>
+                      <td className="py-3 px-3 text-right text-purple-600 font-bold">{r.settlement_confirmed}</td>
+                      <td className="py-3 px-3 text-right">
+                        <WRBadge variant="info">{r.conversion_rate}%</WRBadge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </SectionCard>
+      )}
     </div>
   );
 }

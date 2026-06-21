@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRole } from '@/hooks/useRole';
 import { WorkReportHeader, SectionCard, WRBadge } from './_shared';
 import {
   fetchActivityLogs,
@@ -233,6 +234,8 @@ function TestLogModal({
 // ── 메인 컴포넌트 ─────────────────────────────────────────
 export default function ActivityLogs() {
   const { user } = useAuth();
+  const { isAdmin, isManager } = useRole();
+  const canViewAll = isAdmin || isManager;
   const [logs, setLogs] = useState<ActivityLogWithLead[]>([]);
   const [loading, setLoading] = useState(false);
   const [showTestModal, setShowTestModal] = useState(false);
@@ -251,7 +254,11 @@ export default function ActivityLogs() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchActivityLogs(filter);
+      // 직원은 본인 로그만 조회
+      const effectiveFilter = canViewAll
+        ? filter
+        : { ...filter, staffId: user?.id ?? '' };
+      const data = await fetchActivityLogs(effectiveFilter);
       setLogs(data);
     } catch (e: any) {
       toast.error('로그 조회 실패: ' + e.message);
