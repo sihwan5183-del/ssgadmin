@@ -7,6 +7,10 @@ import { X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ACTION_TYPE_LABEL, type ActivityActionType } from '@/types/workReport';
 import { maskCustomerName } from '@/services/workReport/reportFormatService';
+import { cancelActivityLog } from '@/services/workReport/activityLogService';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRole } from '@/hooks/useRole';
+import { toast } from 'sonner';
 import { resolveStaffDisplayNames } from '@/services/workReport/staffDisplayService';
 import { WRBadge } from './_shared';
 
@@ -57,9 +61,28 @@ export function LogDetailModal({
   filter: LogDetailFilter;
   onClose: () => void;
 }) {
+  const { user } = useAuth();
+  const { isAdmin, isManager } = useRole();
+  const canExclude = isAdmin || isManager;
   const [rows, setRows] = useState<DetailRow[]>([]);
   const [leadsRows, setLeadsRows] = useState<LeadsRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [excludingId, setExcludingId] = useState<string | null>(null);
+
+  const handleExclude = async (logId: string, reason: '실수' | '중복') => {
+    if (!user) return;
+    setExcludingId(logId);
+    try {
+      await cancelActivityLog({ logId, reason, cancelledBy: user.id });
+      toast.success('집계에서 제외되었습니다.');
+      // 해당 로그 is_counted 업데이트
+      setRows((prev) => prev.map((r) => r.id === logId ? { ...r, is_counted: false, not_counted_reason: reason } : r));
+    } catch (e: any) {
+      toast.error('처리 실패: ' + e.message);
+    } finally {
+      setExcludingId(null);
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -199,7 +222,7 @@ export function LogDetailModal({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-xs text-gray-400 border-b border-gray-100 bg-gray-50">
-                    {['처리시간', '담당자', '고객명', '채널', '행동', '이전→변경', '인정', '메모/실패사유'].map((h) => (
+                    {['처리시간', '담당자', '고객명', '채널', '행동', '이전→변경', '인정', '메모/실패사유', ...(canExclude ? ['제외'] : [])].map((h) => (
                       <th key={h} className="py-2.5 px-3 font-medium text-left whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -246,6 +269,30 @@ export function LogDetailModal({
                         {r.memo && <div>{r.memo}</div>}
                         {!r.fail_reason && !r.memo && '-'}
                       </td>
+                      {canExclude && (
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          {r.is_counted ? (
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => handleExclude(r.id, '실수')}
+                                disabled={excludingId === r.id}
+                                className="text-[10px] text-orange-500 hover:text-orange-700 border border-orange-200 rounded px-1.5 py-0.5 disabled:opacity-40"
+                              >
+                                실수
+                              </button>
+                              <button
+                                onClick={() => handleExclude(r.id, '중복')}
+                                disabled={excludingId === r.id}
+                                className="text-[10px] text-red-500 hover:text-red-700 border border-red-200 rounded px-1.5 py-0.5 disabled:opacity-40"
+                              >
+                                중복
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-gray-300">제외됨</span>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

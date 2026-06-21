@@ -9,11 +9,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRole } from '@/hooks/useRole';
 import { WorkReportHeader, SectionCard } from './_shared';
 import {
-  getSalesDetailsByStaff,
+  getStaffIncentiveSummary,
   getSalesChannelSummary,
-  calcIncentiveFromSales,
-  type StaffSalesSummary,
-  type SalesChannelSummary,
+  type StaffIncentiveSummary,
 } from '@/services/workReport/salesReportService';
 
 export default function IncentiveDashboard() {
@@ -23,25 +21,19 @@ export default function IncentiveDashboard() {
   const currentMonth = new Date().toISOString().slice(0, 7);
   const [applyMonth, setApplyMonth] = useState(currentMonth);
   const [loading, setLoading] = useState(false);
-  const [staffSummaries, setStaffSummaries] = useState<StaffSalesSummary[]>([]);
-  const [channelSummaries, setChannelSummaries] = useState<SalesChannelSummary[]>([]);
+  const [staffSummaries, setStaffSummaries] = useState<StaffIncentiveSummary[]>([]);
+  const [channelSummaries, setChannelSummaries] = useState<{ channel: string; total: number; completed: number }[]>([]);
 
   const load = useCallback(async () => {
     if (!user || roleLoading) return;
     setLoading(true);
     try {
+      const myName = user.user_metadata?.display_name ?? '';
       const [staff, channels] = await Promise.all([
-        getSalesDetailsByStaff(applyMonth),
+        getStaffIncentiveSummary(applyMonth, isAdmin ? undefined : myName),
         getSalesChannelSummary(applyMonth),
       ]);
-      // 직원 필터 — 관리자: 전체 / 직원: 본인만
-      if (isAdmin) {
-        setStaffSummaries(staff);
-      } else {
-        // 본인 이름으로 필터 (manager 필드가 이름 기준)
-        const myName = user.user_metadata?.display_name ?? '';
-        setStaffSummaries(staff.filter((s) => s.manager === myName));
-      }
+      setStaffSummaries(staff);
       setChannelSummaries(channels);
     } catch (e: any) {
       toast.error('데이터 조회 실패: ' + e.message);
@@ -55,9 +47,11 @@ export default function IncentiveDashboard() {
   }, [roleLoading, load]);
 
   // 팀 전체 합산
-  const totalMobile = staffSummaries.reduce((s, r) => s + r.mobile_completed, 0);
-  const totalInternet = staffSummaries.reduce((s, r) => s + r.internet_installed, 0);
-  const { finalIncentive: totalIncentive, mobileConditionMet, payoutRate } = calcIncentiveFromSales(totalMobile, totalInternet);
+  const totalMobile = staffSummaries.reduce((s, r) => s + r.mobile, 0);
+  const totalInternet = staffSummaries.reduce((s, r) => s + r.internet, 0);
+  const totalIncentive = staffSummaries.reduce((s, r) => s + r.final_incentive, 0);
+  const mobileConditionMet = totalMobile >= 50;
+  const payoutRate = totalInternet === 0 ? 0 : totalInternet === 1 ? 0.5 : 1;
 
   return (
     <div className="space-y-5">
@@ -132,7 +126,7 @@ export default function IncentiveDashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-xs text-gray-500 border-b border-gray-100 bg-gray-50">
-                  {['담당자', '모바일 개통', '인터넷 설치', '모요 건수', '기본 인센', '지급률', '최종 예상'].map((h) => (
+                  {['담당자', '전체', '모바일', '인터넷', 'TV프리', '모요', '기본 인센', '지급률', '최종 예상'].map((h) => (
                     <th key={h} className={`py-2.5 px-3 font-medium ${h === '담당자' ? 'text-left' : 'text-right'}`}>{h}</th>
                   ))}
                 </tr>
