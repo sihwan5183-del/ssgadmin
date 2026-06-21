@@ -3,11 +3,13 @@
 // ============================================================
 import type { DailyReportData, DailyReportLog } from './reportAggregationService';
 
-// 고객명 마스킹 (박민규 → 박**, 김 → 김**)
+// 고객명 마스킹 (박민규 → 박*규, 김민 → 김*, 김 → 김*)
 export function maskCustomerName(name: string | null | undefined): string {
   if (!name) return '고객';
-  if (name.length <= 1) return name + '**';
-  return name[0] + '**';
+  if (name.length === 1) return name + '*';
+  if (name.length === 2) return name[0] + '*';
+  // 3글자 이상: 첫글자 + * + 마지막글자
+  return name[0] + '*' + name[name.length - 1];
 }
 
 // 날짜 포맷 (2026-06-21 → 2026.06.21)
