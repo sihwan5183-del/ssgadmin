@@ -6,6 +6,7 @@ import { RefreshCw, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRole } from '@/hooks/useRole';
+import { resolveStaffDisplayNames, normalizeStaffName } from '@/services/workReport/staffDisplayService';
 import { WorkReportHeader, SectionCard, WRBadge } from './_shared';
 import {
   fetchActivityLogs,
@@ -240,6 +241,7 @@ export default function ActivityLogs() {
   const [loading, setLoading] = useState(false);
   const [showTestModal, setShowTestModal] = useState(false);
   const [cancelLogId, setCancelLogId] = useState<string | null>(null);
+  const [nameMap, setNameMap] = useState<Map<string, string>>(new Map());
 
   const today = new Date().toISOString().split('T')[0];
   const [filter, setFilter] = useState<ActivityLogFilter>({
@@ -260,6 +262,12 @@ export default function ActivityLogs() {
         : { ...filter, staffId: user?.id ?? '' };
       const data = await fetchActivityLogs(effectiveFilter);
       setLogs(data);
+      // 담당자 표시명 일괄 조회
+      const staffIds = [...new Set(data.map((l) => l.staff_id))];
+      if (staffIds.length > 0) {
+        const map = await resolveStaffDisplayNames(staffIds);
+        setNameMap(map);
+      }
     } catch (e: any) {
       toast.error('로그 조회 실패: ' + e.message);
     } finally {
@@ -404,7 +412,7 @@ export default function ActivityLogs() {
                         <div>{dateStr}</div>
                         <div>{timeStr}</div>
                       </td>
-                      <td className="py-2.5 px-3 font-medium text-gray-800 whitespace-nowrap">{log.staff_name}</td>
+                      <td className="py-2.5 px-3 font-medium text-gray-800 whitespace-nowrap">{normalizeStaffName(log.staff_name, nameMap.get(log.staff_id))}</td>
                       <td className="py-2.5 px-3 whitespace-nowrap">
                         {log.channel ? (
                           <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${

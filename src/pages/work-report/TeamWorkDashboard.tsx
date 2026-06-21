@@ -12,6 +12,7 @@ import {
   aggregateByAction,
   aggregateByStaff,
 } from '@/services/workReport/workReportService';
+import { resolveStaffDisplayNames } from '@/services/workReport/staffDisplayService';
 
 const PERIOD_OPTIONS = ['오늘', '이번주', '이번달'];
 
@@ -37,6 +38,7 @@ export default function TeamWorkDashboard() {
   const [loading, setLoading] = useState(false);
   const [staffRows, setStaffRows] = useState<ReturnType<typeof aggregateByStaff>>([]);
   const [totalAgg, setTotalAgg] = useState<ReturnType<typeof aggregateByAction> | null>(null);
+  const [nameMap, setNameMap] = useState<Map<string, string>>(new Map());
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -45,7 +47,14 @@ export default function TeamWorkDashboard() {
       const { from, to } = getDateRange(period);
       const logs = await getTeamWorkDashboardData(user.id, canViewAll, from, to);
       setTotalAgg(aggregateByAction(logs));
-      setStaffRows(aggregateByStaff(logs));
+      const rows = aggregateByStaff(logs);
+      setStaffRows(rows);
+      // 담당자 표시명 일괄 조회
+      const staffIds = rows.map((r) => r.staff_id);
+      if (staffIds.length > 0) {
+        const map = await resolveStaffDisplayNames(staffIds);
+        setNameMap(map);
+      }
     } catch (e: any) {
       toast.error('데이터 조회 실패: ' + e.message);
     } finally {
@@ -127,7 +136,7 @@ export default function TeamWorkDashboard() {
                 <tbody className="divide-y divide-gray-50">
                   {staffRows.map((r) => (
                     <tr key={r.staff_id} className="hover:bg-gray-50 transition-colors">
-                      <td className="py-3 px-3 font-medium text-gray-800">{r.staff_name}</td>
+                      <td className="py-3 px-3 font-medium text-gray-800">{nameMap.get(r.staff_id) ?? r.staff_name}</td>
                       <td className="py-3 px-3 text-right text-gray-700">{r.call_attempt}</td>
                       <td className="py-3 px-3 text-right text-indigo-600">{r.call_connected}</td>
                       <td className="py-3 px-3 text-right text-orange-500">{r.absent}</td>

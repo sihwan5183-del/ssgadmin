@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { WorkReportHeader, KpiCard, SectionCard, FilterButtons } from './_shared';
 import { getMyWorkDashboardData, aggregateByAction } from '@/services/workReport/workReportService';
+import { resolveStaffDisplayName } from '@/services/workReport/staffDisplayService';
 import { ACTION_TYPE_LABEL } from '@/types/workReport';
 
 const PERIOD_OPTIONS = ['오늘', '어제', '이번주', '이번달'];
@@ -52,6 +53,7 @@ export default function MyWorkDashboard() {
   const [loading, setLoading] = useState(false);
   const [agg, setAgg] = useState<ReturnType<typeof aggregateByAction> | null>(null);
   const [totalLogs, setTotalLogs] = useState(0);
+  const [displayName, setDisplayName] = useState<string>('');
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -61,6 +63,9 @@ export default function MyWorkDashboard() {
       const logs = await getMyWorkDashboardData(user.id, from, to);
       setTotalLogs(logs.length);
       setAgg(aggregateByAction(logs));
+      // 본인 표시명 조회
+      const name = await resolveStaffDisplayName(user.id, user.email ?? '');
+      setDisplayName(name);
     } catch (e: any) {
       toast.error('데이터 조회 실패: ' + e.message);
     } finally {
@@ -76,7 +81,7 @@ export default function MyWorkDashboard() {
     <div className="space-y-5">
       <WorkReportHeader
         title="내 업무 대시보드"
-        description={`${userName}님의 영업 활동 현황입니다.`}
+        description={`${displayName || userName}님의 영업 활동 현황입니다.`}
         rightSlot={
           <>
             <FilterButtons options={PERIOD_OPTIONS} value={period} onChange={setPeriod} />
