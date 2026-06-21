@@ -49,6 +49,7 @@ import { BulkActionBar } from "@/components/common/BulkActionBar";
 import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { Trash2 } from "lucide-react";
+import { formatPhone } from "@/lib/phoneFormat";
 // 무거운(1k+ LOC) 페이지 — 사용자가 [기타인입] 탭을 처음 클릭할 때만 로드해서
 // 메타/도그마루 탭의 초기 진입과 탭 전환 응답성을 잡아준다.
 const ChannelIntakePage = lazy(() => import("@/pages/ChannelIntakePage"));
@@ -953,6 +954,10 @@ export default function LeadsPage() {
   const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru" | "udak" | "other">("meta");
   const [pcCareTab, setPcCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "delivery" | "subscribe" | "pending" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc">("all");
   const [openLead, setOpenLead] = useState<Lead | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editBirth, setEditBirth] = useState("");
+  const [savingLeadInfo, setSavingLeadInfo] = useState(false);
   const [happyCallSaving, setHappyCallSaving] = useState(false);
   const [notes, setNotes] = useState<LeadNote[]>([]);
   const [statusLogs, setStatusLogs] = useState<any[]>([]);
@@ -1074,6 +1079,9 @@ export default function LeadsPage() {
       return;
     }
     setMemoDraft(openLead.memo ?? "");
+    setEditName(openLead.name ?? "");
+    setEditPhone(openLead.phone ?? "");
+    setEditBirth(openLead.birth ?? "");
     (async () => {
       const [{ data: notesData }, { data: logsData }] = await Promise.all([
         supabase.from("lead_notes").select("*").eq("lead_id", openLead.id).order("created_at", { ascending: false }),
@@ -1589,6 +1597,25 @@ export default function LeadsPage() {
 
   const staffName = (uid: string | null | undefined) =>
     staff.find((s) => s.user_id === uid)?.display_name ?? "";
+
+  async function saveLeadInfo() {
+    if (!openLead) return;
+    setSavingLeadInfo(true);
+    const { error } = await supabase
+      .from("leads")
+      .update({
+        name: editName.trim() || null,
+        phone: editPhone.trim() || null,
+        birth: editBirth.trim() || null,
+      })
+      .eq("id", openLead.id);
+    setSavingLeadInfo(false);
+    if (error) { toast.error("저장 실패: " + error.message); return; }
+    const updated = { ...openLead, name: editName.trim() || null, phone: editPhone.trim() || null, birth: editBirth.trim() || null };
+    setOpenLead(updated);
+    setRows((p) => p.map((r) => (r.id === openLead.id ? { ...r, name: updated.name, phone: updated.phone, birth: updated.birth } : r)));
+    toast.success("고객 정보가 저장되었습니다");
+  }
 
   async function saveMemo() {
     if (!openLead) return;
@@ -2530,7 +2557,29 @@ export default function LeadsPage() {
                     {openLead.utm_campaign && <div className="mt-2 text-[10px] text-orange-500 font-medium">📣 {openLead.utm_campaign}</div>}
                   </div>
                 )}
-                <InfoRow label="고객명" value={openLead.name} right={{ label: "연락처", value: openLead.phone }} />
+                {/* ── 편집 가능한 고객 기본 정보 ── */}
+                <div className="p-3 border-b border-border/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-semibold text-foreground/60">고객 기본 정보</span>
+                    <Button size="sm" variant="outline" className="h-7 text-xs px-3" onClick={saveLeadInfo} disabled={savingLeadInfo}>
+                      {savingLeadInfo ? "저장 중…" : "저장하기"}
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-muted-foreground">고객명</label>
+                      <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-8 text-xs" placeholder="고객명" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-muted-foreground">연락처</label>
+                      <Input value={editPhone} onChange={(e) => setEditPhone(formatPhone(e.target.value))} className="h-8 text-xs" type="tel" inputMode="numeric" maxLength={14} placeholder="010-0000-0000" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-muted-foreground">생년월일 (6자리)</label>
+                      <Input value={editBirth} onChange={(e) => setEditBirth(e.target.value.replace(/\D+/g, "").slice(0, 6))} className="h-8 text-xs" inputMode="numeric" maxLength={6} placeholder="900101" />
+                    </div>
+                  </div>
+                </div>
                 <InfoRow label="현재 통신사" value={openLead.current_carrier} right={{ label: "희망 기종", value: openLead.desired_device }} />
                 <InfoRow label="희망 상품" value={openLead.desired_product} right={{ label: "인입 경로", value: openLead.campaign_name ?? openLead.source }} />
                 {(openLead.storage || openLead.color) && (
@@ -2540,7 +2589,7 @@ export default function LeadsPage() {
                   <InfoRow label="할인방식" value={openLead.discount} right={{ label: "가입유형", value: openLead.jointype }} />
                 )}
                 {(openLead.birth || openLead.consult_time) && (
-                  <InfoRow label="생년월일" value={openLead.birth} right={{ label: "상담 희망 시간", value: openLead.consult_time }} />
+                  <InfoRow label="상담 희망 시간" value={openLead.consult_time} right={undefined} />
                 )}
                 {(openLead.channel || openLead.utm_campaign) && (
                   <InfoRow label="채널" value={openLead.channel} right={{ label: "UTM", value: openLead.utm_campaign }} />
