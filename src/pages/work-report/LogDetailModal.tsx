@@ -140,10 +140,10 @@ export function LogDetailModal({
             assigned_name: r.profiles?.display_name ?? '미배정',
           })));
         } else {
-          // activity_logs
+          // activity_logs — leads join 없이 조회 (id 충돌 방지)
           let q = supabase
             .from('activity_logs')
-            .select('id, staff_id, staff_name, channel, action_type, result_type, previous_status, next_status, memo, fail_reason, is_counted, not_counted_reason, created_at, leads!left(customer_name)')
+            .select('id, lead_id, staff_id, staff_name, channel, action_type, previous_status, next_status, memo, fail_reason, is_counted, not_counted_reason, created_at')
             .gte('created_at', `${filter.dateFrom}T00:00:00`)
             .lte('created_at', `${filter.dateTo}T23:59:59`)
             .order('created_at', { ascending: false });
@@ -156,15 +156,24 @@ export function LogDetailModal({
           }
 
           const { data } = await q;
-          const rawRows = (data ?? []).map((r: any) => ({
-            ...r,
-            customer_name: r.leads?.customer_name ?? null,
-          }));
+          const rawRows = (data ?? []) as any[];
+
+          // lead_id로 고객명 별도 조회
+          const leadIds = [...new Set(rawRows.map((r: any) => r.lead_id).filter(Boolean))];
+          const leadNameMap = new Map<string, string>();
+          if (leadIds.length > 0) {
+            const { data: leadData } = await supabase
+              .from('leads').select('id, customer_name').in('id', leadIds);
+            (leadData ?? []).forEach((l: any) => leadNameMap.set(l.id, l.customer_name ?? ''));
+          }
+
           // 담당자명 이메일 → display_name 변환
           const staffIds = [...new Set(rawRows.map((r: any) => r.staff_id).filter(Boolean))];
           const nameMap = staffIds.length > 0 ? await resolveStaffDisplayNames(staffIds) : new Map();
+
           setRows(rawRows.map((r: any) => ({
             ...r,
+            customer_name: leadNameMap.get(r.lead_id) ?? null,
             resolved_name: nameMap.get(r.staff_id) ?? r.staff_name,
           })));
         }

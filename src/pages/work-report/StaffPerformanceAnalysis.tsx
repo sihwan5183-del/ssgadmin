@@ -16,7 +16,7 @@ import {
   type ChannelPerformanceRow, type WarningAlert,
 } from '@/services/workReport/staffPerformanceService';
 
-type Period = '오늘' | '어제' | '이번주' | '이번달' | '직접선택';
+type Period = '오늘' | '어제' | '이번주' | '이번달' | '전체기간' | '직접선택';
 type TabKey = 'overview' | 'staff' | 'trend' | 'channel' | 'alerts';
 
 const CHANNEL_LABEL: Record<string, string> = {
@@ -124,7 +124,7 @@ export default function StaffPerformanceAnalysis() {
 
       {/* 필터 */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 flex flex-wrap gap-2 items-center">
-        {(['오늘','어제','이번주','이번달','직접선택'] as Period[]).map(p => (
+        {(['오늘','어제','이번주','이번달','전체기간','직접선택'] as Period[]).map(p => (
           <button key={p} onClick={() => setPeriod(p)}
             className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${period === p ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
             {p}

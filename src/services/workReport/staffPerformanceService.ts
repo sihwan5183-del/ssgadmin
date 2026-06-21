@@ -22,6 +22,7 @@ export function buildDateRange(period: string, customFrom?: string, customTo?: s
   if (period === '이번달') {
     return { from: `${fmt(today).slice(0, 7)}-01`, to: fmt(today) };
   }
+  if (period === '전체기간') return { from: '2020-01-01', to: fmt(today) };
   if (period === '직접선택') return { from: customFrom ?? fmt(today), to: customTo ?? fmt(today) };
   return { from: fmt(today), to: fmt(today) };
 }
