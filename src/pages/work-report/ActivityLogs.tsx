@@ -9,6 +9,7 @@ import { WorkReportHeader, SectionCard, WRBadge } from './_shared';
 import {
   fetchActivityLogs,
   insertActivityLog,
+  cancelActivityLog,
 } from '@/services/workReport/activityLogService';
 import {
   ACTION_TYPE_LABEL,
@@ -27,6 +28,77 @@ const COUNTED_OPTIONS = [
   { value: 'true', label: '인정' },
   { value: 'false', label: '미인정' },
 ];
+
+
+// 로그 취소 모달 (is_counted = false 처리)
+function CancelModal({
+  logId,
+  onClose,
+  onDone,
+  userId,
+}: {
+  logId: string;
+  onClose: () => void;
+  onDone: () => void;
+  userId: string;
+}) {
+  const [reason, setReason] = useState<'실수' | '중복' | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleCancel = async () => {
+    if (!reason) return toast.error('사유를 선택해주세요.');
+    setLoading(true);
+    try {
+      await cancelActivityLog({ logId, reason, cancelledBy: userId });
+      toast.success('로그가 집계에서 제외되었습니다.');
+      onDone();
+      onClose();
+    } catch (e: any) {
+      toast.error('처리 실패: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+        <h3 className="text-base font-bold text-gray-900 mb-1">로그 집계 제외</h3>
+        <p className="text-xs text-gray-400 mb-4">사유 선택 시 해당 로그는 집계에서 제외됩니다. (기록은 유지)</p>
+        <div className="space-y-2">
+          {(['실수', '중복'] as const).map((r) => (
+            <button
+              key={r}
+              onClick={() => setReason(reason === r ? null : r)}
+              className={`w-full text-left px-4 py-3 rounded-xl border text-sm font-medium transition-colors ${
+                reason === r
+                  ? 'border-pink-400 bg-pink-50 text-pink-700'
+                  : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              {r === '실수' ? '✋ 실수로 눌렀어요' : '🔁 중복 입력이에요'}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2 mt-5">
+          <button
+            onClick={handleCancel}
+            disabled={!reason || loading}
+            className="flex-1 bg-pink-500 hover:bg-pink-600 text-white text-sm font-medium rounded-lg py-2 transition-colors disabled:opacity-40"
+          >
+            {loading ? '처리 중...' : '집계 제외'}
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium rounded-lg py-2 hover:bg-gray-50"
+          >
+            취소
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // 테스트 로그 삽입용 모달
 function TestLogModal({
@@ -164,6 +236,7 @@ export default function ActivityLogs() {
   const [logs, setLogs] = useState<ActivityLogWithLead[]>([]);
   const [loading, setLoading] = useState(false);
   const [showTestModal, setShowTestModal] = useState(false);
+  const [cancelLogId, setCancelLogId] = useState<string | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
   const [filter, setFilter] = useState<ActivityLogFilter>({
@@ -200,6 +273,14 @@ export default function ActivityLogs() {
           userId={user.id}
           onClose={() => setShowTestModal(false)}
           onInserted={load}
+        />
+      )}
+      {cancelLogId && user && (
+        <CancelModal
+          logId={cancelLogId}
+          userId={user.id}
+          onClose={() => setCancelLogId(null)}
+          onDone={load}
         />
       )}
 
@@ -294,7 +375,7 @@ export default function ActivityLogs() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-xs text-gray-500 border-b border-gray-100 bg-gray-50">
-                  {['시간', '담당자', '채널', '고객(lead_id)', '행동유형', '결과', '이전상태', '변경상태', '인정여부', '미인정 사유', '메모'].map((h) => (
+                  {['시간', '담당자', '채널', '고객(lead_id)', '행동유형', '결과', '이전상태', '변경상태', '인정여부', '미인정 사유', '메모', ''].map((h) => (
                     <th key={h} className="py-2.5 px-3 font-medium text-left whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -353,6 +434,16 @@ export default function ActivityLogs() {
                       </td>
                       <td className="py-2.5 px-3 text-xs text-gray-500 max-w-[180px] truncate">
                         {log.memo ?? '-'}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        {log.is_counted && (
+                          <button
+                            onClick={() => setCancelLogId(log.id)}
+                            className="text-xs text-gray-400 hover:text-red-500 transition-colors whitespace-nowrap"
+                          >
+                            제외
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

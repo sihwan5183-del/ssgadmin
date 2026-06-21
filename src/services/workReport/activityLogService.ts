@@ -178,3 +178,24 @@ export async function logLeadStatusChange({
     console.warn('[activity_logs] 로그 저장 실패 (무시):', e);
   }
 }
+
+// ── 로그 취소 (is_counted = false, 집계 제외) ────────────
+export async function cancelActivityLog({
+  logId,
+  reason,
+  cancelledBy,
+}: {
+  logId: string;
+  reason: '실수' | '중복';
+  cancelledBy: string;
+}): Promise<void> {
+  const { error } = await supabase
+    .from('activity_logs')
+    .update({
+      is_counted: false,
+      not_counted_reason: reason,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', logId);
+  if (error) throw error;
+}
