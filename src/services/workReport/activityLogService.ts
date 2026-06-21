@@ -115,3 +115,64 @@ export async function fetchTodaySummaryByStaff(staffId: string) {
   if (error) throw error;
   return data ?? [];
 }
+
+// ── status → action_type 매핑 (LeadsPage용) ──────────────
+export function statusToActionType(status: string): string {
+  const map: Record<string, string> = {
+    '부재케어':   'absent',
+    '부재 중':    'absent',
+    '재케어':     'recare_registered',
+    '재케어완료': 'recare_completed',
+    '실패':       'failed',
+    '상담중':     'consultation_success',
+    '케어중':     'consultation_success',
+    '택배발송':   'delivery_sent',
+    '택배대기':   'delivery_ready',
+    '개통완료':   'activation_completed',
+    '개통 완료':  'activation_completed',
+    '정산확정':   'settlement_confirmed',
+  };
+  return map[status] ?? 'call_attempt';
+}
+
+// ── LeadsPage updateStatus 전용 로그 저장 ────────────────
+export async function logLeadStatusChange({
+  leadId,
+  staffId,
+  staffName,
+  previousStatus,
+  nextStatus,
+}: {
+  leadId: string;
+  staffId: string;
+  staffName: string;
+  previousStatus: string | null;
+  nextStatus: string;
+}): Promise<void> {
+  try {
+    await insertActivityLog({
+      lead_id: leadId,
+      sales_record_id: null,
+      staff_id: staffId,
+      staff_name: staffName,
+      store_id: null,
+      channel: null,
+      action_type: statusToActionType(nextStatus) as any,
+      result_type: nextStatus,
+      previous_status: previousStatus,
+      next_status: nextStatus,
+      memo: null,
+      fail_reason: null,
+      next_action_at: null,
+      is_counted: true,
+      not_counted_reason: null,
+      corrected_log_id: null,
+      device_info: null,
+      ip_address: null,
+      created_by: staffId,
+    });
+  } catch (e) {
+    // 로그 저장 실패가 기존 기능을 막으면 안 됨 — 에러 무시
+    console.warn('[activity_logs] 로그 저장 실패 (무시):', e);
+  }
+}
