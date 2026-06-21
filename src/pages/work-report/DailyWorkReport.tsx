@@ -26,7 +26,7 @@ const SUMMARY_ITEMS = [
 
 export default function DailyWorkReport() {
   const { user } = useAuth();
-  const { isAdmin, isManager } = useRole();
+  const { isAdmin, isManager, loading: roleLoading } = useRole();
   const canViewAll = isAdmin || isManager;
 
   const today = new Date().toISOString().split('T')[0];
@@ -37,7 +37,7 @@ export default function DailyWorkReport() {
   const [showPreview, setShowPreview] = useState(true);
 
   const load = useCallback(async () => {
-    if (!user) return;
+    if (!user || roleLoading) return;
     setLoading(true);
     try {
       const data = await getDailyWorkReportData({
@@ -52,7 +52,9 @@ export default function DailyWorkReport() {
     } finally {
       setLoading(false);
     }
-  }, [user, date, channel, canViewAll]);
+  }, [user, date, channel, canViewAll, roleLoading]);
+
+  // roleLoading 완료 전엔 fetch 안 함 (권한 확정 전 잘못된 필터 방지)
 
   useEffect(() => { load(); }, [load]);
 

@@ -31,7 +31,7 @@ function getDateRange(period: string): { from: string; to: string } {
 
 export default function TeamWorkDashboard() {
   const { user } = useAuth();
-  const { isAdmin, isManager } = useRole();
+  const { isAdmin, isManager, loading: roleLoading } = useRole();
   const canViewAll = isAdmin || isManager;
 
   const [period, setPeriod] = useState('오늘');
@@ -41,7 +41,7 @@ export default function TeamWorkDashboard() {
   const [nameMap, setNameMap] = useState<Map<string, string>>(new Map());
 
   const load = useCallback(async () => {
-    if (!user) return;
+    if (!user || roleLoading) return;
     setLoading(true);
     try {
       const { from, to } = getDateRange(period);
@@ -60,7 +60,7 @@ export default function TeamWorkDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [user, canViewAll, period]);
+  }, [user, canViewAll, period, roleLoading]);
 
   useEffect(() => { load(); }, [load]);
 

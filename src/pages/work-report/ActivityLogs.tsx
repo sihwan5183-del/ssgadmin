@@ -235,7 +235,7 @@ function TestLogModal({
 // ── 메인 컴포넌트 ─────────────────────────────────────────
 export default function ActivityLogs() {
   const { user } = useAuth();
-  const { isAdmin, isManager } = useRole();
+  const { isAdmin, isManager, loading: roleLoading } = useRole();
   const canViewAll = isAdmin || isManager;
   const [logs, setLogs] = useState<ActivityLogWithLead[]>([]);
   const [loading, setLoading] = useState(false);
@@ -254,6 +254,7 @@ export default function ActivityLogs() {
   });
 
   const load = useCallback(async () => {
+    if (roleLoading) return;
     setLoading(true);
     try {
       // 직원은 본인 로그만 조회
@@ -275,7 +276,7 @@ export default function ActivityLogs() {
     }
   }, [filter]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, roleLoading]);
 
   const totalCount = logs.length;
   const countedCount = logs.filter((l) => l.is_counted).length;
