@@ -254,15 +254,15 @@ export default function ActivityLogs() {
   });
 
   const load = useCallback(async () => {
-    if (roleLoading) return;
+    if (roleLoading || !user) return;
     setLoading(true);
     try {
       // 직원은 본인 로그만 조회
       const effectiveFilter = {
         ...filter,
-        staffId: canViewAll ? (filter.staffId || undefined) : (user?.id ?? ''),
+        staffId: canViewAll ? (filter.staffId || undefined) : user.id,
         isCounted: filter.anomalyOnly ? false : filter.isCounted,
-        anomalyOnly: false, // fetchActivityLogs 내부에서 isCounted로 이미 처리
+        anomalyOnly: false,
       };
       const data = await fetchActivityLogs(effectiveFilter);
       setLogs(data);
@@ -279,7 +279,7 @@ export default function ActivityLogs() {
     }
   }, [filter]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { if (user && !roleLoading) load(); }, [load, user, roleLoading]);
 
   const totalCount = logs.length;
   const countedCount = logs.filter((l) => l.is_counted).length;

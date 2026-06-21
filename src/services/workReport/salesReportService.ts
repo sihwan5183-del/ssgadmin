@@ -142,9 +142,21 @@ export async function getStaffIncentiveSummary(
     if (s.channel === '모요' && !s.moyo_excluded) m.moyo_count++;
   });
 
+  // UUID manager → display_name 변환
+  const uuidManagers = [...map.keys()].filter(isUUID);
+  const nameMap = new Map<string, string>();
+  if (uuidManagers.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('user_id, display_name')
+      .in('user_id', uuidManagers);
+    (profiles ?? []).forEach((p: any) => nameMap.set(p.user_id, p.display_name));
+  }
+
   let results: StaffIncentiveSummary[] = [];
-  for (const [manager, counts] of map.entries()) {
-    if (filterManager && manager !== filterManager) continue;
+  for (const [rawManager, counts] of map.entries()) {
+    const manager = nameMap.get(rawManager) ?? rawManager;
+    if (filterManager && manager !== filterManager && rawManager !== filterManager) continue;
     const { mobile_condition_met, base_incentive, payout_rate, final_incentive } =
       calcIncentiveFromSales(counts.mobile, counts.internet);
     results.push({
