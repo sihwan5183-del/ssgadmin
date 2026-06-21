@@ -142,3 +142,57 @@ export async function cancelActivityLog({
     throw new Error(`집계 제외 실패: ${error.message} (code: ${error.code})`);
   }
 }
+
+// ── 리드 상태 변경 로그 (LeadsPage / DogmaruPage 전용) ───────
+// LeadsPage, DogmaruPage에서 updateStatus 호출 시 자동 기록
+export async function logLeadStatusChange({
+  leadId,
+  staffId,
+  staffName,
+  previousStatus,
+  nextStatus,
+  channel,
+}: {
+  leadId: string;
+  staffId: string;
+  staffName: string;
+  previousStatus: string | null;
+  nextStatus: string;
+  channel?: string | null;
+}): Promise<void> {
+  // 상태 변경을 action_type으로 매핑
+  const action_type = (() => {
+    if (nextStatus.includes('부재')) return 'absent';
+    if (nextStatus.includes('재케어')) return 'recare_registered';
+    if (nextStatus.includes('실패') || nextStatus.includes('해지') || nextStatus.includes('미진행')) return 'failed';
+    if (nextStatus.includes('상담')) return 'consultation_success';
+    if (nextStatus.includes('개통완료')) return 'activation_completed';
+    return 'call_attempt';
+  })();
+
+  const { error } = await supabase.from('activity_logs').insert({
+    lead_id: leadId,
+    sales_record_id: null,
+    staff_id: staffId,
+    staff_name: staffName,
+    store_id: null,
+    channel: channel ?? null,
+    action_type,
+    result_type: null,
+    previous_status: previousStatus,
+    next_status: nextStatus,
+    memo: null,
+    fail_reason: null,
+    next_action_at: null,
+    is_counted: true,
+    not_counted_reason: null,
+    corrected_log_id: null,
+    device_info: null,
+    ip_address: null,
+    created_by: staffId,
+  });
+  if (error) {
+    // 로그 실패는 조용히 처리 (메인 플로우 방해하지 않음)
+    console.warn('[logLeadStatusChange] 로그 기록 실패:', error.message);
+  }
+}
