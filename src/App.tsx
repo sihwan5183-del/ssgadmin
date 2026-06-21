@@ -70,6 +70,7 @@ import ActivityLogs from "./pages/work-report/ActivityLogs.tsx";
 import ProgressDelay from "./pages/work-report/ProgressDelay.tsx";
 import IncentiveDashboard from "./pages/work-report/IncentiveDashboard.tsx";
 import ReportSettings from "./pages/work-report/ReportSettings.tsx";
+import StaffPerformanceAnalysis from "./pages/work-report/StaffPerformanceAnalysis.tsx";
 
 const queryClient = new QueryClient();
 
