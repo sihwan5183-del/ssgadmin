@@ -1,0 +1,263 @@
+// ============================================================
+// LogDetailModal — 숫자 클릭 시 상세 로그 팝업
+// activity_logs 기반 / 고객명 마스킹 / 전화번호 미노출
+// ============================================================
+import { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { ACTION_TYPE_LABEL, type ActivityActionType } from '@/types/workReport';
+import { maskCustomerName } from '@/services/workReport/reportFormatService';
+import { WRBadge } from './_shared';
+
+const CHANNEL_LABEL: Record<string, string> = {
+  meta: '메타', dogmaru: '도그마루', udak: '유닥',
+};
+
+export interface LogDetailFilter {
+  title: string;                          // 모달 제목
+  dateFrom: string;
+  dateTo: string;
+  actionTypes?: ActivityActionType[];     // action_type 필터 (없으면 전체)
+  staffId?: string;                       // 특정 담당자 필터
+  sourceType?: 'activity' | 'leads';     // activity_logs vs leads
+  statusFilter?: string[];               // leads용 status 필터
+}
+
+interface DetailRow {
+  id: string;
+  created_at: string;
+  staff_name: string;
+  customer_name: string | null;
+  channel: string | null;
+  action_type: string;
+  previous_status: string | null;
+  next_status: string | null;
+  memo: string | null;
+  fail_reason: string | null;
+  is_counted: boolean;
+  not_counted_reason: string | null;
+}
+
+interface LeadsRow {
+  id: string;
+  created_at: string;
+  customer_name: string | null;
+  channel: string | null;
+  campaign_name: string | null;
+  status: string;
+  assigned_name: string;
+}
+
+export function LogDetailModal({
+  filter,
+  onClose,
+}: {
+  filter: LogDetailFilter;
+  onClose: () => void;
+}) {
+  const [rows, setRows] = useState<DetailRow[]>([]);
+  const [leadsRows, setLeadsRows] = useState<LeadsRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        if (filter.sourceType === 'leads') {
+          // 신규접수/미처리 → leads 테이블
+          let q = supabase
+            .from('leads')
+            .select('id, created_at, customer_name, channel, campaign_name, status, assigned_to, profiles!left(display_name)')
+            .gte('created_at', `${filter.dateFrom}T00:00:00`)
+            .lte('created_at', `${filter.dateTo}T23:59:59`)
+            .is('deleted_at', null)
+            .order('created_at', { ascending: false });
+
+          if (filter.statusFilter && filter.statusFilter.length > 0) {
+            q = q.in('status', filter.statusFilter);
+          }
+          if (filter.staffId) {
+            q = q.eq('assigned_to', filter.staffId);
+          }
+
+          const { data } = await q;
+          setLeadsRows((data ?? []).map((r: any) => ({
+            id: r.id,
+            created_at: r.created_at,
+            customer_name: r.customer_name,
+            channel: r.channel,
+            campaign_name: r.campaign_name,
+            status: r.status,
+            assigned_name: r.profiles?.display_name ?? '미배정',
+          })));
+        } else {
+          // activity_logs
+          let q = supabase
+            .from('activity_logs')
+            .select('*, leads!left(customer_name)')
+            .gte('created_at', `${filter.dateFrom}T00:00:00`)
+            .lte('created_at', `${filter.dateTo}T23:59:59`)
+            .order('created_at', { ascending: false });
+
+          if (filter.actionTypes && filter.actionTypes.length > 0) {
+            q = q.in('action_type', filter.actionTypes);
+          }
+          if (filter.staffId) {
+            q = q.eq('staff_id', filter.staffId);
+          }
+
+          const { data } = await q;
+          setRows((data ?? []).map((r: any) => ({
+            ...r,
+            customer_name: r.leads?.customer_name ?? null,
+          })));
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [filter]);
+
+  const getChannelLabel = (ch: string | null, campaign?: string | null) => {
+    if (campaign === '도그마루_홈캠') return '도그마루';
+    if (ch === '유닥') return '유닥';
+    return CHANNEL_LABEL[ch ?? ''] ?? ch ?? '-';
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+        {/* 헤더 */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div>
+            <h3 className="text-base font-bold text-gray-900">{filter.title}</h3>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {filter.dateFrom === filter.dateTo ? filter.dateFrom : `${filter.dateFrom} ~ ${filter.dateTo}`}
+              {filter.staffId && ' · 담당자 필터'}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+            <X className="size-5" />
+          </button>
+        </div>
+
+        {/* 내용 */}
+        <div className="overflow-auto flex-1 p-4">
+          {loading ? (
+            <div className="py-16 text-center text-sm text-gray-400">로딩 중...</div>
+          ) : filter.sourceType === 'leads' ? (
+            /* 신규접수/미처리 — leads 테이블 */
+            leadsRows.length === 0 ? (
+              <div className="py-16 text-center text-sm text-gray-400">해당 데이터가 없습니다.</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-gray-400 border-b border-gray-100 bg-gray-50">
+                    {['접수시간', '담당자', '고객명', '채널', '상태'].map((h) => (
+                      <th key={h} className="py-2.5 px-3 font-medium text-left whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {leadsRows.map((r) => (
+                    <tr key={r.id} className="hover:bg-gray-50">
+                      <td className="py-2.5 px-3 text-xs text-gray-400 font-mono whitespace-nowrap">
+                        {new Date(r.created_at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })}
+                        {' '}
+                        {new Date(r.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                      </td>
+                      <td className="py-2.5 px-3 font-medium text-gray-800">{r.assigned_name}</td>
+                      <td className="py-2.5 px-3 font-medium text-gray-800">{maskCustomerName(r.customer_name)}</td>
+                      <td className="py-2.5 px-3">
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">
+                          {getChannelLabel(r.channel, r.campaign_name)}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <WRBadge variant="info">{r.status}</WRBadge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )
+          ) : (
+            /* activity_logs */
+            rows.length === 0 ? (
+              <div className="py-16 text-center text-sm text-gray-400">해당 로그가 없습니다.</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-gray-400 border-b border-gray-100 bg-gray-50">
+                    {['처리시간', '담당자', '고객명', '채널', '행동', '이전→변경', '인정', '메모/실패사유'].map((h) => (
+                      <th key={h} className="py-2.5 px-3 font-medium text-left whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {rows.map((r) => (
+                    <tr key={r.id} className={`hover:bg-gray-50 ${!r.is_counted ? 'bg-red-50/30' : ''}`}>
+                      <td className="py-2.5 px-3 text-xs text-gray-400 font-mono whitespace-nowrap">
+                        {new Date(r.created_at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })}
+                        {' '}
+                        {new Date(r.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                      </td>
+                      <td className="py-2.5 px-3 font-medium text-gray-800 whitespace-nowrap">{r.staff_name}</td>
+                      <td className="py-2.5 px-3 font-medium text-gray-800 whitespace-nowrap">
+                        {maskCustomerName(r.customer_name)}
+                      </td>
+                      <td className="py-2.5 px-3 whitespace-nowrap">
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                          r.channel === 'dogmaru' ? 'bg-blue-100 text-blue-700' :
+                          r.channel === 'udak' ? 'bg-purple-100 text-purple-700' :
+                          'bg-pink-100 text-pink-700'
+                        }`}>
+                          {CHANNEL_LABEL[r.channel ?? ''] ?? r.channel ?? '-'}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 whitespace-nowrap">
+                        <WRBadge variant="info">
+                          {ACTION_TYPE_LABEL[r.action_type as ActivityActionType] ?? r.action_type}
+                        </WRBadge>
+                      </td>
+                      <td className="py-2.5 px-3 text-xs text-gray-500 whitespace-nowrap">
+                        {r.previous_status ?? '-'} → {r.next_status ?? '-'}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <WRBadge variant={r.is_counted ? 'success' : 'danger'}>
+                          {r.is_counted ? '인정' : '미인정'}
+                        </WRBadge>
+                        {!r.is_counted && r.not_counted_reason && (
+                          <div className="text-[10px] text-red-400 mt-0.5">{r.not_counted_reason}</div>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3 text-xs text-gray-500 max-w-[180px]">
+                        {r.fail_reason && <div className="text-red-400">{r.fail_reason}</div>}
+                        {r.memo && <div>{r.memo}</div>}
+                        {!r.fail_reason && !r.memo && '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )
+          )}
+        </div>
+
+        {/* 푸터 */}
+        <div className="px-6 py-3 border-t border-gray-100 flex justify-between items-center">
+          <span className="text-xs text-gray-400">
+            {filter.sourceType === 'leads' ? leadsRows.length : rows.length}건
+          </span>
+          <button
+            onClick={onClose}
+            className="text-xs border border-gray-200 text-gray-600 rounded-lg px-4 py-1.5 hover:bg-gray-50"
+          >
+            닫기
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

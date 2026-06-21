@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRole } from '@/hooks/useRole';
 import { getTeamNewLeadsSummary } from '@/services/workReport/newLeadsService';
 import { WorkReportHeader, SectionCard, FilterButtons, WRBadge } from './_shared';
+import { LogDetailModal, type LogDetailFilter } from './LogDetailModal';
 import {
   getTeamWorkDashboardData,
   aggregateByAction,
@@ -40,6 +41,10 @@ export default function TeamWorkDashboard() {
   const [staffRows, setStaffRows] = useState<ReturnType<typeof aggregateByStaff>>([]);
   const [totalAgg, setTotalAgg] = useState<ReturnType<typeof aggregateByAction> | null>(null);
   const [nameMap, setNameMap] = useState<Map<string, string>>(new Map());
+  const [detailFilter, setDetailFilter] = useState<LogDetailFilter | null>(null);
+
+  const today = new Date().toISOString().split('T')[0];
+  const openDetail = (f: LogDetailFilter) => setDetailFilter(f);
   const [newSummary, setNewSummary] = useState<{ today_new: number; pending_new: number; by_channel: Record<string, number> } | null>(null);
 
   const load = useCallback(async () => {
@@ -99,6 +104,10 @@ export default function TeamWorkDashboard() {
           </>
         }
       />
+
+      {detailFilter && (
+        <LogDetailModal filter={detailFilter} onClose={() => setDetailFilter(null)} />
+      )}
 
       {!canViewAll && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 text-xs text-yellow-700 flex items-center gap-2">
@@ -181,14 +190,38 @@ export default function TeamWorkDashboard() {
                   {staffRows.map((r) => (
                     <tr key={r.staff_id} className="hover:bg-gray-50 transition-colors">
                       <td className="py-3 px-3 font-medium text-gray-800">{nameMap.get(r.staff_id) ?? r.staff_name}</td>
-                      <td className="py-3 px-3 text-right text-gray-700">{r.call_attempt}</td>
-                      <td className="py-3 px-3 text-right text-indigo-600">{r.call_connected}</td>
-                      <td className="py-3 px-3 text-right text-orange-500">{r.absent}</td>
-                      <td className="py-3 px-3 text-right text-yellow-600">{r.recare}</td>
-                      <td className="py-3 px-3 text-right text-red-500">{r.failed}</td>
-                      <td className="py-3 px-3 text-right text-green-600 font-semibold">{r.consultation_success}</td>
-                      <td className="py-3 px-3 text-right text-pink-600 font-semibold">{r.activation_completed}</td>
-                      <td className="py-3 px-3 text-right text-purple-600 font-bold">{r.settlement_confirmed}</td>
+                      {[
+                        { val: r.call_attempt, actions: ['call_attempt'], label: '통화시도', cls: 'text-gray-700' },
+                        { val: r.call_connected, actions: ['call_connected'], label: '연결완료', cls: 'text-indigo-600' },
+                        { val: r.absent, actions: ['absent'], label: '부재', cls: 'text-orange-500' },
+                        { val: r.recare, actions: ['recare_registered','recare_completed'], label: '재케어', cls: 'text-yellow-600' },
+                        { val: r.failed, actions: ['failed'], label: '실패', cls: 'text-red-500' },
+                        { val: r.consultation_success, actions: ['consultation_success'], label: '상담성공', cls: 'text-green-600 font-semibold' },
+                        { val: r.activation_completed, actions: ['activation_completed'], label: '개통완료', cls: 'text-pink-600 font-semibold' },
+                        { val: r.settlement_confirmed, actions: ['settlement_confirmed'], label: '정산확정', cls: 'text-purple-600 font-bold' },
+                      ].map(({ val, actions, label, cls }) => {
+                        const { from: df } = (() => {
+                          const t = new Date(); const fmt = (d: Date) => d.toISOString().split('T')[0];
+                          if (period === '오늘') return { from: fmt(t) };
+                          if (period === '이번주') { const m = new Date(t); m.setDate(t.getDate()-((t.getDay()+6)%7)); return { from: fmt(m) }; }
+                          return { from: fmt(new Date(t.getFullYear(), t.getMonth(), 1)) };
+                        })();
+                        return (
+                          <td key={label} className="py-3 px-3 text-right">
+                            <button
+                              onClick={() => val > 0 && openDetail({
+                                title: `${nameMap.get(r.staff_id) ?? r.staff_name} · ${label} 상세`,
+                                dateFrom: df, dateTo: today,
+                                actionTypes: actions as any,
+                                staffId: r.staff_id,
+                              })}
+                              className={`${cls} ${val > 0 ? 'hover:underline cursor-pointer' : 'cursor-default'}`}
+                            >
+                              {val}
+                            </button>
+                          </td>
+                        );
+                      })}
                       <td className="py-3 px-3 text-right">
                         <WRBadge variant="info">{r.conversion_rate}%</WRBadge>
                       </td>

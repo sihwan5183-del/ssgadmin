@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRole } from '@/hooks/useRole';
 import { WorkReportHeader, SectionCard } from './_shared';
+import { LogDetailModal, type LogDetailFilter } from './LogDetailModal';
 import { getDailyWorkReportData, type DailyReportData } from '@/services/workReport/reportAggregationService';
 import { formatDailyKakaoReport, copyDailyReportToClipboard, maskCustomerName } from '@/services/workReport/reportFormatService';
 
@@ -35,6 +36,9 @@ export default function DailyWorkReport() {
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<DailyReportData | null>(null);
   const [showPreview, setShowPreview] = useState(true);
+  const [detailFilter, setDetailFilter] = useState<LogDetailFilter | null>(null);
+
+  const openDetail = (filter: LogDetailFilter) => setDetailFilter(filter);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -107,6 +111,10 @@ export default function DailyWorkReport() {
         }
       />
 
+      {detailFilter && (
+        <LogDetailModal filter={detailFilter} onClose={() => setDetailFilter(null)} />
+      )}
+
       {loading ? (
         <div className="py-20 text-center text-sm text-gray-400">보고서 생성 중...</div>
       ) : !reportData ? null : (
@@ -118,12 +126,33 @@ export default function DailyWorkReport() {
             {/* 전체 요약 */}
             <SectionCard title="전체 요약">
               <div className="grid grid-cols-4 gap-2">
-                {SUMMARY_ITEMS.map(({ key, label, color }) => (
-                  <div key={key} className="bg-gray-50 rounded-xl border border-gray-100 p-3 text-center">
-                    <div className={`text-xl font-bold ${color}`}>{(s as any)?.[key] ?? 0}</div>
-                    <div className="text-[10px] text-gray-400 mt-0.5">{label}</div>
-                  </div>
-                ))}
+                {SUMMARY_ITEMS.map(({ key, label, color }) => {
+                  const actionMap: Record<string, string[]> = {
+                    call_attempt: ['call_attempt'],
+                    call_connected: ['call_connected'],
+                    absent: ['absent'],
+                    recare: ['recare_registered','recare_completed'],
+                    failed: ['failed'],
+                    consultation_success: ['consultation_success'],
+                    delivery_sent: ['delivery_sent'],
+                    activation_completed: ['activation_completed'],
+                  };
+                  const actions = actionMap[key];
+                  return (
+                    <div
+                      key={key}
+                      onClick={() => actions && openDetail({
+                        title: `${label} 상세`,
+                        dateFrom: date, dateTo: date,
+                        actionTypes: actions as any,
+                      })}
+                      className={`bg-gray-50 rounded-xl border border-gray-100 p-3 text-center cursor-pointer hover:shadow-md hover:border-pink-200 transition-all`}
+                    >
+                      <div className={`text-xl font-bold ${color}`}>{(s as any)?.[key] ?? 0}</div>
+                      <div className="text-[10px] text-gray-400 mt-0.5">{label}</div>
+                    </div>
+                  );
+                })}
               </div>
               {(s?.not_counted ?? 0) > 0 && (
                 <p className="text-[11px] text-gray-400 mt-2">미인정 로그 {s!.not_counted}건 제외됨</p>
@@ -206,13 +235,29 @@ export default function DailyWorkReport() {
                     {reportData.staffSummaries.map((s) => (
                       <tr key={s.staff_id} className="text-gray-700">
                         <td className="py-2 font-medium">{s.display_name}</td>
-                        <td className="py-2 text-right">{s.call_attempt}</td>
-                        <td className="py-2 text-right text-indigo-600">{s.call_connected}</td>
-                        <td className="py-2 text-right text-orange-500">{s.absent}</td>
-                        <td className="py-2 text-right text-yellow-600">{s.recare}</td>
-                        <td className="py-2 text-right text-red-500">{s.failed}</td>
-                        <td className="py-2 text-right text-green-600 font-bold">{s.consultation_success}</td>
-                        <td className="py-2 text-right text-pink-600 font-bold">{s.activation_completed}</td>
+                        {[
+                          { val: s.call_attempt, actions: ['call_attempt'], label: '통화시도', color: 'text-gray-700' },
+                          { val: s.call_connected, actions: ['call_connected'], label: '연결완료', color: 'text-indigo-600' },
+                          { val: s.absent, actions: ['absent'], label: '부재', color: 'text-orange-500' },
+                          { val: s.recare, actions: ['recare_registered','recare_completed'], label: '재케어', color: 'text-yellow-600' },
+                          { val: s.failed, actions: ['failed'], label: '실패', color: 'text-red-500' },
+                          { val: s.consultation_success, actions: ['consultation_success'], label: '상담성공', color: 'text-green-600 font-bold' },
+                          { val: s.activation_completed, actions: ['activation_completed'], label: '개통완료', color: 'text-pink-600 font-bold' },
+                        ].map(({ val, actions, label, color }) => (
+                          <td key={label} className="py-2 text-right">
+                            <button
+                              onClick={() => val > 0 && openDetail({
+                                title: `${s.display_name} · ${label} 상세`,
+                                dateFrom: date, dateTo: date,
+                                actionTypes: actions as any,
+                                staffId: s.staff_id,
+                              })}
+                              className={`${color} ${val > 0 ? 'hover:underline cursor-pointer' : 'cursor-default'}`}
+                            >
+                              {val}
+                            </button>
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>
