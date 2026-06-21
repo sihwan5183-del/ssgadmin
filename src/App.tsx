@@ -36,7 +36,6 @@ import StaffStatusPage from "./pages/StaffStatusPage.tsx";
 import MenuManagerPage from "./pages/MenuManagerPage.tsx";
 import DownloadsPage from "./pages/DownloadsPage.tsx";
 import NotFound from "./pages/NotFound.tsx";
-import ChannelIntakePage from "./pages/ChannelIntakePage.tsx";
 import BudgetCategoriesPage from "./pages/BudgetCategoriesPage.tsx";
 import MyPage from "./pages/MyPage.tsx";
 import SalesLedgerPage from "./pages/SalesLedgerPage.tsx";
