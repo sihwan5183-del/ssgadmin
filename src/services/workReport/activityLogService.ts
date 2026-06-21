@@ -187,12 +187,15 @@ export async function cancelActivityLog({
   reason: '실수' | '중복';
   cancelledBy: string;
 }): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('activity_logs')
     .update({
       is_counted: false,
       not_counted_reason: reason,
+      updated_at: new Date().toISOString(),
     })
-    .eq('id', logId);
+    .eq('id', logId)
+    .select('id, is_counted');
   if (error) throw error;
+  if (!data || data.length === 0) throw new Error('업데이트된 행 없음 — id 확인 필요');
 }
