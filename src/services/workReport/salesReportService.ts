@@ -57,15 +57,25 @@ function isMobile(product: string | null): boolean {
   return !product.includes('인터넷') && !product.includes('TV') && !product.includes('홈');
 }
 
-// ── 월별 실적 조회 ─────────────────────────────────────────
+// 월 시작/종료 날짜 계산 (판매실적장표와 동일 기준)
+function getMonthRange(month: string): { start: string; end: string } {
+  const [y, m] = month.split('-').map(Number);
+  const start = `${month}-01`;
+  const lastDay = new Date(y, m, 0).getDate();
+  const end = `${month}-${String(lastDay).padStart(2, '0')}`;
+  return { start, end };
+}
+
+// ── 월별 실적 조회 (open_date 기준 — 판매실적장표와 동일) ──
 export async function getSalesPerformanceByMonth(
   month: string, // 'YYYY-MM'
   manager?: string
 ): Promise<SalesPerformanceItem[]> {
+  const { start, end } = getMonthRange(month);
   let q = supabase
     .from('sales')
     .select('id, seq, open_date, open_month, channel, manager, customer_name, product, sale_type, device_model, rate_plan, status, approval_status, moyo_excluded, unit_price, created_at')
-    .eq('open_month', month)
+    .or(`and(open_date.gte.${start},open_date.lte.${end}),and(open_date.is.null,created_at.gte.${start}T00:00:00,created_at.lte.${end}T23:59:59)`)
     .is('deleted_at', null)
     .order('open_date', { ascending: false });
 
@@ -81,10 +91,11 @@ export async function getMobileCompletedCount(
   month: string,
   manager?: string
 ): Promise<number> {
+  const { start, end } = getMonthRange(month);
   let q = supabase
     .from('sales')
-    .select('id, product, status', { count: 'exact' })
-    .eq('open_month', month)
+    .select('id, product, status')
+    .or(`and(open_date.gte.${start},open_date.lte.${end}),and(open_date.is.null,created_at.gte.${start}T00:00:00,created_at.lte.${end}T23:59:59)`)
     .is('deleted_at', null)
     .or('status.ilike.%개통완료%,status.ilike.%변경완료%');
 
@@ -100,10 +111,11 @@ export async function getInternetInstalledCount(
   month: string,
   manager?: string
 ): Promise<number> {
+  const { start, end } = getMonthRange(month);
   let q = supabase
     .from('sales')
     .select('id, product, status')
-    .eq('open_month', month)
+    .or(`and(open_date.gte.${start},open_date.lte.${end}),and(open_date.is.null,created_at.gte.${start}T00:00:00,created_at.lte.${end}T23:59:59)`)
     .is('deleted_at', null)
     .or('status.ilike.%설치완료%,status.ilike.%개통완료%');
 
@@ -142,10 +154,11 @@ export function calcIncentiveFromSales(
 export async function getSalesDetailsByStaff(
   month: string
 ): Promise<StaffSalesSummary[]> {
+  const { start, end } = getMonthRange(month);
   const { data, error } = await supabase
     .from('sales')
     .select('manager, product, status, moyo_excluded, channel')
-    .eq('open_month', month)
+    .or(`and(open_date.gte.${start},open_date.lte.${end}),and(open_date.is.null,created_at.gte.${start}T00:00:00,created_at.lte.${end}T23:59:59)`)
     .is('deleted_at', null)
     .neq('status', '취소');
 
@@ -170,10 +183,11 @@ export async function getSalesDetailsByStaff(
 
 // ── 채널별 요약 ─────────────────────────────────────────────
 export async function getSalesChannelSummary(month: string): Promise<SalesChannelSummary[]> {
+  const { start, end } = getMonthRange(month);
   const { data, error } = await supabase
     .from('sales')
     .select('channel, status')
-    .eq('open_month', month)
+    .or(`and(open_date.gte.${start},open_date.lte.${end}),and(open_date.is.null,created_at.gte.${start}T00:00:00,created_at.lte.${end}T23:59:59)`)
     .is('deleted_at', null);
 
   if (error) throw error;

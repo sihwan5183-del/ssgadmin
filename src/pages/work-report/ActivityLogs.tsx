@@ -258,9 +258,12 @@ export default function ActivityLogs() {
     setLoading(true);
     try {
       // 직원은 본인 로그만 조회
-      const effectiveFilter = canViewAll
-        ? filter
-        : { ...filter, staffId: user?.id ?? '' };
+      const effectiveFilter = {
+        ...filter,
+        staffId: canViewAll ? (filter.staffId || undefined) : (user?.id ?? ''),
+        // anomalyOnly와 isCounted 중복 방지
+        isCounted: filter.anomalyOnly ? false : filter.isCounted,
+      };
       const data = await fetchActivityLogs(effectiveFilter);
       setLogs(data);
       // 담당자 표시명 일괄 조회

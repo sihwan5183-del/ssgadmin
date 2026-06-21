@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { WorkReportHeader, KpiCard, SectionCard, FilterButtons } from './_shared';
 import { getMyWorkDashboardData, aggregateByAction } from '@/services/workReport/workReportService';
+import { LogDetailModal, type LogDetailFilter } from './LogDetailModal';
 import { getMyNewLeadsSummary, getMyPendingNewLeads, type NewLeadItem, type NewLeadsSummary } from '@/services/workReport/newLeadsService';
 import { resolveStaffDisplayName } from '@/services/workReport/staffDisplayService';
 import { ACTION_TYPE_LABEL } from '@/types/workReport';
@@ -57,6 +58,9 @@ export default function MyWorkDashboard() {
   const [displayName, setDisplayName] = useState<string>('');
   const [newSummary, setNewSummary] = useState<NewLeadsSummary | null>(null);
   const [pendingLeads, setPendingLeads] = useState<NewLeadItem[]>([]);
+  const [detailFilter, setDetailFilter] = useState<LogDetailFilter | null>(null);
+
+  const openDetail = (f: LogDetailFilter) => setDetailFilter(f);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -89,6 +93,10 @@ export default function MyWorkDashboard() {
 
   return (
     <div className="space-y-5">
+      {detailFilter && (
+        <LogDetailModal filter={detailFilter} onClose={() => setDetailFilter(null)} />
+      )}
+
       <WorkReportHeader
         title="내 업무 대시보드"
         description={`${displayName || userName}님의 영업 활동 현황입니다.`}
@@ -115,14 +123,43 @@ export default function MyWorkDashboard() {
               const val = agg?.[key];
               const counted = val?.counted ?? 0;
               const total = val?.total ?? 0;
+              const actionMap: Record<string, string[]> = {
+                call_attempt: ['call_attempt'],
+                call_connected: ['call_connected'],
+                absent: ['absent'],
+                sms_sent: ['sms_sent'],
+                recare_registered: ['recare_registered','recare_completed'],
+                failed: ['failed'],
+                consultation_success: ['consultation_success'],
+                activation_completed: ['activation_completed'],
+              };
+              const today = new Date().toISOString().split('T')[0];
+              const { from: df } = (() => {
+                const t = new Date(); const fmt = (d: Date) => d.toISOString().split('T')[0];
+                if (period === '오늘') return { from: fmt(t) };
+                if (period === '어제') { const y = new Date(t); y.setDate(t.getDate()-1); return { from: fmt(y) }; }
+                if (period === '이번주') { const m = new Date(t); m.setDate(t.getDate()-((t.getDay()+6)%7)); return { from: fmt(m) }; }
+                return { from: fmt(new Date(t.getFullYear(), t.getMonth(), 1)) };
+              })();
               return (
-                <KpiCard
+                <div
                   key={key}
-                  label={label}
-                  value={counted}
-                  sub={total !== counted ? `전체 ${total}건 / 인정 ${counted}건` : undefined}
-                  color={color as any}
-                />
+                  onClick={() => counted > 0 && user && openDetail({
+                    title: `${label} 상세`,
+                    dateFrom: df, dateTo: today,
+                    actionTypes: actionMap[key] as any,
+                    staffId: user.id,
+                  })}
+                  className={`rounded-xl border p-4 flex flex-col gap-1 min-w-[100px] ${counted > 0 ? 'cursor-pointer hover:shadow-md hover:border-pink-200' : ''} transition-all`}
+                  style={{ backgroundColor: 'var(--card)', borderColor: counted > 0 ? undefined : 'var(--border)' }}
+                >
+                  <KpiCard
+                    label={label}
+                    value={counted}
+                    sub={total !== counted ? `전체 ${total}건 / 인정 ${counted}건` : undefined}
+                    color={color as any}
+                  />
+                </div>
               );
             })}
           </div>
