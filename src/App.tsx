@@ -62,6 +62,14 @@ import TrashPage from "./pages/TrashPage.tsx";
 import SmsTemplatePage from "./pages/SmsTemplatePage.tsx";
 import SalesAnalyticsPage from "./pages/SalesAnalyticsPage.tsx";
 import { LeadsRealtimeNotifier } from "./components/leads/LeadsRealtimeNotifier.tsx";
+// 영업 활동 리포트 — 1단계 신규 독립 카테고리
+import MyWorkDashboard from "./pages/work-report/MyWorkDashboard.tsx";
+import TeamWorkDashboard from "./pages/work-report/TeamWorkDashboard.tsx";
+import DailyWorkReport from "./pages/work-report/DailyWorkReport.tsx";
+import ActivityLogs from "./pages/work-report/ActivityLogs.tsx";
+import ProgressDelay from "./pages/work-report/ProgressDelay.tsx";
+import IncentiveDashboard from "./pages/work-report/IncentiveDashboard.tsx";
+import ReportSettings from "./pages/work-report/ReportSettings.tsx";
 
 const queryClient = new QueryClient();
 
@@ -175,6 +183,14 @@ const App = () => {
                         <Route path="/trash" element={<AdminOnlyRoute><TrashPage /></AdminOnlyRoute>} />
                         <Route path="/sms-templates" element={<AdminOnlyRoute><SmsTemplatePage /></AdminOnlyRoute>} />
                         <Route path="/sales-analytics" element={<AdminOnlyRoute><SalesAnalyticsPage /></AdminOnlyRoute>} />
+                        {/* 영업 활동 리포트 — 신규 독립 카테고리 (1단계: mock data 레이아웃) */}
+                        <Route path="/work-report/my-dashboard" element={<MyWorkDashboard />} />
+                        <Route path="/work-report/team-dashboard" element={<TeamWorkDashboard />} />
+                        <Route path="/work-report/daily-report" element={<DailyWorkReport />} />
+                        <Route path="/work-report/activity-logs" element={<ActivityLogs />} />
+                        <Route path="/work-report/progress-delay" element={<ProgressDelay />} />
+                        <Route path="/work-report/incentive" element={<IncentiveDashboard />} />
+                        <Route path="/work-report/settings" element={<AdminOnlyRoute><ReportSettings /></AdminOnlyRoute>} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </AppShell>
