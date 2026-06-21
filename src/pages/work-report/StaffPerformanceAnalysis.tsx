@@ -179,10 +179,12 @@ export default function StaffPerformanceAnalysis() {
                 <div key={key}
                   onClick={() => val > 0 && openDetail({
                     title: `${label} 상세 ${selStaff ? `· ${staffRows.find(r=>r.staff_id===selStaff)?.staff_name}` : ''} ${selChannel ? `· ${selChannel}` : ''}`,
-                    dateFrom: from, dateTo: to,
+                    dateFrom: key === 'pending_leads' ? '2020-01-01' : from,
+                    dateTo: to,
                     sourceType: source === 'activity' ? 'activity' : source === 'sales' ? 'sales' : 'leads',
                     actionTypes: actions as any,
                     staffId: selStaff || undefined,
+                    statusFilter: key === 'pending_leads' ? ['신규 접수','신규접수','접수','대기','상담전','미처리'] : undefined,
                   })}
                   className={`bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center ${val > 0 ? 'cursor-pointer hover:shadow-md hover:border-pink-200' : ''} transition-all`}>
                   <div className={`text-2xl font-bold ${color}`}>{val}</div>
@@ -263,10 +265,12 @@ export default function StaffPerformanceAnalysis() {
                       <td key={label} className="py-3 px-3 text-right">
                         <button onClick={() => val > 0 && openDetail({
                           title: `${r.staff_name} · ${label}`,
-                          dateFrom: from, dateTo: to,
+                          dateFrom: label === '미처리' ? '2020-01-01' : from,
+                          dateTo: to,
                           sourceType: src === 'activity' ? 'activity' : src === 'sales' ? 'sales' : 'leads',
                           actionTypes: actions as any,
                           staffId: r.staff_id,
+                          statusFilter: label === '미처리' ? ['신규 접수','신규접수','접수','대기','상담전','미처리'] : undefined,
                         })} className={`${cls} ${val > 0 ? 'hover:underline cursor-pointer' : 'cursor-default'}`}>{val}</button>
                       </td>
                     ))}
