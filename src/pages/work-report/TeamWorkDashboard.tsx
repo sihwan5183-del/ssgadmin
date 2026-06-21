@@ -6,6 +6,7 @@ import { RefreshCw, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRole } from '@/hooks/useRole';
+import { getTeamNewLeadsSummary } from '@/services/workReport/newLeadsService';
 import { WorkReportHeader, SectionCard, FilterButtons, WRBadge } from './_shared';
 import {
   getTeamWorkDashboardData,
@@ -39,6 +40,7 @@ export default function TeamWorkDashboard() {
   const [staffRows, setStaffRows] = useState<ReturnType<typeof aggregateByStaff>>([]);
   const [totalAgg, setTotalAgg] = useState<ReturnType<typeof aggregateByAction> | null>(null);
   const [nameMap, setNameMap] = useState<Map<string, string>>(new Map());
+  const [newSummary, setNewSummary] = useState<{ today_new: number; pending_new: number; by_channel: Record<string, number> } | null>(null);
 
   const load = useCallback(async () => {
     if (!user || roleLoading) return;
@@ -49,6 +51,16 @@ export default function TeamWorkDashboard() {
       setTotalAgg(aggregateByAction(logs));
       const rows = aggregateByStaff(logs);
       setStaffRows(rows);
+      // 신규건 요약
+      const { from } = (() => {
+        const today = new Date();
+        const fmt = (d: Date) => d.toISOString().split('T')[0];
+        if (period === '오늘') return { from: fmt(today) };
+        if (period === '이번주') { const m = new Date(today); m.setDate(today.getDate() - ((today.getDay() + 6) % 7)); return { from: fmt(m) }; }
+        return { from: fmt(new Date(today.getFullYear(), today.getMonth(), 1)) };
+      })();
+      const newSum = await getTeamNewLeadsSummary(from, canViewAll, user.id);
+      setNewSummary(newSum);
       // 담당자 표시명 일괄 조회
       const staffIds = rows.map((r) => r.staff_id);
       if (staffIds.length > 0) {
@@ -98,6 +110,26 @@ export default function TeamWorkDashboard() {
           <AlertTriangle className="size-3.5 shrink-0" />
           팀 업무 현황은 관리자/팀장만 전체 조회 가능합니다. 본인 데이터만 표시됩니다.
         </div>
+      )}
+
+      {/* 신규 접수 현황 */}
+      {newSummary && (
+        <SectionCard title="신규 접수 현황">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+            {[
+              { label: '오늘 신규 접수', value: newSummary.today_new, color: 'text-blue-600' },
+              { label: '미처리 신규건', value: newSummary.pending_new, color: 'text-red-500' },
+              { label: '메타', value: newSummary.by_channel['meta'] ?? 0, color: 'text-pink-600' },
+              { label: '도그마루', value: newSummary.by_channel['dogmaru'] ?? 0, color: 'text-blue-500' },
+              { label: '유닥', value: newSummary.by_channel['udak'] ?? 0, color: 'text-purple-600' },
+            ].map((s) => (
+              <div key={s.label} className="bg-gray-50 rounded-xl border border-gray-100 p-4 text-center">
+                <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+                <div className="text-xs text-gray-400 mt-1">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
       )}
 
       {/* 전체 요약 */}

@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { WorkReportHeader, KpiCard, SectionCard, FilterButtons } from './_shared';
 import { getMyWorkDashboardData, aggregateByAction } from '@/services/workReport/workReportService';
+import { getMyNewLeadsSummary, getMyPendingNewLeads, type NewLeadItem, type NewLeadsSummary } from '@/services/workReport/newLeadsService';
 import { resolveStaffDisplayName } from '@/services/workReport/staffDisplayService';
 import { ACTION_TYPE_LABEL } from '@/types/workReport';
 
@@ -54,6 +55,8 @@ export default function MyWorkDashboard() {
   const [agg, setAgg] = useState<ReturnType<typeof aggregateByAction> | null>(null);
   const [totalLogs, setTotalLogs] = useState(0);
   const [displayName, setDisplayName] = useState<string>('');
+  const [newSummary, setNewSummary] = useState<NewLeadsSummary | null>(null);
+  const [pendingLeads, setPendingLeads] = useState<NewLeadItem[]>([]);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -66,6 +69,14 @@ export default function MyWorkDashboard() {
       // 본인 표시명 조회
       const name = await resolveStaffDisplayName(user.id, user.email ?? '');
       setDisplayName(name);
+      // 신규건 / 미처리 신규건 조회
+      const { from } = getDateRange(period);
+      const [newSum, pending] = await Promise.all([
+        getMyNewLeadsSummary(user.id, from),
+        getMyPendingNewLeads(user.id),
+      ]);
+      setNewSummary(newSum);
+      setPendingLeads(pending);
     } catch (e: any) {
       toast.error('데이터 조회 실패: ' + e.message);
     } finally {
@@ -147,6 +158,62 @@ export default function MyWorkDashboard() {
           </div>
         )}
       </SectionCard>
+
+      {/* 신규 접수건 요약 카드 */}
+      <SectionCard title="신규 접수 현황">
+        <div className="grid grid-cols-3 gap-4">
+          {[
+            { label: '오늘 신규 접수', value: newSummary?.today_new ?? 0, color: 'text-blue-600' },
+            { label: '미처리 신규건', value: newSummary?.pending_new ?? 0, color: 'text-red-500' },
+            { label: '오늘 배정건', value: newSummary?.today_assigned ?? 0, color: 'text-green-600' },
+          ].map((s) => (
+            <div key={s.label} className="bg-gray-50 rounded-xl border border-gray-100 p-4 text-center">
+              <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+              <div className="text-xs text-gray-400 mt-1">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+
+      {/* 미처리 신규건 리스트 */}
+      {pendingLeads.length > 0 && (
+        <SectionCard title={`내 미처리 신규건 (${pendingLeads.length}건)`}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-gray-400 border-b border-gray-100">
+                  {['접수시간', '고객명', '채널', '상태', '경과'].map((h) => (
+                    <th key={h} className="py-2 px-3 font-medium text-left">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {pendingLeads.map((lead) => (
+                  <tr key={lead.id} className="hover:bg-gray-50">
+                    <td className="py-2.5 px-3 text-xs text-gray-400 whitespace-nowrap font-mono">
+                      {new Date(lead.created_at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })}
+                      {' '}
+                      {new Date(lead.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                    </td>
+                    <td className="py-2.5 px-3 font-medium text-gray-800">{lead.customer_name_masked}</td>
+                    <td className="py-2.5 px-3">
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        lead.channel === 'dogmaru' ? 'bg-blue-100 text-blue-700' :
+                        lead.channel === 'udak' ? 'bg-purple-100 text-purple-700' :
+                        'bg-pink-100 text-pink-700'
+                      }`}>
+                        {lead.channel === 'dogmaru' ? '도그마루' : lead.channel === 'udak' ? '유닥' : '메타'}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 text-xs text-blue-600 font-medium">{lead.status}</td>
+                    <td className="py-2.5 px-3 text-xs text-orange-500 font-medium">{lead.elapsed}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </SectionCard>
+      )}
 
       {/* 3구역: 총 로그 통계 */}
       <SectionCard title="활동 통계">
