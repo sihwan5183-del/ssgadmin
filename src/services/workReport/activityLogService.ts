@@ -192,7 +192,6 @@ export async function cancelActivityLog({
     .update({
       is_counted: false,
       not_counted_reason: reason,
-      updated_at: new Date().toISOString(),
     })
     .eq('id', logId);
   if (error) throw error;

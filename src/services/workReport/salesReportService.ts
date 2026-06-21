@@ -17,6 +17,11 @@ export function productBucket(
   return '기타';
 }
 
+// UUID인지 판단
+function isUUID(s: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(s);
+}
+
 // 완료 상태 판단 (랭킹과 동일: 개통완료/설치완료/변경완료/택배발송/청약완료)
 const COMPLETED_STATUSES = ['개통완료','설치완료','변경완료(업셀용)','택배발송','청약완료'];
 function isCompleted(status: string | null): boolean {
