@@ -127,13 +127,15 @@ export function LogDetailModal({
       try {
         if (filter.sourceType === 'leads') {
           // 신규접수/미처리 → leads 테이블
+          const { start: lStart, end: lEnd } = getKstDateRangeUtc(filter.dateFrom, filter.dateTo);
           let q = supabase
             .from('leads')
-            .select('id, created_at, customer_name, channel, campaign_name, status, assigned_to, profiles!left(display_name)')
-            .gte('created_at', (() => { const {start} = getKstDateRangeUtc(filter.dateFrom, filter.dateTo); return start; })())
-            .lte('created_at', (() => { const {end} = getKstDateRangeUtc(filter.dateFrom, filter.dateTo); return end; })())
+            .select('id, created_at, customer_name, channel, campaign_name, status, assigned_to')
+            .gte('created_at', lStart)
+            .lte('created_at', lEnd)
             .is('deleted_at', null)
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false })
+            .limit(200);
 
           if (filter.statusFilter && filter.statusFilter.length > 0) {
             q = q.in('status', filter.statusFilter);
@@ -142,15 +144,26 @@ export function LogDetailModal({
             q = q.eq('assigned_to', filter.staffId);
           }
 
-          const { data } = await q;
-          setLeadsRows((data ?? []).map((r: any) => ({
+          const { data: leadsData, error: leadsError } = await q;
+          if (leadsError) throw leadsError;
+
+          // assigned_to → display_name 별도 조회 (join 없이)
+          const assignedIds = [...new Set((leadsData ?? []).map((r: any) => r.assigned_to).filter(Boolean))];
+          const assignedNameMap = new Map<string, string>();
+          if (assignedIds.length > 0) {
+            const { data: profs } = await supabase.from('profiles')
+              .select('user_id, display_name').in('user_id', assignedIds);
+            (profs ?? []).forEach((p: any) => assignedNameMap.set(p.user_id, p.display_name ?? ''));
+          }
+
+          setLeadsRows((leadsData ?? []).map((r: any) => ({
             id: r.id,
             created_at: r.created_at,
             customer_name: r.customer_name,
             channel: r.channel,
             campaign_name: r.campaign_name,
             status: r.status,
-            assigned_name: r.profiles?.display_name ?? '미배정',
+            assigned_name: assignedNameMap.get(r.assigned_to) ?? '미배정',
           })));
         } else if (filter.sourceType === 'sales') {
           // sales 테이블 — open_date는 YYYY-MM-DD 타입이므로 KST 변환 없이 직접 사용
