@@ -164,7 +164,7 @@ export function LogDetailModal({
             .select('id, open_date, manager, customer_name, product, status, channel')
             .gte('open_date', start).lte('open_date', end)
             .is('deleted_at', null)
-            .in('status', ['개통완료','설치완료','변경완료(업셀용)','택배발송','청약완료'])
+            .in('status', ['개통완료'])
             .order('open_date', { ascending: false }).limit(100);
           if (filter.staffId) {
             // manager 필드 — 이름 기준으로 매핑 필요 (profiles에서 조회)

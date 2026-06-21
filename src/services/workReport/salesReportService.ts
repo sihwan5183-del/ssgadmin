@@ -22,11 +22,18 @@ function isUUID(s: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(s);
 }
 
-// 완료 상태 판단 (랭킹과 동일: 개통완료/설치완료/변경완료/택배발송/청약완료)
-const COMPLETED_STATUSES = ['개통완료','설치완료','변경완료(업셀용)','택배발송','청약완료'];
+// 모바일 개통완료 기준 — 판매랭킹과 동일하게 "개통완료"만
+const COUNTED_OPEN_STATUSES = ['개통완료'];
+// 인터넷 설치완료 기준 (인센 지급률 계산용)
+const INSTALL_STATUSES = ['설치완료'];
+
 function isCompleted(status: string | null): boolean {
   if (!status) return false;
-  return COMPLETED_STATUSES.some((s) => status.includes(s));
+  return COUNTED_OPEN_STATUSES.includes(status);
+}
+function isInstalled(status: string | null): boolean {
+  if (!status) return false;
+  return INSTALL_STATUSES.includes(status);
 }
 
 // 취소 상태 판단
@@ -57,6 +64,7 @@ export interface SalesSummaryItem {
   // 분류
   bucket: '모바일' | '인터넷' | 'TV프리' | '스마트홈' | '기타';
   isCompleted: boolean;
+  isInstalled: boolean;
   isCancelled: boolean;
 }
 
@@ -93,6 +101,7 @@ export async function getSalesByMonth(month: string): Promise<SalesSummaryItem[]
     ...r,
     bucket: productBucket(r.product),
     isCompleted: isCompleted(r.status),
+    isInstalled: isInstalled(r.status),
     isCancelled: isCancelled(r.status),
   }));
 }
@@ -139,8 +148,8 @@ export async function getStaffIncentiveSummary(
     }
     const m = map.get(mgr)!;
     m.total++;
-    if (s.bucket === '모바일' && s.isCompleted) m.mobile++;
-    if (s.bucket === '인터넷' && s.isCompleted) m.internet++;
+    if (s.bucket === '모바일' && s.isCompleted) m.mobile++;        // 개통완료만
+    if (s.bucket === '인터넷' && isInstalled(s.status)) m.internet++;  // 설치완료만
     if (s.bucket === 'TV프리') m.tvfree++;
     if (s.bucket === '스마트홈') m.smarthome++;
     if (s.bucket === '기타') m.other++;

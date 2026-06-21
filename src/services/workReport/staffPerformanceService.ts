@@ -39,7 +39,12 @@ export interface PerfFilters {
 }
 
 const PENDING_STATUSES = ['신규 접수', '신규접수', '접수', '대기', '상담전', '미처리'];
-const COMPLETED_STATUSES = ['개통완료', '설치완료', '변경완료(업셀용)', '택배발송', '청약완료'];
+// 개통완료 기준 — 판매랭킹과 동일하게 "개통완료"만
+const COUNTED_OPEN_STATUSES = ['개통완료'];
+// 진행/후속 상태 (개통완료 집계에 포함하지 않음)
+const PROGRESS_STATUSES = ['택배발송', '청약완료'];
+const INSTALL_STATUSES  = ['설치완료'];
+const CHANGE_STATUSES   = ['변경완료(업셀용)'];
 
 // UUID 판단
 function isUUID(s: string): boolean {
@@ -89,7 +94,7 @@ export async function getKpiSummary(
     .is('deleted_at', null);
   const { data: sales } = await sq;
   const activated = (sales ?? []).filter((s: any) =>
-    COMPLETED_STATUSES.includes(s.status ?? '')
+    COUNTED_OPEN_STATUSES.includes(s.status ?? '')
   ).length;
 
   return {
@@ -145,7 +150,7 @@ export async function getStaffWorkSummary(
   const salesDeduped: { staffId: string; }[] = [];
   for (const s of (salesRaw ?? [])) {
     if (!s.manager) continue;
-    if (!COMPLETED_STATUSES.includes(s.status ?? '')) continue;
+    if (!COUNTED_OPEN_STATUSES.includes(s.status ?? '')) continue;
     if (seenSalesIds.has(s.id)) continue;
     seenSalesIds.add(s.id);
 
