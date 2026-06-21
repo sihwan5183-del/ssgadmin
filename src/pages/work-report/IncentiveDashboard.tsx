@@ -1,6 +1,6 @@
 // ============================================================
-// 인센 예상 — 실제 데이터 연결 (권한별 조회)
-// 관리자: 전체 / 팀장·직원: 본인만
+// 인센 예상 — sales 테이블 기준 (activity_logs 미사용)
+// 모바일 50건↑ × 20,000원 × 인터넷 설치 지급률
 // ============================================================
 import { useState, useEffect, useCallback } from 'react';
 import { RefreshCw } from 'lucide-react';
@@ -9,12 +9,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRole } from '@/hooks/useRole';
 import { WorkReportHeader, SectionCard } from './_shared';
 import {
-  fetchIncentivePolicies,
-  getIncentiveResults,
-  type IncentivePolicy,
-  type IncentiveResult,
-} from '@/services/workReport/incentiveService';
-import { resolveStaffDisplayNames } from '@/services/workReport/staffDisplayService';
+  getSalesDetailsByStaff,
+  getSalesChannelSummary,
+  calcIncentiveFromSales,
+  type StaffSalesSummary,
+  type SalesChannelSummary,
+} from '@/services/workReport/salesReportService';
 
 export default function IncentiveDashboard() {
   const { user } = useAuth();
@@ -23,23 +23,26 @@ export default function IncentiveDashboard() {
   const currentMonth = new Date().toISOString().slice(0, 7);
   const [applyMonth, setApplyMonth] = useState(currentMonth);
   const [loading, setLoading] = useState(false);
-  const [policies, setPolicies] = useState<IncentivePolicy[]>([]);
-  const [results, setResults] = useState<IncentiveResult[]>([]);
+  const [staffSummaries, setStaffSummaries] = useState<StaffSalesSummary[]>([]);
+  const [channelSummaries, setChannelSummaries] = useState<SalesChannelSummary[]>([]);
 
   const load = useCallback(async () => {
-    if (!user) return;
+    if (!user || roleLoading) return;
     setLoading(true);
     try {
-      const [pol, res] = await Promise.all([
-        fetchIncentivePolicies(applyMonth),
-        getIncentiveResults(applyMonth, user.id, isAdmin),
+      const [staff, channels] = await Promise.all([
+        getSalesDetailsByStaff(applyMonth),
+        getSalesChannelSummary(applyMonth),
       ]);
-      setPolicies(pol);
-
-      // 표시명 보정
-      const staffIds = res.map((r) => r.staff_id);
-      const nameMap = staffIds.length > 0 ? await resolveStaffDisplayNames(staffIds) : new Map();
-      setResults(res.map((r) => ({ ...r, display_name: nameMap.get(r.staff_id) ?? r.staff_name })));
+      // 직원 필터 — 관리자: 전체 / 직원: 본인만
+      if (isAdmin) {
+        setStaffSummaries(staff);
+      } else {
+        // 본인 이름으로 필터 (manager 필드가 이름 기준)
+        const myName = user.user_metadata?.display_name ?? '';
+        setStaffSummaries(staff.filter((s) => s.manager === myName));
+      }
+      setChannelSummaries(channels);
     } catch (e: any) {
       toast.error('데이터 조회 실패: ' + e.message);
     } finally {
@@ -51,14 +54,16 @@ export default function IncentiveDashboard() {
     if (!roleLoading) load();
   }, [roleLoading, load]);
 
-  const totalEstimated = results.reduce((s, r) => s + r.estimated_amount, 0);
-  const totalConfirmed = results.reduce((s, r) => s + r.settlement_confirmed, 0);
+  // 팀 전체 합산
+  const totalMobile = staffSummaries.reduce((s, r) => s + r.mobile_completed, 0);
+  const totalInternet = staffSummaries.reduce((s, r) => s + r.internet_installed, 0);
+  const { finalIncentive: totalIncentive, mobileConditionMet, payoutRate } = calcIncentiveFromSales(totalMobile, totalInternet);
 
   return (
     <div className="space-y-5">
       <WorkReportHeader
         title="인센 예상"
-        description={isAdmin ? '전체 직원 예상 인센을 확인합니다.' : '본인 예상 인센을 확인합니다.'}
+        description="판매실적장표(sales) 기준 개통완료/설치완료 건수로 계산합니다."
         rightSlot={
           <>
             <input
@@ -77,99 +82,108 @@ export default function IncentiveDashboard() {
         }
       />
 
-      {/* 정책 카드 */}
-      <SectionCard title={`인센 정책 — ${applyMonth}`}>
-        {policies.length === 0 ? (
-          <p className="text-sm text-gray-400 py-2">
-            {applyMonth} 인센 정책이 없습니다. 리포트 설정에서 정책을 먼저 입력해주세요.
-          </p>
-        ) : (
-          <div className="flex gap-3 flex-wrap">
-            {policies.map((pol) => {
-              const tierLabel = pol.range_end
-                ? `${pol.range_start}~${pol.range_end}건`
-                : `${pol.range_start}건 이상`;
-              return (
-                <div key={pol.id} className="bg-gradient-to-br from-pink-50 to-white border border-pink-200 rounded-xl px-6 py-4 text-center min-w-[140px]">
-                  <div className="text-xs text-pink-500 font-semibold mb-1">{tierLabel}</div>
-                  <div className="text-2xl font-bold text-pink-600">{pol.unit_price.toLocaleString()}원</div>
-                  <div className="text-[10px] text-gray-400 mt-0.5">건당 / {pol.product_type}</div>
-                </div>
-              );
-            })}
+      {/* 인센 정책 안내 */}
+      <SectionCard title="인센 정책 기준">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="bg-pink-50 border border-pink-200 rounded-xl p-4">
+            <div className="text-xs font-semibold text-pink-600 mb-2">📱 모바일 인센</div>
+            <div className="text-sm text-gray-700 space-y-1">
+              <div>• 정산확정 50건 이상 → 건당 <span className="font-bold text-pink-600">20,000원</span></div>
+              <div>• 정산확정 50건 미만 → <span className="font-bold text-gray-400">0원</span></div>
+            </div>
           </div>
-        )}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <div className="text-xs font-semibold text-blue-600 mb-2">🌐 인터넷 설치 지급률</div>
+            <div className="text-sm text-gray-700 space-y-1">
+              <div>• 당월 설치 0개 → <span className="font-bold text-red-500">0%</span></div>
+              <div>• 당월 설치 1개 → <span className="font-bold text-yellow-600">50%</span></div>
+              <div>• 당월 설치 2개 이상 → <span className="font-bold text-green-600">100%</span></div>
+            </div>
+          </div>
+        </div>
       </SectionCard>
 
-      {/* 전체 요약 (관리자만) */}
+      {/* 팀 전체 요약 (관리자만) */}
       {isAdmin && (
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center">
-            <div className="text-xs text-gray-400 mb-1">총 정산확정</div>
-            <div className="text-2xl font-bold text-gray-900">{totalConfirmed}건</div>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center">
-            <div className="text-xs text-gray-400 mb-1">집계 직원 수</div>
-            <div className="text-2xl font-bold text-blue-600">{results.length}명</div>
-          </div>
-          <div className="bg-pink-50 rounded-xl border border-pink-200 shadow-sm p-4 text-center">
-            <div className="text-xs text-pink-400 mb-1">팀 전체 예상 인센</div>
-            <div className="text-2xl font-bold text-pink-600">{totalEstimated.toLocaleString()}원</div>
-          </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { label: '모바일 개통완료', value: `${totalMobile}건`, color: 'text-pink-600', sub: mobileConditionMet ? '✅ 50건 충족' : `❌ ${50 - totalMobile}건 부족` },
+            { label: '인터넷 설치완료', value: `${totalInternet}건`, color: 'text-blue-600', sub: `지급률 ${Math.round(payoutRate * 100)}%` },
+            { label: '기본 인센 (모바일)', value: mobileConditionMet ? `${(totalMobile * 20000).toLocaleString()}원` : '0원', color: 'text-gray-700', sub: '인터넷 반영 전' },
+            { label: '최종 예상 인센', value: `${totalIncentive.toLocaleString()}원`, color: 'text-pink-600', sub: `= 기본 × ${Math.round(payoutRate * 100)}%` },
+          ].map((s) => (
+            <div key={s.label} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center">
+              <div className="text-xs text-gray-400 mb-1">{s.label}</div>
+              <div className={`text-xl font-bold ${s.color}`}>{s.value}</div>
+              <div className="text-[11px] text-gray-400 mt-1">{s.sub}</div>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* 직원별 테이블 */}
-      <SectionCard title={isAdmin ? '직원별 인센 현황' : '내 인센 현황'}>
+      {/* 직원별 실적 */}
+      <SectionCard title={isAdmin ? '직원별 실적 현황' : '내 실적 현황'}>
         {loading ? (
           <div className="py-8 text-center text-sm text-gray-400">로딩 중...</div>
-        ) : results.length === 0 ? (
-          <div className="py-8 text-center text-sm text-gray-400">
-            {applyMonth} 활동 데이터가 없습니다.
-          </div>
+        ) : staffSummaries.length === 0 ? (
+          <div className="py-8 text-center text-sm text-gray-400">{applyMonth} 실적 데이터가 없습니다.</div>
         ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-xs text-gray-500 border-b border-gray-100 bg-gray-50">
-                    {['담당자', '상담성공', '개통완료', '정산확정', '정산대기', '적용구간', '단가', '예상인센'].map((h) => (
-                      <th key={h} className={`py-2.5 px-3 font-medium ${h === '담당자' ? 'text-left' : 'text-right'}`}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {results.map((r) => (
-                    <tr key={r.staff_id} className="hover:bg-gray-50 transition-colors">
-                      <td className="py-3 px-3 font-medium text-gray-800">{r.display_name}</td>
-                      <td className="py-3 px-3 text-right text-gray-600">{r.consult_success}</td>
-                      <td className="py-3 px-3 text-right text-gray-600">{r.activation_completed}</td>
-                      <td className="py-3 px-3 text-right font-bold text-green-600">{r.settlement_confirmed}</td>
-                      <td className="py-3 px-3 text-right text-blue-500">{r.pending_count}</td>
-                      <td className="py-3 px-3 text-right text-xs text-gray-500">{r.applied_tier}</td>
-                      <td className="py-3 px-3 text-right text-gray-700">{r.applied_unit_price.toLocaleString()}원</td>
-                      <td className="py-3 px-3 text-right font-bold text-pink-600">{r.estimated_amount.toLocaleString()}원</td>
-                    </tr>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-gray-500 border-b border-gray-100 bg-gray-50">
+                  {['담당자', '모바일 개통', '인터넷 설치', '모요 건수', '기본 인센', '지급률', '최종 예상'].map((h) => (
+                    <th key={h} className={`py-2.5 px-3 font-medium ${h === '담당자' ? 'text-left' : 'text-right'}`}>{h}</th>
                   ))}
-                </tbody>
-                {isAdmin && (
-                  <tfoot>
-                    <tr className="border-t-2 border-gray-200 bg-gray-50">
-                      <td className="py-3 px-3 font-bold text-gray-700" colSpan={7}>합계</td>
-                      <td className="py-3 px-3 text-right font-bold text-pink-600 text-base">
-                        {totalEstimated.toLocaleString()}원
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {staffSummaries.map((r) => {
+                  const { baseIncentive, payoutRate: pr, finalIncentive: fi, mobileConditionMet: met } = calcIncentiveFromSales(r.mobile_completed, r.internet_installed);
+                  return (
+                    <tr key={r.manager} className="hover:bg-gray-50 transition-colors">
+                      <td className="py-3 px-3 font-medium text-gray-800">{r.manager}</td>
+                      <td className="py-3 px-3 text-right">
+                        <span className={`font-bold ${met ? 'text-green-600' : 'text-gray-600'}`}>{r.mobile_completed}</span>
+                        {!met && <span className="text-[10px] text-red-400 ml-1">({50 - r.mobile_completed}↑)</span>}
+                      </td>
+                      <td className="py-3 px-3 text-right text-blue-600 font-semibold">{r.internet_installed}</td>
+                      <td className="py-3 px-3 text-right text-gray-500">{r.moyo_count}</td>
+                      <td className="py-3 px-3 text-right text-gray-600">{baseIncentive > 0 ? baseIncentive.toLocaleString() + '원' : '-'}</td>
+                      <td className="py-3 px-3 text-right">
+                        <span className={`font-semibold ${pr === 1 ? 'text-green-600' : pr === 0.5 ? 'text-yellow-600' : 'text-red-500'}`}>
+                          {Math.round(pr * 100)}%
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-right font-bold text-pink-600">
+                        {fi > 0 ? fi.toLocaleString() + '원' : '0원'}
                       </td>
                     </tr>
-                  </tfoot>
-                )}
-              </table>
-            </div>
-            <p className="text-[11px] text-gray-400 mt-3">
-              ※ 예상 인센은 정산확정 건 기준이며, 정산대기 건은 확정 전 참고 금액입니다.
-            </p>
-          </>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
+        <p className="text-[11px] text-gray-400 mt-3">
+          ※ 판매실적장표 기준 / 취소·반려 건 제외 / 개통완료·설치완료 건만 집계
+        </p>
       </SectionCard>
+
+      {/* 채널별 실적 (관리자만) */}
+      {isAdmin && channelSummaries.length > 0 && (
+        <SectionCard title="채널별 실적">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {channelSummaries.slice(0, 8).map((ch) => (
+              <div key={ch.channel} className="bg-gray-50 rounded-xl border border-gray-100 p-4 text-center">
+                <div className="text-xs text-gray-400 mb-1">{ch.channel}</div>
+                <div className="text-xl font-bold text-gray-800">{ch.completed}</div>
+                <div className="text-[10px] text-gray-400 mt-1">완료 / 전체 {ch.total}</div>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
     </div>
   );
 }
