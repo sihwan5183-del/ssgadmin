@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRole } from '@/hooks/useRole';
 import { WorkReportHeader, SectionCard, WRBadge } from './_shared';
+import { LogDetailModal, type LogDetailFilter } from './LogDetailModal';
 import { getProgressDelayData, type ProgressDelayItem, type ProgressDelaySummary } from '@/services/workReport/progressDelayService';
 
 const CHANNEL_OPTIONS = ['전체', 'meta', 'dogmaru', 'udak'];
@@ -35,6 +36,7 @@ export default function ProgressDelay() {
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<ProgressDelayItem[]>([]);
   const [summary, setSummary] = useState<ProgressDelaySummary | null>(null);
+  const [detailFilter, setDetailFilter] = useState<LogDetailFilter | null>(null);
 
   const load = useCallback(async () => {
     if (!user || roleLoading) return;
@@ -58,6 +60,10 @@ export default function ProgressDelay() {
 
   return (
     <div className="space-y-5">
+      {detailFilter && (
+        <LogDetailModal filter={detailFilter} onClose={() => setDetailFilter(null)} />
+      )}
+
       <WorkReportHeader
         title="진행/지연 관리"
         description="상담성공 → 택배발송 → 개통완료 → 정산확정 단계별 지연 건을 추적합니다."
@@ -84,12 +90,35 @@ export default function ProgressDelay() {
 
       {/* 상단 요약 카드 */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        {SUMMARY_CARDS.map(({ key, label, color }) => (
-          <div key={key} className={`rounded-xl border p-4 text-center ${color}`}>
-            <div className="text-3xl font-bold">{summary?.[key] ?? 0}</div>
-            <div className="text-[11px] mt-1.5 leading-tight opacity-80">{label}</div>
-          </div>
-        ))}
+        {SUMMARY_CARDS.map(({ key, label, color }) => {
+          const val = summary?.[key] ?? 0;
+          const today = new Date().toISOString().split('T')[0];
+          const sixMonthsAgo = new Date(); sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+          const from = sixMonthsAgo.toISOString().split('T')[0];
+          const statusMap: Record<string, string[]> = {
+            consult_waiting_delivery: ['상담성공','상담중'],
+            delivery_waiting_opening: ['택배발송'],
+            opening_waiting_settlement: ['개통완료'],
+            overdue_opening: ['택배발송','개통완료'],
+            need_confirm: ['택배대기'],
+          };
+          return (
+            <div
+              key={key}
+              onClick={() => val > 0 && setDetailFilter({
+                title: label,
+                dateFrom: from,
+                dateTo: today,
+                sourceType: 'leads',
+                statusFilter: statusMap[key],
+              })}
+              className={`rounded-xl border p-4 text-center ${color} ${val > 0 ? 'cursor-pointer hover:shadow-md' : ''} transition-all`}
+            >
+              <div className="text-3xl font-bold">{val}</div>
+              <div className="text-[11px] mt-1.5 leading-tight opacity-80">{label}</div>
+            </div>
+          );
+        })}
       </div>
 
       {/* 지연 기준 안내 */}

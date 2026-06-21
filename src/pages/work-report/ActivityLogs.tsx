@@ -261,8 +261,8 @@ export default function ActivityLogs() {
       const effectiveFilter = {
         ...filter,
         staffId: canViewAll ? (filter.staffId || undefined) : (user?.id ?? ''),
-        // anomalyOnly와 isCounted 중복 방지
         isCounted: filter.anomalyOnly ? false : filter.isCounted,
+        anomalyOnly: false, // fetchActivityLogs 내부에서 isCounted로 이미 처리
       };
       const data = await fetchActivityLogs(effectiveFilter);
       setLogs(data);
