@@ -1542,13 +1542,18 @@ export default function LeadsPage() {
     });
 
     // 영업 활동 리포트용 activity_logs INSERT (신규 — 기존 기능에 영향 없음)
-    const previousStatus = rows.find((r) => r.id === id)?.status ?? null;
+    const currentRow = rows.find((r) => r.id === id);
+    const previousStatus = currentRow?.status ?? null;
+    const rowChannel = currentRow?.channel === "유닥" ? "udak"
+      : currentRow?.campaign_name === "도그마루_홈캠" ? "dogmaru"
+      : "meta";
     await logLeadStatusChange({
       leadId: id,
       staffId: user?.id ?? changedBy,
       staffName: changedBy,
       previousStatus,
       nextStatus: status,
+      channel: rowChannel,
     });
 
     setRows((p) => p.map((r) => (r.id === id ? { ...r, ...updateData } : r)));

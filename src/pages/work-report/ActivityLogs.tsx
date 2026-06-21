@@ -294,7 +294,7 @@ export default function ActivityLogs() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-xs text-gray-500 border-b border-gray-100 bg-gray-50">
-                  {['시간', '담당자', '고객(lead_id)', '행동유형', '결과', '이전상태', '변경상태', '인정여부', '미인정 사유', '메모'].map((h) => (
+                  {['시간', '담당자', '채널', '고객(lead_id)', '행동유형', '결과', '이전상태', '변경상태', '인정여부', '미인정 사유', '메모'].map((h) => (
                     <th key={h} className="py-2.5 px-3 font-medium text-left whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -317,6 +317,16 @@ export default function ActivityLogs() {
                         <div>{timeStr}</div>
                       </td>
                       <td className="py-2.5 px-3 font-medium text-gray-800 whitespace-nowrap">{log.staff_name}</td>
+                      <td className="py-2.5 px-3 whitespace-nowrap">
+                        {log.channel ? (
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                            log.channel === 'dogmaru' ? 'bg-blue-100 text-blue-700' :
+                            log.channel === 'udak' ? 'bg-purple-100 text-purple-700' :
+                            log.channel === 'meta' ? 'bg-pink-100 text-pink-700' :
+                            'bg-gray-100 text-gray-500'
+                          }`}>{log.channel}</span>
+                        ) : <span className="text-gray-300 text-xs">-</span>}
+                      </td>
                       <td className="py-2.5 px-3 text-gray-500 text-xs whitespace-nowrap">
                         {log.customer_name
                           ? <span className="text-gray-700">{log.customer_name}</span>
