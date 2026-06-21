@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRole } from '@/hooks/useRole';
 import { resolveStaffDisplayNames, normalizeStaffName } from '@/services/workReport/staffDisplayService';
 import { WorkReportHeader, SectionCard, WRBadge } from './_shared';
+import { getKstTodayString } from '@/services/workReport/dateUtils';
 import {
   fetchActivityLogs,
   insertActivityLog,
@@ -243,10 +244,9 @@ export default function ActivityLogs() {
   const [cancelLogId, setCancelLogId] = useState<string | null>(null);
   const [nameMap, setNameMap] = useState<Map<string, string>>(new Map());
 
-  const today = new Date().toISOString().split('T')[0];
   const [filter, setFilter] = useState<ActivityLogFilter>({
-    dateFrom: today,
-    dateTo: today,
+    dateFrom: getKstTodayString(),
+    dateTo: getKstTodayString(),
     staffId: '',
     actionType: '',
     isCounted: null,
@@ -277,9 +277,13 @@ export default function ActivityLogs() {
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, [filter, canViewAll]);
 
-  useEffect(() => { if (user && !roleLoading) load(); }, [load, user, roleLoading]);
+  useEffect(() => {
+    if (roleLoading) return;
+    if (!user) return;
+    load();
+  }, [load, roleLoading, user]);
 
   const totalCount = logs.length;
   const countedCount = logs.filter((l) => l.is_counted).length;

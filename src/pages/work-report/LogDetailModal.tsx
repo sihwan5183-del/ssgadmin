@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ACTION_TYPE_LABEL, type ActivityActionType } from '@/types/workReport';
 import { maskCustomerName } from '@/services/workReport/reportFormatService';
 import { cancelActivityLog } from '@/services/workReport/activityLogService';
+import { getKstDateRangeUtc } from '@/services/workReport/dateUtils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRole } from '@/hooks/useRole';
 import { toast } from 'sonner';
@@ -129,8 +130,8 @@ export function LogDetailModal({
           let q = supabase
             .from('leads')
             .select('id, created_at, customer_name, channel, campaign_name, status, assigned_to, profiles!left(display_name)')
-            .gte('created_at', `${filter.dateFrom}T00:00:00`)
-            .lte('created_at', `${filter.dateTo}T23:59:59`)
+            .gte('created_at', (() => { const {start} = getKstDateRangeUtc(filter.dateFrom, filter.dateTo); return start; })())
+            .lte('created_at', (() => { const {end} = getKstDateRangeUtc(filter.dateFrom, filter.dateTo); return end; })())
             .is('deleted_at', null)
             .order('created_at', { ascending: false });
 
@@ -169,7 +170,7 @@ export function LogDetailModal({
             // manager 필드 — 이름 기준으로 매핑 필요 (profiles에서 조회)
             const { data: profile } = await supabase.from('profiles')
               .select('display_name').eq('user_id', filter.staffId).single();
-            if (profile?.display_name) q = q.eq('manager', profile.display_name);
+            if (profile?.display_name) { q = q.or(`manager.eq.${profile.display_name},manager.eq.${filter.staffId}`); }
           }
           const { data } = await q;
           setSalesRows((data ?? []) as SalesRow[]);
@@ -178,8 +179,8 @@ export function LogDetailModal({
           let q = supabase
             .from('activity_logs')
             .select('id, lead_id, staff_id, staff_name, channel, action_type, previous_status, next_status, memo, fail_reason, is_counted, not_counted_reason, created_at')
-            .gte('created_at', `${filter.dateFrom}T00:00:00`)
-            .lte('created_at', `${filter.dateTo}T23:59:59`)
+            .gte('created_at', (() => { const {start} = getKstDateRangeUtc(filter.dateFrom, filter.dateTo); return start; })())
+            .lte('created_at', (() => { const {end} = getKstDateRangeUtc(filter.dateFrom, filter.dateTo); return end; })())
             .order('created_at', { ascending: false });
 
           if (filter.actionTypes && filter.actionTypes.length > 0) {

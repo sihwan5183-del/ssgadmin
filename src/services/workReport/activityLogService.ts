@@ -1,16 +1,14 @@
 // ============================================================
 // activityLogService — activity_logs CRUD
-// work-report 모듈 전용. 기존 페이지 로직 미사용.
 // ============================================================
 import { supabase } from '@/integrations/supabase/client';
-import type {
-  ActivityLog,
-  ActivityLogInsert,
-  ActivityLogWithLead,
-  ActivityLogFilter,
+import { getKstDateRangeUtc } from './dateUtils';
+import {
+  type ActivityLogInsert,
+  type ActivityLogFilter,
+  type ActivityLogWithLead,
 } from '@/types/workReport';
 
-// ── 조회 ──────────────────────────────────────────────────
 export async function fetchActivityLogs(
   filter: ActivityLogFilter = {}
 ): Promise<ActivityLogWithLead[]> {
@@ -25,12 +23,17 @@ export async function fetchActivityLogs(
     .order('created_at', { ascending: false })
     .limit(200);
 
-  if (filter.dateFrom) {
-    query = query.gte('created_at', `${filter.dateFrom}T00:00:00`);
+  if (filter.dateFrom && filter.dateTo) {
+    const { start, end } = getKstDateRangeUtc(filter.dateFrom, filter.dateTo);
+    query = query.gte('created_at', start).lte('created_at', end);
+  } else if (filter.dateFrom) {
+    const { start } = getKstDateRangeUtc(filter.dateFrom, filter.dateFrom);
+    query = query.gte('created_at', start);
+  } else if (filter.dateTo) {
+    const { end } = getKstDateRangeUtc(filter.dateTo, filter.dateTo);
+    query = query.lte('created_at', end);
   }
-  if (filter.dateTo) {
-    query = query.lte('created_at', `${filter.dateTo}T23:59:59`);
-  }
+
   if (filter.staffId) {
     query = query.eq('staff_id', filter.staffId);
   }
@@ -49,132 +52,71 @@ export async function fetchActivityLogs(
   return (data ?? []).map((row: any) => ({
     ...row,
     customer_name: row.leads?.customer_name ?? null,
-    leads: undefined,
-  })) as ActivityLogWithLead[];
+  }));
 }
 
-// ── 단건 조회 ─────────────────────────────────────────────
-export async function fetchActivityLogById(id: string): Promise<ActivityLog | null> {
-  const { data, error } = await supabase
-    .from('activity_logs')
-    .select('*')
-    .eq('id', id)
-    .single();
-  if (error) return null;
-  return data as ActivityLog;
-}
-
-// ── 저장 ──────────────────────────────────────────────────
+// ── 로그 삽입 ────────────────────────────────────────────────
 export async function insertActivityLog(
   payload: ActivityLogInsert
-): Promise<ActivityLog> {
-  const { data, error } = await supabase
-    .from('activity_logs')
-    .insert(payload)
-    .select()
-    .single();
+): Promise<void> {
+  const { error } = await supabase.from('activity_logs').insert(payload);
   if (error) throw error;
-  return data as ActivityLog;
 }
 
-// ── 수정 (정정 로그 방식 — 삭제 금지) ───────────────────
-export async function correctActivityLog(
-  originalId: string,
-  correction: Partial<ActivityLogInsert>,
-  correctedBy: string
-): Promise<ActivityLog> {
-  // 원본 조회
-  const original = await fetchActivityLogById(originalId);
-  if (!original) throw new Error('원본 로그를 찾을 수 없습니다.');
+// ── 통계 집계 (오늘 날짜 기준) ──────────────────────────────
+export async function getTodayLogStats(staffId?: string): Promise<{
+  total: number;
+  counted: number;
+  notCounted: number;
+}> {
+  const today = new Date();
+  const kst = new Date(today.getTime() + 9 * 60 * 60 * 1000);
+  const todayStr = kst.toISOString().slice(0, 10);
+  const { start, end } = getKstDateRangeUtc(todayStr, todayStr);
 
-  // 정정 로그 생성 (원본 ID 참조)
-  const correctionLog: ActivityLogInsert = {
-    ...original,
-    ...correction,
-    corrected_log_id: originalId,
-    is_counted: false, // 정정 로그는 카운트 제외
-    not_counted_reason: '정정 로그',
-    created_by: correctedBy,
-  };
-
-  return insertActivityLog(correctionLog);
-}
-
-// ── 집계: 오늘 직원별 요약 ────────────────────────────────
-export async function fetchTodaySummaryByStaff(staffId: string) {
-  const today = new Date().toISOString().split('T')[0];
-  const { data, error } = await supabase
+  let q = supabase
     .from('activity_logs')
     .select('action_type, is_counted')
-    .eq('staff_id', staffId)
-    .gte('created_at', `${today}T00:00:00`)
-    .lte('created_at', `${today}T23:59:59`);
+    .gte('created_at', start)
+    .lte('created_at', end);
+  if (staffId) q = q.eq('staff_id', staffId);
 
-  if (error) throw error;
-  return data ?? [];
-}
-
-// ── status → action_type 매핑 (LeadsPage용) ──────────────
-export function statusToActionType(status: string): string {
-  const map: Record<string, string> = {
-    '부재케어':   'absent',
-    '부재 중':    'absent',
-    '재케어':     'recare_registered',
-    '재케어완료': 'recare_completed',
-    '실패':       'failed',
-    '상담중':     'consultation_success',
-    '케어중':     'consultation_success',
-    '택배발송':   'delivery_sent',
-    '택배대기':   'delivery_ready',
-    '개통완료':   'activation_completed',
-    '개통 완료':  'activation_completed',
-    '정산확정':   'settlement_confirmed',
+  const { data } = await q;
+  const rows = data ?? [];
+  return {
+    total: rows.length,
+    counted: rows.filter((r: any) => r.is_counted).length,
+    notCounted: rows.filter((r: any) => !r.is_counted).length,
   };
-  return map[status] ?? 'call_attempt';
 }
 
-// ── LeadsPage updateStatus 전용 로그 저장 ────────────────
-export async function logLeadStatusChange({
-  leadId,
-  staffId,
-  staffName,
-  previousStatus,
-  nextStatus,
-  channel = null,
-}: {
-  leadId: string;
-  staffId: string;
-  staffName: string;
-  previousStatus: string | null;
-  nextStatus: string;
-  channel?: string | null;
-}): Promise<void> {
-  try {
-    await insertActivityLog({
-      lead_id: leadId,
-      sales_record_id: null,
-      staff_id: staffId,
-      staff_name: staffName,
-      store_id: null,
-      channel: channel,
-      action_type: statusToActionType(nextStatus) as any,
-      result_type: nextStatus,
-      previous_status: previousStatus,
-      next_status: nextStatus,
-      memo: null,
-      fail_reason: null,
-      next_action_at: null,
-      is_counted: true,
-      not_counted_reason: null,
-      corrected_log_id: null,
-      device_info: null,
-      ip_address: null,
-      created_by: staffId,
-    });
-  } catch (e) {
-    // 로그 저장 실패가 기존 기능을 막으면 안 됨 — 에러 무시
-    console.warn('[activity_logs] 로그 저장 실패 (무시):', e);
-  }
+// ── 정정 로그 삽입 ──────────────────────────────────────────
+export async function insertCorrectionLog(
+  original: ActivityLogWithLead,
+  correctedBy: string
+): Promise<void> {
+  const { error } = await supabase.from('activity_logs').insert({
+    lead_id: original.lead_id,
+    sales_record_id: original.sales_record_id,
+    staff_id: original.staff_id,
+    staff_name: original.staff_name,
+    store_id: original.store_id,
+    channel: original.channel,
+    action_type: original.action_type,
+    result_type: original.result_type,
+    previous_status: original.previous_status,
+    next_status: original.next_status,
+    memo: `[정정] ${original.memo ?? ''}`,
+    fail_reason: original.fail_reason,
+    next_action_at: original.next_action_at,
+    is_counted: false, // 정정 로그는 카운트 제외
+    not_counted_reason: '정정',
+    corrected_log_id: original.id,
+    device_info: null,
+    ip_address: null,
+    created_by: correctedBy,
+  });
+  if (error) throw error;
 }
 
 // ── 로그 취소 (is_counted = false, 집계 제외) ────────────
@@ -187,20 +129,16 @@ export async function cancelActivityLog({
   reason: '실수' | '중복';
   cancelledBy: string;
 }): Promise<void> {
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('activity_logs')
     .update({
       is_counted: false,
       not_counted_reason: reason,
-      updated_at: new Date().toISOString(),
     })
     .eq('id', logId)
     .select('id, is_counted');
-  if (error) throw new Error(`DB 에러: ${error.message} (code: ${error.code})`);
-  if (!data || data.length === 0) {
-    // RLS 때문에 행을 못 찾는 경우 — select로 존재 확인
-    const { data: check } = await supabase.from('activity_logs').select('id').eq('id', logId).single();
-    if (!check) throw new Error(`ID를 찾을 수 없음: ${logId}`);
-    throw new Error('RLS 정책으로 인해 업데이트 권한 없음');
+  if (error) {
+    console.error('[cancelActivityLog] RLS 에러 상세:', JSON.stringify(error));
+    throw new Error(`집계 제외 실패: ${error.message} (code: ${error.code})`);
   }
 }
