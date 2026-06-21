@@ -26,6 +26,13 @@ export function buildDateRange(period: string, customFrom?: string, customTo?: s
   return { from: fmt(today), to: fmt(today) };
 }
 
+export interface PerfFilters {
+  staffId?: string;
+  channel?: string;
+  product?: string;
+  isCounted?: boolean;
+}
+
 const PENDING_STATUSES = ['신규 접수', '신규접수', '접수', '대기', '상담전', '미처리'];
 const COMPLETED_STATUSES = ['개통완료', '설치완료', '변경완료(업셀용)', '택배발송', '청약완료'];
 
@@ -43,8 +50,9 @@ export interface KpiSummary {
 }
 
 export async function getKpiSummary(
-  from: string, to: string, staffId?: string, channel?: string
+  from: string, to: string, filters: PerfFilters = {}
 ): Promise<KpiSummary> {
+  const { staffId, channel } = filters;
   let lq = supabase.from('leads').select('id', { count: 'exact', head: true })
     .gte('created_at', `${from}T00:00:00`).lte('created_at', `${to}T23:59:59`)
     .is('deleted_at', null);
@@ -92,8 +100,9 @@ export interface StaffWorkRow {
 }
 
 export async function getStaffWorkSummary(
-  from: string, to: string, channel?: string
+  from: string, to: string, filters: PerfFilters = {}
 ): Promise<StaffWorkRow[]> {
+  const { channel } = filters;
   const { data: profiles } = await supabase
     .from('profiles').select('user_id, display_name').is('deleted_at', null);
   const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.display_name]));
@@ -171,8 +180,9 @@ export interface DailyTrendRow {
 }
 
 export async function getStaffDailyTrend(
-  from: string, to: string, staffId?: string
+  from: string, to: string, filters: PerfFilters = {}
 ): Promise<DailyTrendRow[]> {
+  const { staffId } = filters;
   let aq = supabase.from('activity_logs').select('created_at, action_type')
     .gte('created_at', `${from}T00:00:00`).lte('created_at', `${to}T23:59:59`).eq('is_counted', true);
   if (staffId) aq = aq.eq('staff_id', staffId);
@@ -211,11 +221,13 @@ export interface ChannelPerformanceRow {
 }
 
 export async function getChannelPerformance(
-  from: string, to: string, staffId?: string
+  from: string, to: string, filters: PerfFilters = {}
 ): Promise<ChannelPerformanceRow[]> {
+  const { staffId, channel } = filters;
   let aq = supabase.from('activity_logs').select('channel, action_type')
     .gte('created_at', `${from}T00:00:00`).lte('created_at', `${to}T23:59:59`).eq('is_counted', true);
   if (staffId) aq = aq.eq('staff_id', staffId);
+  if (channel) aq = aq.eq('channel', channel);
   const { data: logs } = await aq;
 
   type Raw = Omit<ChannelPerformanceRow, 'connect_rate'|'success_rate'>;

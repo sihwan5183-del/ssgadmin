@@ -45,6 +45,8 @@ export default function StaffPerformanceAnalysis() {
   const [customTo, setCustomTo] = useState('');
   const [selChannel, setSelChannel] = useState('');
   const [selStaff, setSelStaff] = useState('');
+  const [selProduct, setSelProduct] = useState('');
+  const [selCounted, setSelCounted] = useState('');
   const [tab, setTab] = useState<TabKey>('overview');
 
   const [kpi, setKpi] = useState<KpiSummary | null>(null);
@@ -61,11 +63,17 @@ export default function StaffPerformanceAnalysis() {
     if (!user || roleLoading) return;
     setLoading(true);
     try {
+      const filters = {
+        staffId: selStaff || undefined,
+        channel: selChannel || undefined,
+        product: selProduct || undefined,
+        isCounted: selCounted === 'true' ? true : selCounted === 'false' ? false : undefined,
+      };
       const [k, s, t, c, a] = await Promise.all([
-        getKpiSummary(from, to, selStaff || undefined, selChannel || undefined),
-        getStaffWorkSummary(from, to, selChannel || undefined),
-        getStaffDailyTrend(from, to, selStaff || undefined),
-        getChannelPerformance(from, to, selStaff || undefined),
+        getKpiSummary(from, to, filters),
+        getStaffWorkSummary(from, to, filters),
+        getStaffDailyTrend(from, to, filters),
+        getChannelPerformance(from, to, filters),
         getWarningAlerts(),
       ]);
       setKpi(k); setStaffRows(s); setTrend(t); setChannels(c); setAlerts(a);
@@ -74,7 +82,7 @@ export default function StaffPerformanceAnalysis() {
     } finally {
       setLoading(false);
     }
-  }, [user, roleLoading, from, to, selStaff, selChannel]);
+  }, [user, roleLoading, from, to, selStaff, selChannel, selProduct, selCounted]);
 
   useEffect(() => { if (!roleLoading) load(); }, [roleLoading, load]);
 
@@ -138,6 +146,15 @@ export default function StaffPerformanceAnalysis() {
           <option value="">전체 직원</option>
           {staffRows.map(r => <option key={r.staff_id} value={r.staff_id}>{r.staff_name}</option>)}
         </select>
+        <select value={selProduct} onChange={e => setSelProduct(e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white">
+          <option value="">전체 상품</option>
+          {['모바일','인터넷','2ND','TV프리'].map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <select value={selCounted} onChange={e => setSelCounted(e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white">
+          <option value="">전체(인정+제외)</option>
+          <option value="true">인정만</option>
+          <option value="false">제외만</option>
+        </select>
         <span className="text-[10px] text-gray-400 ml-auto">{from === to ? from : `${from} ~ ${to}`}</span>
       </div>
 
@@ -161,7 +178,7 @@ export default function StaffPerformanceAnalysis() {
               return (
                 <div key={key}
                   onClick={() => val > 0 && openDetail({
-                    title: `${label} 상세`,
+                    title: `${label} 상세 ${selStaff ? `· ${staffRows.find(r=>r.staff_id===selStaff)?.staff_name}` : ''} ${selChannel ? `· ${selChannel}` : ''}`,
                     dateFrom: from, dateTo: to,
                     sourceType: source === 'activity' ? 'activity' : 'leads',
                     actionTypes: actions as any,
