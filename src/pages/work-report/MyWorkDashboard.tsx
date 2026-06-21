@@ -94,7 +94,7 @@ export default function MyWorkDashboard() {
   return (
     <div className="space-y-5">
       {detailFilter && (
-        <LogDetailModal filter={detailFilter} onClose={() => setDetailFilter(null)} />
+        <LogDetailModal filter={detailFilter} onClose={() => setDetailFilter(null)} onDone={load} />
       )}
 
       <WorkReportHeader

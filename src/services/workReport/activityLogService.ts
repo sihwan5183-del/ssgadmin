@@ -37,11 +37,9 @@ export async function fetchActivityLogs(
   if (filter.actionType) {
     query = query.eq('action_type', filter.actionType);
   }
-  if (filter.isCounted !== null && filter.isCounted !== undefined) {
+  // isCounted: null = 전체, true = 인정만, false = 미인정만
+  if (filter.isCounted === true || filter.isCounted === false) {
     query = query.eq('is_counted', filter.isCounted);
-  }
-  if (filter.anomalyOnly) {
-    query = query.eq('is_counted', false);
   }
 
   const { data, error } = await query;

@@ -112,7 +112,7 @@ export default function DailyWorkReport() {
       />
 
       {detailFilter && (
-        <LogDetailModal filter={detailFilter} onClose={() => setDetailFilter(null)} />
+        <LogDetailModal filter={detailFilter} onClose={() => setDetailFilter(null)} onDone={load} />
       )}
 
       {loading ? (

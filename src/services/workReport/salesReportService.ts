@@ -17,10 +17,11 @@ export function productBucket(
   return '기타';
 }
 
-// 완료 상태 판단 (랭킹/판매실적장표 기준)
+// 완료 상태 판단 (랭킹과 동일: 개통완료/설치완료/변경완료/택배발송/청약완료)
+const COMPLETED_STATUSES = ['개통완료','설치완료','변경완료(업셀용)','택배발송','청약완료'];
 function isCompleted(status: string | null): boolean {
   if (!status) return false;
-  return status.includes('개통완료') || status.includes('설치완료') || status.includes('변경완료');
+  return COMPLETED_STATUSES.some((s) => status.includes(s));
 }
 
 // 취소 상태 판단

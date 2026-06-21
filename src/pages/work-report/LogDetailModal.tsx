@@ -57,9 +57,11 @@ interface LeadsRow {
 export function LogDetailModal({
   filter,
   onClose,
+  onDone,
 }: {
   filter: LogDetailFilter;
   onClose: () => void;
+  onDone?: () => void;
 }) {
   const { user } = useAuth();
   const { isAdmin, isManager } = useRole();
@@ -75,8 +77,8 @@ export function LogDetailModal({
     try {
       await cancelActivityLog({ logId, reason, cancelledBy: user.id });
       toast.success('집계에서 제외되었습니다.');
-      // 해당 로그 is_counted 업데이트
       setRows((prev) => prev.map((r) => r.id === logId ? { ...r, is_counted: false, not_counted_reason: reason } : r));
+      onDone?.();
     } catch (e: any) {
       toast.error('처리 실패: ' + e.message);
     } finally {

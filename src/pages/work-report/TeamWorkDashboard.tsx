@@ -106,7 +106,7 @@ export default function TeamWorkDashboard() {
       />
 
       {detailFilter && (
-        <LogDetailModal filter={detailFilter} onClose={() => setDetailFilter(null)} />
+        <LogDetailModal filter={detailFilter} onClose={() => setDetailFilter(null)} onDone={load} />
       )}
 
       {!canViewAll && (
