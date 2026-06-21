@@ -69,20 +69,42 @@ export function LogDetailModal({
   const [rows, setRows] = useState<DetailRow[]>([]);
   const [leadsRows, setLeadsRows] = useState<LeadsRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [excludingId, setExcludingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  // 제외 예정 목록 (저장 전 로컬 상태)
+  const [pendingExcludes, setPendingExcludes] = useState<Map<string, '실수' | '중복'>>(new Map());
 
-  const handleExclude = async (logId: string, reason: '실수' | '중복') => {
-    if (!user) return;
-    setExcludingId(logId);
+  const handleExclude = (logId: string, reason: '실수' | '중복') => {
+    setPendingExcludes((prev) => {
+      const next = new Map(prev);
+      if (next.get(logId) === reason) {
+        next.delete(logId); // 같은 버튼 다시 누르면 취소
+      } else {
+        next.set(logId, reason);
+      }
+      return next;
+    });
+  };
+
+  const handleSave = async () => {
+    if (!user || pendingExcludes.size === 0) return;
+    setSaving(true);
     try {
-      await cancelActivityLog({ logId, reason, cancelledBy: user.id });
-      toast.success('집계에서 제외되었습니다.');
-      setRows((prev) => prev.map((r) => r.id === logId ? { ...r, is_counted: false, not_counted_reason: reason } : r));
+      for (const [logId, reason] of pendingExcludes.entries()) {
+        await cancelActivityLog({ logId, reason, cancelledBy: user.id });
+      }
+      toast.success(`${pendingExcludes.size}건이 집계에서 제외되었습니다.`);
+      setPendingExcludes(new Map());
+      // 로컬 반영
+      setRows((prev) => prev.map((r) =>
+        pendingExcludes.has(r.id)
+          ? { ...r, is_counted: false, not_counted_reason: pendingExcludes.get(r.id) ?? '' }
+          : r
+      ));
       onDone?.();
     } catch (e: any) {
-      toast.error('처리 실패: ' + e.message);
+      toast.error('저장 실패: ' + e.message);
     } finally {
-      setExcludingId(null);
+      setSaving(false);
     }
   };
 
@@ -275,20 +297,22 @@ export function LogDetailModal({
                         <td className="py-2.5 px-3 whitespace-nowrap">
                           {r.is_counted ? (
                             <div className="flex gap-1">
-                              <button
-                                onClick={() => handleExclude(r.id, '실수')}
-                                disabled={excludingId === r.id}
-                                className="text-[10px] text-orange-500 hover:text-orange-700 border border-orange-200 rounded px-1.5 py-0.5 disabled:opacity-40"
-                              >
-                                실수
-                              </button>
-                              <button
-                                onClick={() => handleExclude(r.id, '중복')}
-                                disabled={excludingId === r.id}
-                                className="text-[10px] text-red-500 hover:text-red-700 border border-red-200 rounded px-1.5 py-0.5 disabled:opacity-40"
-                              >
-                                중복
-                              </button>
+                              {(['실수', '중복'] as const).map((reason) => {
+                                const selected = pendingExcludes.get(r.id) === reason;
+                                return (
+                                  <button
+                                    key={reason}
+                                    onClick={() => handleExclude(r.id, reason)}
+                                    className={`text-[10px] border rounded px-1.5 py-0.5 transition-colors ${
+                                      selected
+                                        ? 'bg-red-500 text-white border-red-500'
+                                        : 'text-gray-400 border-gray-200 hover:border-red-300 hover:text-red-400'
+                                    }`}
+                                  >
+                                    {reason}
+                                  </button>
+                                );
+                              })}
                             </div>
                           ) : (
                             <span className="text-[10px] text-gray-300">제외됨</span>
@@ -307,13 +331,27 @@ export function LogDetailModal({
         <div className="px-6 py-3 border-t border-gray-100 flex justify-between items-center">
           <span className="text-xs text-gray-400">
             {filter.sourceType === 'leads' ? leadsRows.length : rows.length}건
+            {pendingExcludes.size > 0 && (
+              <span className="ml-2 text-red-500 font-medium">{pendingExcludes.size}건 제외 예정</span>
+            )}
           </span>
-          <button
-            onClick={onClose}
-            className="text-xs border border-gray-200 text-gray-600 rounded-lg px-4 py-1.5 hover:bg-gray-50"
-          >
-            닫기
-          </button>
+          <div className="flex gap-2">
+            {canExclude && pendingExcludes.size > 0 && (
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="text-xs bg-red-500 hover:bg-red-600 text-white rounded-lg px-4 py-1.5 font-medium transition-colors disabled:opacity-50"
+              >
+                {saving ? '저장 중...' : `${pendingExcludes.size}건 제외 저장`}
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="text-xs border border-gray-200 text-gray-600 rounded-lg px-4 py-1.5 hover:bg-gray-50"
+            >
+              닫기
+            </button>
+          </div>
         </div>
       </div>
     </div>
