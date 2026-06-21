@@ -189,6 +189,7 @@ const App = () => {
                         <Route path="/work-report/daily-report" element={<DailyWorkReport />} />
                         <Route path="/work-report/activity-logs" element={<ActivityLogs />} />
                         <Route path="/work-report/progress-delay" element={<ProgressDelay />} />
+              <Route path="/work-report/staff-performance" element={<StaffPerformanceAnalysis />} />
                         <Route path="/work-report/incentive" element={<IncentiveDashboard />} />
                         <Route path="/work-report/settings" element={<AdminOnlyRoute><ReportSettings /></AdminOnlyRoute>} />
                         <Route path="*" element={<NotFound />} />
