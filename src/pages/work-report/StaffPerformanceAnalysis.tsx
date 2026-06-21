@@ -12,12 +12,16 @@ import { LogDetailModal, type LogDetailFilter } from './LogDetailModal';
 import {
   buildDateRange, getKpiSummary, getStaffWorkSummary, getStaffDailyTrend,
   getChannelPerformance, getWarningAlerts,
+  getStaffSalesSummary, getStaffProductDetailStats,
+  getStaffChannelFocusStats, getChannelFunnelStats,
   type KpiSummary, type StaffWorkRow, type DailyTrendRow,
   type ChannelPerformanceRow, type WarningAlert,
+  type StaffSalesSummaryRow, type ProductDetailRow,
+  type StaffChannelFocusRow, type ChannelFunnelRow,
 } from '@/services/workReport/staffPerformanceService';
 
 type Period = '오늘' | '어제' | '이번주' | '이번달' | '전체기간' | '직접선택';
-type TabKey = 'overview' | 'staff' | 'trend' | 'channel' | 'alerts';
+type TabKey = 'overview' | 'staff' | 'trend' | 'channel' | 'alerts' | 'sales_summary' | 'product_detail' | 'funnel';
 
 const CHANNEL_LABEL: Record<string, string> = {
   meta: '메타', dogmaru: '도그마루', udak: '유닥', moyo: '모요', other: '기타인입', '기타': '기타',
@@ -54,6 +58,10 @@ export default function StaffPerformanceAnalysis() {
   const [trend, setTrend] = useState<DailyTrendRow[]>([]);
   const [channels, setChannels] = useState<ChannelPerformanceRow[]>([]);
   const [alerts, setAlerts] = useState<WarningAlert[]>([]);
+  const [salesSummary, setSalesSummary] = useState<StaffSalesSummaryRow[]>([]);
+  const [productDetail, setProductDetail] = useState<ProductDetailRow[]>([]);
+  const [channelFocus, setChannelFocus] = useState<StaffChannelFocusRow[]>([]);
+  const [funnelStats, setFunnelStats] = useState<ChannelFunnelRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [detailFilter, setDetailFilter] = useState<LogDetailFilter | null>(null);
 
@@ -69,20 +77,25 @@ export default function StaffPerformanceAnalysis() {
         product: selProduct || undefined,
         isCounted: selCounted === 'true' ? true : selCounted === 'false' ? false : undefined,
       };
-      const [k, s, t, c, a] = await Promise.all([
+      const [k, s, t, c, a, ss, pd, cf, fn] = await Promise.all([
         getKpiSummary(from, to, filters),
         getStaffWorkSummary(from, to, filters),
         getStaffDailyTrend(from, to, filters),
         getChannelPerformance(from, to, filters),
         getWarningAlerts(),
+        getStaffSalesSummary(from, to, filters),
+        getStaffProductDetailStats(from, to, filters),
+        getStaffChannelFocusStats(from, to, filters),
+        getChannelFunnelStats(from, to, filters),
       ]);
       setKpi(k); setStaffRows(s); setTrend(t); setChannels(c); setAlerts(a);
+      setSalesSummary(ss); setProductDetail(pd); setChannelFocus(cf); setFunnelStats(fn);
     } catch (e: any) {
       toast.error('조회 실패: ' + e.message);
     } finally {
       setLoading(false);
     }
-  }, [user, roleLoading, from, to, selStaff, selChannel, selProduct, selCounted]);
+  }, [user, roleLoading, from, to, selStaff, selChannel, selProduct, selCounted, selDevice, selPlan, selSaleType]);
 
   useEffect(() => { if (!roleLoading) load(); }, [roleLoading, load]);
 
@@ -103,10 +116,15 @@ export default function StaffPerformanceAnalysis() {
   const tabs: { key: TabKey; label: string }[] = [
     { key: 'overview', label: '전체 대시보드' },
     { key: 'staff', label: '직원별 업무량' },
+    { key: 'sales_summary', label: '직원별 판매요약' },
+    { key: 'product_detail', label: '상품·기기 분석' },
+    { key: 'funnel', label: '채널 퍼널' },
     { key: 'trend', label: '일별 추이' },
     { key: 'channel', label: '채널별 성과' },
     { key: 'alerts', label: `이상 알림 ${alerts.length > 0 ? `(${alerts.length})` : ''}` },
   ];
+  const CHANNEL_LABELS: Record<string, string> = { meta: '메타', dogmaru: '도그마루', udak: '유닥', moyo: '모요', other: '기타인입', '기타': '기타' };
+  const pct = (a: number, b: number) => b > 0 ? `${Math.round(a / b * 100)}%` : '-';
 
   return (
     <div className="space-y-4">
@@ -154,6 +172,18 @@ export default function StaffPerformanceAnalysis() {
           <option value="">전체(인정+제외)</option>
           <option value="true">인정만</option>
           <option value="false">제외만</option>
+        </select>
+        <select value={selDevice} onChange={e => setSelDevice(e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white">
+          <option value="">전체 기기</option>
+          {deviceOptions.devices.map(d => <option key={d} value={d}>{d}</option>)}
+        </select>
+        <select value={selPlan} onChange={e => setSelPlan(e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white">
+          <option value="">전체 요금제</option>
+          {deviceOptions.plans.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <select value={selSaleType} onChange={e => setSelSaleType(e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white">
+          <option value="">전체 가입유형</option>
+          {deviceOptions.saleTypes.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
         <span className="text-[10px] text-gray-400 ml-auto">{from === to ? from : `${from} ~ ${to}`}</span>
       </div>
@@ -349,6 +379,341 @@ export default function StaffPerformanceAnalysis() {
             </table>
           </div>
         </SectionCard>
+      )}
+
+
+      {/* 직원별 판매요약 */}
+      {tab === 'sales_summary' && (
+        <SectionCard title="직원별 판매 요약">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="text-xs text-gray-400 border-b bg-gray-50">
+                {['직원','전체','모바일','인터넷','2ND','TV프리','기타','인터넷설치'].map(h => (
+                  <th key={h} className={`py-2.5 px-3 font-medium whitespace-nowrap ${h==='직원' ? 'text-left' : 'text-right'}`}>{h}</th>
+                ))}
+              </tr></thead>
+              <tbody className="divide-y divide-gray-50">
+                {loading ? <tr><td colSpan={8} className="py-8 text-center text-xs text-gray-400">로딩 중...</td></tr>
+                  : salesSummary.length === 0 ? <tr><td colSpan={8} className="py-8 text-center text-xs text-gray-400">해당 기간 데이터 없음</td></tr>
+                  : salesSummary.map(r => (
+                  <tr key={r.staff_id} className="hover:bg-gray-50">
+                    <td className="py-3 px-3 font-medium text-gray-800">{r.staff_name}</td>
+                    {[
+                      { val: r.total, label: '전체', cls: 'text-pink-600 font-bold', product: undefined },
+                      { val: r.mobile, label: '모바일', cls: 'text-pink-500', product: '모바일' },
+                      { val: r.internet, label: '인터넷', cls: 'text-blue-600', product: '인터넷' },
+                      { val: r.second, label: '2ND', cls: 'text-gray-600', product: undefined },
+                      { val: r.tvfree, label: 'TV프리', cls: 'text-purple-600', product: 'TV프리' },
+                      { val: r.other, label: '기타', cls: 'text-gray-500', product: undefined },
+                      { val: r.internet_install, label: '인터넷설치', cls: 'text-blue-400', product: undefined },
+                    ].map(({ val, label, cls, product }) => (
+                      <td key={label} className="py-3 px-3 text-right">
+                        <button onClick={() => val > 0 && openDetail({
+                          title: `${r.staff_name} · ${label} 개통`,
+                          dateFrom: from, dateTo: to,
+                          sourceType: 'sales', staffId: r.staff_id,
+                        })} className={`${cls} ${val > 0 ? 'hover:underline cursor-pointer' : 'cursor-default'}`}>{val}</button>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-[11px] text-gray-400 mt-3">※ 개통완료 = sales.status="개통완료" / 인터넷설치 = "설치완료" / open_date 기간 기준</p>
+        </SectionCard>
+      )}
+
+      {/* 상품·기기 분석 */}
+      {tab === 'product_detail' && (
+        <SectionCard title="직원별 상품·기기 상세">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="text-xs text-gray-400 border-b bg-gray-50">
+                {['직원','상품구분','기기명','요금제','가입유형','채널','건수','비중'].map(h => (
+                  <th key={h} className={`py-2.5 px-3 font-medium whitespace-nowrap ${h==='직원'||h==='기기명'||h==='요금제' ? 'text-left' : 'text-right'}`}>{h}</th>
+                ))}
+              </tr></thead>
+              <tbody className="divide-y divide-gray-50">
+                {loading ? <tr><td colSpan={8} className="py-8 text-center text-xs text-gray-400">로딩 중...</td></tr>
+                  : productDetail.length === 0 ? <tr><td colSpan={8} className="py-8 text-center text-xs text-gray-400">해당 기간 데이터 없음</td></tr>
+                  : (() => {
+                    const staffTotals = new Map<string, number>();
+                    productDetail.forEach(r => staffTotals.set(r.staff_id, (staffTotals.get(r.staff_id) ?? 0) + r.count));
+                    return productDetail.slice(0, 100).map((r, i) => (
+                      <tr key={i} className="hover:bg-gray-50">
+                        <td className="py-2.5 px-3 font-medium text-gray-800 whitespace-nowrap">{r.staff_name}</td>
+                        <td className="py-2.5 px-3 text-right">
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                            r.bucket==='모바일' ? 'bg-pink-100 text-pink-700' :
+                            r.bucket==='인터넷' ? 'bg-blue-100 text-blue-700' :
+                            r.bucket==='TV프리' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'
+                          }`}>{r.bucket}</span>
+                        </td>
+                        <td className="py-2.5 px-3 text-xs text-gray-700 max-w-[140px] truncate">{r.device_model}</td>
+                        <td className="py-2.5 px-3 text-xs text-gray-600 max-w-[100px] truncate">{r.rate_plan}</td>
+                        <td className="py-2.5 px-3 text-right text-xs text-gray-500">{r.sale_type}</td>
+                        <td className="py-2.5 px-3 text-right text-xs text-gray-500">{CHANNEL_LABELS[r.channel] ?? r.channel}</td>
+                        <td className="py-2.5 px-3 text-right font-semibold text-pink-600">
+                          <button onClick={() => openDetail({
+                            title: `${r.staff_name} · ${r.device_model} · ${r.bucket}`,
+                            dateFrom: from, dateTo: to,
+                            sourceType: 'sales', staffId: r.staff_id,
+                          })} className="hover:underline cursor-pointer">{r.count}</button>
+                        </td>
+                        <td className="py-2.5 px-3 text-right text-xs text-gray-400">
+                          {pct(r.count, staffTotals.get(r.staff_id) ?? 0)}
+                        </td>
+                      </tr>
+                    ));
+                  })()
+                }
+              </tbody>
+            </table>
+          </div>
+          <p className="text-[11px] text-gray-400 mt-3">※ 컬러/용량 필드 없음(sales DB 미저장) — 기기명(device_model) / 요금제(rate_plan) / 가입유형(sale_type) 기준</p>
+        </SectionCard>
+      )}
+
+      {/* 채널 퍼널 분석 */}
+      {tab === 'funnel' && (
+        <SectionCard title="채널별 퍼널 분석">
+          {/* 직원별 채널 집중도 */}
+          <div className="mb-6">
+            <h4 className="text-xs font-semibold text-gray-600 mb-3">직원별 채널 집중도 (activity_logs 기준)</h4>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="text-xs text-gray-400 border-b bg-gray-50">
+                  {['직원','채널','시도','연결','부재','재케어','실패','상담성공','채널집중도','연결률','성공률'].map(h => (
+                    <th key={h} className={`py-2 px-2.5 font-medium whitespace-nowrap ${h==='직원'||h==='채널' ? 'text-left' : 'text-right'}`}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody className="divide-y divide-gray-50">
+                  {loading ? <tr><td colSpan={11} className="py-6 text-center text-xs text-gray-400">로딩 중...</td></tr>
+                    : channelFocus.length === 0 ? <tr><td colSpan={11} className="py-6 text-center text-xs text-gray-400">데이터 없음 (activity_logs 미기록)</td></tr>
+                    : channelFocus.map((r, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="py-2 px-2.5 font-medium text-gray-800 whitespace-nowrap text-xs">{r.staff_name}</td>
+                      <td className="py-2 px-2.5 text-xs"><WRBadge variant="info">{CHANNEL_LABELS[r.channel] ?? r.channel}</WRBadge></td>
+                      <td className="py-2 px-2.5 text-right text-gray-700 text-xs">{r.call_attempt}</td>
+                      <td className="py-2 px-2.5 text-right text-indigo-600 text-xs">{r.call_connected}</td>
+                      <td className="py-2 px-2.5 text-right text-orange-500 text-xs">{r.absent}</td>
+                      <td className="py-2 px-2.5 text-right text-yellow-600 text-xs">{r.recare}</td>
+                      <td className="py-2 px-2.5 text-right text-red-500 text-xs">{r.failed}</td>
+                      <td className="py-2 px-2.5 text-right text-green-600 font-semibold text-xs">{r.consultation_success}</td>
+                      <td className="py-2 px-2.5 text-right text-xs font-semibold text-pink-600">{r.focus_rate}%</td>
+                      <td className="py-2 px-2.5 text-right text-xs text-indigo-500">{r.connect_rate}%</td>
+                      <td className="py-2 px-2.5 text-right text-xs text-green-600">{r.success_rate}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {/* 채널별 퍼널 */}
+          <div>
+            <h4 className="text-xs font-semibold text-gray-600 mb-3">채널별 유입→개통 퍼널</h4>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="text-xs text-gray-400 border-b bg-gray-50">
+                  {['채널','신규접수','통화시도','연결완료','상담성공','개통완료','시도율','연결률','상담성공률','개통전환율'].map(h => (
+                    <th key={h} className={`py-2.5 px-3 font-medium whitespace-nowrap ${h==='채널' ? 'text-left' : 'text-right'}`}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody className="divide-y divide-gray-50">
+                  {loading ? <tr><td colSpan={10} className="py-6 text-center text-xs text-gray-400">로딩 중...</td></tr>
+                    : funnelStats.map(r => (
+                    <tr key={r.channel} className="hover:bg-gray-50">
+                      <td className="py-3 px-3"><WRBadge variant="info">{CHANNEL_LABELS[r.channel] ?? r.channel}</WRBadge></td>
+                      <td className="py-3 px-3 text-right text-blue-600 font-semibold">{r.new_leads}</td>
+                      <td className="py-3 px-3 text-right text-gray-700">{r.call_attempt}</td>
+                      <td className="py-3 px-3 text-right text-indigo-600">{r.call_connected}</td>
+                      <td className="py-3 px-3 text-right text-green-600 font-semibold">{r.consultation_success}</td>
+                      <td className="py-3 px-3 text-right text-pink-600 font-bold">{r.activation_completed}</td>
+                      <td className="py-3 px-3 text-right text-xs">{r.try_rate > 0 ? `${r.try_rate}%` : '-'}</td>
+                      <td className="py-3 px-3 text-right text-xs text-indigo-500">{r.connect_rate > 0 ? `${r.connect_rate}%` : '-'}</td>
+                      <td className="py-3 px-3 text-right text-xs text-green-600">{r.success_rate > 0 ? `${r.success_rate}%` : '-'}</td>
+                      <td className="py-3 px-3 text-right text-xs font-semibold text-pink-600">{r.conversion_rate > 0 ? `${r.conversion_rate}%` : '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <p className="text-[11px] text-gray-400 mt-3">※ 신규접수=leads기준 / 시도~상담=activity_logs기준 / 개통=sales기준</p>
+        </SectionCard>
+      )}
+
+      {/* 직원별 판매 요약 */}
+      {tab === 'sales_summary' && (
+        <div className="space-y-4">
+          <SectionCard title="직원별 판매 요약">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="text-xs text-gray-400 border-b bg-gray-50">
+                  {['직원','전체','모바일','인터넷','2ND','TV프리','모요','도그마루','유닥','메타','설치완료'].map(h => (
+                    <th key={h} className={`py-2.5 px-3 font-medium whitespace-nowrap ${h==='직원'?'text-left':'text-right'}`}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody className="divide-y divide-gray-50">
+                  {loading ? <tr><td colSpan={11} className="py-8 text-center text-xs text-gray-400">로딩 중...</td></tr>
+                    : salesSummary.map(r => (
+                    <tr key={r.staff_name} className="hover:bg-gray-50">
+                      <td className="py-3 px-3 font-medium text-gray-800 whitespace-nowrap">{r.staff_name}</td>
+                      {[
+                        { val: r.total, label: '전체 개통', cls: 'text-pink-600 font-bold', statuses: ['개통완료'] },
+                        { val: r.mobile, label: '모바일', cls: 'text-pink-500', statuses: ['개통완료'] },
+                        { val: r.internet, label: '인터넷', cls: 'text-blue-600', statuses: ['개통완료'] },
+                        { val: r.second, label: '2ND', cls: 'text-gray-600', statuses: ['개통완료'] },
+                        { val: r.tvfree, label: 'TV프리', cls: 'text-purple-600', statuses: ['개통완료'] },
+                        { val: r.moyo, label: '모요', cls: 'text-gray-700', statuses: ['개통완료'] },
+                        { val: r.dogmaru, label: '도그마루', cls: 'text-gray-700', statuses: ['개통완료'] },
+                        { val: r.udak, label: '유닥', cls: 'text-gray-700', statuses: ['개통완료'] },
+                        { val: r.meta, label: '메타', cls: 'text-gray-700', statuses: ['개통완료'] },
+                        { val: r.install_completed, label: '설치완료', cls: 'text-blue-400', statuses: ['설치완료'] },
+                      ].map(({ val, label, cls }) => (
+                        <td key={label} className="py-3 px-3 text-right">
+                          <button onClick={() => val > 0 && openDetail({
+                            title: `${r.staff_name} · ${label}`,
+                            dateFrom: from, dateTo: to, sourceType: 'sales',
+                            staffId: staffRows.find(s => s.staff_name === r.staff_name)?.staff_id,
+                          })} className={`${cls} ${val > 0 ? 'hover:underline cursor-pointer' : 'cursor-default'}`}>{val}</button>
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </SectionCard>
+
+          <SectionCard title="직원별 채널 판매 breakdown">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="text-xs text-gray-400 border-b bg-gray-50">
+                  {['직원','채널','전체','모바일','인터넷','2ND','TV프리','주요기기','주요요금제','비중'].map(h => (
+                    <th key={h} className={`py-2.5 px-3 font-medium whitespace-nowrap ${h==='직원'||h==='채널'||h==='주요기기'||h==='주요요금제'?'text-left':'text-right'}`}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody className="divide-y divide-gray-50">
+                  {loading ? <tr><td colSpan={10} className="py-8 text-center text-xs text-gray-400">로딩 중...</td></tr>
+                    : channelSales.map((r, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="py-2.5 px-3 font-medium text-gray-800 whitespace-nowrap">{r.staff_name}</td>
+                      <td className="py-2.5 px-3"><span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">{CHANNEL_LABEL[r.channel] ?? r.channel}</span></td>
+                      <td className="py-2.5 px-3 text-right font-bold text-pink-600">{r.total}</td>
+                      <td className="py-2.5 px-3 text-right text-pink-500">{r.mobile}</td>
+                      <td className="py-2.5 px-3 text-right text-blue-600">{r.internet}</td>
+                      <td className="py-2.5 px-3 text-right text-gray-600">{r.second}</td>
+                      <td className="py-2.5 px-3 text-right text-purple-600">{r.tvfree}</td>
+                      <td className="py-2.5 px-3 text-xs text-gray-600 max-w-[100px] truncate">{r.top_device}</td>
+                      <td className="py-2.5 px-3 text-xs text-gray-600 max-w-[100px] truncate">{r.top_rate_plan}</td>
+                      <td className="py-2.5 px-3 text-right text-xs text-gray-500">{r.share_pct}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </SectionCard>
+        </div>
+      )}
+
+      {/* 상품·기기 분석 */}
+      {tab === 'product_device' && (
+        <SectionCard title="상품·기기 분석">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="text-xs text-gray-400 border-b bg-gray-50">
+                {['직원','채널','상품','기기명','요금제','가입유형','개통방식','지원유형','건수','비중'].map(h => (
+                  <th key={h} className={`py-2.5 px-3 font-medium whitespace-nowrap ${h==='건수'||h==='비중'?'text-right':'text-left'}`}>{h}</th>
+                ))}
+              </tr></thead>
+              <tbody className="divide-y divide-gray-50">
+                {loading ? <tr><td colSpan={10} className="py-8 text-center text-xs text-gray-400">로딩 중...</td></tr>
+                  : productDetail.slice(0, 100).map((r, i) => (
+                  <tr key={i} className="hover:bg-gray-50">
+                    <td className="py-2.5 px-3 font-medium text-gray-800 whitespace-nowrap">{r.staff_name}</td>
+                    <td className="py-2.5 px-3"><span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">{CHANNEL_LABEL[r.channel] ?? r.channel}</span></td>
+                    <td className="py-2.5 px-3 text-xs text-gray-600">{r.product}</td>
+                    <td className="py-2.5 px-3 text-xs text-gray-800 font-medium max-w-[120px] truncate">{r.device_model}</td>
+                    <td className="py-2.5 px-3 text-xs text-gray-600 max-w-[100px] truncate">{r.rate_plan}</td>
+                    <td className="py-2.5 px-3 text-xs text-gray-600">{r.sale_type}</td>
+                    <td className="py-2.5 px-3 text-xs text-gray-600">{r.open_method}</td>
+                    <td className="py-2.5 px-3 text-xs text-gray-600">{r.contract_type}</td>
+                    <td className="py-2.5 px-3 text-right font-bold text-pink-600">{r.count}</td>
+                    <td className="py-2.5 px-3 text-right text-xs text-gray-500">{r.share_pct}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {productDetail.length > 100 && <p className="text-xs text-gray-400 mt-2">상위 100개 표시 중 (전체 {productDetail.length}개 조합)</p>}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* 채널 퍼널 */}
+      {tab === 'funnel' && (
+        <div className="space-y-4">
+          <SectionCard title="채널별 퍼널 분석">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="text-xs text-gray-400 border-b bg-gray-50">
+                  {['채널','신규접수','통화시도','연결완료','부재','재케어','상담성공','개통완료','시도율','연결률','성공률','전환율'].map(h => (
+                    <th key={h} className={`py-2.5 px-3 font-medium whitespace-nowrap ${h==='채널'?'text-left':'text-right'}`}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody className="divide-y divide-gray-50">
+                  {loading ? <tr><td colSpan={12} className="py-8 text-center text-xs text-gray-400">로딩 중...</td></tr>
+                    : funnelRows.map(r => (
+                    <tr key={r.channel} className="hover:bg-gray-50">
+                      <td className="py-3 px-3"><WRBadge variant="info">{CHANNEL_LABEL[r.channel] ?? r.channel}</WRBadge></td>
+                      <td className="py-3 px-3 text-right text-blue-600">{r.new_leads}</td>
+                      <td className="py-3 px-3 text-right text-gray-700">{r.call_attempt}</td>
+                      <td className="py-3 px-3 text-right text-indigo-600">{r.call_connected}</td>
+                      <td className="py-3 px-3 text-right text-orange-500">{r.absent}</td>
+                      <td className="py-3 px-3 text-right text-yellow-600">{r.recare}</td>
+                      <td className="py-3 px-3 text-right text-green-600 font-semibold">{r.consultation_success}</td>
+                      <td className="py-3 px-3 text-right text-pink-600 font-bold">{r.activation_completed}</td>
+                      <td className="py-3 px-3 text-right text-xs text-gray-500">{r.try_rate > 0 ? `${r.try_rate}%` : '-'}</td>
+                      <td className="py-3 px-3 text-right text-xs text-indigo-500">{r.connect_rate > 0 ? `${r.connect_rate}%` : '-'}</td>
+                      <td className="py-3 px-3 text-right text-xs text-green-600">{r.success_rate > 0 ? `${r.success_rate}%` : '-'}</td>
+                      <td className="py-3 px-3 text-right text-xs text-pink-600">{r.conversion_rate > 0 ? `${r.conversion_rate}%` : '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </SectionCard>
+
+          <SectionCard title="직원별 채널 집중도">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="text-xs text-gray-400 border-b bg-gray-50">
+                  {['직원','채널','시도','연결','부재','재케어','상담성공','집중도','연결률','성공률'].map(h => (
+                    <th key={h} className={`py-2.5 px-3 font-medium whitespace-nowrap ${h==='직원'||h==='채널'?'text-left':'text-right'}`}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody className="divide-y divide-gray-50">
+                  {loading ? <tr><td colSpan={10} className="py-8 text-center text-xs text-gray-400">로딩 중...</td></tr>
+                    : channelFocus.map((r, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="py-2.5 px-3 font-medium text-gray-800 whitespace-nowrap">{r.staff_name}</td>
+                      <td className="py-2.5 px-3"><WRBadge variant="info">{CHANNEL_LABEL[r.channel] ?? r.channel}</WRBadge></td>
+                      <td className="py-2.5 px-3 text-right text-gray-700">{r.call_attempt}</td>
+                      <td className="py-2.5 px-3 text-right text-indigo-600">{r.call_connected}</td>
+                      <td className="py-2.5 px-3 text-right text-orange-500">{r.absent}</td>
+                      <td className="py-2.5 px-3 text-right text-yellow-600">{r.recare}</td>
+                      <td className="py-2.5 px-3 text-right text-green-600 font-semibold">{r.consultation_success}</td>
+                      <td className="py-2.5 px-3 text-right text-xs font-semibold text-pink-600">{r.focus_pct}%</td>
+                      <td className="py-2.5 px-3 text-right text-xs text-indigo-500">{r.connect_rate > 0 ? `${r.connect_rate}%` : '-'}</td>
+                      <td className="py-2.5 px-3 text-right text-xs text-green-600">{r.success_rate > 0 ? `${r.success_rate}%` : '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </SectionCard>
+        </div>
       )}
 
       {/* 이상 알림 */}

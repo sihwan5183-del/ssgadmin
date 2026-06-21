@@ -405,3 +405,594 @@ export async function getLeadDetailRecords(
     source: 'leads' as const,
   }));
 }
+
+// ============================================================
+// 직원 × 채널 × 상품 × 기기 종합 분석 함수들
+// ============================================================
+
+export interface StaffSalesSummaryRow {
+  staff_id: string;
+  staff_name: string;
+  total: number;
+  mobile: number;
+  internet: number;
+  second: number;      // 2ND
+  tvfree: number;
+  other: number;
+  internet_install: number; // 설치완료 기준
+}
+
+export async function getStaffSalesSummary(
+  from: string, to: string, filters: PerfFilters = {}
+): Promise<StaffSalesSummaryRow[]> {
+  const { data: profiles } = await supabase.from('profiles').select('user_id, display_name').is('deleted_at', null);
+  const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.display_name]));
+  const nameToId = new Map((profiles ?? []).map((p: any) => [p.display_name, p.user_id]));
+
+  let q = supabase.from('sales')
+    .select('id, manager, product, status')
+    .gte('open_date', from).lte('open_date', to)
+    .is('deleted_at', null)
+    .in('status', ['개통완료', '설치완료']);
+  const { data: salesRaw } = await q;
+
+  const map = new Map<string, StaffSalesSummaryRow>();
+  const seen = new Set<string>();
+
+  for (const s of (salesRaw ?? [])) {
+    if (!s.manager || seen.has(s.id)) continue;
+    seen.add(s.id);
+    let staffId = isUUID(s.manager) ? (profileMap.has(s.manager) ? s.manager : null) : nameToId.get(s.manager) ?? null;
+    if (!staffId) continue;
+    if (filters.staffId && staffId !== filters.staffId) continue;
+    if (!map.has(staffId)) map.set(staffId, {
+      staff_id: staffId, staff_name: profileMap.get(staffId) ?? s.manager,
+      total: 0, mobile: 0, internet: 0, second: 0, tvfree: 0, other: 0, internet_install: 0,
+    });
+    const r = map.get(staffId)!;
+    const bucket = productBucket(s.product);
+    if (s.status === '개통완료') {
+      r.total++;
+      if (bucket === '모바일') r.mobile++;
+      else if (bucket === '인터넷') r.internet++;
+      else if (bucket === '기타' && (s.product ?? '').includes('2ND')) r.second++;
+      else if (bucket === 'TV프리') r.tvfree++;
+      else r.other++;
+    }
+    if (s.status === '설치완료' && bucket === '인터넷') r.internet_install++;
+  }
+  return [...map.values()].sort((a, b) => b.total - a.total);
+}
+
+export interface ProductDetailRow {
+  staff_id: string;
+  staff_name: string;
+  bucket: string;
+  device_model: string;
+  rate_plan: string;
+  sale_type: string;
+  channel: string;
+  count: number;
+  ids: string[];
+}
+
+export async function getStaffProductDetailStats(
+  from: string, to: string, filters: PerfFilters = {}
+): Promise<ProductDetailRow[]> {
+  const { data: profiles } = await supabase.from('profiles').select('user_id, display_name').is('deleted_at', null);
+  const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.display_name]));
+  const nameToId = new Map((profiles ?? []).map((p: any) => [p.display_name, p.user_id]));
+
+  let q = supabase.from('sales')
+    .select('id, manager, product, device_model, rate_plan, sale_type, channel, status')
+    .gte('open_date', from).lte('open_date', to)
+    .is('deleted_at', null)
+    .eq('status', '개통완료');
+  const { data: salesRaw } = await q;
+
+  const map = new Map<string, ProductDetailRow>();
+  const seen = new Set<string>();
+
+  for (const s of (salesRaw ?? [])) {
+    if (!s.manager || seen.has(s.id)) continue;
+    seen.add(s.id);
+    let staffId = isUUID(s.manager) ? (profileMap.has(s.manager) ? s.manager : null) : nameToId.get(s.manager) ?? null;
+    if (!staffId) continue;
+    if (filters.staffId && staffId !== filters.staffId) continue;
+    if (filters.channel && (s.channel ?? '') !== filters.channel) continue;
+    const bucket = productBucket(s.product);
+    const key = `${staffId}|${bucket}|${s.device_model ?? ''}|${s.rate_plan ?? ''}|${s.sale_type ?? ''}|${s.channel ?? ''}`;
+    if (!map.has(key)) map.set(key, {
+      staff_id: staffId, staff_name: profileMap.get(staffId) ?? s.manager,
+      bucket, device_model: s.device_model ?? '-', rate_plan: s.rate_plan ?? '-',
+      sale_type: s.sale_type ?? '-', channel: s.channel ?? '-', count: 0, ids: [],
+    });
+    const r = map.get(key)!;
+    r.count++;
+    r.ids.push(s.id);
+  }
+  return [...map.values()].sort((a, b) => b.count - a.count);
+}
+
+export interface StaffChannelFocusRow {
+  staff_id: string;
+  staff_name: string;
+  channel: string;
+  call_attempt: number;
+  call_connected: number;
+  absent: number;
+  recare: number;
+  failed: number;
+  consultation_success: number;
+  focus_rate: number;    // 직원 내 채널 시도 비중
+  connect_rate: number;
+  success_rate: number;
+}
+
+export async function getStaffChannelFocusStats(
+  from: string, to: string, filters: PerfFilters = {}
+): Promise<StaffChannelFocusRow[]> {
+  const { start: aStart, end: aEnd } = getKstDateRangeUtc(from, to);
+  const { data: profiles } = await supabase.from('profiles').select('user_id, display_name').is('deleted_at', null);
+  const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.display_name]));
+
+  let aq = supabase.from('activity_logs')
+    .select('staff_id, staff_name, channel, action_type')
+    .gte('created_at', aStart).lte('created_at', aEnd)
+    .eq('is_counted', true);
+  if (filters.staffId) aq = aq.eq('staff_id', filters.staffId);
+  if (filters.channel) aq = aq.eq('channel', filters.channel);
+  const { data: logs } = await aq;
+
+  type Raw = Omit<StaffChannelFocusRow, 'focus_rate' | 'connect_rate' | 'success_rate'>;
+  const map = new Map<string, Raw>();
+  const staffTotals = new Map<string, number>();
+
+  for (const l of (logs ?? [])) {
+    const name = profileMap.get(l.staff_id) ?? l.staff_name;
+    const key = `${l.staff_id}|${l.channel ?? '기타'}`;
+    if (!map.has(key)) map.set(key, {
+      staff_id: l.staff_id, staff_name: name, channel: l.channel ?? '기타',
+      call_attempt: 0, call_connected: 0, absent: 0, recare: 0, failed: 0, consultation_success: 0,
+    });
+    const r = map.get(key)!;
+    if (l.action_type === 'call_attempt') { r.call_attempt++; staffTotals.set(l.staff_id, (staffTotals.get(l.staff_id) ?? 0) + 1); }
+    if (l.action_type === 'call_connected') r.call_connected++;
+    if (l.action_type === 'absent') r.absent++;
+    if (['recare_registered', 'recare_completed'].includes(l.action_type)) r.recare++;
+    if (l.action_type === 'failed') r.failed++;
+    if (l.action_type === 'consultation_success') r.consultation_success++;
+  }
+
+  return [...map.values()].map(r => ({
+    ...r,
+    focus_rate: staffTotals.get(r.staff_id) ? Math.round(r.call_attempt / staffTotals.get(r.staff_id)! * 100) : 0,
+    connect_rate: r.call_attempt > 0 ? Math.round(r.call_connected / r.call_attempt * 100) : 0,
+    success_rate: r.call_connected > 0 ? Math.round(r.consultation_success / r.call_connected * 100) : 0,
+  })).sort((a, b) => b.call_attempt - a.call_attempt);
+}
+
+export interface ChannelFunnelRow {
+  channel: string;
+  new_leads: number;
+  call_attempt: number;
+  call_connected: number;
+  consultation_success: number;
+  activation_completed: number;
+  try_rate: number;
+  connect_rate: number;
+  success_rate: number;
+  conversion_rate: number;
+}
+
+export async function getChannelFunnelStats(
+  from: string, to: string, filters: PerfFilters = {}
+): Promise<ChannelFunnelRow[]> {
+  const { start: lStart, end: lEnd } = getKstDateRangeUtc(from, to);
+  const { start: aStart, end: aEnd } = getKstDateRangeUtc(from, to);
+
+  const [leadsRes, logsRes, salesRes] = await Promise.all([
+    supabase.from('leads').select('channel, campaign_name').gte('created_at', lStart).lte('created_at', lEnd).is('deleted_at', null),
+    supabase.from('activity_logs').select('channel, action_type').gte('created_at', aStart).lte('created_at', aEnd).eq('is_counted', true),
+    supabase.from('sales').select('channel, status').gte('open_date', from).lte('open_date', to).is('deleted_at', null).eq('status', '개통완료'),
+  ]);
+
+  const detectCh = (r: any) => r.campaign_name === '도그마루_홈캠' ? 'dogmaru' : r.channel ?? '기타';
+  const map = new Map<string, ChannelFunnelRow>();
+  const ensure = (ch: string) => { if (!map.has(ch)) map.set(ch, { channel: ch, new_leads: 0, call_attempt: 0, call_connected: 0, consultation_success: 0, activation_completed: 0, try_rate: 0, connect_rate: 0, success_rate: 0, conversion_rate: 0 }); return map.get(ch)!; };
+
+  (leadsRes.data ?? []).forEach((r: any) => { ensure(detectCh(r)).new_leads++; });
+  (logsRes.data ?? []).forEach((r: any) => {
+    const row = ensure(r.channel ?? '기타');
+    if (r.action_type === 'call_attempt') row.call_attempt++;
+    if (r.action_type === 'call_connected') row.call_connected++;
+    if (r.action_type === 'consultation_success') row.consultation_success++;
+  });
+  (salesRes.data ?? []).forEach((r: any) => { ensure(r.channel ?? '기타').activation_completed++; });
+
+  return [...map.values()].map(r => ({
+    ...r,
+    try_rate: r.new_leads > 0 ? Math.round(r.call_attempt / r.new_leads * 100) : 0,
+    connect_rate: r.call_attempt > 0 ? Math.round(r.call_connected / r.call_attempt * 100) : 0,
+    success_rate: r.call_connected > 0 ? Math.round(r.consultation_success / r.call_connected * 100) : 0,
+    conversion_rate: r.consultation_success > 0 ? Math.round(r.activation_completed / r.consultation_success * 100) : 0,
+  })).sort((a, b) => b.new_leads - a.new_leads);
+}
+
+// ============================================================
+// ── 직원별 판매 요약 ─────────────────────────────────────────
+// ============================================================
+
+export interface StaffSalesSummaryRow {
+  staff_name: string;
+  total: number;
+  mobile: number;
+  internet: number;
+  second: number;   // 2ND
+  tvfree: number;
+  moyo: number;
+  udak: number;
+  dogmaru: number;
+  meta: number;
+  install_completed: number; // 설치완료 (인터넷 인센용)
+}
+
+function productBucketLocal(p: string | null): '모바일' | '인터넷' | '2ND' | 'TV프리' | '기타' {
+  if (!p) return '기타';
+  if (/tv\s*프리|프리tv|tv프리/i.test(p) || p.includes('TV프리')) return 'TV프리';
+  if (/인터넷|기가|wifi/i.test(p)) return '인터넷';
+  if (/모바일|mobile|usim|mnp|재약정|업셀/i.test(p)) return '모바일';
+  if (/2nd|세컨/i.test(p)) return '2ND';
+  return '기타';
+}
+
+function channelBucket(ch: string | null): string {
+  if (!ch) return '기타';
+  if (ch === 'moyo' || ch.includes('모요')) return 'moyo';
+  if (ch === 'dogmaru' || ch.includes('도그마루')) return 'dogmaru';
+  if (ch === 'udak' || ch.includes('유닥')) return 'udak';
+  if (ch === 'meta' || ch.includes('메타')) return 'meta';
+  return ch;
+}
+
+export async function getStaffSalesSummary(
+  from: string, to: string, staffId?: string
+): Promise<StaffSalesSummaryRow[]> {
+  const { data: profiles } = await supabase.from('profiles').select('user_id, display_name').is('deleted_at', null);
+  const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.display_name]));
+  const nameToId = new Map((profiles ?? []).map((p: any) => [p.display_name, p.user_id]));
+
+  let q = supabase.from('sales')
+    .select('id, manager, product, channel, status')
+    .gte('open_date', from).lte('open_date', to)
+    .is('deleted_at', null);
+  const { data: salesRaw } = await q;
+
+  // dedupe by id
+  const seen = new Set<string>();
+  const map = new Map<string, StaffSalesSummaryRow>();
+
+  const ensure = (name: string): StaffSalesSummaryRow => {
+    if (!map.has(name)) map.set(name, { staff_name: name, total: 0, mobile: 0, internet: 0, second: 0, tvfree: 0, moyo: 0, udak: 0, dogmaru: 0, meta: 0, install_completed: 0 });
+    return map.get(name)!;
+  };
+
+  for (const s of (salesRaw ?? [])) {
+    if (seen.has(s.id)) continue;
+    seen.add(s.id);
+
+    let resolvedName: string | null = null;
+    if (s.manager) {
+      if (/^[0-9a-f]{8}-/i.test(s.manager)) {
+        resolvedName = profileMap.get(s.manager) ?? null;
+      } else {
+        resolvedName = s.manager;
+      }
+    }
+    if (!resolvedName) continue;
+    if (staffId && nameToId.get(resolvedName) !== staffId && s.manager !== staffId) continue;
+
+    const bucket = productBucketLocal(s.product);
+    const ch = channelBucket(s.channel);
+
+    if (s.status === '개통완료') {
+      const r = ensure(resolvedName);
+      r.total++;
+      if (bucket === '모바일') r.mobile++;
+      if (bucket === '인터넷') r.internet++;
+      if (bucket === '2ND') r.second++;
+      if (bucket === 'TV프리') r.tvfree++;
+      if (ch === 'moyo') r.moyo++;
+      if (ch === 'udak') r.udak++;
+      if (ch === 'dogmaru') r.dogmaru++;
+      if (ch === 'meta') r.meta++;
+    }
+    if (s.status === '설치완료' && bucket === '인터넷') {
+      ensure(resolvedName).install_completed++;
+    }
+  }
+
+  return [...map.values()].sort((a, b) => b.total - a.total);
+}
+
+// ── 직원별 채널 판매 breakdown ────────────────────────────────
+export interface StaffChannelSalesRow {
+  staff_name: string;
+  channel: string;
+  total: number;
+  mobile: number;
+  internet: number;
+  second: number;
+  tvfree: number;
+  top_device: string;
+  top_rate_plan: string;
+  share_pct: number; // 해당 직원 전체 대비 비중
+}
+
+export async function getStaffChannelSalesStats(
+  from: string, to: string, staffId?: string
+): Promise<StaffChannelSalesRow[]> {
+  const { data: profiles } = await supabase.from('profiles').select('user_id, display_name').is('deleted_at', null);
+  const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.display_name]));
+  const nameToId = new Map((profiles ?? []).map((p: any) => [p.display_name, p.user_id]));
+
+  let q = supabase.from('sales')
+    .select('id, manager, product, channel, status, device_model, rate_plan')
+    .gte('open_date', from).lte('open_date', to)
+    .is('deleted_at', null).eq('status', '개통완료');
+  const { data: salesRaw } = await q;
+
+  const seen = new Set<string>();
+  // key: staff_name + channel
+  const map = new Map<string, { total: number; mobile: number; internet: number; second: number; tvfree: number; devices: string[]; plans: string[] }>();
+  const staffTotal = new Map<string, number>();
+
+  for (const s of (salesRaw ?? [])) {
+    if (seen.has(s.id)) continue;
+    seen.add(s.id);
+
+    let name: string | null = null;
+    if (s.manager) {
+      name = /^[0-9a-f]{8}-/i.test(s.manager) ? (profileMap.get(s.manager) ?? null) : s.manager;
+    }
+    if (!name) continue;
+    if (staffId && nameToId.get(name) !== staffId && s.manager !== staffId) continue;
+
+    const ch = channelBucket(s.channel);
+    const bucket = productBucketLocal(s.product);
+    const key = `${name}||${ch}`;
+
+    if (!map.has(key)) map.set(key, { total: 0, mobile: 0, internet: 0, second: 0, tvfree: 0, devices: [], plans: [] });
+    const r = map.get(key)!;
+    r.total++;
+    if (bucket === '모바일') r.mobile++;
+    if (bucket === '인터넷') r.internet++;
+    if (bucket === '2ND') r.second++;
+    if (bucket === 'TV프리') r.tvfree++;
+    if (s.device_model) r.devices.push(s.device_model);
+    if (s.rate_plan) r.plans.push(s.rate_plan);
+    staffTotal.set(name, (staffTotal.get(name) ?? 0) + 1);
+  }
+
+  const topOf = (arr: string[]) => {
+    if (!arr.length) return '-';
+    const freq = new Map<string, number>();
+    arr.forEach(v => freq.set(v, (freq.get(v) ?? 0) + 1));
+    return [...freq.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  };
+
+  return [...map.entries()].map(([key, v]) => {
+    const [staff_name, channel] = key.split('||');
+    const tot = staffTotal.get(staff_name) ?? 1;
+    return {
+      staff_name, channel,
+      total: v.total, mobile: v.mobile, internet: v.internet, second: v.second, tvfree: v.tvfree,
+      top_device: topOf(v.devices), top_rate_plan: topOf(v.plans),
+      share_pct: Math.round(v.total / tot * 100),
+    };
+  }).sort((a, b) => b.total - a.total);
+}
+
+// ── 상품·기기 분석 ────────────────────────────────────────────
+export interface ProductDeviceRow {
+  staff_name: string;
+  channel: string;
+  product: string;
+  device_model: string;
+  rate_plan: string;
+  sale_type: string;
+  open_method: string;
+  contract_type: string;
+  count: number;
+  share_pct: number;
+}
+
+export async function getStaffProductDetailStats(
+  from: string, to: string, staffId?: string, filterChannel?: string, filterDevice?: string, filterPlan?: string, filterSaleType?: string
+): Promise<ProductDeviceRow[]> {
+  const { data: profiles } = await supabase.from('profiles').select('user_id, display_name').is('deleted_at', null);
+  const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.display_name]));
+  const nameToId = new Map((profiles ?? []).map((p: any) => [p.display_name, p.user_id]));
+
+  let q = supabase.from('sales')
+    .select('id, manager, product, channel, status, device_model, rate_plan, sale_type, open_method, custom_fields')
+    .gte('open_date', from).lte('open_date', to)
+    .is('deleted_at', null).eq('status', '개통완료');
+  if (filterDevice) q = q.eq('device_model', filterDevice);
+  if (filterPlan) q = q.eq('rate_plan', filterPlan);
+  if (filterSaleType) q = q.eq('sale_type', filterSaleType);
+  const { data: salesRaw } = await q;
+
+  const seen = new Set<string>();
+  const map = new Map<string, { count: number }>();
+  const total = { val: 0 };
+
+  for (const s of (salesRaw ?? [])) {
+    if (seen.has(s.id)) continue;
+    seen.add(s.id);
+
+    let name: string | null = null;
+    if (s.manager) {
+      name = /^[0-9a-f]{8}-/i.test(s.manager) ? (profileMap.get(s.manager) ?? null) : s.manager;
+    }
+    if (!name) continue;
+    if (staffId && nameToId.get(name) !== staffId && s.manager !== staffId) continue;
+
+    const ch = channelBucket(s.channel);
+    if (filterChannel && ch !== filterChannel) continue;
+
+    const contractType = (s.custom_fields as any)?.contract_type ?? '';
+    const key = [name, ch, s.product ?? '', s.device_model ?? '', s.rate_plan ?? '', s.sale_type ?? '', s.open_method ?? '', contractType].join('||');
+    if (!map.has(key)) map.set(key, { count: 0 });
+    map.get(key)!.count++;
+    total.val++;
+  }
+
+  return [...map.entries()].map(([key, v]) => {
+    const parts = key.split('||');
+    return {
+      staff_name: parts[0], channel: parts[1], product: parts[2] || '-', device_model: parts[3] || '-',
+      rate_plan: parts[4] || '-', sale_type: parts[5] || '-', open_method: parts[6] || '-', contract_type: parts[7] || '-',
+      count: v.count, share_pct: total.val > 0 ? Math.round(v.count / total.val * 100 * 10) / 10 : 0,
+    };
+  }).sort((a, b) => b.count - a.count);
+}
+
+// ── 채널 퍼널 ─────────────────────────────────────────────────
+export interface ChannelFunnelRow {
+  channel: string;
+  new_leads: number;
+  call_attempt: number;
+  call_connected: number;
+  absent: number;
+  recare: number;
+  consultation_success: number;
+  activation_completed: number;
+  try_rate: number;
+  connect_rate: number;
+  success_rate: number;
+  conversion_rate: number;
+}
+
+export async function getChannelFunnelStats(
+  from: string, to: string
+): Promise<ChannelFunnelRow[]> {
+  const { start: lStart, end: lEnd } = getKstDateRangeUtc(from, to);
+
+  const [leadsRes, logsRes, salesRes] = await Promise.all([
+    supabase.from('leads').select('channel, campaign_name').gte('created_at', lStart).lte('created_at', lEnd).is('deleted_at', null),
+    supabase.from('activity_logs').select('channel, action_type').gte('created_at', lStart).lte('created_at', lEnd).eq('is_counted', true),
+    supabase.from('sales').select('id, channel, status').gte('open_date', from).lte('open_date', to).is('deleted_at', null).eq('status', '개통완료'),
+  ]);
+
+  const CHANNELS = ['meta', 'dogmaru', 'udak', 'moyo', '기타'];
+  const map = new Map<string, ChannelFunnelRow>();
+  const ensure = (ch: string) => {
+    if (!map.has(ch)) map.set(ch, { channel: ch, new_leads: 0, call_attempt: 0, call_connected: 0, absent: 0, recare: 0, consultation_success: 0, activation_completed: 0, try_rate: 0, connect_rate: 0, success_rate: 0, conversion_rate: 0 });
+    return map.get(ch)!;
+  };
+
+  const leadCh = (ch: string | null, camp: string | null) => {
+    if (camp === '도그마루_홈캠') return 'dogmaru';
+    if (ch === '유닥') return 'udak';
+    if (camp?.includes('모요')) return 'moyo';
+    if (ch === 'meta' || camp) return 'meta';
+    return '기타';
+  };
+
+  (leadsRes.data ?? []).forEach((l: any) => { ensure(leadCh(l.channel, l.campaign_name)).new_leads++; });
+  (logsRes.data ?? []).forEach((l: any) => {
+    const ch = l.channel ?? '기타';
+    const r = ensure(ch);
+    if (l.action_type === 'call_attempt') r.call_attempt++;
+    if (l.action_type === 'call_connected') r.call_connected++;
+    if (l.action_type === 'absent') r.absent++;
+    if (['recare_registered', 'recare_completed'].includes(l.action_type)) r.recare++;
+    if (l.action_type === 'consultation_success') r.consultation_success++;
+  });
+
+  const seenSales = new Set<string>();
+  (salesRes.data ?? []).forEach((s: any) => {
+    if (seenSales.has(s.id)) return;
+    seenSales.add(s.id);
+    ensure(channelBucket(s.channel)).activation_completed++;
+  });
+
+  const pct = (n: number, d: number) => d > 0 ? Math.round(n / d * 100) : 0;
+
+  return [...map.values()].map(r => ({
+    ...r,
+    try_rate: pct(r.call_attempt, r.new_leads),
+    connect_rate: pct(r.call_connected, r.call_attempt),
+    success_rate: pct(r.consultation_success, r.call_connected),
+    conversion_rate: pct(r.activation_completed, r.consultation_success),
+  })).sort((a, b) => b.new_leads - a.new_leads);
+}
+
+// ── 직원별 채널 집중도 ────────────────────────────────────────
+export interface StaffChannelFocusRow {
+  staff_name: string;
+  channel: string;
+  call_attempt: number;
+  call_connected: number;
+  absent: number;
+  recare: number;
+  consultation_success: number;
+  focus_pct: number;   // 직원 내 채널 시도 비중
+  connect_rate: number;
+  success_rate: number;
+}
+
+export async function getStaffChannelFocusStats(
+  from: string, to: string, staffId?: string
+): Promise<StaffChannelFocusRow[]> {
+  const { data: profiles } = await supabase.from('profiles').select('user_id, display_name').is('deleted_at', null);
+  const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.display_name]));
+
+  const { start: aStart, end: aEnd } = getKstDateRangeUtc(from, to);
+  let q = supabase.from('activity_logs')
+    .select('staff_id, staff_name, channel, action_type')
+    .gte('created_at', aStart).lte('created_at', aEnd).eq('is_counted', true);
+  if (staffId) q = q.eq('staff_id', staffId);
+  const { data: logs } = await q;
+
+  const map = new Map<string, StaffChannelFocusRow>();
+  const staffAttempt = new Map<string, number>();
+
+  (logs ?? []).forEach((l: any) => {
+    const name = profileMap.get(l.staff_id) ?? l.staff_name ?? l.staff_id;
+    const ch = l.channel ?? '기타';
+    const key = `${name}||${ch}`;
+    if (!map.has(key)) map.set(key, { staff_name: name, channel: ch, call_attempt: 0, call_connected: 0, absent: 0, recare: 0, consultation_success: 0, focus_pct: 0, connect_rate: 0, success_rate: 0 });
+    const r = map.get(key)!;
+    if (l.action_type === 'call_attempt') { r.call_attempt++; staffAttempt.set(name, (staffAttempt.get(name) ?? 0) + 1); }
+    if (l.action_type === 'call_connected') r.call_connected++;
+    if (l.action_type === 'absent') r.absent++;
+    if (['recare_registered', 'recare_completed'].includes(l.action_type)) r.recare++;
+    if (l.action_type === 'consultation_success') r.consultation_success++;
+  });
+
+  const pct = (n: number, d: number) => d > 0 ? Math.round(n / d * 100) : 0;
+  return [...map.values()].map(r => ({
+    ...r,
+    focus_pct: pct(r.call_attempt, staffAttempt.get(r.staff_name) ?? 0),
+    connect_rate: pct(r.call_connected, r.call_attempt),
+    success_rate: pct(r.consultation_success, r.call_connected),
+  })).sort((a, b) => b.call_attempt - a.call_attempt);
+}
+
+// ── 기기/요금제/가입유형 필터 옵션 ───────────────────────────
+export async function getDeviceFilterOptions(from: string, to: string): Promise<{
+  devices: string[]; plans: string[]; saleTypes: string[];
+}> {
+  const { data } = await supabase.from('sales')
+    .select('device_model, rate_plan, sale_type')
+    .gte('open_date', from).lte('open_date', to)
+    .is('deleted_at', null).eq('status', '개통완료');
+  const uniq = (arr: (string | null)[]) => [...new Set(arr.filter(Boolean) as string[])].sort();
+  return {
+    devices: uniq((data ?? []).map((r: any) => r.device_model)),
+    plans: uniq((data ?? []).map((r: any) => r.rate_plan)),
+    saleTypes: uniq((data ?? []).map((r: any) => r.sale_type)),
+  };
+}
