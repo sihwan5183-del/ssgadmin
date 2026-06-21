@@ -15,7 +15,7 @@ import { resolveStaffDisplayNames } from '@/services/workReport/staffDisplayServ
 import { WRBadge } from './_shared';
 
 const CHANNEL_LABEL: Record<string, string> = {
-  meta: '메타', dogmaru: '도그마루', udak: '유닥',
+  meta: '메타', dogmaru: '도그마루', udak: '유닥', moyo: '모요', other: '기타인입',
 };
 
 export interface LogDetailFilter {
@@ -92,14 +92,15 @@ export function LogDetailModal({
       for (const [logId, reason] of pendingExcludes.entries()) {
         await cancelActivityLog({ logId, reason, cancelledBy: user.id });
       }
-      toast.success(`${pendingExcludes.size}건이 집계에서 제외되었습니다.`);
-      setPendingExcludes(new Map());
-      // 로컬 반영
+      const excluded = new Map(pendingExcludes); // 저장 전 복사
+      toast.success(`${excluded.size}건이 집계에서 제외되었습니다.`);
+      // 로컬 반영 (복사본 사용)
       setRows((prev) => prev.map((r) =>
-        pendingExcludes.has(r.id)
-          ? { ...r, is_counted: false, not_counted_reason: pendingExcludes.get(r.id) ?? '' }
+        excluded.has(r.id)
+          ? { ...r, is_counted: false, not_counted_reason: excluded.get(r.id) ?? '' }
           : r
       ));
+      setPendingExcludes(new Map()); // 마지막에 초기화
       onDone?.();
     } catch (e: any) {
       toast.error('저장 실패: ' + e.message);

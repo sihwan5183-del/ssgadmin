@@ -20,7 +20,7 @@ type Period = '오늘' | '어제' | '이번주' | '이번달' | '전체기간' |
 type TabKey = 'overview' | 'staff' | 'trend' | 'channel' | 'alerts';
 
 const CHANNEL_LABEL: Record<string, string> = {
-  meta: '메타', dogmaru: '도그마루', udak: '유닥', moyo: '모요', '기타': '기타',
+  meta: '메타', dogmaru: '도그마루', udak: '유닥', moyo: '모요', other: '기타인입', '기타': '기타',
 };
 
 const KPI_CONFIG = [
@@ -140,7 +140,7 @@ export default function StaffPerformanceAnalysis() {
         <div className="h-4 w-px bg-gray-200 mx-1" />
         <select value={selChannel} onChange={e => setSelChannel(e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white">
           <option value="">전체 채널</option>
-          {['meta','dogmaru','udak','moyo'].map(ch => <option key={ch} value={ch}>{CHANNEL_LABEL[ch]}</option>)}
+          {['meta','dogmaru','udak','moyo','other'].map(ch => <option key={ch} value={ch}>{CHANNEL_LABEL[ch]}</option>)}
         </select>
         <select value={selStaff} onChange={e => setSelStaff(e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white">
           <option value="">전체 직원</option>
