@@ -43,7 +43,7 @@ export default function TeamWorkDashboard() {
   const [newSummary, setNewSummary] = useState<{ today_new: number; pending_new: number; by_channel: Record<string, number> } | null>(null);
 
   const load = useCallback(async () => {
-    if (!user || roleLoading) return;
+    if (!user) return;
     setLoading(true);
     try {
       const { from, to } = getDateRange(period);
@@ -72,9 +72,11 @@ export default function TeamWorkDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [user, canViewAll, period, roleLoading]);
+  }, [user, canViewAll, period]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (!roleLoading) load();
+  }, [roleLoading, load]);
 
   const kpiItems = [
     { label: '통화시도',  key: 'call_attempt',         color: 'text-blue-600' },

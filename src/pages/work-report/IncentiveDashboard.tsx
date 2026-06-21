@@ -27,7 +27,7 @@ export default function IncentiveDashboard() {
   const [results, setResults] = useState<IncentiveResult[]>([]);
 
   const load = useCallback(async () => {
-    if (!user || roleLoading) return;
+    if (!user) return;
     setLoading(true);
     try {
       const [pol, res] = await Promise.all([
@@ -47,7 +47,9 @@ export default function IncentiveDashboard() {
     }
   }, [user, roleLoading, isAdmin, applyMonth]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (!roleLoading) load();
+  }, [roleLoading, load]);
 
   const totalEstimated = results.reduce((s, r) => s + r.estimated_amount, 0);
   const totalConfirmed = results.reduce((s, r) => s + r.settlement_confirmed, 0);

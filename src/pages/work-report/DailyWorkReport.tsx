@@ -37,7 +37,7 @@ export default function DailyWorkReport() {
   const [showPreview, setShowPreview] = useState(true);
 
   const load = useCallback(async () => {
-    if (!user || roleLoading) return;
+    if (!user) return;
     setLoading(true);
     try {
       const data = await getDailyWorkReportData({
@@ -52,11 +52,12 @@ export default function DailyWorkReport() {
     } finally {
       setLoading(false);
     }
-  }, [user, date, channel, canViewAll, roleLoading]);
+  }, [user, date, channel, canViewAll]);
 
-  // roleLoading 완료 전엔 fetch 안 함 (권한 확정 전 잘못된 필터 방지)
-
-  useEffect(() => { load(); }, [load]);
+  // roleLoading 완료 시점 + 조건 변경 시 재조회
+  useEffect(() => {
+    if (!roleLoading) load();
+  }, [roleLoading, load]);
 
   const reportText = reportData ? formatDailyKakaoReport(reportData) : '';
 

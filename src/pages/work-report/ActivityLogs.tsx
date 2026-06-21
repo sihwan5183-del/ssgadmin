@@ -276,7 +276,7 @@ export default function ActivityLogs() {
     }
   }, [filter]);
 
-  useEffect(() => { load(); }, [load, roleLoading]);
+  useEffect(() => { load(); }, [load]);
 
   const totalCount = logs.length;
   const countedCount = logs.filter((l) => l.is_counted).length;
