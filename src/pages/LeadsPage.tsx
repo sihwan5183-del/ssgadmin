@@ -50,7 +50,6 @@ import { BulkDeleteDialog } from "@/components/common/BulkDeleteDialog";
 import { PaginationBar } from "@/components/ui/pagination-bar";
 import { Trash2 } from "lucide-react";
 import { formatPhone } from "@/lib/phoneFormat";
-import { logLeadStatusChange } from "@/services/workReport/activityLogService";
 // 무거운(1k+ LOC) 페이지 — 사용자가 [기타인입] 탭을 처음 클릭할 때만 로드해서
 // 메타/도그마루 탭의 초기 진입과 탭 전환 응답성을 잡아준다.
 const ChannelIntakePage = lazy(() => import("@/pages/ChannelIntakePage"));
@@ -1534,21 +1533,11 @@ export default function LeadsPage() {
     const { error } = await supabase.from("leads").update(updateData).eq("id", id);
     if (error) { toast.error(error.message); return; }
 
-    // 상태 변경 로그 INSERT (기존 유지)
+    // 상태 변경 로그 INSERT
     await supabase.from("lead_status_logs").insert({
       lead_id: id,
       status,
       changed_by: changedBy,
-    });
-
-    // 영업 활동 리포트용 activity_logs INSERT (신규 — 기존 기능에 영향 없음)
-    const previousStatus = rows.find((r) => r.id === id)?.status ?? null;
-    await logLeadStatusChange({
-      leadId: id,
-      staffId: user?.id ?? changedBy,
-      staffName: changedBy,
-      previousStatus,
-      nextStatus: status,
     });
 
     setRows((p) => p.map((r) => (r.id === id ? { ...r, ...updateData } : r)));
