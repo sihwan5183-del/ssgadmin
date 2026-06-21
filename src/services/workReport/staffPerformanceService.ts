@@ -155,12 +155,15 @@ export async function getStaffWorkSummary(
   (sales ?? []).forEach((s: any) => {
     if (!s.manager) return;
     if (!COMPLETED_STATUSES.includes(s.status ?? '')) return;
-    // UUID → display_name → staff_id 매핑
-    const resolvedId = isUUID(s.manager)
-      ? (profileMap.has(s.manager) ? s.manager : null)
-      : (nameToId.get(s.manager) ?? null);
+    // UUID → staffId 직접 사용 / 이름 → nameToId로 staffId 변환
+    let resolvedId: string | null = null;
+    if (isUUID(s.manager)) {
+      resolvedId = profileMap.has(s.manager) ? s.manager : null;
+    } else {
+      resolvedId = nameToId.get(s.manager) ?? null;
+    }
     if (!resolvedId) return;
-    const r = ensure(resolvedId, s.manager);
+    const r = ensure(resolvedId, profileMap.get(resolvedId) ?? s.manager);
     r.activation_completed++;
   });
 

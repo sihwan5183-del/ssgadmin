@@ -196,6 +196,11 @@ export async function cancelActivityLog({
     })
     .eq('id', logId)
     .select('id, is_counted');
-  if (error) throw error;
-  if (!data || data.length === 0) throw new Error('업데이트된 행 없음 — id 확인 필요');
+  if (error) throw new Error(`DB 에러: ${error.message} (code: ${error.code})`);
+  if (!data || data.length === 0) {
+    // RLS 때문에 행을 못 찾는 경우 — select로 존재 확인
+    const { data: check } = await supabase.from('activity_logs').select('id').eq('id', logId).single();
+    if (!check) throw new Error(`ID를 찾을 수 없음: ${logId}`);
+    throw new Error('RLS 정책으로 인해 업데이트 권한 없음');
+  }
 }
