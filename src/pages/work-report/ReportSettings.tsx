@@ -1,13 +1,22 @@
 // ============================================================
-// 리포트 설정 — mock data 기반 레이아웃 (1단계)
+// 리포트 설정 — 인센 정책 DB 저장 (관리자 전용)
 // ============================================================
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Save, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRole } from '@/hooks/useRole';
 import { WorkReportHeader, SectionCard } from './_shared';
-import { mockIncentivePolicies } from '@/data/workReportMockData';
+import {
+  fetchAllMonthPolicies,
+  upsertIncentivePolicy,
+  deleteIncentivePolicy,
+  type IncentivePolicy,
+} from '@/services/workReport/incentiveService';
 
-function ToggleSetting({ label, description, defaultChecked }: { label: string; description?: string; defaultChecked?: boolean }) {
+function ToggleSetting({ label, description, defaultChecked }: {
+  label: string; description?: string; defaultChecked?: boolean;
+}) {
   const [checked, setChecked] = useState(defaultChecked ?? false);
   return (
     <div className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
@@ -25,172 +34,241 @@ function ToggleSetting({ label, description, defaultChecked }: { label: string; 
   );
 }
 
-function NumberSetting({ label, defaultValue, unit }: { label: string; defaultValue: number; unit?: string }) {
-  return (
-    <div className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
-      <div className="text-sm font-medium text-gray-800">{label}</div>
-      <div className="flex items-center gap-2">
-        <input
-          type="number"
-          defaultValue={defaultValue}
-          className="w-16 text-right text-sm border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-pink-300"
-        />
-        {unit && <span className="text-xs text-gray-400">{unit}</span>}
-      </div>
-    </div>
-  );
-}
-
 export default function ReportSettings() {
-  const handleSave = () => toast.success('설정이 저장되었습니다.');
+  const { user } = useAuth();
+  const { isAdmin } = useRole();
+
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const [applyMonth, setApplyMonth] = useState(currentMonth);
+  const [policies, setPolicies] = useState<IncentivePolicy[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // 편집용 로컬 상태
+  const [editRows, setEditRows] = useState<Array<Partial<IncentivePolicy> & { _new?: boolean }>>([]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const all = await fetchAllMonthPolicies();
+      const filtered = all.filter((p) => p.apply_month === applyMonth);
+      setPolicies(filtered);
+      setEditRows(filtered.map((p) => ({ ...p })));
+    } catch (e: any) {
+      toast.error('정책 조회 실패: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [applyMonth]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleAddRow = () => {
+    setEditRows((prev) => [
+      ...prev,
+      { _new: true, apply_month: applyMonth, product_type: '전체', calc_method: '최종구간일괄', range_start: 1, range_end: null, unit_price: 0, is_active: true },
+    ]);
+  };
+
+  const handleSaveAll = async () => {
+    if (!user) return;
+    setSaving(true);
+    try {
+      for (const row of editRows) {
+        await upsertIncentivePolicy({
+          ...row,
+          apply_month: applyMonth,
+          created_by: user.id,
+        } as any);
+      }
+      toast.success('인센 정책이 저장되었습니다.');
+      await load();
+    } catch (e: any) {
+      toast.error('저장 실패: ' + e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('이 구간을 삭제하시겠습니까?')) return;
+    try {
+      await deleteIncentivePolicy(id);
+      toast.success('삭제되었습니다.');
+      await load();
+    } catch (e: any) {
+      toast.error('삭제 실패: ' + e.message);
+    }
+  };
+
+  const updateRow = (idx: number, field: string, value: any) => {
+    setEditRows((prev) => prev.map((r, i) => i === idx ? { ...r, [field]: value } : r));
+  };
+
+  if (!isAdmin) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center text-gray-400">
+          <div className="text-lg font-semibold mb-1">접근 권한 없음</div>
+          <div className="text-sm">리포트 설정은 관리자만 접근할 수 있습니다.</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
       <WorkReportHeader
         title="리포트 설정"
-        description="업무량 인정 기준, 인센 정책, 보고서 양식을 관리자가 직접 설정합니다."
+        description="업무량 인정 기준, 인센 정책을 관리자가 직접 설정합니다."
         rightSlot={
           <button
-            onClick={handleSave}
-            className="flex items-center gap-1.5 text-xs bg-pink-500 hover:bg-pink-600 text-white rounded-lg px-4 py-2 font-medium transition-colors"
+            onClick={handleSaveAll}
+            disabled={saving}
+            className="flex items-center gap-1.5 text-xs bg-pink-500 hover:bg-pink-600 text-white rounded-lg px-4 py-2 font-medium transition-colors disabled:opacity-50"
           >
-            <Save className="size-3.5" />저장
+            <Save className="size-3.5" />{saving ? '저장 중...' : '전체 저장'}
           </button>
         }
       />
 
+      {/* 업무량 인정 기준 (로컬 설정 — 추후 DB 연결) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* 업무량 인정 기준 */}
         <SectionCard title="업무량 인정 기준">
-          <NumberSetting label="동일 고객 동일 행동 중복 제한 시간" defaultValue={10} unit="분" />
-          <NumberSetting label="동일 고객 부재 인정 횟수 (일 최대)" defaultValue={3} unit="회" />
-          <NumberSetting label="동일 고객 문자발송 인정 횟수 (일 최대)" defaultValue={2} unit="회" />
-          <div className="py-3 border-b border-gray-50">
-            <div className="text-sm font-medium text-gray-800 mb-2">실패처리 필수 입력값</div>
-            <div className="space-y-1.5">
-              {['실패사유', '상담요약'].map((item) => (
-                <label key={item} className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                  <input type="checkbox" defaultChecked className="rounded accent-pink-500" />
-                  {item}
-                </label>
-              ))}
+          {[
+            { label: '동일 고객 동일 행동 중복 제한', sub: '10분 이내 중복 시 미인정' },
+            { label: '부재 인정 횟수 (일 최대 3회)' },
+            { label: '문자발송 인정 횟수 (일 최대 2회)' },
+          ].map((item) => (
+            <div key={item.label} className="flex justify-between items-center py-3 border-b border-gray-50 last:border-0">
+              <div>
+                <div className="text-sm font-medium text-gray-800">{item.label}</div>
+                {item.sub && <div className="text-xs text-gray-400 mt-0.5">{item.sub}</div>}
+              </div>
+              <span className="text-xs text-gray-400 bg-gray-100 rounded-lg px-2 py-1">적용 중</span>
             </div>
-          </div>
-          <div className="py-3">
-            <div className="text-sm font-medium text-gray-800 mb-2">재케어완료 필수 입력값</div>
-            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded accent-pink-500" />
-              다음 예정 연락 시간
-            </label>
-          </div>
+          ))}
         </SectionCard>
 
         {/* 보고서 양식 설정 */}
-        <SectionCard title="보고서 양식 설정">
-          <ToggleSetting label="고객명 마스킹" description="보고서에 고객명 마스킹 (김** 형태)" defaultChecked={true} />
+        <SectionCard title="보고서 양식">
+          <ToggleSetting label="고객명 마스킹" description="박민규 → 박*규 형태" defaultChecked={true} />
           <ToggleSetting label="연락처 표시" description="보고서에 연락처 포함" defaultChecked={false} />
-          <ToggleSetting label="실패 사유 포함" description="보고서에 실패 사유 요약 포함" defaultChecked={true} />
-          <ToggleSetting label="담당자별 요약 포함" description="담당자별 업무량 요약 포함" defaultChecked={true} />
-          <ToggleSetting label="성공건 상세 포함" description="개통완료건 상세 목록 포함" defaultChecked={true} />
-          <ToggleSetting label="진행예정건 포함" description="택배대기/개통대기 진행건 포함" defaultChecked={true} />
+          <ToggleSetting label="실패 사유 포함" defaultChecked={true} />
+          <ToggleSetting label="담당자별 요약 포함" defaultChecked={true} />
+          <ToggleSetting label="성공건 상세 포함" defaultChecked={true} />
+          <ToggleSetting label="진행예정건 포함" defaultChecked={true} />
         </SectionCard>
       </div>
 
-      {/* 인센 정책 설정 */}
+      {/* 인센 정책 — DB 연결 */}
       <SectionCard
         title="인센 정책"
         rightSlot={
-          <button className="flex items-center gap-1 text-xs bg-pink-500 hover:bg-pink-600 text-white rounded-lg px-3 py-1.5 font-medium transition-colors">
-            <Plus className="size-3" />구간 추가
-          </button>
-        }
-      >
-        <div className="mb-3 flex gap-3 flex-wrap">
           <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-500 font-medium">적용월</label>
             <input
               type="month"
-              defaultValue="2026-06"
-              className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-pink-300"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-500 font-medium">계산방식</label>
-            <select
-              defaultValue="최종구간일괄"
+              value={applyMonth}
+              onChange={(e) => setApplyMonth(e.target.value)}
               className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none"
+            />
+            <button
+              onClick={handleAddRow}
+              className="flex items-center gap-1 text-xs bg-pink-500 hover:bg-pink-600 text-white rounded-lg px-3 py-1.5 font-medium transition-colors"
             >
-              <option>최종구간일괄</option>
-              <option>구간별누적</option>
-            </select>
+              <Plus className="size-3" />구간 추가
+            </button>
           </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs text-gray-500 border-b border-gray-100 bg-gray-50">
-                {['구간 시작', '구간 종료', '건당 단가', '상품구분', '활성', ''].map((h) => (
-                  <th key={h} className="py-2.5 px-3 font-medium text-left">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {mockIncentivePolicies.map((pol, i) => (
-                <tr key={pol.id} className="hover:bg-gray-50">
-                  <td className="py-2.5 px-3">
-                    <input
-                      type="number"
-                      defaultValue={pol.range_start}
-                      className="w-16 text-sm border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-pink-300"
-                    />
-                  </td>
-                  <td className="py-2.5 px-3">
-                    <input
-                      type="number"
-                      defaultValue={pol.range_end ?? ''}
-                      placeholder="이상"
-                      className="w-16 text-sm border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-pink-300"
-                    />
-                  </td>
-                  <td className="py-2.5 px-3">
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        defaultValue={pol.unit_price}
-                        className="w-24 text-sm border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-pink-300"
-                      />
-                      <span className="text-xs text-gray-400">원</span>
-                    </div>
-                  </td>
-                  <td className="py-2.5 px-3">
-                    <select
-                      defaultValue={pol.product_type}
-                      className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none"
-                    >
-                      <option>전체</option>
-                      <option>MNP</option>
-                      <option>재가입</option>
-                      <option>기기변경</option>
-                    </select>
-                  </td>
-                  <td className="py-2.5 px-3">
-                    <input type="checkbox" defaultChecked={pol.is_active} className="rounded accent-pink-500" />
-                  </td>
-                  <td className="py-2.5 px-3">
-                    <button className="text-gray-300 hover:text-red-400 transition-colors">
-                      <Trash2 className="size-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <p className="text-[11px] text-gray-400 mt-3">
-          ※ 계산방식 "최종구간일괄": 정산확정 건수 기준 해당 구간 단가를 전체 건에 일괄 적용합니다.
-        </p>
+        }
+      >
+        {loading ? (
+          <div className="py-8 text-center text-sm text-gray-400">로딩 중...</div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-gray-500 border-b border-gray-100 bg-gray-50">
+                    {['구간 시작', '구간 종료', '건당 단가', '상품구분', '활성', ''].map((h) => (
+                      <th key={h} className="py-2.5 px-3 font-medium text-left">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {editRows.map((row, idx) => (
+                    <tr key={row.id ?? `new-${idx}`} className="hover:bg-gray-50">
+                      <td className="py-2.5 px-3">
+                        <input
+                          type="number"
+                          value={row.range_start ?? ''}
+                          onChange={(e) => updateRow(idx, 'range_start', Number(e.target.value))}
+                          className="w-16 text-sm border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-pink-300"
+                        />
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <input
+                          type="number"
+                          value={row.range_end ?? ''}
+                          placeholder="이상"
+                          onChange={(e) => updateRow(idx, 'range_end', e.target.value ? Number(e.target.value) : null)}
+                          className="w-16 text-sm border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-pink-300"
+                        />
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            value={row.unit_price ?? ''}
+                            onChange={(e) => updateRow(idx, 'unit_price', Number(e.target.value))}
+                            className="w-24 text-sm border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-pink-300"
+                          />
+                          <span className="text-xs text-gray-400">원</span>
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <select
+                          value={row.product_type ?? '전체'}
+                          onChange={(e) => updateRow(idx, 'product_type', e.target.value)}
+                          className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none"
+                        >
+                          {['전체', 'MNP', '재가입', '기기변경'].map((o) => <option key={o}>{o}</option>)}
+                        </select>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <input
+                          type="checkbox"
+                          checked={row.is_active ?? true}
+                          onChange={(e) => updateRow(idx, 'is_active', e.target.checked)}
+                          className="rounded accent-pink-500"
+                        />
+                      </td>
+                      <td className="py-2.5 px-3">
+                        {row.id && (
+                          <button
+                            onClick={() => handleDelete(row.id!)}
+                            className="text-gray-300 hover:text-red-400 transition-colors"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {editRows.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-sm text-gray-400">
+                        구간을 추가해주세요.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-3">
+              ※ 계산방식 "최종구간일괄": 정산확정 건수 기준 해당 구간 단가를 전체 건에 일괄 적용합니다.
+            </p>
+          </>
+        )}
       </SectionCard>
     </div>
   );
