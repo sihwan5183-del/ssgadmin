@@ -142,12 +142,14 @@ export async function logLeadStatusChange({
   staffName,
   previousStatus,
   nextStatus,
+  channel = null,
 }: {
   leadId: string;
   staffId: string;
   staffName: string;
   previousStatus: string | null;
   nextStatus: string;
+  channel?: string | null;
 }): Promise<void> {
   try {
     await insertActivityLog({
@@ -156,7 +158,7 @@ export async function logLeadStatusChange({
       staff_id: staffId,
       staff_name: staffName,
       store_id: null,
-      channel: null,
+      channel: channel,
       action_type: statusToActionType(nextStatus) as any,
       result_type: nextStatus,
       previous_status: previousStatus,
