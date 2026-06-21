@@ -177,15 +177,18 @@ export default function StaffPerformanceAnalysis() {
               const val = kpi ? (kpi as any)[key] : 0;
               return (
                 <div key={key}
-                  onClick={() => val > 0 && openDetail({
-                    title: `${label} 상세 ${selStaff ? `· ${staffRows.find(r=>r.staff_id===selStaff)?.staff_name}` : ''} ${selChannel ? `· ${selChannel}` : ''}`,
-                    dateFrom: key === 'pending_leads' ? '2020-01-01' : from,
-                    dateTo: to,
-                    sourceType: source === 'activity' ? 'activity' : source === 'sales' ? 'sales' : 'leads',
-                    actionTypes: actions as any,
-                    staffId: selStaff || undefined,
-                    statusFilter: key === 'pending_leads' ? ['신규 접수','신규접수','접수','대기','상담전','미처리'] : undefined,
-                  })}
+                  onClick={() => {
+                    const prevDay = (d: string) => { const dt = new Date(d); dt.setDate(dt.getDate()-1); return dt.toISOString().split('T')[0]; };
+                    val > 0 && openDetail({
+                      title: `${label} 상세 ${selStaff ? `· ${staffRows.find(r=>r.staff_id===selStaff)?.staff_name}` : ''} ${selChannel ? `· ${selChannel}` : ''}`,
+                      dateFrom: key === 'pending_leads' ? '2020-01-01' : prevDay(from),
+                      dateTo: to,
+                      sourceType: source === 'activity' ? 'activity' : source === 'sales' ? 'sales' : 'leads',
+                      actionTypes: actions as any,
+                      staffId: selStaff || undefined,
+                      statusFilter: key === 'pending_leads' ? ['신규 접수','신규접수','접수','대기','상담전','미처리'] : undefined,
+                    });
+                  }}
                   className={`bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-center ${val > 0 ? 'cursor-pointer hover:shadow-md hover:border-pink-200' : ''} transition-all`}>
                   <div className={`text-2xl font-bold ${color}`}>{val}</div>
                   <div className="text-[11px] text-gray-400 mt-1">{label}</div>
