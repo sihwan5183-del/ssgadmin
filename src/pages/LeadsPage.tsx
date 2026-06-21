@@ -1544,9 +1544,16 @@ export default function LeadsPage() {
     // 영업 활동 리포트용 activity_logs INSERT (신규 — 기존 기능에 영향 없음)
     const currentRow = rows.find((r) => r.id === id);
     const previousStatus = currentRow?.status ?? null;
-    const rowChannel = currentRow?.channel === "유닥" ? "udak"
-      : currentRow?.campaign_name === "도그마루_홈캠" ? "dogmaru"
-      : "meta";
+    const detectChannel = (row: typeof currentRow) => {
+      if (!row) return "meta";
+      if (row.channel === "유닥") return "udak";
+      if (row.campaign_name === "도그마루_홈캠") return "dogmaru";
+      if (row.campaign_name?.includes("모요")) return "moyo";
+      // campaign_name이 있으면 메타 광고
+      if (row.campaign_name) return "meta";
+      return "meta";
+    };
+    const rowChannel = detectChannel(currentRow);
     await logLeadStatusChange({
       leadId: id,
       staffId: user?.id ?? changedBy,

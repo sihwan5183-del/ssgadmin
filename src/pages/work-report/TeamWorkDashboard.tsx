@@ -140,6 +140,7 @@ export default function TeamWorkDashboard() {
                   { label: '메타', value: newSummary.by_channel['meta'] ?? 0, color: 'bg-pink-50 border-pink-100 text-pink-600' },
                   { label: '도그마루', value: newSummary.by_channel['dogmaru'] ?? 0, color: 'bg-blue-50 border-blue-100 text-blue-600' },
                   { label: '유닥', value: newSummary.by_channel['udak'] ?? 0, color: 'bg-purple-50 border-purple-100 text-purple-600' },
+                  { label: '모요', value: newSummary.by_channel['moyo'] ?? 0, color: 'bg-green-50 border-green-100 text-green-600' },
                   { label: '기타', value: newSummary.by_channel['other'] ?? 0, color: 'bg-gray-50 border-gray-100 text-gray-500' },
                 ].map((s) => (
                   <div key={s.label} className={`rounded-xl border p-3 text-center ${s.color}`}>

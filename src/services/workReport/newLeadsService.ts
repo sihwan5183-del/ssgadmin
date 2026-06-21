@@ -22,6 +22,8 @@ const PROCESSED_STATUSES = [
 function getLeadChannel(lead: { campaign_name: string | null; channel: string | null }): string {
   if (lead.campaign_name === DOGMARU_CAMPAIGN) return 'dogmaru';
   if (lead.channel === '유닥') return 'udak';
+  if (lead.campaign_name?.includes('모요')) return 'moyo';
+  if (lead.campaign_name) return 'meta';
   return 'meta';
 }
 
@@ -53,6 +55,7 @@ export interface NewLeadsSummary {
     meta: number;
     dogmaru: number;
     udak: number;
+    moyo: number;
     other: number;
   };
 }
@@ -84,11 +87,12 @@ export async function getMyNewLeadsSummary(
   ]);
 
   const leads = todayLeads ?? [];
-  const by_channel = { meta: 0, dogmaru: 0, udak: 0, other: 0 };
+  const by_channel = { meta: 0, dogmaru: 0, udak: 0, moyo: 0, other: 0 };
   leads.forEach((l) => {
     const ch = getLeadChannel(l);
     if (ch === 'dogmaru') by_channel.dogmaru++;
     else if (ch === 'udak') by_channel.udak++;
+    else if (ch === 'moyo') by_channel.moyo++;
     else by_channel.meta++;
   });
 
