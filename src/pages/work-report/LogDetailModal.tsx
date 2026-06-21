@@ -82,6 +82,9 @@ export function LogDetailModal({
   const [salesRows, setSalesRows] = useState<SalesRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // sales 팝업 내부 필터
+  const [salesProductFilter, setSalesProductFilter] = useState('');
+  const [salesChannelFilter, setSalesChannelFilter] = useState('');
   // 제외 예정 목록 (저장 전 로컬 상태)
   const [pendingExcludes, setPendingExcludes] = useState<Map<string, '실수' | '중복'>>(new Map());
 
@@ -266,31 +269,76 @@ export function LogDetailModal({
           {loading ? (
             <div className="py-16 text-center text-sm text-gray-400">로딩 중...</div>
           ) : filter.sourceType === 'sales' ? (
-            salesRows.length === 0 ? (
-              <div className="py-16 text-center text-sm text-gray-400">해당 데이터가 없습니다.</div>
-            ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-xs text-gray-400 border-b border-gray-100 bg-gray-50">
-                    {['개통일','담당자','고객명','상품','상태','채널'].map(h => (
-                      <th key={h} className="py-2.5 px-3 font-medium text-left whitespace-nowrap">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {salesRows.map(r => (
-                    <tr key={r.id} className="hover:bg-gray-50">
-                      <td className="py-2.5 px-3 text-xs text-gray-400 font-mono">{r.open_date ?? '-'}</td>
-                      <td className="py-2.5 px-3 font-medium text-gray-800">{r.manager ?? '-'}</td>
-                      <td className="py-2.5 px-3 font-medium text-gray-800">{maskCustomerName(r.customer_name)}</td>
-                      <td className="py-2.5 px-3 text-xs text-gray-600">{r.product ?? '-'}</td>
-                      <td className="py-2.5 px-3"><WRBadge variant="success">{r.status ?? '-'}</WRBadge></td>
-                      <td className="py-2.5 px-3 text-xs text-gray-500">{r.channel ?? '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )
+  (() => {
+              // 상품구분 분류 (salesReportService.productBucket 기준과 동일)
+              const getBucket = (p: string | null) => {
+                if (!p) return '기타';
+                if (/tv\s*프리|프리tv|tv프리/i.test(p) || p.includes('TV프리')) return 'TV프리';
+                if (/인터넷|기가|wifi/i.test(p)) return '인터넷';
+                if (/모바일|mobile|usim|mnp|재약정|업셀/i.test(p)) return '모바일';
+                return '기타';
+              };
+              // 고유 상품/채널 목록
+              const productOptions = ['', ...Array.from(new Set(salesRows.map(r => getBucket(r.product))))];
+              const channelOptions = ['', ...Array.from(new Set(salesRows.map(r => r.channel ?? '기타').filter(Boolean)))];
+              // 필터 적용
+              const filtered = salesRows.filter(r => {
+                if (salesProductFilter && getBucket(r.product) !== salesProductFilter) return false;
+                if (salesChannelFilter && (r.channel ?? '기타') !== salesChannelFilter) return false;
+                return true;
+              });
+              return (
+                <>
+                  {/* 팝업 내부 필터 바 */}
+                  <div className="flex gap-2 mb-3 flex-wrap">
+                    <select value={salesProductFilter} onChange={e => setSalesProductFilter(e.target.value)}
+                      className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white">
+                      <option value="">전체 상품</option>
+                      {productOptions.filter(Boolean).map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                    <select value={salesChannelFilter} onChange={e => setSalesChannelFilter(e.target.value)}
+                      className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white">
+                      <option value="">전체 채널</option>
+                      {channelOptions.filter(Boolean).map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <span className="text-xs text-gray-400 self-center ml-auto">{filtered.length}건 / 전체 {salesRows.length}건</span>
+                  </div>
+                  {filtered.length === 0 ? (
+                    <div className="py-12 text-center text-sm text-gray-400">해당 조건의 데이터가 없습니다.</div>
+                  ) : (
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-xs text-gray-400 border-b border-gray-100 bg-gray-50">
+                          {['개통일','담당자','고객명','상품','상품구분','상태','채널'].map(h => (
+                            <th key={h} className="py-2.5 px-3 font-medium text-left whitespace-nowrap">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {filtered.map(r => (
+                          <tr key={r.id} className="hover:bg-gray-50">
+                            <td className="py-2.5 px-3 text-xs text-gray-400 font-mono">{r.open_date ?? '-'}</td>
+                            <td className="py-2.5 px-3 font-medium text-gray-800">{r.manager ?? '-'}</td>
+                            <td className="py-2.5 px-3 font-medium text-gray-800">{maskCustomerName(r.customer_name)}</td>
+                            <td className="py-2.5 px-3 text-xs text-gray-600 max-w-[120px] truncate">{r.product ?? '-'}</td>
+                            <td className="py-2.5 px-3">
+                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                                getBucket(r.product) === '모바일' ? 'bg-pink-100 text-pink-700' :
+                                getBucket(r.product) === '인터넷' ? 'bg-blue-100 text-blue-700' :
+                                getBucket(r.product) === 'TV프리' ? 'bg-purple-100 text-purple-700' :
+                                'bg-gray-100 text-gray-600'
+                              }`}>{getBucket(r.product)}</span>
+                            </td>
+                            <td className="py-2.5 px-3"><WRBadge variant="success">{r.status ?? '-'}</WRBadge></td>
+                            <td className="py-2.5 px-3 text-xs text-gray-500">{r.channel ?? '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </>
+              );
+            })()
           ) : filter.sourceType === 'leads' ? (
             /* 신규접수/미처리 — leads 테이블 */
             leadsRows.length === 0 ? (
