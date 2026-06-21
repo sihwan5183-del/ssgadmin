@@ -1,189 +1,76 @@
 // ============================================================
-// 영업 활동 리포트 — 타입 정의 (1단계: mock data용)
+// 영업 활동 리포트 — 타입 정의
 // ============================================================
 
-export type WorkReportMenuKey =
-  | 'my-work-dashboard'
-  | 'team-work-dashboard'
-  | 'daily-work-report'
-  | 'activity-logs'
-  | 'progress-delay'
-  | 'incentive-dashboard'
-  | 'report-settings';
-
 export type ActivityActionType =
-  | 'CALL_ATTEMPT'
-  | 'CALL_CONNECTED'
-  | 'NO_ANSWER'
-  | 'SMS_SENT'
-  | 'RECARE_REGISTERED'
-  | 'RECARE_COMPLETED'
-  | 'FAILED'
-  | 'CONSULT_SUCCESS'
-  | 'DELIVERY_PENDING'
-  | 'DELIVERY_SENT'
-  | 'CUSTOMER_RECEIVED'
-  | 'OPENING_PENDING'
-  | 'OPENING_COMPLETE'
-  | 'SETTLEMENT_PENDING'
-  | 'SETTLEMENT_CONFIRMED'
-  | 'SETTLEMENT_EXCLUDED'
-  | 'CANCELLED';
+  | 'call_attempt'        // 통화시도
+  | 'call_connected'      // 연결완료
+  | 'absent'              // 부재
+  | 'sms_sent'            // 문자발송
+  | 'recare_registered'   // 재케어등록
+  | 'recare_completed'    // 재케어완료
+  | 'failed'              // 실패처리
+  | 'consultation_success'// 상담성공
+  | 'delivery_ready'      // 택배대기
+  | 'delivery_sent'       // 택배발송
+  | 'activation_completed'// 개통완료
+  | 'settlement_confirmed';// 정산확정
 
-export type ActivityResultType =
-  | '부재'
-  | '연결완료'
-  | '문자발송완료'
-  | '상담성공'
-  | '실패'
-  | '재케어등록'
-  | '재케어완료'
-  | '택배대기'
-  | '택배발송'
-  | '고객수령'
-  | '개통대기'
-  | '개통완료'
-  | '정산대기'
-  | '정산확정'
-  | '정산제외'
-  | '취소';
+export const ACTION_TYPE_LABEL: Record<ActivityActionType, string> = {
+  call_attempt:         '통화시도',
+  call_connected:       '연결완료',
+  absent:               '부재',
+  sms_sent:             '문자발송',
+  recare_registered:    '재케어등록',
+  recare_completed:     '재케어완료',
+  failed:               '실패처리',
+  consultation_success: '상담성공',
+  delivery_ready:       '택배대기',
+  delivery_sent:        '택배발송',
+  activation_completed: '개통완료',
+  settlement_confirmed: '정산확정',
+};
 
-export type LeadProgressStatus =
-  | '신규접수'
-  | '통화시도'
-  | '연결완료'
-  | '부재'
-  | '재케어등록'
-  | '재케어완료'
-  | '실패처리'
-  | '상담성공'
-  | '택배대기'
-  | '택배발송'
-  | '고객수령'
-  | '개통대기'
-  | '개통완료';
-
-export type SettlementStatus =
-  | '정산대기'
-  | '정산확정'
-  | '정산제외'
-  | '철회';
-
-// 활동 로그 (신규 테이블 - 2단계에서 실제 연결)
+// Supabase activity_logs 테이블 Row 타입
 export interface ActivityLog {
   id: string;
   lead_id: string | null;
   sales_record_id: string | null;
-  user_id: string;
-  user_name: string;
-  branch: string;
-  channel: string;
+  staff_id: string;
+  staff_name: string;
+  store_id: string | null;
+  channel: string | null;
   action_type: ActivityActionType;
-  result_type: ActivityResultType | null;
+  result_type: string | null;
   previous_status: string | null;
   next_status: string | null;
   memo: string | null;
   fail_reason: string | null;
-  next_contact_at: string | null;
+  next_action_at: string | null;
   is_counted: boolean;
-  uncounted_reason: string | null;
-  is_corrected: boolean;
-  correction_of_log_id: string | null;
+  not_counted_reason: string | null;
+  corrected_log_id: string | null;
   device_info: string | null;
   ip_address: string | null;
   created_at: string;
-  // 조인 데이터 (읽기용)
-  customer_name?: string;
-  customer_phone?: string;
+  created_by: string;
+  updated_at: string;
 }
 
-// 일일 업무 요약 카드용
-export interface DailySummaryCard {
-  label: string;
-  count: number;
-  countedCount?: number;
-  totalLogCount?: number;
-  color?: string;
+// INSERT용 타입 (id, created_at, updated_at 제외)
+export type ActivityLogInsert = Omit<ActivityLog, 'id' | 'created_at' | 'updated_at'>;
+
+// 활동 로그 + leads join 결과 (화면 표시용)
+export interface ActivityLogWithLead extends ActivityLog {
+  customer_name?: string | null;  // leads 테이블에서 join
 }
 
-// 직원별 팀 현황 행
-export interface TeamMemberRow {
-  user_id: string;
-  user_name: string;
-  branch: string;
-  assigned: number;
-  callAttempt: number;
-  callConnected: number;
-  noAnswer: number;
-  recare: number;
-  failed: number;
-  consultSuccess: number;
-  openingComplete: number;
-  settlementConfirmed: number;
-  conversionRate: number;
-}
-
-// 인센 정책
-export interface IncentivePolicy {
-  id: string;
-  apply_month: string;
-  product_type: string;
-  calc_method: '최종구간일괄' | '구간별누적';
-  range_start: number;
-  range_end: number | null;
-  unit_price: number;
-  is_active: boolean;
-  created_at: string;
-}
-
-// 인센 결과 (직원별)
-export interface IncentiveResult {
-  id: string;
-  apply_month: string;
-  user_id: string;
-  user_name: string;
-  consult_success: number;
-  opening_complete: number;
-  confirmed_count: number;
-  pending_count: number;
-  excluded_count: number;
-  applied_tier: string;
-  applied_unit_price: number;
-  estimated_amount: number;
-  calculated_at: string;
-}
-
-// 진행/지연 건
-export interface ProgressDelayRow {
-  id: string;
-  customer_name: string;
-  customer_phone: string;
-  user_name: string;
-  current_status: LeadProgressStatus | string;
-  consult_success_at: string | null;
-  delivery_sent_at: string | null;
-  expected_opening_at: string | null;
-  actual_opening_at: string | null;
-  delay_days: number;
-  channel: string;
-  product_type: string;
-}
-
-// 이상 로그 유형
-export type AnomalyType =
-  | '10분내_중복통화'
-  | '부재4회이상'
-  | '실패사유_미입력'
-  | '진행예정_다음액션없음'
-  | '상담성공_택배미발송_2일초과'
-  | '택배발송_개통미완료_4일초과'
-  | '개통완료_정산미확정_3일초과';
-
-export interface AnomalyLog {
-  anomaly_type: AnomalyType;
-  log_id: string;
-  user_name: string;
-  customer_name: string;
-  occurred_at: string;
-  description: string;
+// 필터 타입
+export interface ActivityLogFilter {
+  dateFrom?: string;
+  dateTo?: string;
+  staffId?: string;
+  actionType?: ActivityActionType | '';
+  isCounted?: boolean | null;
+  anomalyOnly?: boolean;
 }
