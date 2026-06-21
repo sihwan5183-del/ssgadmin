@@ -67,6 +67,7 @@ export function formatDailyKakaoReport(data: DailyReportData, teamName = '온라
   lines.push(`- 택배발송: ${summary.delivery_sent}건`);
   lines.push(`- 개통완료: ${summary.activation_completed}건`);
 
+  // 개통 완료건 — 항상 고정 출력
   lines.push('');
   lines.push('[개통 완료건]');
   if (activationLogs.length === 0) {
@@ -75,6 +76,7 @@ export function formatDailyKakaoReport(data: DailyReportData, teamName = '온라
     activationLogs.forEach((log, i) => lines.push(formatActivationLine(log, i)));
   }
 
+  // 진행 예정건 — 항상 고정 출력
   lines.push('');
   lines.push('[진행 예정건]');
   if (progressLogs.length === 0) {
@@ -83,6 +85,7 @@ export function formatDailyKakaoReport(data: DailyReportData, teamName = '온라
     progressLogs.forEach((log, i) => lines.push(formatProgressLine(log, i)));
   }
 
+  // 실패 요약 — 항상 고정 출력
   lines.push('');
   lines.push('[실패 요약]');
   if (failReasons.length === 0) {
@@ -91,6 +94,7 @@ export function formatDailyKakaoReport(data: DailyReportData, teamName = '온라
     failReasons.forEach((f) => lines.push(`- ${f.reason}: ${f.count}건`));
   }
 
+  // 담당자별 — 항상 고정 출력 (0건이어도 표시)
   lines.push('');
   lines.push('[담당자별]');
   if (staffSummaries.length === 0) {

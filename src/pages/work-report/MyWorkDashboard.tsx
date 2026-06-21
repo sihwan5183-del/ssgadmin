@@ -70,7 +70,6 @@ export default function MyWorkDashboard() {
       const name = await resolveStaffDisplayName(user.id, user.email ?? '');
       setDisplayName(name);
       // 신규건 / 미처리 신규건 조회
-      const { from } = getDateRange(period);
       const [newSum, pending] = await Promise.all([
         getMyNewLeadsSummary(user.id, from),
         getMyPendingNewLeads(user.id),

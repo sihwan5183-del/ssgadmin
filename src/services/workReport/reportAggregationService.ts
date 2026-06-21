@@ -137,8 +137,25 @@ export async function getDailyWorkReportData({
     .map(([reason, count]) => ({ reason, count }))
     .sort((a, b) => b.count - a.count);
 
-  // 담당자별 집계
+  // 전 직원 목록 가져오기 (활동 없어도 0건으로 표시)
+  const { data: allProfiles } = await supabase
+    .from('profiles')
+    .select('user_id, display_name')
+    .eq('status', 'active')
+    .is('deleted_at', null);
+
+  // 담당자별 집계 — 전 직원 기본값으로 초기화
   const staffMap = new Map<string, StaffDailySummary>();
+  (allProfiles ?? []).forEach((p: any) => {
+    staffMap.set(p.user_id, {
+      staff_id: p.user_id,
+      staff_name: p.display_name,
+      display_name: p.display_name,
+      call_attempt: 0, call_connected: 0, absent: 0,
+      recare: 0, failed: 0, consultation_success: 0, activation_completed: 0,
+    });
+  });
+  // 로그 있는 직원은 nameMap으로 덮어쓰기
   counted.forEach((l) => {
     if (!staffMap.has(l.staff_id)) {
       staffMap.set(l.staff_id, {
