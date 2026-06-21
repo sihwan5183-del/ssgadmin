@@ -37,7 +37,7 @@ export interface IncentiveResult {
 // ── 정책 조회 ─────────────────────────────────────────────
 export async function fetchIncentivePolicies(month: string): Promise<IncentivePolicy[]> {
   const { data, error } = await supabase
-    .from('incentive_policies')
+    .from('work_report_incentive_policies')
     .select('*')
     .eq('apply_month', month)
     .eq('is_active', true)
@@ -48,7 +48,7 @@ export async function fetchIncentivePolicies(month: string): Promise<IncentivePo
 
 export async function fetchAllMonthPolicies(): Promise<IncentivePolicy[]> {
   const { data, error } = await supabase
-    .from('incentive_policies')
+    .from('work_report_incentive_policies')
     .select('*')
     .order('apply_month', { ascending: false })
     .order('range_start');
@@ -62,7 +62,7 @@ export async function upsertIncentivePolicy(
 ): Promise<void> {
   if (policy.id) {
     const { error } = await supabase
-      .from('incentive_policies')
+      .from('work_report_incentive_policies')
       .update({
         range_start: policy.range_start,
         range_end: policy.range_end,
@@ -76,7 +76,7 @@ export async function upsertIncentivePolicy(
     if (error) throw error;
   } else {
     const { error } = await supabase
-      .from('incentive_policies')
+      .from('work_report_incentive_policies')
       .insert({
         apply_month: policy.apply_month,
         product_type: policy.product_type ?? '전체',
@@ -93,7 +93,7 @@ export async function upsertIncentivePolicy(
 
 export async function deleteIncentivePolicy(id: string): Promise<void> {
   const { error } = await supabase
-    .from('incentive_policies')
+    .from('work_report_incentive_policies')
     .delete()
     .eq('id', id);
   if (error) throw error;
