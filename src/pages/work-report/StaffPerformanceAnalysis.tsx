@@ -180,7 +180,7 @@ export default function StaffPerformanceAnalysis() {
                   onClick={() => val > 0 && openDetail({
                     title: `${label} 상세 ${selStaff ? `· ${staffRows.find(r=>r.staff_id===selStaff)?.staff_name}` : ''} ${selChannel ? `· ${selChannel}` : ''}`,
                     dateFrom: from, dateTo: to,
-                    sourceType: source === 'activity' ? 'activity' : 'leads',
+                    sourceType: source === 'activity' ? 'activity' : source === 'sales' ? 'sales' : 'leads',
                     actionTypes: actions as any,
                     staffId: selStaff || undefined,
                   })}
@@ -264,7 +264,7 @@ export default function StaffPerformanceAnalysis() {
                         <button onClick={() => val > 0 && openDetail({
                           title: `${r.staff_name} · ${label}`,
                           dateFrom: from, dateTo: to,
-                          sourceType: src === 'activity' ? 'activity' : 'leads',
+                          sourceType: src === 'activity' ? 'activity' : src === 'sales' ? 'sales' : 'leads',
                           actionTypes: actions as any,
                           staffId: r.staff_id,
                         })} className={`${cls} ${val > 0 ? 'hover:underline cursor-pointer' : 'cursor-default'}`}>{val}</button>

@@ -78,7 +78,7 @@ export async function getKpiSummary(
   const { data: sales } = await supabase.from('sales')
     .select('status').gte('open_date', start).lte('open_date', end).is('deleted_at', null);
   const activated = (sales ?? []).filter(s =>
-    COMPLETED_STATUSES.some(x => (s.status ?? '').includes(x))
+    COMPLETED_STATUSES.includes(s.status ?? '')
   ).length;
 
   return {
@@ -154,7 +154,7 @@ export async function getStaffWorkSummary(
 
   (sales ?? []).forEach((s: any) => {
     if (!s.manager) return;
-    if (!COMPLETED_STATUSES.some(x => (s.status ?? '').includes(x))) return;
+    if (!COMPLETED_STATUSES.includes(s.status ?? '')) return;
     // UUID → display_name → staff_id 매핑
     const resolvedId = isUUID(s.manager)
       ? (profileMap.has(s.manager) ? s.manager : null)

@@ -24,7 +24,7 @@ export interface LogDetailFilter {
   dateTo: string;
   actionTypes?: ActivityActionType[];     // action_type 필터 (없으면 전체)
   staffId?: string;                       // 특정 담당자 필터
-  sourceType?: 'activity' | 'leads';     // activity_logs vs leads
+  sourceType?: 'activity' | 'leads' | 'sales';  // activity_logs vs leads vs sales
   statusFilter?: string[];               // leads용 status 필터
 }
 
@@ -42,6 +42,16 @@ interface DetailRow {
   fail_reason: string | null;
   is_counted: boolean;
   not_counted_reason: string | null;
+}
+
+interface SalesRow {
+  id: string;
+  open_date: string | null;
+  manager: string | null;
+  customer_name: string | null;
+  product: string | null;
+  status: string | null;
+  channel: string | null;
 }
 
 interface LeadsRow {
@@ -68,6 +78,7 @@ export function LogDetailModal({
   const canExclude = isAdmin || isManager;
   const [rows, setRows] = useState<DetailRow[]>([]);
   const [leadsRows, setLeadsRows] = useState<LeadsRow[]>([]);
+  const [salesRows, setSalesRows] = useState<SalesRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   // 제외 예정 목록 (저장 전 로컬 상태)
@@ -140,6 +151,28 @@ export function LogDetailModal({
             status: r.status,
             assigned_name: r.profiles?.display_name ?? '미배정',
           })));
+        } else if (filter.sourceType === 'sales') {
+          // sales 테이블 조회
+          const { start, end } = (() => {
+            const from = filter.dateFrom.slice(0, 7);
+            const [y, m] = from.split('-').map(Number);
+            const lastDay = new Date(y, m, 0).getDate();
+            return { start: `${from}-01`, end: `${from}-${String(lastDay).padStart(2, '0')}` };
+          })();
+          let q = supabase.from('sales')
+            .select('id, open_date, manager, customer_name, product, status, channel')
+            .gte('open_date', start).lte('open_date', end)
+            .is('deleted_at', null)
+            .in('status', ['개통완료','설치완료','변경완료(업셀용)','택배발송','청약완료'])
+            .order('open_date', { ascending: false }).limit(100);
+          if (filter.staffId) {
+            // manager 필드 — 이름 기준으로 매핑 필요 (profiles에서 조회)
+            const { data: profile } = await supabase.from('profiles')
+              .select('display_name').eq('user_id', filter.staffId).single();
+            if (profile?.display_name) q = q.eq('manager', profile.display_name);
+          }
+          const { data } = await q;
+          setSalesRows((data ?? []) as SalesRow[]);
         } else {
           // activity_logs — leads join 없이 조회 (id 충돌 방지)
           let q = supabase
@@ -212,6 +245,32 @@ export function LogDetailModal({
         <div className="overflow-auto flex-1 p-4">
           {loading ? (
             <div className="py-16 text-center text-sm text-gray-400">로딩 중...</div>
+          ) : filter.sourceType === 'sales' ? (
+            salesRows.length === 0 ? (
+              <div className="py-16 text-center text-sm text-gray-400">해당 데이터가 없습니다.</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-gray-400 border-b border-gray-100 bg-gray-50">
+                    {['개통일','담당자','고객명','상품','상태','채널'].map(h => (
+                      <th key={h} className="py-2.5 px-3 font-medium text-left whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {salesRows.map(r => (
+                    <tr key={r.id} className="hover:bg-gray-50">
+                      <td className="py-2.5 px-3 text-xs text-gray-400 font-mono">{r.open_date ?? '-'}</td>
+                      <td className="py-2.5 px-3 font-medium text-gray-800">{r.manager ?? '-'}</td>
+                      <td className="py-2.5 px-3 font-medium text-gray-800">{maskCustomerName(r.customer_name)}</td>
+                      <td className="py-2.5 px-3 text-xs text-gray-600">{r.product ?? '-'}</td>
+                      <td className="py-2.5 px-3"><WRBadge variant="success">{r.status ?? '-'}</WRBadge></td>
+                      <td className="py-2.5 px-3 text-xs text-gray-500">{r.channel ?? '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )
           ) : filter.sourceType === 'leads' ? (
             /* 신규접수/미처리 — leads 테이블 */
             leadsRows.length === 0 ? (
@@ -340,7 +399,7 @@ export function LogDetailModal({
         {/* 푸터 */}
         <div className="px-6 py-3 border-t border-gray-100 flex justify-between items-center">
           <span className="text-xs text-gray-400">
-            {filter.sourceType === 'leads' ? leadsRows.length : rows.length}건
+            {filter.sourceType === 'sales' ? salesRows.length : filter.sourceType === 'leads' ? leadsRows.length : rows.length}건
             {pendingExcludes.size > 0 && (
               <span className="ml-2 text-red-500 font-medium">{pendingExcludes.size}건 제외 예정</span>
             )}
