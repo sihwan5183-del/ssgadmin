@@ -141,7 +141,6 @@ export async function getDailyWorkReportData({
   const { data: allProfiles } = await supabase
     .from('profiles')
     .select('user_id, display_name')
-    .eq('status', 'active')
     .is('deleted_at', null);
 
   // 담당자별 집계 — 전 직원 기본값으로 초기화

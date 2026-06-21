@@ -51,14 +51,7 @@ export default function TeamWorkDashboard() {
       setTotalAgg(aggregateByAction(logs));
       const rows = aggregateByStaff(logs);
       setStaffRows(rows);
-      // 신규건 요약
-      const { from } = (() => {
-        const today = new Date();
-        const fmt = (d: Date) => d.toISOString().split('T')[0];
-        if (period === '오늘') return { from: fmt(today) };
-        if (period === '이번주') { const m = new Date(today); m.setDate(today.getDate() - ((today.getDay() + 6) % 7)); return { from: fmt(m) }; }
-        return { from: fmt(new Date(today.getFullYear(), today.getMonth(), 1)) };
-      })();
+      // 신규건 요약 (from은 이미 위에서 선언됨)
       const newSum = await getTeamNewLeadsSummary(from, canViewAll, user.id);
       setNewSummary(newSum);
       // 담당자 표시명 일괄 조회
