@@ -138,11 +138,9 @@ export async function getDailyWorkReportData({
     .sort((a, b) => b.count - a.count);
 
   // 전 직원 목록 가져오기 (활동 없어도 0건으로 표시)
-  // show_in_dashboard = true인 직원만 (실제 영업 활동 직원)
   const { data: allProfiles } = await supabase
     .from('profiles')
     .select('user_id, display_name')
-    .eq('show_in_dashboard', true)
     .is('deleted_at', null);
 
   // 담당자별 집계 — 전 직원 기본값으로 초기화

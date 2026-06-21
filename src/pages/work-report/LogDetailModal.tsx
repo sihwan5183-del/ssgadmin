@@ -7,6 +7,7 @@ import { X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ACTION_TYPE_LABEL, type ActivityActionType } from '@/types/workReport';
 import { maskCustomerName } from '@/services/workReport/reportFormatService';
+import { resolveStaffDisplayNames } from '@/services/workReport/staffDisplayService';
 import { WRBadge } from './_shared';
 
 const CHANNEL_LABEL: Record<string, string> = {
@@ -27,6 +28,7 @@ interface DetailRow {
   id: string;
   created_at: string;
   staff_name: string;
+  resolved_name?: string;
   customer_name: string | null;
   channel: string | null;
   action_type: string;
@@ -107,9 +109,16 @@ export function LogDetailModal({
           }
 
           const { data } = await q;
-          setRows((data ?? []).map((r: any) => ({
+          const rawRows = (data ?? []).map((r: any) => ({
             ...r,
             customer_name: r.leads?.customer_name ?? null,
+          }));
+          // 담당자명 이메일 → display_name 변환
+          const staffIds = [...new Set(rawRows.map((r: any) => r.staff_id).filter(Boolean))];
+          const nameMap = staffIds.length > 0 ? await resolveStaffDisplayNames(staffIds) : new Map();
+          setRows(rawRows.map((r: any) => ({
+            ...r,
+            resolved_name: nameMap.get(r.staff_id) ?? r.staff_name,
           })));
         }
       } finally {
@@ -203,7 +212,7 @@ export function LogDetailModal({
                         {' '}
                         {new Date(r.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                       </td>
-                      <td className="py-2.5 px-3 font-medium text-gray-800 whitespace-nowrap">{r.staff_name}</td>
+                      <td className="py-2.5 px-3 font-medium text-gray-800 whitespace-nowrap">{r.resolved_name ?? r.staff_name}</td>
                       <td className="py-2.5 px-3 font-medium text-gray-800 whitespace-nowrap">
                         {maskCustomerName(r.customer_name)}
                       </td>
