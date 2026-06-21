@@ -143,7 +143,7 @@ export function LogDetailModal({
           // activity_logs
           let q = supabase
             .from('activity_logs')
-            .select('*, leads!left(customer_name)')
+            .select('id, staff_id, staff_name, channel, action_type, result_type, previous_status, next_status, memo, fail_reason, is_counted, not_counted_reason, created_at, leads!left(customer_name)')
             .gte('created_at', `${filter.dateFrom}T00:00:00`)
             .lte('created_at', `${filter.dateTo}T23:59:59`)
             .order('created_at', { ascending: false });
