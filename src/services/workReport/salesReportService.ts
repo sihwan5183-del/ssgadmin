@@ -158,10 +158,29 @@ export async function getStaffIncentiveSummary(
     (profiles ?? []).forEach((p: any) => nameMap.set(p.user_id, p.display_name));
   }
 
-  let results: StaffIncentiveSummary[] = [];
+  // UUID → 이름 변환 후 동일 이름 합산
+  const mergedMap = new Map<string, typeof map extends Map<string, infer V> ? V : never>();
   for (const [rawManager, counts] of map.entries()) {
     const manager = nameMap.get(rawManager) ?? rawManager;
-    if (filterManager && manager !== filterManager && rawManager !== filterManager) continue;
+    if (mergedMap.has(manager)) {
+      const existing = mergedMap.get(manager)!;
+      mergedMap.set(manager, {
+        total: existing.total + counts.total,
+        mobile: existing.mobile + counts.mobile,
+        internet: existing.internet + counts.internet,
+        tvfree: existing.tvfree + counts.tvfree,
+        smarthome: existing.smarthome + counts.smarthome,
+        other: existing.other + counts.other,
+        moyo_count: existing.moyo_count + counts.moyo_count,
+      });
+    } else {
+      mergedMap.set(manager, { ...counts });
+    }
+  }
+
+  let results: StaffIncentiveSummary[] = [];
+  for (const [manager, counts] of mergedMap.entries()) {
+    if (filterManager && manager !== filterManager) continue;
     const { mobile_condition_met, base_incentive, payout_rate, final_incentive } =
       calcIncentiveFromSales(counts.mobile, counts.internet);
     results.push({
