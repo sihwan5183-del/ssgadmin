@@ -153,27 +153,33 @@ export function LogDetailModal({
             assigned_name: r.profiles?.display_name ?? '미배정',
           })));
         } else if (filter.sourceType === 'sales') {
-          // sales 테이블 조회
-          const { start, end } = (() => {
-            const from = filter.dateFrom.slice(0, 7);
-            const [y, m] = from.split('-').map(Number);
-            const lastDay = new Date(y, m, 0).getDate();
-            return { start: `${from}-01`, end: `${from}-${String(lastDay).padStart(2, '0')}` };
-          })();
+          // sales 테이블 — open_date는 YYYY-MM-DD 타입이므로 KST 변환 없이 직접 사용
           let q = supabase.from('sales')
             .select('id, open_date, manager, customer_name, product, status, channel')
-            .gte('open_date', start).lte('open_date', end)
+            .gte('open_date', filter.dateFrom).lte('open_date', filter.dateTo)
             .is('deleted_at', null)
             .in('status', ['개통완료'])
-            .order('open_date', { ascending: false }).limit(100);
+            .order('open_date', { ascending: false }).limit(200);
           if (filter.staffId) {
-            // manager 필드 — 이름 기준으로 매핑 필요 (profiles에서 조회)
             const { data: profile } = await supabase.from('profiles')
               .select('display_name').eq('user_id', filter.staffId).single();
-            if (profile?.display_name) { q = q.or(`manager.eq.${profile.display_name},manager.eq.${filter.staffId}`); }
+            if (profile?.display_name) {
+              q = q.or(`manager.eq.${profile.display_name},manager.eq.${filter.staffId}`);
+            }
           }
           const { data } = await q;
-          setSalesRows((data ?? []) as SalesRow[]);
+          // manager UUID → 이름 변환
+          const uuidManagers = [...new Set((data ?? []).map((r: any) => r.manager).filter((m: any) => m && /^[0-9a-f]{8}-/i.test(m)))];
+          const uuidNameMap = new Map<string, string>();
+          if (uuidManagers.length > 0) {
+            const { data: profiles } = await supabase.from('profiles')
+              .select('user_id, display_name').in('user_id', uuidManagers);
+            (profiles ?? []).forEach((p: any) => uuidNameMap.set(p.user_id, p.display_name));
+          }
+          setSalesRows((data ?? []).map((r: any) => ({
+            ...r,
+            manager: uuidNameMap.get(r.manager) ?? r.manager,
+          })) as SalesRow[]);
         } else {
           // activity_logs — leads join 없이 조회 (id 충돌 방지)
           let q = supabase

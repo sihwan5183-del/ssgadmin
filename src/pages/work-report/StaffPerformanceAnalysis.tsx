@@ -178,10 +178,9 @@ export default function StaffPerformanceAnalysis() {
               return (
                 <div key={key}
                   onClick={() => {
-                    const prevDay = (d: string) => { const dt = new Date(d); dt.setDate(dt.getDate()-1); return dt.toISOString().split('T')[0]; };
                     val > 0 && openDetail({
                       title: `${label} 상세 ${selStaff ? `· ${staffRows.find(r=>r.staff_id===selStaff)?.staff_name}` : ''} ${selChannel ? `· ${selChannel}` : ''}`,
-                      dateFrom: key === 'pending_leads' ? '2020-01-01' : prevDay(from),
+                      dateFrom: key === 'pending_leads' ? '2020-01-01' : from,
                       dateTo: to,
                       sourceType: source === 'activity' ? 'activity' : source === 'sales' ? 'sales' : 'leads',
                       actionTypes: actions as any,

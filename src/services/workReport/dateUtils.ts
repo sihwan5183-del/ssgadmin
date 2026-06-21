@@ -7,9 +7,16 @@
  * 예) '2026-06-21' → { start: '2026-06-20T15:00:00.000Z', end: '2026-06-21T14:59:59.999Z' }
  */
 export function getKstDateRangeUtc(from: string, to: string): { start: string; end: string } {
-  const start = new Date(`${from}T00:00:00.000+09:00`).toISOString();
-  const end   = new Date(`${to}T23:59:59.999+09:00`).toISOString();
-  return { start, end };
+  // 빈 값 방어: 직접선택 시 customFrom/customTo가 빈 문자열일 수 있음
+  const safeFrom = from && from.length === 10 ? from : new Date().toISOString().slice(0, 10);
+  const safeTo   = to   && to.length   === 10 ? to   : safeFrom;
+  const startMs = new Date(`${safeFrom}T00:00:00.000+09:00`);
+  const endMs   = new Date(`${safeTo}T23:59:59.999+09:00`);
+  if (isNaN(startMs.getTime()) || isNaN(endMs.getTime())) {
+    const now = new Date().toISOString();
+    return { start: now, end: now };
+  }
+  return { start: startMs.toISOString(), end: endMs.toISOString() };
 }
 
 /**
