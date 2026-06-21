@@ -46,9 +46,15 @@ export interface NewLeadItem {
 }
 
 export interface NewLeadsSummary {
-  today_new: number;       // 오늘 신규 접수
+  today_new: number;       // 오늘 신규 접수 전체
   pending_new: number;     // 미처리 신규건 (신규 접수 상태)
   today_assigned: number;  // 오늘 배정된 건
+  by_channel: {
+    meta: number;
+    dogmaru: number;
+    udak: number;
+    other: number;
+  };
 }
 
 // ── 내 업무 대시보드용 신규건 요약 ───────────────────────
@@ -56,31 +62,41 @@ export async function getMyNewLeadsSummary(
   userId: string,
   date: string
 ): Promise<NewLeadsSummary> {
-  const [{ count: today_new }, { count: pending_new }, { count: today_assigned }] =
-    await Promise.all([
-      // 오늘 신규 접수 (본인 배정)
-      supabase.from('leads').select('*', { count: 'exact', head: true })
-        .eq('assigned_to', userId)
-        .gte('created_at', `${date}T00:00:00`)
-        .lte('created_at', `${date}T23:59:59`)
-        .is('deleted_at', null),
-      // 미처리 신규건 (신규 접수 상태, 본인 배정)
-      supabase.from('leads').select('*', { count: 'exact', head: true })
-        .eq('assigned_to', userId)
-        .eq('status', PENDING_STATUS)
-        .is('deleted_at', null),
-      // 오늘 배정건
-      supabase.from('leads').select('*', { count: 'exact', head: true })
-        .eq('assigned_to', userId)
-        .gte('updated_at', `${date}T00:00:00`)
-        .lte('updated_at', `${date}T23:59:59`)
-        .is('deleted_at', null),
-    ]);
+  // 오늘 신규 접수 전체 + 채널별
+  const { data: todayLeads } = await supabase
+    .from('leads')
+    .select('id, channel, campaign_name')
+    .eq('assigned_to', userId)
+    .gte('created_at', `${date}T00:00:00`)
+    .lte('created_at', `${date}T23:59:59`)
+    .is('deleted_at', null);
+
+  const [{ count: pending_new }, { count: today_assigned }] = await Promise.all([
+    supabase.from('leads').select('*', { count: 'exact', head: true })
+      .eq('assigned_to', userId)
+      .eq('status', PENDING_STATUS)
+      .is('deleted_at', null),
+    supabase.from('leads').select('*', { count: 'exact', head: true })
+      .eq('assigned_to', userId)
+      .gte('updated_at', `${date}T00:00:00`)
+      .lte('updated_at', `${date}T23:59:59`)
+      .is('deleted_at', null),
+  ]);
+
+  const leads = todayLeads ?? [];
+  const by_channel = { meta: 0, dogmaru: 0, udak: 0, other: 0 };
+  leads.forEach((l) => {
+    const ch = getLeadChannel(l);
+    if (ch === 'dogmaru') by_channel.dogmaru++;
+    else if (ch === 'udak') by_channel.udak++;
+    else by_channel.meta++;
+  });
 
   return {
-    today_new: today_new ?? 0,
+    today_new: leads.length,
     pending_new: pending_new ?? 0,
     today_assigned: today_assigned ?? 0,
+    by_channel,
   };
 }
 

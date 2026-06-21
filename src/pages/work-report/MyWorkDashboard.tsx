@@ -160,7 +160,8 @@ export default function MyWorkDashboard() {
 
       {/* 신규 접수건 요약 카드 */}
       <SectionCard title="신규 접수 현황">
-        <div className="grid grid-cols-3 gap-4">
+        {/* 전체 요약 */}
+        <div className="grid grid-cols-3 gap-3 mb-4">
           {[
             { label: '오늘 신규 접수', value: newSummary?.today_new ?? 0, color: 'text-blue-600' },
             { label: '미처리 신규건', value: newSummary?.pending_new ?? 0, color: 'text-red-500' },
@@ -171,6 +172,23 @@ export default function MyWorkDashboard() {
               <div className="text-xs text-gray-400 mt-1">{s.label}</div>
             </div>
           ))}
+        </div>
+        {/* 채널별 분리 */}
+        <div className="border-t border-gray-100 pt-3">
+          <div className="text-xs text-gray-400 mb-2 font-medium">채널별 오늘 신규</div>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { label: '메타', value: newSummary?.by_channel.meta ?? 0, color: 'bg-pink-50 border-pink-100 text-pink-600' },
+              { label: '도그마루', value: newSummary?.by_channel.dogmaru ?? 0, color: 'bg-blue-50 border-blue-100 text-blue-600' },
+              { label: '유닥', value: newSummary?.by_channel.udak ?? 0, color: 'bg-purple-50 border-purple-100 text-purple-600' },
+              { label: '기타', value: newSummary?.by_channel.other ?? 0, color: 'bg-gray-50 border-gray-100 text-gray-500' },
+            ].map((s) => (
+              <div key={s.label} className={`rounded-xl border p-3 text-center ${s.color}`}>
+                <div className="text-xl font-bold">{s.value}</div>
+                <div className="text-[10px] mt-0.5 opacity-70">{s.label}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </SectionCard>
 

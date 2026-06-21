@@ -110,19 +110,36 @@ export default function TeamWorkDashboard() {
       {/* 신규 접수 현황 */}
       {newSummary && (
         <SectionCard title="신규 접수 현황">
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-            {[
-              { label: '오늘 신규 접수', value: newSummary.today_new, color: 'text-blue-600' },
-              { label: '미처리 신규건', value: newSummary.pending_new, color: 'text-red-500' },
-              { label: '메타', value: newSummary.by_channel['meta'] ?? 0, color: 'text-pink-600' },
-              { label: '도그마루', value: newSummary.by_channel['dogmaru'] ?? 0, color: 'text-blue-500' },
-              { label: '유닥', value: newSummary.by_channel['udak'] ?? 0, color: 'text-purple-600' },
-            ].map((s) => (
-              <div key={s.label} className="bg-gray-50 rounded-xl border border-gray-100 p-4 text-center">
-                <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-                <div className="text-xs text-gray-400 mt-1">{s.label}</div>
+          <div className="space-y-3">
+            {/* 전체 요약 */}
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: '오늘 신규 접수 (전체)', value: newSummary.today_new, color: 'text-blue-600' },
+                { label: '미처리 신규건', value: newSummary.pending_new, color: 'text-red-500' },
+              ].map((s) => (
+                <div key={s.label} className="bg-gray-50 rounded-xl border border-gray-100 p-4 text-center">
+                  <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+                  <div className="text-xs text-gray-400 mt-1">{s.label}</div>
+                </div>
+              ))}
+            </div>
+            {/* 채널별 분리 */}
+            <div>
+              <div className="text-xs text-gray-400 mb-2 font-medium">채널별 오늘 신규</div>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { label: '메타', value: newSummary.by_channel['meta'] ?? 0, color: 'bg-pink-50 border-pink-100 text-pink-600' },
+                  { label: '도그마루', value: newSummary.by_channel['dogmaru'] ?? 0, color: 'bg-blue-50 border-blue-100 text-blue-600' },
+                  { label: '유닥', value: newSummary.by_channel['udak'] ?? 0, color: 'bg-purple-50 border-purple-100 text-purple-600' },
+                  { label: '기타', value: newSummary.by_channel['other'] ?? 0, color: 'bg-gray-50 border-gray-100 text-gray-500' },
+                ].map((s) => (
+                  <div key={s.label} className={`rounded-xl border p-3 text-center ${s.color}`}>
+                    <div className="text-xl font-bold">{s.value}</div>
+                    <div className="text-[10px] mt-0.5 opacity-70">{s.label}</div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         </SectionCard>
       )}
