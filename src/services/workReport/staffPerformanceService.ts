@@ -26,101 +26,80 @@ export function buildDateRange(period: string, customFrom?: string, customTo?: s
   return { from: fmt(today), to: fmt(today) };
 }
 
-// ── 미처리 신규건 status ────────────────────────────────────
 const PENDING_STATUSES = ['신규 접수', '신규접수', '접수', '대기', '상담전', '미처리'];
+const COMPLETED_STATUSES = ['개통완료', '설치완료', '변경완료(업셀용)', '택배발송', '청약완료'];
+
+// UUID 판단
+function isUUID(s: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(s);
+}
 
 // ── KPI 요약 ────────────────────────────────────────────────
 export interface KpiSummary {
-  new_leads: number;
-  pending_leads: number;
-  call_attempt: number;
-  call_connected: number;
-  absent: number;
-  recare: number;
-  failed: number;
-  consultation_success: number;
-  activation_completed: number;
-  settlement_confirmed: number;
+  new_leads: number; pending_leads: number;
+  call_attempt: number; call_connected: number; absent: number;
+  recare: number; failed: number; consultation_success: number;
+  activation_completed: number; settlement_confirmed: number;
 }
 
 export async function getKpiSummary(
-  from: string, to: string,
-  staffId?: string, channel?: string
+  from: string, to: string, staffId?: string, channel?: string
 ): Promise<KpiSummary> {
-  // 신규접수 (leads)
   let lq = supabase.from('leads').select('id', { count: 'exact', head: true })
     .gte('created_at', `${from}T00:00:00`).lte('created_at', `${to}T23:59:59`)
     .is('deleted_at', null);
   if (staffId) lq = lq.eq('assigned_to', staffId);
   const { count: new_leads } = await lq;
 
-  // 미처리
   let pq = supabase.from('leads').select('id', { count: 'exact', head: true })
     .in('status', PENDING_STATUSES).is('deleted_at', null);
   if (staffId) pq = pq.eq('assigned_to', staffId);
   const { count: pending_leads } = await pq;
 
-  // activity_logs
   let aq = supabase.from('activity_logs').select('action_type')
     .gte('created_at', `${from}T00:00:00`).lte('created_at', `${to}T23:59:59`)
     .eq('is_counted', true);
   if (staffId) aq = aq.eq('staff_id', staffId);
   if (channel) aq = aq.eq('channel', channel);
   const { data: logs } = await aq;
+  const cnt = (t: string[]) => (logs ?? []).filter(l => t.includes(l.action_type)).length;
 
-  const count = (t: string[]) => (logs ?? []).filter(l => t.includes(l.action_type)).length;
-
-  // sales (개통/정산)
+  // sales — open_date 기준 (랭킹과 동일)
   const { start, end } = getMonthRange(from.slice(0, 7));
-  let sq = supabase.from('sales').select('status')
-    .gte('open_date', start).lte('open_date', end).is('deleted_at', null);
-  const { data: sales } = await sq;
+  const { data: sales } = await supabase.from('sales')
+    .select('status').gte('open_date', start).lte('open_date', end).is('deleted_at', null);
   const activated = (sales ?? []).filter(s =>
-    ['개통완료','설치완료','변경완료(업셀용)','택배발송','청약완료'].some(x => (s.status ?? '').includes(x))
+    COMPLETED_STATUSES.some(x => (s.status ?? '').includes(x))
   ).length;
 
   return {
-    new_leads: new_leads ?? 0,
-    pending_leads: pending_leads ?? 0,
-    call_attempt: count(['call_attempt']),
-    call_connected: count(['call_connected']),
-    absent: count(['absent']),
-    recare: count(['recare_registered','recare_completed']),
-    failed: count(['failed']),
-    consultation_success: count(['consultation_success']),
-    activation_completed: activated,
-    settlement_confirmed: 0,
+    new_leads: new_leads ?? 0, pending_leads: pending_leads ?? 0,
+    call_attempt: cnt(['call_attempt']), call_connected: cnt(['call_connected']),
+    absent: cnt(['absent']), recare: cnt(['recare_registered','recare_completed']),
+    failed: cnt(['failed']), consultation_success: cnt(['consultation_success']),
+    activation_completed: activated, settlement_confirmed: 0,
   };
 }
 
 // ── 직원별 업무 현황 ────────────────────────────────────────
 export interface StaffWorkRow {
-  staff_id: string;
-  staff_name: string;
-  new_leads: number;
-  pending_leads: number;
-  call_attempt: number;
-  call_connected: number;
-  absent: number;
-  recare: number;
-  failed: number;
-  consultation_success: number;
+  staff_id: string; staff_name: string;
+  new_leads: number; pending_leads: number;
+  call_attempt: number; call_connected: number; absent: number;
+  recare: number; failed: number; consultation_success: number;
   activation_completed: number;
-  // 전환율
-  connect_rate: number;
-  success_rate: number;
-  conversion_rate: number;
+  connect_rate: number; success_rate: number; conversion_rate: number;
 }
 
 export async function getStaffWorkSummary(
   from: string, to: string, channel?: string
 ): Promise<StaffWorkRow[]> {
-  // profiles
   const { data: profiles } = await supabase
     .from('profiles').select('user_id, display_name').is('deleted_at', null);
   const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.display_name]));
+  // 이름→UUID 역맵
+  const nameToId = new Map((profiles ?? []).map((p: any) => [p.display_name, p.user_id]));
 
-  // activity_logs
   let aq = supabase.from('activity_logs')
     .select('staff_id, staff_name, action_type')
     .gte('created_at', `${from}T00:00:00`).lte('created_at', `${to}T23:59:59`)
@@ -128,22 +107,20 @@ export async function getStaffWorkSummary(
   if (channel) aq = aq.eq('channel', channel);
   const { data: logs } = await aq;
 
-  // leads (신규/미처리)
-  const { data: leads } = await supabase
-    .from('leads').select('assigned_to, status')
+  const { data: leads } = await supabase.from('leads')
+    .select('assigned_to, status')
     .gte('created_at', `${from}T00:00:00`).lte('created_at', `${to}T23:59:59`)
     .is('deleted_at', null);
 
-  // sales
-  const month = from.slice(0, 7);
-  const { start, end } = getMonthRange(month);
+  // sales (open_date 기준)
+  const { start, end } = getMonthRange(from.slice(0, 7));
   const { data: sales } = await supabase.from('sales')
     .select('manager, status').gte('open_date', start).lte('open_date', end)
     .is('deleted_at', null);
 
-  // 집계
-  const map = new Map<string, Omit<StaffWorkRow, 'connect_rate' | 'success_rate' | 'conversion_rate'>>();
-  const ensure = (id: string, name: string) => {
+  type Row = Omit<StaffWorkRow, 'connect_rate'|'success_rate'|'conversion_rate'>;
+  const map = new Map<string, Row>();
+  const ensure = (id: string, name: string): Row => {
     if (!map.has(id)) map.set(id, { staff_id: id, staff_name: profileMap.get(id) ?? name, new_leads: 0, pending_leads: 0, call_attempt: 0, call_connected: 0, absent: 0, recare: 0, failed: 0, consultation_success: 0, activation_completed: 0 });
     return map.get(id)!;
   };
@@ -167,10 +144,14 @@ export async function getStaffWorkSummary(
 
   (sales ?? []).forEach((s: any) => {
     if (!s.manager) return;
-    // manager가 이름인 경우 매핑
-    const staffId = [...profileMap.entries()].find(([, name]) => name === s.manager)?.[0] ?? s.manager;
-    const r = ensure(staffId, s.manager);
-    if (['개통완료','설치완료','변경완료(업셀용)','택배발송','청약완료'].some(x => (s.status ?? '').includes(x))) r.activation_completed++;
+    if (!COMPLETED_STATUSES.some(x => (s.status ?? '').includes(x))) return;
+    // UUID → display_name → staff_id 매핑
+    const resolvedId = isUUID(s.manager)
+      ? (profileMap.has(s.manager) ? s.manager : null)
+      : (nameToId.get(s.manager) ?? null);
+    if (!resolvedId) return;
+    const r = ensure(resolvedId, s.manager);
+    r.activation_completed++;
   });
 
   return [...map.values()].map(r => ({
@@ -178,36 +159,34 @@ export async function getStaffWorkSummary(
     connect_rate: r.call_attempt > 0 ? Math.round(r.call_connected / r.call_attempt * 100) : 0,
     success_rate: r.call_connected > 0 ? Math.round(r.consultation_success / r.call_connected * 100) : 0,
     conversion_rate: r.consultation_success > 0 ? Math.round(r.activation_completed / r.consultation_success * 100) : 0,
-  })).sort((a, b) => b.call_attempt - a.call_attempt);
+  })).filter(r => r.call_attempt + r.new_leads + r.activation_completed > 0)
+    .sort((a, b) => b.call_attempt - a.call_attempt);
 }
 
 // ── 일별 추이 ────────────────────────────────────────────────
 export interface DailyTrendRow {
-  date: string;
-  new_leads: number;
-  call_attempt: number;
-  call_connected: number;
-  absent: number;
-  recare: number;
-  consultation_success: number;
-  activation_completed: number;
+  date: string; new_leads: number;
+  call_attempt: number; call_connected: number; absent: number;
+  recare: number; consultation_success: number; activation_completed: number;
 }
 
 export async function getStaffDailyTrend(
   from: string, to: string, staffId?: string
 ): Promise<DailyTrendRow[]> {
-  const [{ data: logs }, { data: leads }] = await Promise.all([
-    supabase.from('activity_logs').select('created_at, action_type')
-      .gte('created_at', `${from}T00:00:00`).lte('created_at', `${to}T23:59:59`)
-      .eq('is_counted', true)
-      .then(q => staffId ? supabase.from('activity_logs').select('created_at, action_type').gte('created_at', `${from}T00:00:00`).lte('created_at', `${to}T23:59:59`).eq('is_counted', true).eq('staff_id', staffId) : q),
-    supabase.from('leads').select('created_at').gte('created_at', `${from}T00:00:00`).lte('created_at', `${to}T23:59:59`).is('deleted_at', null).then(q => staffId ? supabase.from('leads').select('created_at').gte('created_at', `${from}T00:00:00`).lte('created_at', `${to}T23:59:59`).is('deleted_at', null).eq('assigned_to', staffId) : q),
-  ]);
+  let aq = supabase.from('activity_logs').select('created_at, action_type')
+    .gte('created_at', `${from}T00:00:00`).lte('created_at', `${to}T23:59:59`).eq('is_counted', true);
+  if (staffId) aq = aq.eq('staff_id', staffId);
+  const { data: logs } = await aq;
 
-  const dayMap = new Map<string, DailyTrendRow>();
+  let lq = supabase.from('leads').select('created_at')
+    .gte('created_at', `${from}T00:00:00`).lte('created_at', `${to}T23:59:59`).is('deleted_at', null);
+  if (staffId) lq = lq.eq('assigned_to', staffId);
+  const { data: leads } = await lq;
+
+  const map = new Map<string, DailyTrendRow>();
   const ensure = (date: string) => {
-    if (!dayMap.has(date)) dayMap.set(date, { date, new_leads: 0, call_attempt: 0, call_connected: 0, absent: 0, recare: 0, consultation_success: 0, activation_completed: 0 });
-    return dayMap.get(date)!;
+    if (!map.has(date)) map.set(date, { date, new_leads: 0, call_attempt: 0, call_connected: 0, absent: 0, recare: 0, consultation_success: 0, activation_completed: 0 });
+    return map.get(date)!;
   };
 
   (leads ?? []).forEach((l: any) => { ensure(l.created_at.slice(0, 10)).new_leads++; });
@@ -220,21 +199,15 @@ export async function getStaffDailyTrend(
     if (l.action_type === 'consultation_success') r.consultation_success++;
   });
 
-  return [...dayMap.values()].sort((a, b) => a.date.localeCompare(b.date));
+  return [...map.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
 // ── 채널별 성과 ─────────────────────────────────────────────
 export interface ChannelPerformanceRow {
-  channel: string;
-  new_leads: number;
-  call_attempt: number;
-  call_connected: number;
-  absent: number;
-  recare: number;
-  failed: number;
-  consultation_success: number;
-  connect_rate: number;
-  success_rate: number;
+  channel: string; new_leads: number;
+  call_attempt: number; call_connected: number; absent: number;
+  recare: number; failed: number; consultation_success: number;
+  connect_rate: number; success_rate: number;
 }
 
 export async function getChannelPerformance(
@@ -245,8 +218,9 @@ export async function getChannelPerformance(
   if (staffId) aq = aq.eq('staff_id', staffId);
   const { data: logs } = await aq;
 
-  const map = new Map<string, Omit<ChannelPerformanceRow, 'connect_rate' | 'success_rate'>>();
-  const ensure = (ch: string) => {
+  type Raw = Omit<ChannelPerformanceRow, 'connect_rate'|'success_rate'>;
+  const map = new Map<string, Raw>();
+  const ensure = (ch: string): Raw => {
     if (!map.has(ch)) map.set(ch, { channel: ch, new_leads: 0, call_attempt: 0, call_connected: 0, absent: 0, recare: 0, failed: 0, consultation_success: 0 });
     return map.get(ch)!;
   };
@@ -270,53 +244,48 @@ export async function getChannelPerformance(
 
 // ── 이상/주의 알림 ──────────────────────────────────────────
 export interface WarningAlert {
-  type: string;
-  label: string;
-  count: number;
-  severity: 'danger' | 'warning' | 'info';
+  type: string; label: string; count: number; severity: 'danger'|'warning'|'info';
 }
 
 export async function getWarningAlerts(): Promise<WarningAlert[]> {
   const alerts: WarningAlert[] = [];
   const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
   const cutoff = yesterday.toISOString();
-
-  // 배정 후 24시간 미시도
-  const { count: noAttempt } = await supabase.from('leads')
-    .select('id', { count: 'exact', head: true })
-    .in('status', PENDING_STATUSES).lte('created_at', cutoff).is('deleted_at', null);
-  if ((noAttempt ?? 0) > 0) alerts.push({ type: 'no_attempt', label: '배정 후 24시간 미시도', count: noAttempt ?? 0, severity: 'danger' });
-
-  // 담당자 없는 리드
-  const { count: unassigned } = await supabase.from('leads')
-    .select('id', { count: 'exact', head: true }).is('assigned_to', null).is('deleted_at', null).in('status', PENDING_STATUSES);
-  if ((unassigned ?? 0) > 0) alerts.push({ type: 'unassigned', label: '담당자 없는 신규건', count: unassigned ?? 0, severity: 'warning' });
-
-  // 집계 제외된 로그 (오늘)
   const today = new Date().toISOString().split('T')[0];
-  const { count: excluded } = await supabase.from('activity_logs')
-    .select('id', { count: 'exact', head: true }).eq('is_counted', false)
-    .gte('created_at', `${today}T00:00:00`);
-  if ((excluded ?? 0) > 0) alerts.push({ type: 'excluded', label: '오늘 집계 제외된 로그', count: excluded ?? 0, severity: 'info' });
+
+  const checks = await Promise.all([
+    // 배정 후 24시간 미시도 (신규접수 상태 + 24시간 경과)
+    supabase.from('leads').select('id', { count: 'exact', head: true })
+      .in('status', PENDING_STATUSES).lte('created_at', cutoff).is('deleted_at', null),
+    // 담당자 없는 신규건
+    supabase.from('leads').select('id', { count: 'exact', head: true })
+      .is('assigned_to', null).is('deleted_at', null).in('status', PENDING_STATUSES),
+    // 오늘 집계 제외 로그
+    supabase.from('activity_logs').select('id', { count: 'exact', head: true })
+      .eq('is_counted', false).gte('created_at', `${today}T00:00:00`),
+    // 채널 없는 로그 (오늘)
+    supabase.from('activity_logs').select('id', { count: 'exact', head: true })
+      .is('channel', null).gte('created_at', `${today}T00:00:00`),
+  ]);
+
+  const [noAttempt, unassigned, excluded, noChannel] = checks.map(r => r.count ?? 0);
+
+  if (noAttempt > 0) alerts.push({ type: 'no_attempt', label: '배정 후 24시간 미시도', count: noAttempt, severity: 'danger' });
+  if (unassigned > 0) alerts.push({ type: 'unassigned', label: '담당자 없는 신규건', count: unassigned, severity: 'warning' });
+  if (excluded > 0) alerts.push({ type: 'excluded', label: '오늘 집계 제외 로그', count: excluded, severity: 'info' });
+  if (noChannel > 0) alerts.push({ type: 'no_channel', label: '채널 없는 로그', count: noChannel, severity: 'info' });
 
   return alerts;
 }
 
-// ── 상세 레코드 조회 (팝업용) ────────────────────────────────
+// ── 상세 레코드 조회 ─────────────────────────────────────────
 export interface DetailRecord {
-  id: string;
-  datetime: string;
-  staff_name: string;
-  customer_name: string;
-  channel: string;
-  action_label: string;
-  prev_status: string;
-  next_status: string;
-  memo: string;
-  fail_reason: string;
-  is_counted: boolean;
-  not_counted_reason: string;
-  source: 'activity_logs' | 'leads' | 'sales';
+  id: string; datetime: string; staff_name: string;
+  customer_name: string; channel: string; action_label: string;
+  prev_status: string; next_status: string;
+  memo: string; fail_reason: string;
+  is_counted: boolean; not_counted_reason: string;
+  source: 'activity_logs'|'leads'|'sales';
 }
 
 const ACTION_LABELS: Record<string, string> = {
@@ -327,8 +296,7 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 export async function getActivityDetailRecords(
-  from: string, to: string,
-  actionTypes: string[], staffId?: string, channel?: string
+  from: string, to: string, actionTypes: string[], staffId?: string, channel?: string
 ): Promise<DetailRecord[]> {
   let q = supabase.from('activity_logs')
     .select('id, staff_id, staff_name, channel, action_type, previous_status, next_status, memo, fail_reason, is_counted, not_counted_reason, created_at, leads!left(customer_name)')
