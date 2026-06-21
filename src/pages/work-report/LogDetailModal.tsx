@@ -2,7 +2,7 @@
 // LogDetailModal — 숫자 클릭 시 상세 로그 팝업
 // activity_logs 기반 / 고객명 마스킹 / 전화번호 미노출
 // ============================================================
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ACTION_TYPE_LABEL, type ActivityActionType } from '@/types/workReport';
@@ -85,6 +85,13 @@ export function LogDetailModal({
   // sales 팝업 내부 필터
   const [salesProductFilter, setSalesProductFilter] = useState('');
   const [salesChannelFilter, setSalesChannelFilter] = useState('');
+  // leads 팝업 내부 필터 + 페이지네이션
+  const [leadsChannelFilter, setLeadsChannelFilter] = useState('');
+  const [leadsStatusFilter2, setLeadsStatusFilter2] = useState('');
+  const [leadsPage, setLeadsPage] = useState(0);
+  const [leadsHasMore, setLeadsHasMore] = useState(false);
+  const [leadsTotal, setLeadsTotal] = useState(0);
+  const LEADS_PAGE_SIZE = 50;
   // 제외 예정 목록 (저장 전 로컬 상태)
   const [pendingExcludes, setPendingExcludes] = useState<Map<string, '실수' | '중복'>>(new Map());
 
@@ -125,32 +132,42 @@ export function LogDetailModal({
   };
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
+    loadData(false);
+  }, [filter]);
+
+  const loadData = useCallback(async (isNextPage: boolean) => {
+    setLoading(true);
+    try {
         if (filter.sourceType === 'leads') {
           // 신규접수/미처리 → leads 테이블
           const { start: lStart, end: lEnd } = getKstDateRangeUtc(filter.dateFrom, filter.dateTo);
-          let q = supabase
-            .from('leads')
+          const PAGE_SIZE = 50;
+          const page = isNextPage ? leadsPage + 1 : 0;
+
+          // 전체 건수 조회
+          let cq = supabase.from('leads')
+            .select('id', { count: 'exact', head: true })
+            .gte('created_at', lStart).lte('created_at', lEnd)
+            .is('deleted_at', null);
+          if (filter.statusFilter && filter.statusFilter.length > 0) cq = cq.in('status', filter.statusFilter);
+          if (filter.staffId) cq = cq.eq('assigned_to', filter.staffId);
+          const { count: totalCount } = await cq;
+          setLeadsTotal(totalCount ?? 0);
+
+          // 데이터 조회
+          let q = supabase.from('leads')
             .select('id, created_at, customer_name, channel, campaign_name, status, assigned_to')
-            .gte('created_at', lStart)
-            .lte('created_at', lEnd)
+            .gte('created_at', lStart).lte('created_at', lEnd)
             .is('deleted_at', null)
             .order('created_at', { ascending: false })
-            .limit(200);
-
-          if (filter.statusFilter && filter.statusFilter.length > 0) {
-            q = q.in('status', filter.statusFilter);
-          }
-          if (filter.staffId) {
-            q = q.eq('assigned_to', filter.staffId);
-          }
+            .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+          if (filter.statusFilter && filter.statusFilter.length > 0) q = q.in('status', filter.statusFilter);
+          if (filter.staffId) q = q.eq('assigned_to', filter.staffId);
 
           const { data: leadsData, error: leadsError } = await q;
           if (leadsError) throw leadsError;
 
-          // assigned_to → display_name 별도 조회 (join 없이)
+          // assigned_to → display_name 별도 조회
           const assignedIds = [...new Set((leadsData ?? []).map((r: any) => r.assigned_to).filter(Boolean))];
           const assignedNameMap = new Map<string, string>();
           if (assignedIds.length > 0) {
@@ -159,15 +176,19 @@ export function LogDetailModal({
             (profs ?? []).forEach((p: any) => assignedNameMap.set(p.user_id, p.display_name ?? ''));
           }
 
-          setLeadsRows((leadsData ?? []).map((r: any) => ({
-            id: r.id,
-            created_at: r.created_at,
-            customer_name: r.customer_name,
-            channel: r.channel,
-            campaign_name: r.campaign_name,
-            status: r.status,
+          const mapped = (leadsData ?? []).map((r: any) => ({
+            id: r.id, created_at: r.created_at, customer_name: r.customer_name,
+            channel: r.channel, campaign_name: r.campaign_name, status: r.status,
             assigned_name: assignedNameMap.get(r.assigned_to) ?? '미배정',
-          })));
+          }));
+
+          if (isNextPage) {
+            setLeadsRows(prev => [...prev, ...mapped]);
+          } else {
+            setLeadsRows(mapped);
+          }
+          setLeadsPage(page);
+          setLeadsHasMore((page + 1) * PAGE_SIZE < (totalCount ?? 0));
         } else if (filter.sourceType === 'sales') {
           // sales 테이블 — open_date는 YYYY-MM-DD 타입이므로 KST 변환 없이 직접 사용
           let q = supabase.from('sales')
@@ -235,10 +256,8 @@ export function LogDetailModal({
           })));
         }
       } finally {
-        setLoading(false);
-      }
-    };
-    load();
+      setLoading(false);
+    }
   }, [filter]);
 
   const getChannelLabel = (ch: string | null, campaign?: string | null) => {
@@ -341,40 +360,82 @@ export function LogDetailModal({
             })()
           ) : filter.sourceType === 'leads' ? (
             /* 신규접수/미처리 — leads 테이블 */
-            leadsRows.length === 0 ? (
-              <div className="py-16 text-center text-sm text-gray-400">해당 데이터가 없습니다.</div>
-            ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-xs text-gray-400 border-b border-gray-100 bg-gray-50">
-                    {['접수시간', '담당자', '고객명', '채널', '상태'].map((h) => (
-                      <th key={h} className="py-2.5 px-3 font-medium text-left whitespace-nowrap">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {leadsRows.map((r) => (
-                    <tr key={r.id} className="hover:bg-gray-50">
-                      <td className="py-2.5 px-3 text-xs text-gray-400 font-mono whitespace-nowrap">
-                        {new Date(r.created_at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })}
-                        {' '}
-                        {new Date(r.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
-                      </td>
-                      <td className="py-2.5 px-3 font-medium text-gray-800">{r.assigned_name}</td>
-                      <td className="py-2.5 px-3 font-medium text-gray-800">{maskCustomerName(r.customer_name)}</td>
-                      <td className="py-2.5 px-3">
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">
-                          {getChannelLabel(r.channel, r.campaign_name)}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-3">
-                        <WRBadge variant="info">{r.status}</WRBadge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )
+            (() => {
+              // 채널 목록
+              const chOptions = ['', ...Array.from(new Set(leadsRows.map(r => getChannelLabel(r.channel, r.campaign_name))))];
+              // 상태 목록 (미처리 아닌 경우)
+              const stOptions = ['', ...Array.from(new Set(leadsRows.map(r => r.status)))];
+              // 클라이언트 필터 (이미 로드된 데이터에서)
+              const filtered = leadsRows.filter(r => {
+                if (leadsChannelFilter && getChannelLabel(r.channel, r.campaign_name) !== leadsChannelFilter) return false;
+                if (leadsStatusFilter2 && r.status !== leadsStatusFilter2) return false;
+                return true;
+              });
+              return (
+                <>
+                  {/* 필터 바 */}
+                  <div className="flex gap-2 mb-3 flex-wrap items-center">
+                    <select value={leadsChannelFilter} onChange={e => setLeadsChannelFilter(e.target.value)}
+                      className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white">
+                      <option value="">전체 채널</option>
+                      {chOptions.filter(Boolean).map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <select value={leadsStatusFilter2} onChange={e => setLeadsStatusFilter2(e.target.value)}
+                      className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white">
+                      <option value="">전체 상태</option>
+                      {stOptions.filter(Boolean).map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                    <span className="text-xs text-gray-400 ml-auto">{filtered.length}건 표시 / 전체 {leadsTotal}건</span>
+                  </div>
+                  {filtered.length === 0 ? (
+                    <div className="py-12 text-center text-sm text-gray-400">해당 조건의 데이터가 없습니다.</div>
+                  ) : (
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-xs text-gray-400 border-b border-gray-100 bg-gray-50">
+                          {['접수시간', '담당자', '고객명', '채널', '상태'].map((h) => (
+                            <th key={h} className="py-2.5 px-3 font-medium text-left whitespace-nowrap">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {filtered.map((r) => (
+                          <tr key={r.id} className="hover:bg-gray-50">
+                            <td className="py-2.5 px-3 text-xs text-gray-400 font-mono whitespace-nowrap">
+                              {new Date(r.created_at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })}
+                              {' '}
+                              {new Date(r.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                            </td>
+                            <td className="py-2.5 px-3 font-medium text-gray-800">{r.assigned_name}</td>
+                            <td className="py-2.5 px-3 font-medium text-gray-800">{maskCustomerName(r.customer_name)}</td>
+                            <td className="py-2.5 px-3">
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">
+                                {getChannelLabel(r.channel, r.campaign_name)}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <WRBadge variant="info">{r.status}</WRBadge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                  {/* 다음 페이지 버튼 */}
+                  {leadsHasMore && (
+                    <div className="pt-3 text-center">
+                      <button
+                        onClick={() => loadData(true)}
+                        disabled={loading}
+                        className="text-xs border border-gray-200 rounded-lg px-4 py-2 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+                      >
+                        {loading ? '로딩 중...' : `다음 50건 더 보기 (${leadsRows.length} / ${leadsTotal}건)`}
+                      </button>
+                    </div>
+                  )}
+                </>
+              );
+            })()
           ) : (
             /* activity_logs */
             rows.length === 0 ? (
