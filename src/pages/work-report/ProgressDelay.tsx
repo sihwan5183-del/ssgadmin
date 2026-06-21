@@ -1,28 +1,60 @@
 // ============================================================
-// 진행/지연 관리 — mock data 기반 레이아웃 (1단계)
+// 진행/지연 관리 — leads 테이블 실제 데이터 연결
 // ============================================================
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRole } from '@/hooks/useRole';
 import { WorkReportHeader, SectionCard, WRBadge } from './_shared';
-import { mockProgressCards, mockProgressDelayRows } from '@/data/workReportMockData';
+import { getProgressDelayData, type ProgressDelayItem, type ProgressDelaySummary } from '@/services/workReport/progressDelayService';
 
-const STAFF_OPTIONS = ['전체', '최윤정', '김경환', '오미나'];
-const STATUS_OPTIONS = ['전체', '상담성공', '택배대기', '택배발송', '개통대기', '개통완료', '정산대기'];
+const CHANNEL_OPTIONS = ['전체', 'meta', 'dogmaru', 'udak'];
+const CHANNEL_LABEL: Record<string, string> = { meta: '메타', dogmaru: '도그마루', udak: '유닥', 전체: '전체' };
 
-function DelayBadge({ days }: { days: number }) {
-  if (days === 0) return <WRBadge variant="success">정상</WRBadge>;
-  if (days <= 1) return <WRBadge variant="warning">{days}일 지연</WRBadge>;
-  return <WRBadge variant="danger">{days}일 초과</WRBadge>;
+const SUMMARY_CARDS = [
+  { key: 'consult_waiting_delivery',   label: '상담성공 후 택배대기',      color: 'bg-yellow-50 border-yellow-200 text-yellow-700' },
+  { key: 'delivery_waiting_opening',   label: '택배발송 후 개통대기',      color: 'bg-orange-50 border-orange-200 text-orange-700' },
+  { key: 'opening_waiting_settlement', label: '개통완료 후 정산대기',      color: 'bg-blue-50 border-blue-200 text-blue-700' },
+  { key: 'overdue_opening',            label: '지연 위험 건',              color: 'bg-red-50 border-red-200 text-red-700' },
+  { key: 'need_confirm',               label: '택배대기 확인 필요',        color: 'bg-gray-50 border-gray-200 text-gray-500' },
+] as const;
+
+function DelayBadge({ level, days }: { level: ProgressDelayItem['delay_level']; days: number }) {
+  if (level === 'danger') return <WRBadge variant="danger">{days}일 초과</WRBadge>;
+  if (level === 'warning') return <WRBadge variant="warning">{days}일 지연</WRBadge>;
+  return <WRBadge variant="success">정상</WRBadge>;
 }
 
 export default function ProgressDelay() {
-  const [staff, setStaff] = useState('전체');
-  const [status, setStatus] = useState('전체');
+  const { user } = useAuth();
+  const { isAdmin, isManager, loading: roleLoading } = useRole();
+  const canViewAll = isAdmin || isManager;
 
-  const filtered = mockProgressDelayRows.filter((r) => {
-    if (staff !== '전체' && r.user_name !== staff) return false;
-    if (status !== '전체' && r.current_status !== status) return false;
-    return true;
-  });
+  const [channel, setChannel] = useState('전체');
+  const [loading, setLoading] = useState(false);
+  const [items, setItems] = useState<ProgressDelayItem[]>([]);
+  const [summary, setSummary] = useState<ProgressDelaySummary | null>(null);
+
+  const load = useCallback(async () => {
+    if (!user || roleLoading) return;
+    setLoading(true);
+    try {
+      const result = await getProgressDelayData({
+        userId: user.id,
+        isAdmin: canViewAll,
+        channel: channel === '전체' ? undefined : channel,
+      });
+      setItems(result.items);
+      setSummary(result.summary);
+    } catch (e: any) {
+      toast.error('데이터 조회 실패: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [user, roleLoading, canViewAll, channel]);
+
+  useEffect(() => { load(); }, [load]);
 
   return (
     <div className="space-y-5">
@@ -31,110 +63,107 @@ export default function ProgressDelay() {
         description="상담성공 → 택배발송 → 개통완료 → 정산확정 단계별 지연 건을 추적합니다."
         rightSlot={
           <>
-            <input
-              type="date"
-              defaultValue="2026-06-21"
-              className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none"
-            />
             <select
-              value={staff}
-              onChange={(e) => setStaff(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none"
+              value={channel}
+              onChange={(e) => setChannel(e.target.value)}
+              className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none"
             >
-              {STAFF_OPTIONS.map((s) => <option key={s}>{s}</option>)}
+              {CHANNEL_OPTIONS.map((c) => (
+                <option key={c} value={c}>{CHANNEL_LABEL[c] ?? c}</option>
+              ))}
             </select>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none"
+            <button
+              onClick={load}
+              className="flex items-center gap-1 text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-500 hover:text-gray-700"
             >
-              {STATUS_OPTIONS.map((s) => <option key={s}>{s}</option>)}
-            </select>
+              <RefreshCw className={`size-3 ${loading ? 'animate-spin' : ''}`} />
+            </button>
           </>
         }
       />
 
-      {/* 상단 카드 */}
+      {/* 상단 요약 카드 */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        {mockProgressCards.map((card) => {
-          const colorMap: Record<string, string> = {
-            yellow: 'bg-yellow-50 border-yellow-200',
-            orange: 'bg-orange-50 border-orange-200',
-            blue: 'bg-blue-50 border-blue-200',
-            red: 'bg-red-50 border-red-200',
-            gray: 'bg-gray-50 border-gray-200',
-          };
-          const countColor: Record<string, string> = {
-            yellow: 'text-yellow-600', orange: 'text-orange-600',
-            blue: 'text-blue-600', red: 'text-red-600', gray: 'text-gray-500',
-          };
-          return (
-            <div
-              key={card.label}
-              className={`rounded-xl border p-4 text-center ${colorMap[card.color] ?? colorMap.gray}`}
-            >
-              <div className={`text-3xl font-bold ${countColor[card.color] ?? 'text-gray-600'}`}>
-                {card.count}
-              </div>
-              <div className="text-[11px] text-gray-500 mt-1.5 leading-tight">{card.label}</div>
-            </div>
-          );
-        })}
+        {SUMMARY_CARDS.map(({ key, label, color }) => (
+          <div key={key} className={`rounded-xl border p-4 text-center ${color}`}>
+            <div className="text-3xl font-bold">{summary?.[key] ?? 0}</div>
+            <div className="text-[11px] mt-1.5 leading-tight opacity-80">{label}</div>
+          </div>
+        ))}
       </div>
 
       {/* 지연 기준 안내 */}
-      <div className="flex gap-3 flex-wrap">
+      <div className="flex gap-2 flex-wrap">
         {[
-          '상담성공 후 2일 이상 택배 미발송',
-          '택배발송 후 4일 이상 개통 미완료',
-          '개통완료 후 3일 이상 정산 미확정',
+          '상담성공 후 2일 이상 → 경고 / 3일 이상 → 위험',
+          '택배발송 후 2일 이상 → 경고 / 4일 이상 → 위험',
+          '개통완료 후 2일 이상 → 경고 / 3일 이상 → 위험',
         ].map((rule) => (
-          <div key={rule} className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+          <div key={rule} className="text-xs text-gray-400 bg-gray-50 border border-gray-100 rounded-lg px-3 py-1.5">
             ⚠ {rule}
           </div>
         ))}
       </div>
 
-      {/* 지연 테이블 */}
+      {/* 진행 건 테이블 */}
       <SectionCard>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs text-gray-500 border-b border-gray-100 bg-gray-50">
-                {['고객명', '담당자', '현재상태', '채널', '상담성공일', '택배발송일', '예상개통일', '실제개통일', '지연', '조치'].map((h) => (
-                  <th key={h} className="py-2.5 px-3 font-medium text-left whitespace-nowrap">{h}</th>
+        {loading ? (
+          <div className="py-16 text-center text-sm text-gray-400">로딩 중...</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-gray-500 border-b border-gray-100 bg-gray-50">
+                  {['고객명', '담당자', '현재상태', '채널', '최근 변경일', '경과일', '지연', '메모'].map((h) => (
+                    <th key={h} className="py-2.5 px-3 font-medium text-left whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {items.map((item) => (
+                  <tr
+                    key={item.id}
+                    className={`hover:bg-gray-50 transition-colors ${
+                      item.delay_level === 'danger' ? 'bg-red-50/30' :
+                      item.delay_level === 'warning' ? 'bg-orange-50/20' : ''
+                    }`}
+                  >
+                    <td className="py-3 px-3 font-medium text-gray-800">{item.customer_name_masked}</td>
+                    <td className="py-3 px-3 text-gray-700">{item.assigned_name}</td>
+                    <td className="py-3 px-3">
+                      <WRBadge variant={
+                        item.status === '개통완료' ? 'success' :
+                        item.status === '상담성공' || item.status === '상담중' ? 'info' : 'warning'
+                      }>
+                        {item.status}
+                      </WRBadge>
+                    </td>
+                    <td className="py-3 px-3">
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        item.channel === 'dogmaru' ? 'bg-blue-100 text-blue-700' :
+                        item.channel === 'udak' ? 'bg-purple-100 text-purple-700' :
+                        'bg-pink-100 text-pink-700'
+                      }`}>
+                        {CHANNEL_LABEL[item.channel] ?? item.channel}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-xs text-gray-500 whitespace-nowrap">{item.consult_date ?? '-'}</td>
+                    <td className="py-3 px-3 text-xs text-gray-600 font-medium">{item.delay_days}일</td>
+                    <td className="py-3 px-3"><DelayBadge level={item.delay_level} days={item.delay_days} /></td>
+                    <td className="py-3 px-3 text-xs text-gray-400 max-w-[160px] truncate">{item.memo ?? '-'}</td>
+                  </tr>
                 ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filtered.map((row) => (
-                <tr key={row.id} className={`hover:bg-gray-50 transition-colors ${row.delay_days > 0 ? 'bg-orange-50/30' : ''}`}>
-                  <td className="py-3 px-3 font-medium text-gray-800">{row.customer_name}</td>
-                  <td className="py-3 px-3 text-gray-700">{row.user_name}</td>
-                  <td className="py-3 px-3">
-                    <WRBadge variant={row.delay_days > 0 ? 'warning' : 'info'}>{row.current_status}</WRBadge>
-                  </td>
-                  <td className="py-3 px-3 text-xs text-gray-500">{row.channel}</td>
-                  <td className="py-3 px-3 text-xs text-gray-600 whitespace-nowrap">{row.consult_success_at ?? '-'}</td>
-                  <td className="py-3 px-3 text-xs text-gray-600 whitespace-nowrap">{row.delivery_sent_at ?? '-'}</td>
-                  <td className="py-3 px-3 text-xs text-gray-600 whitespace-nowrap">{row.expected_opening_at ?? '-'}</td>
-                  <td className="py-3 px-3 text-xs text-gray-600 whitespace-nowrap">{row.actual_opening_at ?? '-'}</td>
-                  <td className="py-3 px-3"><DelayBadge days={row.delay_days} /></td>
-                  <td className="py-3 px-3">
-                    <button className="text-xs text-pink-500 hover:text-pink-700 font-medium">확인</button>
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={10} className="py-12 text-center text-sm text-gray-400">
-                    지연 건이 없습니다.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                {items.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="py-16 text-center text-sm text-gray-400">
+                      진행 중인 건이 없습니다.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </SectionCard>
     </div>
   );
