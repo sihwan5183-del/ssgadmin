@@ -13,6 +13,7 @@ import {
   getTeamWorkDashboardData,
   aggregateByAction,
   aggregateByStaff,
+  getSalesDoneCount,
 } from '@/services/workReport/workReportService';
 import { resolveStaffDisplayNames } from '@/services/workReport/staffDisplayService';
 
@@ -52,9 +53,21 @@ export default function TeamWorkDashboard() {
     setLoading(true);
     try {
       const { from, to } = getDateRange(period);
-      const logs = await getTeamWorkDashboardData(user.id, canViewAll, from, to);
-      setTotalAgg(aggregateByAction(logs));
-      const rows = aggregateByStaff(logs);
+      const [logs, salesDone] = await Promise.all([
+        getTeamWorkDashboardData(user.id, canViewAll, from, to),
+        getSalesDoneCount(from, to),
+      ]);
+      const baseAgg = aggregateByAction(logs);
+      // 개통완료/설치완료/정산확정은 sales 기준으로 덮어쓰기
+      setTotalAgg({ ...baseAgg,
+        activation_completed: { counted: salesDone.activation, total: salesDone.activation },
+        settlement_confirmed: { counted: salesDone.settlement, total: salesDone.settlement },
+      });
+      const rows = aggregateByStaff(logs).map(r => ({
+        ...r,
+        activation_completed: salesDone.byStaff[r.staff_id]?.activation ?? 0,
+        settlement_confirmed: salesDone.byStaff[r.staff_id]?.settlement ?? 0,
+      }));
       setStaffRows(rows);
       // 신규건 요약 (from은 이미 위에서 선언됨)
       const newSum = await getTeamNewLeadsSummary(from, canViewAll, user.id);

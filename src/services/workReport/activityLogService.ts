@@ -152,14 +152,19 @@ export async function logLeadStatusChange({
   previousStatus,
   nextStatus,
   channel,
+  createdBy,
 }: {
   leadId: string;
-  staffId: string;
+  staffId: string;       // 성과 귀속 대상 (리드 담당자)
   staffName: string;
   previousStatus: string | null;
   nextStatus: string;
   channel?: string | null;
+  createdBy?: string;    // 실제 조작자 (관리자일 수 있음)
 }): Promise<void> {
+  // staff_id 없으면 로그 스킵
+  if (!staffId) return;
+
   // profiles에서 실제 display_name 조회 (이메일/unknown 방지)
   let resolvedName = staffName;
   if (!resolvedName || resolvedName.includes('@') || resolvedName === 'unknown') {
@@ -168,15 +173,36 @@ export async function logLeadStatusChange({
     if (profile?.display_name) resolvedName = profile.display_name;
   }
 
-  // 상태 변경을 action_type으로 매핑
-  const action_type = (() => {
-    if (nextStatus.includes('부재')) return 'absent';
-    if (nextStatus.includes('재케어')) return 'recare_registered';
-    if (nextStatus.includes('실패') || nextStatus.includes('해지') || nextStatus.includes('미진행')) return 'failed';
-    if (nextStatus.includes('상담')) return 'consultation_success';
-    if (nextStatus.includes('개통완료')) return 'activation_completed';
-    return 'call_attempt';
-  })();
+  // 미배정 여부 판단
+  const isUnassigned = !staffId;
+
+  // 상태값 → action_type 정확한 매핑
+  const getActionType = (status: string): { action_type: string; is_counted: boolean; reason: string | null } => {
+    if (status.includes('부재')) return { action_type: 'absent', is_counted: true, reason: null };
+    if (status.includes('재케어완료')) return { action_type: 'recare_completed', is_counted: true, reason: null };
+    if (status.includes('재케어')) return { action_type: 'recare_registered', is_counted: true, reason: null };
+    if (status.includes('실패') || status.includes('해지') || status.includes('미진행')) return { action_type: 'failed', is_counted: true, reason: null };
+    if (status.includes('상담성공') || status.includes('상담 성공')) return { action_type: 'consultation_success', is_counted: true, reason: null };
+    if (status.includes('개통완료')) return { action_type: 'activation_completed', is_counted: false, reason: 'sales 기준 집계' };
+    if (status.includes('설치완료')) return { action_type: 'installation_completed', is_counted: false, reason: 'sales 기준 집계' };
+    if (status.includes('정산확정')) return { action_type: 'settlement_confirmed', is_counted: false, reason: 'sales 기준 집계' };
+    if (status.includes('택배발송')) return { action_type: 'delivery_sent', is_counted: false, reason: '진행 상태' };
+    if (status.includes('청약완료')) return { action_type: 'application_completed', is_counted: false, reason: '진행 상태' };
+    if (status.includes('통화시도') || status.includes('시도')) return { action_type: 'call_attempt', is_counted: true, reason: null };
+    if (status.includes('연결') || status.includes('통화완료')) return { action_type: 'call_connected', is_counted: true, reason: null };
+    // 나머지 단순 상태 변경은 status_changed로 미인정
+    return { action_type: 'status_changed', is_counted: false, reason: '단순 상태 변경' };
+  };
+
+  const { action_type, is_counted, reason } = getActionType(nextStatus);
+
+  // 10분 이내 중복 체크
+  const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const { count } = await supabase.from('activity_logs')
+    .select('id', { count: 'exact', head: true })
+    .eq('lead_id', leadId).eq('staff_id', staffId)
+    .eq('action_type', action_type).gte('created_at', tenMinAgo);
+  const isDuplicate = (count ?? 0) > 0;
 
   const { error } = await supabase.from('activity_logs').insert({
     lead_id: leadId,
@@ -192,12 +218,12 @@ export async function logLeadStatusChange({
     memo: null,
     fail_reason: null,
     next_action_at: null,
-    is_counted: true,
-    not_counted_reason: null,
+    is_counted: isDuplicate ? false : (isUnassigned ? false : is_counted),
+    not_counted_reason: isDuplicate ? '10분 이내 중복' : (isUnassigned ? '미배정 상태 변경' : reason),
     corrected_log_id: null,
     device_info: null,
     ip_address: null,
-    created_by: staffId,
+    created_by: createdBy ?? staffId,
   });
   if (error) {
     // 에러 상세 로깅 (디버깅용)
@@ -251,8 +277,8 @@ export async function logSalesActivity({
     memo: product ? `상품: ${product}` : null,
     fail_reason: null,
     next_action_at: null,
-    is_counted: true,
-    not_counted_reason: null,
+    is_counted: false,
+    not_counted_reason: '판매실적 기록 (sales 기준 집계)',
     corrected_log_id: null,
     device_info: null,
     ip_address: null,

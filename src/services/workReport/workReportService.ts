@@ -114,3 +114,40 @@ export function aggregateByStaff(logs: WorkDashboardSummary[]) {
     };
   });
 }
+
+
+// ── sales 기준 개통완료/설치완료/정산확정 집계 ───────────────
+export async function getSalesDoneCount(
+  dateFrom: string,
+  dateTo: string,
+  staffId?: string
+): Promise<{ activation: number; installation: number; settlement: number; byStaff: Record<string, { activation: number; installation: number; settlement: number }> }> {
+  const { data: profiles } = await supabase.from('profiles').select('user_id, display_name');
+  const nameToId = new Map((profiles ?? []).map((p: any) => [p.display_name, p.user_id]));
+
+  const { data } = await supabase.from('sales')
+    .select('id, manager, status')
+    .gte('open_date', dateFrom).lte('open_date', dateTo)
+    .is('deleted_at', null)
+    .in('status', ['개통완료', '설치완료', '정산확정']);
+
+  const seen = new Set<string>();
+  const byStaff: Record<string, { activation: number; installation: number; settlement: number }> = {};
+  let activation = 0, installation = 0, settlement = 0;
+
+  for (const s of (data ?? [])) {
+    if (seen.has(s.id)) continue;
+    seen.add(s.id);
+    let sid: string | null = null;
+    if (s.manager) {
+      sid = /^[0-9a-f]{8}-/i.test(s.manager) ? s.manager : (nameToId.get(s.manager) ?? null);
+    }
+    if (staffId && sid !== staffId) continue;
+    if (!sid) continue;
+    if (!byStaff[sid]) byStaff[sid] = { activation: 0, installation: 0, settlement: 0 };
+    if (s.status === '개통완료') { activation++; byStaff[sid].activation++; }
+    if (s.status === '설치완료') { installation++; byStaff[sid].installation++; }
+    if (s.status === '정산확정') { settlement++; byStaff[sid].settlement++; }
+  }
+  return { activation, installation, settlement, byStaff };
+}
