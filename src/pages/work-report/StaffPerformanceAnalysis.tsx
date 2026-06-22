@@ -12,11 +12,11 @@ import { LogDetailModal, type LogDetailFilter } from './LogDetailModal';
 import {
   buildDateRange, getKpiSummary, getStaffWorkSummary, getStaffDailyTrend,
   getChannelPerformance, getWarningAlerts,
-  getStaffSalesSummary, getStaffProductDetailStats,
-  getStaffChannelFocusStats, getChannelFunnelStats,
+  getStaffSalesSummary, getStaffChannelSalesStats, getStaffProductDetailStats,
+  getStaffChannelFocusStats, getChannelFunnelStats, getDeviceFilterOptions,
   type KpiSummary, type StaffWorkRow, type DailyTrendRow,
   type ChannelPerformanceRow, type WarningAlert,
-  type StaffSalesSummaryRow, type ProductDetailRow,
+  type StaffSalesSummaryRow, type StaffChannelSalesRow, type ProductDeviceRow,
   type StaffChannelFocusRow, type ChannelFunnelRow,
 } from '@/services/workReport/staffPerformanceService';
 
@@ -59,7 +59,7 @@ export default function StaffPerformanceAnalysis() {
   const [channels, setChannels] = useState<ChannelPerformanceRow[]>([]);
   const [alerts, setAlerts] = useState<WarningAlert[]>([]);
   const [salesSummary, setSalesSummary] = useState<StaffSalesSummaryRow[]>([]);
-  const [productDetail, setProductDetail] = useState<ProductDetailRow[]>([]);
+  const [productDetail, setProductDetail] = useState<ProductDeviceRow[]>([]);
   const [channelFocus, setChannelFocus] = useState<StaffChannelFocusRow[]>([]);
   const [channelSales, setChannelSales] = useState<StaffChannelSalesRow[]>([]);
   const [deviceOptions, setDeviceOptions] = useState<{ devices: string[]; plans: string[]; saleTypes: string[] }>({ devices: [], plans: [], saleTypes: [] });

@@ -3,6 +3,7 @@
 // 권한별 필터 적용 (service 단계에서 필터링)
 // ============================================================
 import { supabase } from '@/integrations/supabase/client';
+import { getKstDateRangeUtc } from './dateUtils';
 import type { ActivityActionType } from '@/types/workReport';
 
 export interface WorkDashboardSummary {
@@ -24,8 +25,8 @@ export async function getMyWorkDashboardData(
     .from('activity_logs')
     .select('action_type, is_counted, channel, created_at, staff_id, staff_name')
     .eq('staff_id', userId)           // 본인 데이터만
-    .gte('created_at', `${dateFrom}T00:00:00`)
-    .lte('created_at', `${dateTo}T23:59:59`)
+    .gte('created_at', getKstDateRangeUtc(dateFrom, dateTo).start)
+    .lte('created_at', getKstDateRangeUtc(dateFrom, dateTo).end)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
@@ -43,8 +44,8 @@ export async function getTeamWorkDashboardData(
   let query = supabase
     .from('activity_logs')
     .select('action_type, is_counted, channel, created_at, staff_id, staff_name')
-    .gte('created_at', `${dateFrom}T00:00:00`)
-    .lte('created_at', `${dateTo}T23:59:59`)
+    .gte('created_at', getKstDateRangeUtc(dateFrom, dateTo).start)
+    .lte('created_at', getKstDateRangeUtc(dateFrom, dateTo).end)
     .order('created_at', { ascending: false });
 
   // 관리자가 아니면 본인 데이터만
