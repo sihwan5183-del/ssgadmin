@@ -196,46 +196,42 @@ export async function logLeadStatusChange({
 
   const { action_type, is_counted, reason } = getActionType(nextStatus);
 
-  // 10분 이내 중복 체크
-  const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-  const { count } = await supabase.from('activity_logs')
-    .select('id', { count: 'exact', head: true })
-    .eq('lead_id', leadId).eq('staff_id', staffId)
-    .eq('action_type', action_type).gte('created_at', tenMinAgo);
-  const isDuplicate = (count ?? 0) > 0;
+  // 로그 기록 실패는 절대 메인 플로우(상태 변경)를 막으면 안 됨
+  try {
+    // 10분 이내 중복 체크
+    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { count } = await supabase.from('activity_logs')
+      .select('id', { count: 'exact', head: true })
+      .eq('lead_id', leadId).eq('staff_id', staffId)
+      .eq('action_type', action_type).gte('created_at', tenMinAgo);
+    const isDuplicate = (count ?? 0) > 0;
 
-  const { error } = await supabase.from('activity_logs').insert({
-    lead_id: leadId,
-    sales_record_id: null,
-    staff_id: staffId,
-    staff_name: resolvedName,
-    store_id: null,
-    channel: channel ?? null,
-    action_type,
-    result_type: null,
-    previous_status: previousStatus,
-    next_status: nextStatus,
-    memo: null,
-    fail_reason: null,
-    next_action_at: null,
-    is_counted: isDuplicate ? false : (isUnassigned ? false : is_counted),
-    not_counted_reason: isDuplicate ? '10분 이내 중복' : (isUnassigned ? '미배정 상태 변경' : reason),
-    corrected_log_id: null,
-    device_info: null,
-    ip_address: null,
-    created_by: createdBy ?? staffId,
-  });
-  if (error) {
-    // 에러 상세 로깅 (디버깅용)
-    console.error('[logLeadStatusChange] INSERT 실패:', {
-      code: error.code,
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      staffId,
-      staffName,
+    const { error } = await supabase.from('activity_logs').insert({
+      lead_id: leadId,
+      sales_record_id: null,
+      staff_id: staffId,
+      staff_name: resolvedName,
+      store_id: null,
+      channel: channel ?? null,
       action_type,
+      result_type: null,
+      previous_status: previousStatus,
+      next_status: nextStatus,
+      memo: null,
+      fail_reason: null,
+      next_action_at: null,
+      is_counted: isDuplicate ? false : (isUnassigned ? false : is_counted),
+      not_counted_reason: isDuplicate ? '10분 이내 중복' : (isUnassigned ? '미배정 상태 변경' : reason),
+      corrected_log_id: null,
+      device_info: null,
+      ip_address: null,
+      created_by: createdBy ?? staffId,
     });
+    if (error) {
+      console.warn('[logLeadStatusChange] 로그 기록 실패 (무시):', error.message);
+    }
+  } catch (e) {
+    console.warn('[logLeadStatusChange] 예외 (무시):', e);
   }
 }
 
