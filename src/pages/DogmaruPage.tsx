@@ -219,10 +219,15 @@ function MobileLeadsView({
 
   async function handleStatus(lead: Lead, status: string) {
     setStatusLoading(lead.id + status);
-    await updateStatus(lead.id, status);
-    setStatusLoading(null);
-    setAbsenceModal(null);
-    setRecareModal(null);
+    try {
+      await updateStatus(lead.id, status);
+    } catch (e) {
+      console.warn('[handleStatus] 에러 (무시):', e);
+    } finally {
+      setStatusLoading(null);
+      setAbsenceModal(null);
+      setRecareModal(null);
+    }
   }
 
   async function saveMemo() {
