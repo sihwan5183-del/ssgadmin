@@ -160,6 +160,14 @@ export async function logLeadStatusChange({
   nextStatus: string;
   channel?: string | null;
 }): Promise<void> {
+  // profiles에서 실제 display_name 조회 (이메일/unknown 방지)
+  let resolvedName = staffName;
+  if (!resolvedName || resolvedName.includes('@') || resolvedName === 'unknown') {
+    const { data: profile } = await supabase
+      .from('profiles').select('display_name').eq('user_id', staffId).single();
+    if (profile?.display_name) resolvedName = profile.display_name;
+  }
+
   // 상태 변경을 action_type으로 매핑
   const action_type = (() => {
     if (nextStatus.includes('부재')) return 'absent';
@@ -174,7 +182,7 @@ export async function logLeadStatusChange({
     lead_id: leadId,
     sales_record_id: null,
     staff_id: staffId,
-    staff_name: staffName,
+    staff_name: resolvedName,
     store_id: null,
     channel: channel ?? null,
     action_type,
