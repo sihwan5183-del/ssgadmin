@@ -1539,33 +1539,35 @@ export default function LeadsPage() {
     const { error } = await supabase.from("leads").update(updateData).eq("id", id);
     if (error) { toast.error(error.message); return; }
 
-    // 상태 변경 로그 INSERT (기존 유지) - 실패해도 메인 플로우 유지
-    try {
-      await supabase.from("lead_status_logs").insert({
-        lead_id: id,
-        status,
-        changed_by: changedBy,
-      });
-    } catch (e) {
-      console.warn('[lead_status_logs] INSERT 실패 (무시):', e);
-    }
+    // ── UI 즉시 갱신 (로그 기록 전에 먼저) ──────────────────
+    setRows((p) => p.map((r) => (r.id === id ? { ...r, ...updateData } : r)));
+    if (openLead?.id === id) setOpenLead({ ...openLead, ...updateData });
 
-    // 영업 활동 리포트용 activity_logs INSERT (신규 — 기존 기능에 영향 없음)
+    // ── 부가 로그 기록 (실패해도 UI에 영향 없음) ─────────────
     const currentRow = rows.find((r) => r.id === id);
     const previousStatus = currentRow?.status ?? null;
     const detectChannel = (row: typeof currentRow) => {
       if (!row) return "meta";
-      if (row.channel === "유닥") return "udak";
+      if (row.channel === "유닧") return "udak";
       if (row.campaign_name === "도그마루_홈캠") return "dogmaru";
       if (row.campaign_name?.includes("모요")) return "moyo";
-      // campaign_name이 있으면 메타 광고
       if (row.campaign_name) return "meta";
       return "meta";
     };
     const rowChannel = detectChannel(currentRow);
-    // staffId는 리드 담당자(assigned_to) 기준 — 로그인한 관리자가 아님
     const assignedStaffId = currentRow?.assigned_to ?? '';
-    await logLeadStatusChange({
+
+    // lead_status_logs 비동기 (결과 기다리지 않음)
+    supabase.from("lead_status_logs").insert({
+      lead_id: id,
+      status,
+      changed_by: changedBy,
+    }).then(({ error: e }) => {
+      if (e) console.warn('[lead_status_logs] INSERT 실패:', e.message);
+    });
+
+    // activity_logs 비동기 (결과 기다리지 않음)
+    logLeadStatusChange({
       leadId: id,
       staffId: assignedStaffId || (user?.id ?? ''),
       staffName: changedBy,
@@ -1573,10 +1575,7 @@ export default function LeadsPage() {
       nextStatus: status,
       channel: rowChannel,
       createdBy: user?.id ?? '',
-    });
-
-    setRows((p) => p.map((r) => (r.id === id ? { ...r, ...updateData } : r)));
-    if (openLead?.id === id) setOpenLead({ ...openLead, ...updateData });
+    }).catch((e) => console.warn('[activity_logs] 실패:', e));
   }
 
   // 부재케어 카운트 수동 조정

@@ -1455,22 +1455,24 @@ export default function LeadsPage() {
     const { error } = await supabase.from("leads").update(updateData).eq("id", id);
     if (error) { toast.error(error.message); return; }
 
-    // 상태 변경 로그 INSERT (기존 유지) - 실패해도 메인 플로우 유지
-    try {
-      await supabase.from("lead_status_logs").insert({
-        lead_id: id,
-        status,
-        changed_by: changedBy,
-      });
-    } catch (e) {
-      console.warn('[lead_status_logs] INSERT 실패 (무시):', e);
-    }
+    // ── UI 즉시 갱신 (로그 기록 전에 먼저) ──────────────────
+    setRows((p) => p.map((r) => (r.id === id ? { ...r, ...updateData } : r)));
+    if (openLead?.id === id) setOpenLead({ ...openLead, ...updateData });
 
-    // 영업 활동 리포트용 activity_logs INSERT (신규 — 기존 기능에 영향 없음)
-    const previousStatus = rows.find((r) => r.id === id)?.status ?? null;
+    // ── 부가 로그 기록 (실패해도 UI에 영향 없음) ─────────────
     const dogRow = rows.find((r) => r.id === id);
+    const previousStatus = dogRow?.status ?? null;
     const dogAssignedId = dogRow?.assigned_to ?? '';
-    await logLeadStatusChange({
+
+    supabase.from("lead_status_logs").insert({
+      lead_id: id,
+      status,
+      changed_by: changedBy,
+    }).then(({ error: e }) => {
+      if (e) console.warn('[lead_status_logs] INSERT 실패:', e.message);
+    });
+
+    logLeadStatusChange({
       leadId: id,
       staffId: dogAssignedId || (user?.id ?? ''),
       staffName: changedBy,
@@ -1478,10 +1480,7 @@ export default function LeadsPage() {
       nextStatus: status,
       channel: "dogmaru",
       createdBy: user?.id ?? '',
-    });
-
-    setRows((p) => p.map((r) => (r.id === id ? { ...r, ...updateData } : r)));
-    if (openLead?.id === id) setOpenLead({ ...openLead, ...updateData });
+    }).catch((e) => console.warn('[activity_logs] 실패:', e));
   }
 
   // 부재케어 카운트 수동 조정
