@@ -1554,10 +1554,12 @@ export default function LeadsPage() {
       return "meta";
     };
     const rowChannel = detectChannel(currentRow);
+    // staffId는 리드 담당자(assigned_to) 기준 — 로그인한 관리자가 아님
+    const assignedStaffId = currentRow?.assigned_to ?? user?.id ?? '';
     await logLeadStatusChange({
       leadId: id,
-      staffId: user?.id ?? changedBy,
-      staffName: changedBy,
+      staffId: assignedStaffId,
+      staffName: changedBy,  // display는 변경자 이름, id는 담당자 UUID
       previousStatus,
       nextStatus: status,
       channel: rowChannel,

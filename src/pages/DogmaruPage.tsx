@@ -1459,9 +1459,10 @@ export default function LeadsPage() {
 
     // 영업 활동 리포트용 activity_logs INSERT (신규 — 기존 기능에 영향 없음)
     const previousStatus = rows.find((r) => r.id === id)?.status ?? null;
+    const dogAssignedId = rows.find((r) => r.id === id)?.assigned_to ?? user?.id ?? '';
     await logLeadStatusChange({
       leadId: id,
-      staffId: user?.id ?? changedBy,
+      staffId: dogAssignedId,
       staffName: changedBy,
       previousStatus,
       nextStatus: status,
