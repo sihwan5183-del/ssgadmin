@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Check, Upload, Pencil, X, Camera, Plus, Trash2, Tv, Sparkles, AlertTriangle, Wallet, Banknote, CreditCard, Smartphone, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { logSalesActivity } from "@/services/workReport/activityLogService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { useProductRatePlans } from "@/hooks/useProductRatePlans";
@@ -580,6 +581,15 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
           .maybeSingle();
         if (fresh) originalRef.current = fresh;
         toast.success("저장되었습니다");
+        // 활동 로그 기록 (상태 변경 시)
+        await logSalesActivity({
+          salesId: editingId ?? '',
+          staffId: (typeof form.manager === 'string' && form.manager) ? form.manager : (user?.id ?? ''),
+          actionType: payload.status?.includes('개통완료') ? 'activation_completed' : 'call_attempt',
+          nextStatus: payload.status ?? '',
+          channel: form.channel ?? null,
+          product: form.product ?? null,
+        });
       } else {
         const { data: inserted, error } = await supabase.from("sales").insert(payload).select("id").single();
         if (error) throw error;
@@ -593,6 +603,15 @@ export function SaleEditForm({ saleId, embedded = false, onSaved, onCancel, hide
         }
         toast.success("실적이 성공적으로 등록되었으며, 즉시 장표에 반영되었습니다", {
           description: "검수/승인 여부와 무관하게 모든 합계·리스트에 즉시 노출됩니다.",
+        });
+        // 활동 로그 기록
+        await logSalesActivity({
+          salesId: resultId ?? '',
+          staffId: (typeof form.manager === 'string' && form.manager) ? form.manager : (user?.id ?? ''),
+          actionType: 'activation_completed',
+          nextStatus: form.status ?? '개통완료',
+          channel: form.channel ?? null,
+          product: form.product ?? null,
         });
       }
       if (!embedded) reset();

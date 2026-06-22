@@ -212,3 +212,53 @@ export async function logLeadStatusChange({
     });
   }
 }
+
+// ── 판매실적 입력/수정 시 로그 기록 (SaleEditForm 전용) ─────
+export async function logSalesActivity({
+  salesId,
+  staffId,
+  actionType,
+  nextStatus,
+  channel,
+  product,
+}: {
+  salesId: string;
+  staffId: string;
+  actionType: string;
+  nextStatus: string;
+  channel?: string | null;
+  product?: string | null;
+}): Promise<void> {
+  if (!staffId) return;
+
+  // profiles에서 실제 display_name 조회
+  let resolvedName = '';
+  const { data: profile } = await supabase
+    .from('profiles').select('display_name').eq('user_id', staffId).single();
+  resolvedName = profile?.display_name ?? staffId;
+
+  const { error } = await supabase.from('activity_logs').insert({
+    lead_id: null,
+    sales_record_id: salesId || null,
+    staff_id: staffId,
+    staff_name: resolvedName,
+    store_id: null,
+    channel: channel ?? null,
+    action_type: actionType,
+    result_type: null,
+    previous_status: null,
+    next_status: nextStatus,
+    memo: product ? `상품: ${product}` : null,
+    fail_reason: null,
+    next_action_at: null,
+    is_counted: true,
+    not_counted_reason: null,
+    corrected_log_id: null,
+    device_info: null,
+    ip_address: null,
+    created_by: staffId,
+  });
+  if (error) {
+    console.error('[logSalesActivity] 로그 기록 실패:', error.message);
+  }
+}
