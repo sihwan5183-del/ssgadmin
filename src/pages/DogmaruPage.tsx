@@ -1450,12 +1450,16 @@ export default function LeadsPage() {
     const { error } = await supabase.from("leads").update(updateData).eq("id", id);
     if (error) { toast.error(error.message); return; }
 
-    // 상태 변경 로그 INSERT (기존 유지)
-    await supabase.from("lead_status_logs").insert({
-      lead_id: id,
-      status,
-      changed_by: changedBy,
-    });
+    // 상태 변경 로그 INSERT (기존 유지) - 실패해도 메인 플로우 유지
+    try {
+      await supabase.from("lead_status_logs").insert({
+        lead_id: id,
+        status,
+        changed_by: changedBy,
+      });
+    } catch (e) {
+      console.warn('[lead_status_logs] INSERT 실패 (무시):', e);
+    }
 
     // 영업 활동 리포트용 activity_logs INSERT (신규 — 기존 기능에 영향 없음)
     const previousStatus = rows.find((r) => r.id === id)?.status ?? null;
@@ -1485,11 +1489,15 @@ export default function LeadsPage() {
     const newMemo = next > 0 ? [baseMemo, `부재/${next}회`].filter(Boolean).join(" / ") : baseMemo;
     await supabase.from("leads").update({ memo: newMemo }).eq("id", lead.id);
     // 로그 기록
-    await supabase.from("lead_status_logs").insert({
-      lead_id: lead.id,
-      status: delta > 0 ? `부재케어 +1 (${next}회)` : `부재케어 -1 (${next}회)`,
-      changed_by: changedBy,
-    });
+    try {
+      await supabase.from("lead_status_logs").insert({
+        lead_id: lead.id,
+        status: delta > 0 ? `부재케어 +1 (${next}회)` : `부재케어 -1 (${next}회)`,
+        changed_by: changedBy,
+      });
+    } catch (e) {
+      console.warn('[lead_status_logs] INSERT 실패 (무시):', e);
+    }
     setRows(p => p.map(r => r.id === lead.id ? { ...r, memo: newMemo } : r));
     if (openLead?.id === lead.id) setOpenLead({ ...openLead, memo: newMemo });
   }
