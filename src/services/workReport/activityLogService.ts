@@ -192,7 +192,15 @@ export async function logLeadStatusChange({
     created_by: staffId,
   });
   if (error) {
-    // 로그 실패는 조용히 처리 (메인 플로우 방해하지 않음)
-    console.warn('[logLeadStatusChange] 로그 기록 실패:', error.message);
+    // 에러 상세 로깅 (디버깅용)
+    console.error('[logLeadStatusChange] INSERT 실패:', {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      staffId,
+      staffName,
+      action_type,
+    });
   }
 }
