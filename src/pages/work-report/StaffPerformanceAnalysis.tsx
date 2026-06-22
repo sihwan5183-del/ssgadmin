@@ -61,7 +61,12 @@ export default function StaffPerformanceAnalysis() {
   const [salesSummary, setSalesSummary] = useState<StaffSalesSummaryRow[]>([]);
   const [productDetail, setProductDetail] = useState<ProductDetailRow[]>([]);
   const [channelFocus, setChannelFocus] = useState<StaffChannelFocusRow[]>([]);
-  const [funnelStats, setFunnelStats] = useState<ChannelFunnelRow[]>([]);
+  const [channelSales, setChannelSales] = useState<StaffChannelSalesRow[]>([]);
+  const [deviceOptions, setDeviceOptions] = useState<{ devices: string[]; plans: string[]; saleTypes: string[] }>({ devices: [], plans: [], saleTypes: [] });
+  const [selDevice, setSelDevice] = useState('');
+  const [selPlan, setSelPlan] = useState('');
+  const [selSaleType, setSelSaleType] = useState('');
+  const [funnelRows, setFunnelRows] = useState<ChannelFunnelRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [detailFilter, setDetailFilter] = useState<LogDetailFilter | null>(null);
 
@@ -77,19 +82,21 @@ export default function StaffPerformanceAnalysis() {
         product: selProduct || undefined,
         isCounted: selCounted === 'true' ? true : selCounted === 'false' ? false : undefined,
       };
-      const [k, s, t, c, a, ss, pd, cf, fn] = await Promise.all([
+      const [k, s, t, c, a, ss, cs, pd, fn, cf, dopt] = await Promise.all([
         getKpiSummary(from, to, filters),
         getStaffWorkSummary(from, to, filters),
         getStaffDailyTrend(from, to, filters),
         getChannelPerformance(from, to, filters),
         getWarningAlerts(),
-        getStaffSalesSummary(from, to, filters),
-        getStaffProductDetailStats(from, to, filters),
-        getStaffChannelFocusStats(from, to, filters),
-        getChannelFunnelStats(from, to, filters),
+        getStaffSalesSummary(from, to, selStaff || undefined),
+        getStaffChannelSalesStats(from, to, selStaff || undefined),
+        getStaffProductDetailStats(from, to, selStaff || undefined, selChannel || undefined, selDevice || undefined, selPlan || undefined, selSaleType || undefined),
+        getChannelFunnelStats(from, to),
+        getStaffChannelFocusStats(from, to, selStaff || undefined),
+        getDeviceFilterOptions(from, to),
       ]);
       setKpi(k); setStaffRows(s); setTrend(t); setChannels(c); setAlerts(a);
-      setSalesSummary(ss); setProductDetail(pd); setChannelFocus(cf); setFunnelStats(fn);
+      setSalesSummary(ss); setChannelSales(cs); setProductDetail(pd); setFunnelRows(fn); setChannelFocus(cf); setDeviceOptions(dopt);
     } catch (e: any) {
       toast.error('조회 실패: ' + e.message);
     } finally {
@@ -522,7 +529,7 @@ export default function StaffPerformanceAnalysis() {
                 </tr></thead>
                 <tbody className="divide-y divide-gray-50">
                   {loading ? <tr><td colSpan={10} className="py-6 text-center text-xs text-gray-400">로딩 중...</td></tr>
-                    : funnelStats.map(r => (
+                    : funnelRows.map(r => (
                     <tr key={r.channel} className="hover:bg-gray-50">
                       <td className="py-3 px-3"><WRBadge variant="info">{CHANNEL_LABELS[r.channel] ?? r.channel}</WRBadge></td>
                       <td className="py-3 px-3 text-right text-blue-600 font-semibold">{r.new_leads}</td>
