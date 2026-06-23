@@ -22,19 +22,21 @@ export interface DailyReportLog {
   customer_name?: string | null;
 }
 
-// 채널별 집계 항목 — 채널마다 의미있는 항목이 다름
+// 채널별 집계 — next_status 원본값 기준 카운팅
 export interface ChannelSummary {
-  channel: string;         // meta | dogmaru | udak | other
-  label: string;           // 메타광고 | 도그마루 | 유닥 | 기타인입
-  call_attempt: number;    // 메타:케어중, 도그마루:해피콜시도
-  call_connected: number;  // 도그마루:해피콜O
-  absent: number;          // 부재/부재케어/미재케어
-  recare: number;          // 재케어
-  failed: number;          // 취소/실패/개통철회/영업X
-  consultation_success: number; // 유닥:성공, 도그마루:영업O
-  delivery_sent: number;   // 택배발송
+  channel: string;   // meta | dogmaru | udak | other
+  label: string;     // 메타광고 | 도그마루 | 유닥 | 기타인입
+  statusCounts: Record<string, number>; // { '케어중': 3, '부재중': 2, ... }
   activation_completed: number; // 개통완료 (sales 기준)
 }
+
+// 채널별 표시할 상태값 순서
+export const CHANNEL_STATUS_ORDER: Record<string, string[]> = {
+  meta:    ['신규접수', '신규 접수', '케어중', '부재중', '재케어', '취소', '개통완료'],
+  dogmaru: ['신규접수', '신규 접수', '부재케어', '재케어', '재케어대상', '해피콜', '영업', '실패', '개통철회', '기타', '택배발송', '청약대기', '개통대기', '완료'],
+  udak:    ['신규접수', '신규 접수', '성공', '실패', '부재케어', '부재', '재케어', '택배발송', '개통완료'],
+  other:   ['성공', '실패', '재케어', '미케어', '부재', '신규접수', '신규 접수'],
+};
 
 export interface DailyReportSummary {
   call_attempt: number;
@@ -147,31 +149,28 @@ export async function getDailyWorkReportData({
     not_counted:          logs.filter((l) => !l.is_counted).length,
   };
 
-  // ── 채널별 분리 집계 ──────────────────────────────────────
+  // ── 채널별 분리 집계 (next_status 원본값 기준) ─────────────
   const channelMap = new Map<string, ChannelSummary>();
   const ensureChannel = (ch: string) => {
     if (!channelMap.has(ch)) {
       channelMap.set(ch, {
         channel: ch,
         label: CHANNEL_LABELS[ch] ?? ch,
-        call_attempt: 0, call_connected: 0, absent: 0, recare: 0,
-        failed: 0, consultation_success: 0, delivery_sent: 0, activation_completed: 0,
+        statusCounts: {},
+        activation_completed: 0,
       });
     }
     return channelMap.get(ch)!;
   };
 
-  counted.forEach((l) => {
+  // is_counted 관계없이 모든 로그의 next_status로 카운팅
+  logs.forEach((l) => {
     const ch = detectChannelBucket(l.channel);
     const r = ensureChannel(ch);
-    if (l.action_type === 'call_attempt')         r.call_attempt++;
-    if (l.action_type === 'call_connected')        r.call_connected++;
-    if (l.action_type === 'absent')               r.absent++;
-    if (l.action_type === 'recare_registered' || l.action_type === 'recare_completed') r.recare++;
-    if (l.action_type === 'failed')               r.failed++;
-    if (l.action_type === 'consultation_success') r.consultation_success++;
-    if (l.action_type === 'delivery_sent')        r.delivery_sent++;
-    if (l.action_type === 'activation_completed') r.activation_completed++;
+    const s = l.next_status?.trim();
+    if (s) {
+      r.statusCounts[s] = (r.statusCounts[s] ?? 0) + 1;
+    }
   });
 
   // sales 기준 개통완료 (오늘 open_date)
@@ -193,7 +192,9 @@ export async function getDailyWorkReportData({
       if (sid !== filterStaffId) return;
     }
     const ch = detectChannelBucket(s.channel);
-    ensureChannel(ch).activation_completed++;
+    const r = ensureChannel(ch);
+    r.activation_completed++;
+    r.statusCounts['개통완료'] = (r.statusCounts['개통완료'] ?? 0) + 1;
   });
 
   // 채널 순서 고정

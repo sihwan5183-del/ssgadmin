@@ -2,6 +2,7 @@
 // reportFormatService — 카톡 보고문 포맷 생성 (채널별 분리)
 // ============================================================
 import type { DailyReportData, DailyReportLog, ChannelSummary } from './reportAggregationService';
+import { CHANNEL_STATUS_ORDER } from './reportAggregationService';
 
 export function maskCustomerName(name: string | null | undefined): string {
   if (!name) return '고객';
@@ -44,40 +45,22 @@ function formatProgressLine(log: DailyReportLog, idx: number): string {
   return `${idx + 1}. ${parts.join(' / ')}`;
 }
 
-// 채널별 요약 한 블록
+// 채널별 요약 한 블록 — next_status 원본값 기준
 function formatChannelBlock(cs: ChannelSummary): string {
   const lines: string[] = [];
   lines.push(`[${cs.label}]`);
-
-  // 채널별로 의미있는 항목만 출력
-  if (cs.channel === 'meta') {
-    lines.push(`- 케어(시도): ${cs.call_attempt}건`);
-    lines.push(`- 부재: ${cs.absent}건`);
-    lines.push(`- 재케어: ${cs.recare}건`);
-    lines.push(`- 취소(실패): ${cs.failed}건`);
-    lines.push(`- 개통완료: ${cs.activation_completed}건`);
-  } else if (cs.channel === 'dogmaru') {
-    lines.push(`- 해피콜 시도: ${cs.call_attempt}건`);
-    lines.push(`- 해피콜O(연결): ${cs.call_connected}건`);
-    lines.push(`- 해피콜X(부재): ${cs.absent}건`);
-    lines.push(`- 재케어: ${cs.recare}건`);
-    lines.push(`- 영업O(상담성공): ${cs.consultation_success}건`);
-    lines.push(`- 영업X(실패): ${cs.failed}건`);
-    lines.push(`- 개통완료: ${cs.activation_completed}건`);
-  } else if (cs.channel === 'udak') {
-    lines.push(`- 부재: ${cs.absent}건`);
-    lines.push(`- 재케어: ${cs.recare}건`);
-    lines.push(`- 성공(상담성공): ${cs.consultation_success}건`);
-    lines.push(`- 실패: ${cs.failed}건`);
-    lines.push(`- 택배발송: ${cs.delivery_sent}건`);
-    lines.push(`- 개통완료: ${cs.activation_completed}건`);
-  } else {
-    lines.push(`- 부재: ${cs.absent}건`);
-    lines.push(`- 재케어: ${cs.recare}건`);
-    lines.push(`- 성공: ${cs.consultation_success}건`);
-    lines.push(`- 실패: ${cs.failed}건`);
-    lines.push(`- 개통완료: ${cs.activation_completed}건`);
-  }
+  const order = CHANNEL_STATUS_ORDER[cs.channel] ?? [];
+  // 정해진 순서대로 출력 (0건도 표시)
+  order.forEach(status => {
+    const count = cs.statusCounts[status] ?? 0;
+    lines.push(`- ${status}: ${count}건`);
+  });
+  // 순서에 없는 상태값도 추가 출력
+  Object.entries(cs.statusCounts).forEach(([status, count]) => {
+    if (!order.includes(status)) {
+      lines.push(`- ${status}: ${count}건`);
+    }
+  });
   return lines.join('\n');
 }
 
