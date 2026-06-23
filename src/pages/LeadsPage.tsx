@@ -560,7 +560,7 @@ function MobileLeadsView({
                       <button onClick={() => saveHappyCall(lead, (lead as any).happy_call === "X" ? null : "X", (lead as any).happy_call_result)} className={`flex-1 py-2.5 rounded-lg border text-xs font-bold transition-colors ${(lead as any).happy_call === "X" ? "bg-rose-100 text-rose-700 border-rose-400" : "bg-background border-border text-muted-foreground"}`}>❌ X (거절)</button>
                     </div>
                     <div className="text-[10px] text-muted-foreground">{(lead as any).happy_call === "O" ? "✅ 인터넷 상담 받을게요!" : (lead as any).happy_call === "X" ? "❌ 필요 없어요" : "미설정"}</div>
-                  </div>
+                  </div>}
                   {/* 영업 결과 — 도그마루 탭에서만 표시 */}
                   {sourceTab === "dogmaru" && <div className={`p-3 rounded-xl border space-y-1.5 transition-opacity ${(lead as any).happy_call === "O" ? "border-border bg-muted/20 opacity-100" : "border-dashed border-border/40 bg-muted/10 opacity-40 pointer-events-none"}`}>
                     <div className="flex items-center justify-between">
@@ -573,7 +573,7 @@ function MobileLeadsView({
                       <button onClick={() => saveHappyCall(lead, (lead as any).happy_call, (lead as any).happy_call_result === "부재" ? null : "부재")} className={`flex-1 py-2.5 rounded-lg border text-xs font-bold transition-colors ${(lead as any).happy_call_result === "부재" ? "bg-orange-100 text-orange-700 border-orange-400" : "bg-background border-border text-muted-foreground"}`}>📵 부재</button>
                     </div>
                     <div className="text-[10px] text-muted-foreground">{(lead as any).happy_call_result ? `현재: ${(lead as any).happy_call_result}` : "⚠️ 미설정 — 재케어 대상"}</div>
-                  </div>
+                  </div>}
 
                   {/* 메모 */}
                   <div>
