@@ -838,7 +838,9 @@ const LEADS_SELECT = `
   birth,
   consult_time,
   estimated_fee,
-  estimated_fee_memo
+  estimated_fee_memo,
+  pkg_number,
+  last_action_at
 `;
 
 const cleanText = (value: unknown) => {

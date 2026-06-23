@@ -774,7 +774,8 @@ const LEADS_SELECT = `
   cancellation_status,
   activation_number,
   happy_call,
-  happy_call_result
+  happy_call_result,
+  last_action_at
 `;
 
 const cleanText = (value: unknown) => {
