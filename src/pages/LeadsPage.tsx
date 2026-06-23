@@ -838,7 +838,9 @@ const LEADS_SELECT = `
   birth,
   consult_time,
   estimated_fee,
-  estimated_fee_memo
+  estimated_fee_memo,
+  pkg_number,
+  last_action_at
 `;
 
 const cleanText = (value: unknown) => {
@@ -927,6 +929,7 @@ type Lead = {
   consult_time: string | null;
   estimated_fee: number | null;
   estimated_fee_memo: string | null;
+  last_action_at: string | null;
 };
 
 type LeadNote = {
@@ -1539,7 +1542,7 @@ export default function LeadsPage() {
     }
 
     // 상태 업데이트
-    const updateData: any = { status };
+    const updateData: any = { status, last_action_at: new Date().toISOString() };
     // 부재케어면 메모에 횟수 자동 기록
     if (status === "부재케어") {
       const currentRow = rows.find(r => r.id === id);

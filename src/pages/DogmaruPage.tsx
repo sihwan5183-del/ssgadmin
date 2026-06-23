@@ -774,7 +774,8 @@ const LEADS_SELECT = `
   cancellation_status,
   activation_number,
   happy_call,
-  happy_call_result
+  happy_call_result,
+  last_action_at
 `;
 
 const cleanText = (value: unknown) => {
@@ -852,6 +853,7 @@ type Lead = {
   pkg_number: string | null;
   happy_call: string | null;
   happy_call_result: string | null;
+  last_action_at: string | null;
 };
 
 type LeadNote = {
@@ -1455,7 +1457,7 @@ export default function LeadsPage() {
     }
 
     // 상태 업데이트
-    const updateData: any = { status };
+    const updateData: any = { status, last_action_at: new Date().toISOString() };
     // 부재케어면 메모에 횟수 자동 기록
     if (status === "부재케어") {
       const currentRow = rows.find(r => r.id === id);
