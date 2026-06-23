@@ -70,6 +70,7 @@ interface InquiryRow {
   retry_at: string | null;
   fail_reason: string | null;
   last_action_at: string | null;
+  last_action_by: string | null;
   created_by: string;
   created_at: string;
 }
@@ -485,6 +486,7 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
       retry_at: ["부재", "재케어"].includes(editStatus) && editRetryAt ? new Date(editRetryAt).toISOString() : null as string | null,
       fail_reason: editStatus === "실패" ? (editFailReason || null) : null as string | null,
       last_action_at: new Date().toISOString() as string | null,
+      last_action_by: user?.user_metadata?.display_name ?? user?.email ?? null,
     } as const;
     const { error } = await supabase.from("inquiries").update(update).eq("id", editingRow.id);
     if (error) { toast.error(error.message); return; }
@@ -630,6 +632,7 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
         retry_at: null,
         fail_reason: null,
         last_action_at: new Date().toISOString(),
+        last_action_by: user?.user_metadata?.display_name ?? user?.email ?? null,
       })
       .eq("id", row.id);
     if (error) { toast.error(error.message); return; }
@@ -985,10 +988,17 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
                             {displayStatus || "-"}
                           </span>
                         </td>
-                        <td className="px-2 py-3 text-[11px] tabular-nums align-middle whitespace-nowrap text-foreground">
-                          {lastLog?.created_at
-                            ? formatTime(lastLog.created_at)
-                            : formatTime(r.last_action_at)}
+                        <td className="px-2 py-3 text-[11px] align-middle whitespace-nowrap text-foreground">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="tabular-nums">
+                              {lastLog?.created_at
+                                ? formatTime(lastLog.created_at)
+                                : formatTime(r.last_action_at)}
+                            </span>
+                            {r.last_action_by && (
+                              <span className="text-[10px] text-gray-400">{r.last_action_by}</span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-2 py-3 text-xs align-middle whitespace-nowrap overflow-hidden text-ellipsis text-foreground">
                           {(lastSummary || consultDevice) ? (
