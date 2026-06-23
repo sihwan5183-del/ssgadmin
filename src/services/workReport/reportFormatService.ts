@@ -120,16 +120,35 @@ export function formatDailyKakaoReport(data: DailyReportData, teamName = '온라
     failReasons.forEach((f) => lines.push(`- ${f.reason}: ${f.count}건`));
   }
 
-  // 담당자별
+  // 담당자별 — 채널별 상태값 기준
   lines.push('');
   lines.push('[담당자별]');
   if (staffSummaries.length === 0) {
     lines.push('- 데이터 없음');
   } else {
     staffSummaries.forEach((s) => {
-      lines.push(
-        `- ${s.display_name}: 시도 ${s.call_attempt} / 연결 ${s.call_connected} / 부재 ${s.absent} / 재케어 ${s.recare} / 실패 ${s.failed} / 상담성공 ${s.consultation_success} / 개통완료 ${s.activation_completed}`
-      );
+      lines.push('');
+      lines.push(`▶ ${s.display_name}`);
+      const chOrder = ['meta', 'dogmaru', 'udak', 'other'];
+      const chLabels: Record<string, string> = { meta: '메타', dogmaru: '도그마루', udak: '유닥', other: '기타인입' };
+      chOrder.forEach(ch => {
+        const counts = s.channelStatusCounts[ch];
+        if (!counts || Object.keys(counts).length === 0) return;
+        const statusOrder = CHANNEL_STATUS_ORDER[ch] ?? [];
+        const parts: string[] = [];
+        // 정해진 순서대로
+        statusOrder.forEach(st => {
+          const c = counts[st] ?? 0;
+          if (c > 0) parts.push(`${st} ${c}`);
+        });
+        // 순서에 없는 것도
+        Object.entries(counts).forEach(([st, c]) => {
+          if (!statusOrder.includes(st) && c > 0) parts.push(`${st} ${c}`);
+        });
+        if (parts.length > 0) {
+          lines.push(`  [${chLabels[ch]}] ${parts.join(' / ')}`);
+        }
+      });
     });
   }
 

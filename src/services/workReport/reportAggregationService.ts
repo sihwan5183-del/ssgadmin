@@ -61,6 +61,8 @@ export interface StaffDailySummary {
   failed: number;
   consultation_success: number;
   activation_completed: number;
+  // 채널별 상태값 카운팅
+  channelStatusCounts: Record<string, Record<string, number>>; // { meta: { 케어중: 2 }, dogmaru: { 부재케어: 1 } }
 }
 
 export interface FailReasonCount {
@@ -227,26 +229,38 @@ export async function getDailyWorkReportData({
       staff_id: p.user_id, staff_name: p.display_name, display_name: p.display_name,
       call_attempt: 0, call_connected: 0, absent: 0,
       recare: 0, failed: 0, consultation_success: 0, activation_completed: 0,
+      channelStatusCounts: {},
     });
   });
 
-  counted.forEach((l) => {
+  logs.forEach((l) => {
     if (!staffMap.has(l.staff_id)) {
       staffMap.set(l.staff_id, {
         staff_id: l.staff_id, staff_name: l.staff_name,
         display_name: nameMap.get(l.staff_id) ?? l.staff_name,
         call_attempt: 0, call_connected: 0, absent: 0,
         recare: 0, failed: 0, consultation_success: 0, activation_completed: 0,
+        channelStatusCounts: {},
       });
     }
     const s = staffMap.get(l.staff_id)!;
-    if (l.action_type === 'call_attempt')         s.call_attempt++;
-    if (l.action_type === 'call_connected')        s.call_connected++;
-    if (l.action_type === 'absent')               s.absent++;
-    if (l.action_type === 'recare_registered' || l.action_type === 'recare_completed') s.recare++;
-    if (l.action_type === 'failed')               s.failed++;
-    if (l.action_type === 'consultation_success') s.consultation_success++;
-    if (l.action_type === 'activation_completed') s.activation_completed++;
+    // action_type 기반 집계 (is_counted=true만)
+    if (l.is_counted) {
+      if (l.action_type === 'call_attempt')         s.call_attempt++;
+      if (l.action_type === 'call_connected')        s.call_connected++;
+      if (l.action_type === 'absent')               s.absent++;
+      if (l.action_type === 'recare_registered' || l.action_type === 'recare_completed') s.recare++;
+      if (l.action_type === 'failed')               s.failed++;
+      if (l.action_type === 'consultation_success') s.consultation_success++;
+      if (l.action_type === 'activation_completed') s.activation_completed++;
+    }
+    // 채널별 next_status 카운팅 (전체 로그 기준)
+    const ch = detectChannelBucket(l.channel);
+    const status = l.next_status?.trim();
+    if (status) {
+      if (!s.channelStatusCounts[ch]) s.channelStatusCounts[ch] = {};
+      s.channelStatusCounts[ch][status] = (s.channelStatusCounts[ch][status] ?? 0) + 1;
+    }
   });
 
   // sales 기준 담당자별 개통 반영
