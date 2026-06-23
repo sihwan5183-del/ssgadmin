@@ -549,8 +549,8 @@ function MobileLeadsView({
                     </div>
                   </div>
 
-                  {/* 해피콜 */}
-                  <div className="p-3 rounded-xl border border-border bg-muted/20 space-y-1.5">
+                  {/* 해피콜 — 도그마루 탭에서만 표시 */}
+                  {sourceTab === "dogmaru" && <div className="p-3 rounded-xl border border-border bg-muted/20 space-y-1.5">
                     <div className="flex items-center justify-between">
                       <div className="text-xs font-semibold">📞 해피콜</div>
                       <div className="text-[10px] text-muted-foreground">해피콜 팀 작성</div>
@@ -561,8 +561,8 @@ function MobileLeadsView({
                     </div>
                     <div className="text-[10px] text-muted-foreground">{(lead as any).happy_call === "O" ? "✅ 인터넷 상담 받을게요!" : (lead as any).happy_call === "X" ? "❌ 필요 없어요" : "미설정"}</div>
                   </div>
-                  {/* 영업 결과 */}
-                  <div className={`p-3 rounded-xl border space-y-1.5 transition-opacity ${(lead as any).happy_call === "O" ? "border-border bg-muted/20 opacity-100" : "border-dashed border-border/40 bg-muted/10 opacity-40 pointer-events-none"}`}>
+                  {/* 영업 결과 — 도그마루 탭에서만 표시 */}
+                  {sourceTab === "dogmaru" && <div className={`p-3 rounded-xl border space-y-1.5 transition-opacity ${(lead as any).happy_call === "O" ? "border-border bg-muted/20 opacity-100" : "border-dashed border-border/40 bg-muted/10 opacity-40 pointer-events-none"}`}>
                     <div className="flex items-center justify-between">
                       <div className="text-xs font-semibold">💼 영업 결과</div>
                       <div className="text-[10px] text-muted-foreground">해피콜 O만 활성</div>
@@ -1555,7 +1555,6 @@ export default function LeadsPage() {
       return "meta";
     };
     const rowChannel = detectChannel(currentRow);
-    const assignedStaffId = currentRow?.assigned_to ?? '';
 
     // lead_status_logs 비동기 (결과 기다리지 않음)
     supabase.from("lead_status_logs").insert({
@@ -1566,10 +1565,10 @@ export default function LeadsPage() {
       if (e) console.warn('[lead_status_logs] INSERT 실패:', e.message);
     });
 
-    // activity_logs 비동기 (결과 기다리지 않음)
+    // activity_logs — 실제 누른 사람(로그인 유저) 기준
     logLeadStatusChange({
       leadId: id,
-      staffId: assignedStaffId || (user?.id ?? ''),
+      staffId: user?.id ?? '',
       staffName: changedBy,
       previousStatus,
       nextStatus: status,

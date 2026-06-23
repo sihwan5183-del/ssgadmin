@@ -1462,7 +1462,6 @@ export default function LeadsPage() {
     // ── 부가 로그 기록 (실패해도 UI에 영향 없음) ─────────────
     const dogRow = rows.find((r) => r.id === id);
     const previousStatus = dogRow?.status ?? null;
-    const dogAssignedId = dogRow?.assigned_to ?? '';
 
     supabase.from("lead_status_logs").insert({
       lead_id: id,
@@ -1474,7 +1473,7 @@ export default function LeadsPage() {
 
     logLeadStatusChange({
       leadId: id,
-      staffId: dogAssignedId || (user?.id ?? ''),
+      staffId: user?.id ?? '',
       staffName: changedBy,
       previousStatus,
       nextStatus: status,
