@@ -139,6 +139,18 @@ export async function getDailyWorkReportData({
   const counted = logs.filter((l) => l.is_counted);
   const cnt = (type: string) => counted.filter((l) => l.action_type === type).length;
 
+  // sales 기준 개통완료 먼저 계산 (summary에서 사용)
+  const { data: salesDataForSummary } = await supabase.from('sales')
+    .select('id, channel, manager, status')
+    .eq('open_date', date).eq('status', '개통완료').is('deleted_at', null);
+  const seenSalesIds = new Set<string>();
+  let salesActivationCount = 0;
+  (salesDataForSummary ?? []).forEach((s: any) => {
+    if (seenSalesIds.has(s.id)) return;
+    seenSalesIds.add(s.id);
+    salesActivationCount++;
+  });
+
   const summary: DailyReportSummary = {
     call_attempt:         cnt('call_attempt'),
     call_connected:       cnt('call_connected'),
@@ -147,7 +159,7 @@ export async function getDailyWorkReportData({
     failed:               cnt('failed'),
     consultation_success: cnt('consultation_success'),
     delivery_sent:        cnt('delivery_sent'),
-    activation_completed: cnt('activation_completed'),
+    activation_completed: salesActivationCount,  // sales 기준
     not_counted:          logs.filter((l) => !l.is_counted).length,
   };
 
@@ -175,7 +187,7 @@ export async function getDailyWorkReportData({
     }
   });
 
-  // sales 기준 개통완료 (오늘 open_date)
+  // sales 기준 개통완료 채널별 집계
   const { data: salesData } = await supabase.from('sales')
     .select('id, channel, manager, status')
     .eq('open_date', date)
