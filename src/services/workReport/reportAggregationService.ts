@@ -165,8 +165,8 @@ export async function getDailyWorkReportData({
     return channelMap.get(ch)!;
   };
 
-  // is_counted 관계없이 모든 로그의 next_status로 카운팅
-  logs.forEach((l) => {
+  // is_counted=true인 로그만 채널 집계에 사용
+  counted.forEach((l) => {
     const ch = detectChannelBucket(l.channel);
     const r = ensureChannel(ch);
     const s = l.next_status?.trim();
@@ -233,7 +233,7 @@ export async function getDailyWorkReportData({
     });
   });
 
-  logs.forEach((l) => {
+  counted.forEach((l) => {
     if (!staffMap.has(l.staff_id)) {
       staffMap.set(l.staff_id, {
         staff_id: l.staff_id, staff_name: l.staff_name,
@@ -244,17 +244,14 @@ export async function getDailyWorkReportData({
       });
     }
     const s = staffMap.get(l.staff_id)!;
-    // action_type 기반 집계 (is_counted=true만)
-    if (l.is_counted) {
-      if (l.action_type === 'call_attempt')         s.call_attempt++;
-      if (l.action_type === 'call_connected')        s.call_connected++;
-      if (l.action_type === 'absent')               s.absent++;
-      if (l.action_type === 'recare_registered' || l.action_type === 'recare_completed') s.recare++;
-      if (l.action_type === 'failed')               s.failed++;
-      if (l.action_type === 'consultation_success') s.consultation_success++;
-      if (l.action_type === 'activation_completed') s.activation_completed++;
-    }
-    // 채널별 next_status 카운팅 (전체 로그 기준)
+    if (l.action_type === 'call_attempt')         s.call_attempt++;
+    if (l.action_type === 'call_connected')        s.call_connected++;
+    if (l.action_type === 'absent')               s.absent++;
+    if (l.action_type === 'recare_registered' || l.action_type === 'recare_completed') s.recare++;
+    if (l.action_type === 'failed')               s.failed++;
+    if (l.action_type === 'consultation_success') s.consultation_success++;
+    if (l.action_type === 'activation_completed') s.activation_completed++;
+    // 채널별 next_status 카운팅
     const ch = detectChannelBucket(l.channel);
     const status = l.next_status?.trim();
     if (status) {
