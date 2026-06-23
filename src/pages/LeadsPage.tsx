@@ -840,7 +840,8 @@ const LEADS_SELECT = `
   estimated_fee,
   estimated_fee_memo,
   pkg_number,
-  last_action_at
+  last_action_at,
+  last_action_by
 `;
 
 const cleanText = (value: unknown) => {
@@ -930,6 +931,7 @@ type Lead = {
   estimated_fee: number | null;
   estimated_fee_memo: string | null;
   last_action_at: string | null;
+  last_action_by: string | null;
 };
 
 type LeadNote = {
@@ -1542,7 +1544,7 @@ export default function LeadsPage() {
     }
 
     // 상태 업데이트
-    const updateData: any = { status, last_action_at: new Date().toISOString() };
+    const updateData: any = { status, last_action_at: new Date().toISOString(), last_action_by: changedBy };
     // 부재케어면 메모에 횟수 자동 기록
     if (status === "부재케어") {
       const currentRow = rows.find(r => r.id === id);
@@ -2310,9 +2312,12 @@ export default function LeadsPage() {
                       {item.memo ?? "-"}
                     </TableCell>
                     <TableCell className="py-1.5 text-xs text-gray-500 whitespace-nowrap">
-                      {(item as any).last_action_at
-                        ? fmtCompactDate((item as any).last_action_at)
-                        : <span className="text-gray-300">-</span>}
+                      {(item as any).last_action_at ? (
+                        <div className="flex flex-col gap-0.5">
+                          <span>{fmtCompactDate((item as any).last_action_at)}</span>
+                          {(item as any).last_action_by && <span className="text-gray-400 text-[10px]">{(item as any).last_action_by}</span>}
+                        </div>
+                      ) : <span className="text-gray-300">-</span>}
                     </TableCell>
                     <TableCell className="text-center py-1.5">
                       {(item as any).happy_call === "O" ? (
@@ -2485,9 +2490,12 @@ export default function LeadsPage() {
                   })()}
                 </TableCell>
                 <TableCell className="py-1.5 text-xs text-gray-500 whitespace-nowrap">
-                  {r.last_action_at
-                    ? fmtCompactDate(r.last_action_at)
-                    : <span className="text-gray-300">-</span>}
+                  {r.last_action_at ? (
+                    <div className="flex flex-col gap-0.5">
+                      <span>{fmtCompactDate(r.last_action_at)}</span>
+                      {r.last_action_by && <span className="text-gray-400 text-[10px]">{r.last_action_by}</span>}
+                    </div>
+                  ) : <span className="text-gray-300">-</span>}
                 </TableCell>
                 {sourceTab !== "udak" && (
                   <TableCell className="text-center py-1.5">
