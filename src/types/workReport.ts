@@ -3,32 +3,40 @@
 // ============================================================
 
 export type ActivityActionType =
-  | 'call_attempt'        // 통화시도
-  | 'call_connected'      // 연결완료
-  | 'absent'              // 부재
-  | 'sms_sent'            // 문자발송
-  | 'recare_registered'   // 재케어등록
-  | 'recare_completed'    // 재케어완료
-  | 'failed'              // 실패처리
-  | 'consultation_success'// 상담성공
-  | 'delivery_ready'      // 택배대기
-  | 'delivery_sent'       // 택배발송
-  | 'activation_completed'// 개통완료
-  | 'settlement_confirmed';// 정산확정
+  | 'call_attempt'         // 통화시도
+  | 'call_connected'       // 연결완료
+  | 'absent'               // 부재
+  | 'sms_sent'             // 문자발송
+  | 'recare_registered'    // 재케어등록
+  | 'recare_completed'     // 재케어완료
+  | 'failed'               // 실패처리
+  | 'consultation_success' // 상담성공
+  | 'delivery_ready'       // 택배대기
+  | 'delivery_sent'        // 택배발송
+  | 'activation_completed' // 개통완료
+  | 'installation_completed' // 설치완료
+  | 'settlement_confirmed' // 정산확정
+  | 'status_changed'       // 단순 상태 변경 (미인정)
+  | 'sales_record_created' // 판매실적 등록
+  | 'sales_record_updated'; // 판매실적 수정
 
 export const ACTION_TYPE_LABEL: Record<ActivityActionType, string> = {
-  call_attempt:         '통화시도',
-  call_connected:       '연결완료',
-  absent:               '부재',
-  sms_sent:             '문자발송',
-  recare_registered:    '재케어등록',
-  recare_completed:     '재케어완료',
-  failed:               '실패처리',
-  consultation_success: '상담성공',
-  delivery_ready:       '택배대기',
-  delivery_sent:        '택배발송',
-  activation_completed: '개통완료',
-  settlement_confirmed: '정산확정',
+  call_attempt:           '통화시도',
+  call_connected:         '연결완료',
+  absent:                 '부재',
+  sms_sent:               '문자발송',
+  recare_registered:      '재케어등록',
+  recare_completed:       '재케어완료',
+  failed:                 '실패처리',
+  consultation_success:   '상담성공',
+  delivery_ready:         '택배대기',
+  delivery_sent:          '택배발송',
+  activation_completed:   '개통완료',
+  installation_completed: '설치완료',
+  settlement_confirmed:   '정산확정',
+  status_changed:         '상태변경',
+  sales_record_created:   '판매실적등록',
+  sales_record_updated:   '판매실적수정',
 };
 
 // Supabase activity_logs 테이블 Row 타입

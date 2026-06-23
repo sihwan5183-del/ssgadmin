@@ -189,7 +189,7 @@ export async function getDailyWorkReportData({
 
   // sales 기준 개통완료 채널별 집계
   const { data: salesData } = await supabase.from('sales')
-    .select('id, channel, manager, status')
+    .select('id, channel, manager, status, customer_name, product')
     .eq('open_date', date)
     .eq('status', '개통완료')
     .is('deleted_at', null);
@@ -217,7 +217,6 @@ export async function getDailyWorkReportData({
     .map(ch => channelMap.get(ch))
     .filter(Boolean) as ChannelSummary[];
 
-  const activationLogs = counted.filter((l) => l.action_type === 'activation_completed');
   const progressLogs = counted.filter((l) =>
     ['consultation_success', 'delivery_sent'].includes(l.action_type)
   );
@@ -280,6 +279,36 @@ export async function getDailyWorkReportData({
     const sid = /^[0-9a-f]{8}-/i.test(s.manager ?? '') ? s.manager : nameToId.get(s.manager ?? '');
     if (sid && staffMap.has(sid)) staffMap.get(sid)!.activation_completed++;
   });
+
+  // 개통 완료건 목록 — sales 기준 (staffMap 생성 후 이름 매핑 가능)
+  const activationLogs: DailyReportLog[] = (salesData ?? [])
+    .filter((s: any) => {
+      if (filterStaffId) {
+        const sid = /^[0-9a-f]{8}-/i.test(s.manager ?? '') ? s.manager : nameToId.get(s.manager ?? '');
+        return sid === filterStaffId;
+      }
+      return true;
+    })
+    .map((s: any): DailyReportLog => {
+      const sid = /^[0-9a-f]{8}-/i.test(s.manager ?? '') ? s.manager : nameToId.get(s.manager ?? '');
+      const staffEntry = sid ? staffMap.get(sid) : null;
+      return {
+        id: s.id,
+        staff_id: sid ?? '',
+        staff_name: staffEntry?.display_name ?? s.manager ?? '',
+        channel: s.channel ?? null,
+        action_type: 'activation_completed',
+        result_type: null,
+        previous_status: null,
+        next_status: '개통완료',
+        memo: s.product ?? null,
+        fail_reason: null,
+        is_counted: false,
+        lead_id: null,
+        created_at: s.open_date,
+        customer_name: s.customer_name ?? null,
+      };
+    });
 
   return {
     date, logs, summary, channelSummaries,

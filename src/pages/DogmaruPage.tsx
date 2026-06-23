@@ -218,6 +218,10 @@ function MobileLeadsView({
   const completeMetaCount = tabRows.filter(r => r.status === "개통 완료").length;
 
   async function handleStatus(lead: Lead, status: string) {
+    console.log("[Mobile handleStatus START - Dogmaru]", {
+      leadId: lead.id,
+      nextStatus: status,
+    });
     setStatusLoading(lead.id + status);
     try {
       await updateStatus(lead.id, status);
@@ -943,7 +947,7 @@ export default function LeadsPage() {
       setInquiryRows((data ?? []) as { created_at: string; status: string | null; manager: string | null }[]);
     })();
     const ch = supabase
-      .channel("leads-rt")
+      .channel("dogmaru-page-rt")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "leads" },
@@ -1430,6 +1434,13 @@ export default function LeadsPage() {
   const valCancellation = useMemo(() => dogmaruRows.map((r) => r.cancellation_status ?? ""), [dogmaruRows]);
 
   async function updateStatus(id: string, status: string) {
+    console.log("[DogmaruPage updateStatus START]", {
+      id,
+      status,
+      userId: user?.id,
+      email: user?.email,
+    });
+    toast.message(`updateStatus 진입: ${status}`);
     const changedBy = user?.user_metadata?.display_name ?? user?.email ?? "unknown";
 
     // 부재케어 카운팅 - 기존 횟수 확인
@@ -1456,8 +1467,16 @@ export default function LeadsPage() {
     if (error) { toast.error(error.message); return; }
 
     // ── UI 즉시 갱신 (로그 기록 전에 먼저) ──────────────────
-    setRows((p) => p.map((r) => (r.id === id ? { ...r, ...updateData } : r)));
-    if (openLead?.id === id) setOpenLead({ ...openLead, ...updateData });
+    setRows((p) => {
+      console.log("[setRows before - Dogmaru]", p.find((r) => r.id === id)?.status);
+      const next = p.map((r) => (r.id === id ? { ...r, ...updateData } : r));
+      console.log("[setRows after - Dogmaru]", next.find((r) => r.id === id)?.status);
+      return next;
+    });
+    if (openLead?.id === id) {
+      console.log("[openLead update - Dogmaru]", openLead.status, "→", updateData.status ?? status);
+      setOpenLead({ ...openLead, ...updateData });
+    }
 
     // ── 부가 로그 기록 (실패해도 UI에 영향 없음) ─────────────
     const dogRow = rows.find((r) => r.id === id);
@@ -2258,7 +2277,7 @@ export default function LeadsPage() {
                 <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
                   <Select
                     value={r.status}
-                    onValueChange={(v) => updateStatus(r.id, v)}
+                    onValueChange={(v) => { console.log("[PC status select - Dogmaru]", { leadId: r.id, nextStatus: v }); updateStatus(r.id, v); }}
                   >
                     <SelectTrigger
                       className={`h-8 text-xs ${STATUS_COLOR[r.status] ?? ""}`}
@@ -2380,7 +2399,7 @@ export default function LeadsPage() {
                     <div className="text-[11px] font-semibold text-foreground/60 mb-1">상담 상태</div>
                     <Select
                       value={openLead.status}
-                      onValueChange={(v) => updateStatus(openLead.id, v)}
+                      onValueChange={(v) => { console.log("[Detail status select - Dogmaru]", { leadId: openLead?.id, nextStatus: v }); updateStatus(openLead.id, v); }}
                     >
                       <SelectTrigger className="h-9">
                         <SelectValue />
