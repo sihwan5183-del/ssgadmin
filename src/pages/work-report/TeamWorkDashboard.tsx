@@ -16,6 +16,7 @@ import {
   getSalesDoneCount,
 } from '@/services/workReport/workReportService';
 import { resolveStaffDisplayNames } from '@/services/workReport/staffDisplayService';
+import { getAbsentRepeatCases, type AbsentRepeatCase } from '@/services/workReport/absentRepeatService';
 
 const PERIOD_OPTIONS = ['오늘', '이번주', '이번달'];
 
@@ -43,6 +44,7 @@ export default function TeamWorkDashboard() {
   const [totalAgg, setTotalAgg] = useState<ReturnType<typeof aggregateByAction> | null>(null);
   const [nameMap, setNameMap] = useState<Map<string, string>>(new Map());
   const [detailFilter, setDetailFilter] = useState<LogDetailFilter | null>(null);
+  const [repeatCases, setRepeatCases] = useState<AbsentRepeatCase[]>([]);
 
   const today = new Date().toISOString().split('T')[0];
   const openDetail = (f: LogDetailFilter) => setDetailFilter(f);
@@ -71,6 +73,8 @@ export default function TeamWorkDashboard() {
       setStaffRows(rows);
       // 신규건 요약 (from은 이미 위에서 선언됨)
       const newSum = await getTeamNewLeadsSummary(from, canViewAll, user.id);
+      const repeats = await getAbsentRepeatCases(from, to, canViewAll ? undefined : user.id);
+      setRepeatCases(repeats);
       setNewSummary(newSum);
       // 담당자 표시명 일괄 조회
       const staffIds = rows.map((r) => r.staff_id);
@@ -182,6 +186,33 @@ export default function TeamWorkDashboard() {
           </div>
         )}
       </SectionCard>
+
+      {/* 반복 부재 감지 */}
+      {repeatCases.length > 0 && (
+        <SectionCard title={`⚠️ 반복 부재 고객 ${repeatCases.length}건 (2회 이상)`}>
+          <div className="grid grid-cols-1 gap-2">
+            {repeatCases.slice(0, 10).map((c) => (
+              <div key={c.lead_id} className="flex items-center justify-between bg-orange-50 border border-orange-100 rounded-xl px-4 py-2.5 text-xs">
+                <div className="flex items-center gap-3">
+                  <span className="font-medium text-gray-800">{c.customer_name ?? '고객'}</span>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                    c.channel === 'dogmaru' ? 'bg-blue-100 text-blue-700' :
+                    c.channel === 'udak' ? 'bg-purple-100 text-purple-700' :
+                    'bg-pink-100 text-pink-700'
+                  }`}>{c.channel ?? '-'}</span>
+                  <span className="text-gray-500">{c.staff_name}</span>
+                </div>
+                <span className={`font-bold text-sm ${c.absent_count >= 5 ? 'text-red-600' : c.absent_count >= 3 ? 'text-orange-500' : 'text-yellow-600'}`}>
+                  부재 {c.absent_count}회
+                </span>
+              </div>
+            ))}
+            {repeatCases.length > 10 && (
+              <p className="text-xs text-gray-400 text-center">외 {repeatCases.length - 10}건</p>
+            )}
+          </div>
+        </SectionCard>
+      )}
 
       {/* 담당자별 표 — 관리자/팀장만 */}
       {canViewAll && (

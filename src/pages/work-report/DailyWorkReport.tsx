@@ -9,6 +9,7 @@ import { useRole } from '@/hooks/useRole';
 import { WorkReportHeader, SectionCard } from './_shared';
 import { LogDetailModal, type LogDetailFilter } from './LogDetailModal';
 import { getDailyWorkReportData, type DailyReportData } from '@/services/workReport/reportAggregationService';
+import { getAbsentRepeatCases, type AbsentRepeatCase } from '@/services/workReport/absentRepeatService';
 import { formatDailyKakaoReport, copyDailyReportToClipboard, maskCustomerName } from '@/services/workReport/reportFormatService';
 
 const CHANNEL_OPTIONS = ['전체', 'meta', 'dogmaru', 'udak'];
@@ -36,6 +37,7 @@ export default function DailyWorkReport() {
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<DailyReportData | null>(null);
   const [showPreview, setShowPreview] = useState(true);
+  const [repeatCases, setRepeatCases] = useState<AbsentRepeatCase[]>([]);
   const [detailFilter, setDetailFilter] = useState<LogDetailFilter | null>(null);
 
   const openDetail = (filter: LogDetailFilter) => setDetailFilter(filter);
@@ -51,6 +53,8 @@ export default function DailyWorkReport() {
         channel: channel === '전체' ? undefined : channel,
       });
       setReportData(data);
+      const repeats = await getAbsentRepeatCases(date, date, canViewAll ? undefined : user.id);
+      setRepeatCases(repeats);
     } catch (e: any) {
       toast.error('보고서 생성 실패: ' + e.message);
     } finally {
@@ -217,6 +221,25 @@ export default function DailyWorkReport() {
                 </div>
               )}
             </SectionCard>
+
+            {/* 반복 부재 감지 */}
+            {repeatCases.length > 0 && (
+              <SectionCard title={`⚠️ 반복 부재 ${repeatCases.length}건`}>
+                <div className="space-y-1.5">
+                  {repeatCases.map((c) => (
+                    <div key={c.lead_id} className="flex items-center justify-between bg-orange-50 border border-orange-100 rounded-lg px-3 py-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-gray-800">{c.customer_name ?? '고객'}</span>
+                        <span className="text-gray-400">{c.staff_name}</span>
+                      </div>
+                      <span className={`font-bold ${c.absent_count >= 5 ? 'text-red-600' : c.absent_count >= 3 ? 'text-orange-500' : 'text-yellow-600'}`}>
+                        {c.absent_count}회
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
+            )}
 
             {/* 담당자별 */}
             <SectionCard title="담당자별 요약">

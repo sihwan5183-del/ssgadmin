@@ -14,6 +14,7 @@ import {
   insertActivityLog,
   cancelActivityLog,
 } from '@/services/workReport/activityLogService';
+import { getAbsentRepeatCases, type AbsentRepeatCase } from '@/services/workReport/absentRepeatService';
 import {
   ACTION_TYPE_LABEL,
   type ActivityLogWithLead,
@@ -244,6 +245,7 @@ export default function ActivityLogs() {
   const [cancelLogId, setCancelLogId] = useState<string | null>(null);
   const [nameMap, setNameMap] = useState<Map<string, string>>(new Map());
 
+  const [repeatCases, setRepeatCases] = useState<AbsentRepeatCase[]>([]);
   const [filter, setFilter] = useState<ActivityLogFilter>({
     dateFrom: getKstTodayString(),
     dateTo: getKstTodayString(),
@@ -266,6 +268,13 @@ export default function ActivityLogs() {
       };
       const data = await fetchActivityLogs(effectiveFilter);
       setLogs(data);
+      // 반복 부재 감지
+      const repeats = await getAbsentRepeatCases(
+        filter.dateFrom ?? getKstTodayString(),
+        filter.dateTo ?? getKstTodayString(),
+        canViewAll ? (filter.staffId || undefined) : user?.id
+      );
+      setRepeatCases(repeats);
       // 담당자 표시명 일괄 조회
       const staffIds = [...new Set(data.map((l) => l.staff_id))];
       if (staffIds.length > 0) {
@@ -389,6 +398,49 @@ export default function ActivityLogs() {
         ))}
       </div>
 
+      {/* 반복 부재케어 감지 */}
+      {repeatCases.length > 0 && (
+        <SectionCard title={`⚠️ 반복 부재 고객 (${repeatCases.length}건) — 2회 이상`}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-gray-400 border-b border-gray-100 bg-orange-50">
+                  {['고객', '채널', '담당자', '부재 횟수', '마지막 부재'].map((h) => (
+                    <th key={h} className="py-2 px-3 font-medium text-left whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {repeatCases.map((c) => (
+                  <tr key={c.lead_id} className="hover:bg-orange-50/50">
+                    <td className="py-2 px-3 font-medium text-gray-800">
+                      {c.customer_name ?? <span className="text-gray-300">-</span>}
+                    </td>
+                    <td className="py-2 px-3">
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        c.channel === 'dogmaru' ? 'bg-blue-100 text-blue-700' :
+                        c.channel === 'udak' ? 'bg-purple-100 text-purple-700' :
+                        c.channel === 'meta' ? 'bg-pink-100 text-pink-700' :
+                        'bg-gray-100 text-gray-500'
+                      }`}>{c.channel ?? '-'}</span>
+                    </td>
+                    <td className="py-2 px-3 text-gray-600">{c.staff_name}</td>
+                    <td className="py-2 px-3">
+                      <span className={`font-bold ${c.absent_count >= 5 ? 'text-red-600' : c.absent_count >= 3 ? 'text-orange-500' : 'text-yellow-600'}`}>
+                        {c.absent_count}회
+                      </span>
+                    </td>
+                    <td className="py-2 px-3 text-gray-400 font-mono">
+                      {new Date(c.last_absent_at).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </SectionCard>
+      )}
+
       {/* 로그 테이블 */}
       <SectionCard>
         {loading ? (
@@ -414,7 +466,11 @@ export default function ActivityLogs() {
                   return (
                     <tr
                       key={log.id}
-                      className={`hover:bg-gray-50 transition-colors ${!log.is_counted ? 'bg-red-50/40' : ''}`}
+                      className={`hover:bg-gray-50 transition-colors ${
+                        !log.is_counted ? 'bg-red-50/40' :
+                        (log.action_type === 'absent' && log.lead_id && repeatCases.some(c => c.lead_id === log.lead_id))
+                          ? 'bg-orange-50/60' : ''
+                      }`}
                     >
                       <td className="py-2.5 px-3 text-gray-400 text-xs whitespace-nowrap font-mono">
                         <div>{dateStr}</div>
