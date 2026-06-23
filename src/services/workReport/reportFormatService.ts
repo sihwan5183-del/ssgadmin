@@ -1,23 +1,19 @@
 // ============================================================
-// reportFormatService — 카톡 보고문 포맷 생성
+// reportFormatService — 카톡 보고문 포맷 생성 (채널별 분리)
 // ============================================================
-import type { DailyReportData, DailyReportLog } from './reportAggregationService';
+import type { DailyReportData, DailyReportLog, ChannelSummary } from './reportAggregationService';
 
-// 고객명 마스킹 (박민규 → 박*규, 김민 → 김*, 김 → 김*)
 export function maskCustomerName(name: string | null | undefined): string {
   if (!name) return '고객';
   if (name.length === 1) return name + '*';
   if (name.length === 2) return name[0] + '*';
-  // 3글자 이상: 첫글자 + * + 마지막글자
   return name[0] + '*' + name[name.length - 1];
 }
 
-// 날짜 포맷 (2026-06-21 → 2026.06.21)
 function formatDate(date: string): string {
   return date.replace(/-/g, '.');
 }
 
-// 채널 표시명
 function channelLabel(channel: string | null): string {
   if (!channel) return '-';
   const map: Record<string, string> = {
@@ -26,7 +22,6 @@ function channelLabel(channel: string | null): string {
   return map[channel] ?? channel;
 }
 
-// 개통완료건 한 줄 포맷
 function formatActivationLine(log: DailyReportLog, idx: number): string {
   const parts = [
     log.staff_name,
@@ -38,7 +33,6 @@ function formatActivationLine(log: DailyReportLog, idx: number): string {
   return `${idx + 1}. ${parts.join(' / ')}`;
 }
 
-// 진행예정건 한 줄 포맷
 function formatProgressLine(log: DailyReportLog, idx: number): string {
   const parts = [
     log.staff_name,
@@ -50,13 +44,52 @@ function formatProgressLine(log: DailyReportLog, idx: number): string {
   return `${idx + 1}. ${parts.join(' / ')}`;
 }
 
+// 채널별 요약 한 블록
+function formatChannelBlock(cs: ChannelSummary): string {
+  const lines: string[] = [];
+  lines.push(`[${cs.label}]`);
+
+  // 채널별로 의미있는 항목만 출력
+  if (cs.channel === 'meta') {
+    lines.push(`- 케어(시도): ${cs.call_attempt}건`);
+    lines.push(`- 부재: ${cs.absent}건`);
+    lines.push(`- 재케어: ${cs.recare}건`);
+    lines.push(`- 취소(실패): ${cs.failed}건`);
+    lines.push(`- 개통완료: ${cs.activation_completed}건`);
+  } else if (cs.channel === 'dogmaru') {
+    lines.push(`- 해피콜 시도: ${cs.call_attempt}건`);
+    lines.push(`- 해피콜O(연결): ${cs.call_connected}건`);
+    lines.push(`- 해피콜X(부재): ${cs.absent}건`);
+    lines.push(`- 재케어: ${cs.recare}건`);
+    lines.push(`- 영업O(상담성공): ${cs.consultation_success}건`);
+    lines.push(`- 영업X(실패): ${cs.failed}건`);
+    lines.push(`- 개통완료: ${cs.activation_completed}건`);
+  } else if (cs.channel === 'udak') {
+    lines.push(`- 부재: ${cs.absent}건`);
+    lines.push(`- 재케어: ${cs.recare}건`);
+    lines.push(`- 성공(상담성공): ${cs.consultation_success}건`);
+    lines.push(`- 실패: ${cs.failed}건`);
+    lines.push(`- 택배발송: ${cs.delivery_sent}건`);
+    lines.push(`- 개통완료: ${cs.activation_completed}건`);
+  } else {
+    lines.push(`- 부재: ${cs.absent}건`);
+    lines.push(`- 재케어: ${cs.recare}건`);
+    lines.push(`- 성공: ${cs.consultation_success}건`);
+    lines.push(`- 실패: ${cs.failed}건`);
+    lines.push(`- 개통완료: ${cs.activation_completed}건`);
+  }
+  return lines.join('\n');
+}
+
 // 카톡 보고문 전체 생성
 export function formatDailyKakaoReport(data: DailyReportData, teamName = '온라인 마케팅팀'): string {
-  const { date, summary, activationLogs, progressLogs, failReasons, staffSummaries } = data;
+  const { date, summary, channelSummaries, activationLogs, progressLogs, failReasons, staffSummaries } = data;
   const lines: string[] = [];
 
   lines.push(`■ ${formatDate(date)} ${teamName} 일일 업무보고`);
   lines.push('');
+
+  // 전체 요약
   lines.push('[전체 요약]');
   lines.push(`- 통화시도: ${summary.call_attempt}건`);
   lines.push(`- 연결완료: ${summary.call_connected}건`);
@@ -67,7 +100,17 @@ export function formatDailyKakaoReport(data: DailyReportData, teamName = '온라
   lines.push(`- 택배발송: ${summary.delivery_sent}건`);
   lines.push(`- 개통완료: ${summary.activation_completed}건`);
 
-  // 개통 완료건 — 항상 고정 출력
+  // 채널별 분리 요약
+  if (channelSummaries.length > 0) {
+    lines.push('');
+    lines.push('[채널별 요약]');
+    channelSummaries.forEach(cs => {
+      lines.push('');
+      lines.push(formatChannelBlock(cs));
+    });
+  }
+
+  // 개통 완료건
   lines.push('');
   lines.push('[개통 완료건]');
   if (activationLogs.length === 0) {
@@ -76,7 +119,7 @@ export function formatDailyKakaoReport(data: DailyReportData, teamName = '온라
     activationLogs.forEach((log, i) => lines.push(formatActivationLine(log, i)));
   }
 
-  // 진행 예정건 — 항상 고정 출력
+  // 진행 예정건
   lines.push('');
   lines.push('[진행 예정건]');
   if (progressLogs.length === 0) {
@@ -85,7 +128,7 @@ export function formatDailyKakaoReport(data: DailyReportData, teamName = '온라
     progressLogs.forEach((log, i) => lines.push(formatProgressLine(log, i)));
   }
 
-  // 실패 요약 — 항상 고정 출력
+  // 실패 요약
   lines.push('');
   lines.push('[실패 요약]');
   if (failReasons.length === 0) {
@@ -94,7 +137,7 @@ export function formatDailyKakaoReport(data: DailyReportData, teamName = '온라
     failReasons.forEach((f) => lines.push(`- ${f.reason}: ${f.count}건`));
   }
 
-  // 담당자별 — 항상 고정 출력 (0건이어도 표시)
+  // 담당자별
   lines.push('');
   lines.push('[담당자별]');
   if (staffSummaries.length === 0) {
@@ -110,7 +153,6 @@ export function formatDailyKakaoReport(data: DailyReportData, teamName = '온라
   return lines.join('\n');
 }
 
-// 클립보드 복사
 export async function copyDailyReportToClipboard(text: string): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
