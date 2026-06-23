@@ -324,7 +324,7 @@ export function InquiryDetailDialog({
     setStatus(next);
     const { error } = await supabase
       .from("inquiries")
-      .update({ status: next, last_action_at: new Date().toISOString() })
+      .update({ status: next, last_action_at: new Date().toISOString(), last_action_by: user?.user_metadata?.display_name ?? user?.email ?? null })
       .eq("id", inquiry.id);
     if (error) {
       toast.error("상태 변경 실패: " + error.message);
