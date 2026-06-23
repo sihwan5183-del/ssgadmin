@@ -33,6 +33,7 @@ import { usePeriod } from "@/contexts/PeriodContext";
 import { InquiryForm } from "@/components/inquiries/InquiryForm";
 import { InquiryDetailDialog } from "@/components/inquiries/InquiryDetailDialog";
 import { useInquiryStatuses } from "@/hooks/useInquiryStatuses";
+import { logLeadStatusChange } from "@/services/workReport/activityLogService";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { inquiryStatusClass, inquiryStatusTextClass } from "@/lib/inquiryStatus";
 import { toast } from "sonner";
@@ -498,6 +499,16 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
       });
     }
     toast.success("상태 변경 완료");
+    // activity_logs 기록 (기타인입)
+    logLeadStatusChange({
+      leadId: editingRow.id,
+      staffId: user?.id ?? '',
+      staffName: user?.user_metadata?.display_name ?? user?.email ?? 'unknown',
+      previousStatus: prevStatus ?? null,
+      nextStatus: editStatus,
+      channel: 'other',
+      createdBy: user?.id ?? '',
+    }).catch((e) => console.warn('[ChannelIntakePage saveStatus activity_log 실패]', e));
     const id = editingRow.id;
     setEditingRow(null);
     refreshOne(id);
@@ -623,6 +634,16 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
       });
     }
     toast.success(`상태 변경: ${next}`);
+    // activity_logs 기록 (기타인입)
+    logLeadStatusChange({
+      leadId: row.id,
+      staffId: user?.id ?? '',
+      staffName: user?.user_metadata?.display_name ?? user?.email ?? 'unknown',
+      previousStatus: prevStatus ?? null,
+      nextStatus: next,
+      channel: 'other',
+      createdBy: user?.id ?? '',
+    }).catch((e) => console.warn('[ChannelIntakePage quickChangeStatus activity_log 실패]', e));
     refreshOne(row.id);
   };
 
