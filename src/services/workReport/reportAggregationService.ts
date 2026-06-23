@@ -80,10 +80,10 @@ export interface DailyReportData {
 // 채널 구분
 function detectChannelBucket(channel: string | null): string {
   if (!channel) return 'other';
-  if (channel === 'meta' || channel === '메타') return 'meta';
   if (channel === 'dogmaru' || channel === '도그마루') return 'dogmaru';
-  if (channel === 'udak' || channel === '유닥') return 'udak';
-  return 'other';
+  if (channel === 'udak' || channel === '유닥' || channel === '유닧') return 'udak';
+  if (channel === 'meta' || channel === '메타') return 'meta';
+  return 'meta'; // campaign_name 기반으로 저장된 meta 채널
 }
 
 const CHANNEL_LABELS: Record<string, string> = {
