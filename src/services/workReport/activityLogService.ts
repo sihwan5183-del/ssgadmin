@@ -176,25 +176,64 @@ export async function logLeadStatusChange({
   // 미배정 여부 판단
   const isUnassigned = !staffId;
 
-  // 상태값 → action_type 정확한 매핑
-  const getActionType = (status: string): { action_type: string; is_counted: boolean; reason: string | null } => {
-    if (status.includes('부재')) return { action_type: 'absent', is_counted: true, reason: null };
-    if (status.includes('재케어완료')) return { action_type: 'recare_completed', is_counted: true, reason: null };
-    if (status.includes('재케어')) return { action_type: 'recare_registered', is_counted: true, reason: null };
-    if (status.includes('실패') || status.includes('해지') || status.includes('미진행')) return { action_type: 'failed', is_counted: true, reason: null };
-    if (status.includes('상담성공') || status.includes('상담 성공')) return { action_type: 'consultation_success', is_counted: true, reason: null };
-    if (status.includes('개통완료')) return { action_type: 'activation_completed', is_counted: false, reason: 'sales 기준 집계' };
-    if (status.includes('설치완료')) return { action_type: 'installation_completed', is_counted: false, reason: 'sales 기준 집계' };
-    if (status.includes('정산확정')) return { action_type: 'settlement_confirmed', is_counted: false, reason: 'sales 기준 집계' };
-    if (status.includes('택배발송')) return { action_type: 'delivery_sent', is_counted: false, reason: '진행 상태' };
-    if (status.includes('청약완료')) return { action_type: 'application_completed', is_counted: false, reason: '진행 상태' };
-    if (status.includes('통화시도') || status.includes('시도')) return { action_type: 'call_attempt', is_counted: true, reason: null };
-    if (status.includes('연결') || status.includes('통화완료')) return { action_type: 'call_connected', is_counted: true, reason: null };
-    // 나머지 단순 상태 변경은 status_changed로 미인정
+  // 채널별 상태값 → action_type 정확한 매핑
+  const getActionType = (status: string, ch: string | null): { action_type: string; is_counted: boolean; reason: string | null } => {
+    const s = status.trim();
+    const c = ch ?? '';
+
+    // ── 메타광고 ──────────────────────────────────────────────
+    if (c === 'meta' || c === '메타' || (!c.includes('dogmaru') && !c.includes('udak'))) {
+      if (s === '케어중') return { action_type: 'call_attempt', is_counted: true, reason: null };
+      if (s === '부재중' || s === '부재') return { action_type: 'absent', is_counted: true, reason: null };
+      if (s === '재케어') return { action_type: 'recare_registered', is_counted: true, reason: null };
+      if (s === '취소') return { action_type: 'failed', is_counted: true, reason: null };
+      if (s === '개통완료') return { action_type: 'activation_completed', is_counted: false, reason: 'sales 기준 집계' };
+    }
+
+    // ── 도그마루 ──────────────────────────────────────────────
+    if (c === 'dogmaru' || c === '도그마루') {
+      if (s === '부재케어' || s === '부재') return { action_type: 'absent', is_counted: true, reason: null };
+      if (s === '재케어' || s === '재케어대상') return { action_type: 'recare_registered', is_counted: true, reason: null };
+      if (s === '실패' || s === '개통철회') return { action_type: 'failed', is_counted: true, reason: null };
+      if (s === '해피콜O' || s === '해피콜o') return { action_type: 'call_connected', is_counted: true, reason: null };
+      if (s === '해피콜X' || s === '해피콜x') return { action_type: 'absent', is_counted: true, reason: null };
+      if (s === '영업O' || s === '영업o') return { action_type: 'consultation_success', is_counted: true, reason: null };
+      if (s === '영업X' || s === '영업x') return { action_type: 'failed', is_counted: true, reason: null };
+      if (s === '개통완료' || s === '완료') return { action_type: 'activation_completed', is_counted: false, reason: 'sales 기준 집계' };
+      if (s === '택배발송' || s === '청약대기' || s === '개통대기') return { action_type: 'delivery_sent', is_counted: false, reason: '진행 상태' };
+    }
+
+    // ── 유닥 ──────────────────────────────────────────────────
+    if (c === 'udak' || c === '유닥') {
+      if (s === '성공') return { action_type: 'consultation_success', is_counted: true, reason: null };
+      if (s === '실패') return { action_type: 'failed', is_counted: true, reason: null };
+      if (s === '부재' || s === '미재케어') return { action_type: 'absent', is_counted: true, reason: null };
+      if (s === '재케어') return { action_type: 'recare_registered', is_counted: true, reason: null };
+      if (s === '택배발송') return { action_type: 'delivery_sent', is_counted: false, reason: '진행 상태' };
+      if (s === '개통완료') return { action_type: 'activation_completed', is_counted: false, reason: 'sales 기준 집계' };
+    }
+
+    // ── 기타인입 ──────────────────────────────────────────────
+    if (s === '미케어') return { action_type: 'status_changed', is_counted: false, reason: '미케어' };
+    if (s === '부재') return { action_type: 'absent', is_counted: true, reason: null };
+    if (s === '재케어') return { action_type: 'recare_registered', is_counted: true, reason: null };
+    if (s === '성공') return { action_type: 'consultation_success', is_counted: true, reason: null };
+    if (s === '실패') return { action_type: 'failed', is_counted: true, reason: null };
+
+    // ── 공통 ──────────────────────────────────────────────────
+    if (s.includes('개통완료')) return { action_type: 'activation_completed', is_counted: false, reason: 'sales 기준 집계' };
+    if (s.includes('설치완료')) return { action_type: 'installation_completed', is_counted: false, reason: 'sales 기준 집계' };
+    if (s.includes('정산확정')) return { action_type: 'settlement_confirmed', is_counted: false, reason: 'sales 기준 집계' };
+    if (s.includes('택배발송')) return { action_type: 'delivery_sent', is_counted: false, reason: '진행 상태' };
+    if (s.includes('부재')) return { action_type: 'absent', is_counted: true, reason: null };
+    if (s.includes('재케어')) return { action_type: 'recare_registered', is_counted: true, reason: null };
+    if (s.includes('실패') || s.includes('해지') || s.includes('취소') || s.includes('개통철회')) return { action_type: 'failed', is_counted: true, reason: null };
+
+    // 신규접수, 기타 단순 상태 변경
     return { action_type: 'status_changed', is_counted: false, reason: '단순 상태 변경' };
   };
 
-  const { action_type, is_counted, reason } = getActionType(nextStatus);
+  const { action_type, is_counted, reason } = getActionType(nextStatus, channel ?? null);
 
   // 로그 기록 실패는 절대 메인 플로우(상태 변경)를 막으면 안 됨
   try {
