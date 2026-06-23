@@ -2222,6 +2222,7 @@ export default function LeadsPage() {
                 <TableHead className="text-foreground font-bold">가입번호</TableHead>
                 <TableHead className="text-foreground font-bold">택배개통</TableHead>
                 <TableHead className="text-foreground font-bold">비고</TableHead>
+                <TableHead className="text-foreground font-bold w-28 text-xs whitespace-nowrap">최종액션</TableHead>
                 <TableHead className="text-foreground font-bold w-16 text-center">해피콜</TableHead>
                 <TableHead className="text-foreground font-bold w-16 text-center">영업</TableHead>
                 <TableHead className="text-foreground font-bold w-20 text-center">관리</TableHead>
@@ -2308,6 +2309,11 @@ export default function LeadsPage() {
                     <TableCell className="text-foreground/80 py-1.5 max-w-[200px] truncate">
                       {item.memo ?? "-"}
                     </TableCell>
+                    <TableCell className="py-1.5 text-xs text-gray-500 whitespace-nowrap">
+                      {(item as any).last_action_at
+                        ? fmtCompactDate((item as any).last_action_at)
+                        : <span className="text-gray-300">-</span>}
+                    </TableCell>
                     <TableCell className="text-center py-1.5">
                       {(item as any).happy_call === "O" ? (
                         <span className="inline-flex items-center justify-center size-6 rounded-full bg-emerald-100 text-emerald-700 font-bold text-xs border border-emerald-300">O</span>
@@ -2363,6 +2369,7 @@ export default function LeadsPage() {
                 <ColumnFilter label="상담 상태" values={valStatus} selected={fStatus} onChange={setFStatus} />
               </TableHead>
               <TableHead className="text-foreground font-bold w-[200px]">메모</TableHead>
+              <TableHead className="text-foreground font-bold w-28 text-xs whitespace-nowrap">최종액션</TableHead>
               {sourceTab !== "udak" && <TableHead className="text-foreground font-bold w-16 text-center">해피콜</TableHead>}
               {sourceTab !== "udak" && <TableHead className="text-foreground font-bold w-16 text-center">영업</TableHead>}
               {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-16 text-center text-xs">2ND</TableHead>}
@@ -2476,6 +2483,11 @@ export default function LeadsPage() {
                       </div>
                     );
                   })()}
+                </TableCell>
+                <TableCell className="py-1.5 text-xs text-gray-500 whitespace-nowrap">
+                  {r.last_action_at
+                    ? fmtCompactDate(r.last_action_at)
+                    : <span className="text-gray-300">-</span>}
                 </TableCell>
                 {sourceTab !== "udak" && (
                   <TableCell className="text-center py-1.5">
