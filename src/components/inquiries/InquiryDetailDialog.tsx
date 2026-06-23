@@ -18,6 +18,7 @@ import { useStaffNames } from "@/hooks/useStaffNames";
 import { useInquiryStatuses } from "@/hooks/useInquiryStatuses";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { inquiryStatusClass, inquiryStatusSoftClass, inquiryStatusSolidClass } from "@/lib/inquiryStatus";
+import { logLeadStatusChange } from "@/services/workReport/activityLogService";
 import { formatPhone } from "@/lib/phoneFormat";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -340,6 +341,16 @@ export function InquiryDetailDialog({
       });
     }
     toast.success("상태 변경 완료");
+    // activity_logs 기록
+    logLeadStatusChange({
+      leadId: inquiry.id,
+      staffId: user?.id ?? '',
+      staffName: user?.user_metadata?.display_name ?? user?.email ?? 'unknown',
+      previousStatus: prev ?? null,
+      nextStatus: next,
+      channel: (inquiry as any).channel ?? 'other',
+      createdBy: user?.id ?? '',
+    }).catch((e) => console.warn('[InquiryDetailDialog activity_log 실패]', e));
     onChanged();
   };
 
