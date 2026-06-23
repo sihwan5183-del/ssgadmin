@@ -870,6 +870,7 @@ type LeadNote = {
 export default function LeadsPage() {
   const { user } = useAuth();
   const { isSuperAdmin } = useSuperAdmin();
+  const [happyCallSaving, setHappyCallSaving] = useState(false);
   const { staff } = useDashboardStaff();
   // [기타인입] 탭 청크를 마운트 시 백그라운드로 미리 로드해
   // 사용자가 처음 클릭했을 때 흰 화면 없이 곧바로 리스트가 보이도록 한다.
