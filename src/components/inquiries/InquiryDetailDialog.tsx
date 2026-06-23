@@ -18,7 +18,6 @@ import { useStaffNames } from "@/hooks/useStaffNames";
 import { useInquiryStatuses } from "@/hooks/useInquiryStatuses";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
 import { inquiryStatusClass, inquiryStatusSoftClass, inquiryStatusSolidClass } from "@/lib/inquiryStatus";
-import { logLeadStatusChange } from "@/services/workReport/activityLogService";
 import { formatPhone } from "@/lib/phoneFormat";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -341,16 +340,38 @@ export function InquiryDetailDialog({
       });
     }
     toast.success("상태 변경 완료");
-    // activity_logs 기록
-    logLeadStatusChange({
-      leadId: inquiry.id,
-      staffId: user?.id ?? '',
-      staffName: user?.user_metadata?.display_name ?? user?.email ?? 'unknown',
-      previousStatus: prev ?? null,
-      nextStatus: next,
-      channel: (inquiry as any).channel ?? 'other',
-      createdBy: user?.id ?? '',
-    }).catch((e) => console.warn('[InquiryDetailDialog activity_log 실패]', e));
+    // activity_logs 기록 (inquiries는 leads FK 없으므로 lead_id=null로 직접 insert)
+    {
+      const staffId = user?.id ?? '';
+      const staffName = user?.user_metadata?.display_name ?? user?.email ?? 'unknown';
+      if (staffId) {
+        import('@/integrations/supabase/client').then(({ supabase: sb }) => {
+          sb.from('activity_logs').insert({
+            lead_id: null,
+            sales_record_id: null,
+            staff_id: staffId,
+            staff_name: staffName,
+            store_id: null,
+            channel: (inquiry as any).channel ?? 'other',
+            action_type: 'status_changed',
+            result_type: null,
+            previous_status: prev ?? null,
+            next_status: next,
+            memo: null,
+            fail_reason: null,
+            next_action_at: null,
+            is_counted: false,
+            not_counted_reason: '기타인입(inquiries) 상태변경',
+            corrected_log_id: null,
+            device_info: null,
+            ip_address: null,
+            created_by: staffId,
+          }).then(({ error: e }) => {
+            if (e) console.warn('[InquiryDetailDialog activity_log 실패]', e.message);
+          });
+        });
+      }
+    }
     onChanged();
   };
 
