@@ -91,6 +91,18 @@ function unauthorized(msg = 'Unauthorized') {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
+  // Meta webhook verification (GET)
+  if (req.method === 'GET') {
+    const url = new URL(req.url)
+    const mode = url.searchParams.get('hub.mode')
+    const verifyToken = url.searchParams.get('hub.verify_token')
+    const challenge = url.searchParams.get('hub.challenge')
+    if (mode === 'subscribe' && verifyToken === WEBHOOK_SECRET) {
+      return new Response(challenge, { status: 200 })
+    }
+    return new Response('Forbidden', { status: 403 })
+  }
+
   // Auth: shared secret via header only. Query string is disallowed to avoid
   // leaking the secret into access logs / Referer headers / CDN caches.
   const token =
