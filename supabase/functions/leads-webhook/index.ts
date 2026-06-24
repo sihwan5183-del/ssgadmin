@@ -39,7 +39,6 @@ async function broadcastLeadPush(
     : '메타광고에 새 잠재고객이 등록되었습니다. 즉시 확인 후 해피콜을 진행하세요.'
   const url = `/leads?tab=${channel}&highlight=${leadId}`
 
-  // 활성 직원 + 푸시 허용된 사용자
   const { data: profs } = await supabase
     .from('profiles')
     .select('user_id')
@@ -103,8 +102,6 @@ Deno.serve(async (req) => {
     return new Response('Forbidden', { status: 403 })
   }
 
-  // Auth: shared secret via header only. Query string is disallowed to avoid
-  // leaking the secret into access logs / Referer headers / CDN caches.
   const token =
     req.headers.get('x-webhook-secret') ??
     req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ??
@@ -159,20 +156,41 @@ Deno.serve(async (req) => {
   }
 
   const campaignName = pick('campaign_name', 'campaign name', '캠페인명')
+  const phone = pick('phone', 'customer_phone', '연락처', '고객 전화번호')
+  const source = pick('source') ?? 'webhook'
+
+  // ── Meta 리드 중복 방지 (phone + campaign_name + status = "신규 접수") ──
+  if (phone && campaignName && source === 'meta') {
+    const supabaseCheck = createClient(SUPABASE_URL, SERVICE_ROLE)
+    const { data: existing } = await supabaseCheck
+      .from('leads')
+      .select('id')
+      .eq('phone', phone)
+      .eq('campaign_name', campaignName)
+      .eq('status', '신규 접수')
+      .maybeSingle()
+    if (existing) {
+      return new Response(JSON.stringify({ ok: true, id: existing.id, duplicate: true }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+  }
 
   const row = {
     name: pick('name', 'customer_name', '고객 성명', '성명'),
-    phone: pick('phone', 'customer_phone', '연락처', '고객 전화번호'),
+    phone,
     current_carrier: pick('current_carrier'),
     desired_device: pick('desired_device'),
     desired_product: pick('desired_product'),
     campaign_name: campaignName,
+    channel: null,
     memo: pick('memo') ?? null,
     status: '신규 접수',
-    source: pick('source') ?? 'webhook',
+    source,
     registration_date: pick('registration_date', '접수 일자', '접수일자'),
     customer_name: pick('customer_name', 'name', '고객 성명', '성명'),
-    customer_phone: pick('customer_phone', 'phone', '연락처', '고객 전화번호'),
+    customer_phone: phone,
     branch_name: pick('branch_name', '접수 지점명', '지점명'),
     activation_status: pick('activation_status', '개통 상태', '개통상태'),
     cancellation_status: pick('cancellation_status', '해지 및 철회', '해지및철회'),
@@ -188,15 +206,15 @@ Deno.serve(async (req) => {
     })
   }
 
-  // 휴대폰 시스템 푸시 (백그라운드/잠금화면 알림)
+  // 푸시 알림
   try {
-    const channel: 'meta' | 'dogmaru' = campaignName === DOGMARU_CAMPAIGN ? 'dogmaru' : 'meta'
-    await broadcastLeadPush(supabase, data.id as string, channel)
+    const pushChannel: 'meta' | 'dogmaru' = campaignName === DOGMARU_CAMPAIGN ? 'dogmaru' : 'meta'
+    await broadcastLeadPush(supabase, data.id as string, pushChannel)
   } catch (e) {
     console.warn('[leads-webhook] broadcast failed', e)
   }
 
-  return new Response(JSON.stringify({ ok: true, id: data.id }), {
+  return new Response(JSON.stringify({ ok: true, id: data.id, updated: false }), {
     status: 200,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
