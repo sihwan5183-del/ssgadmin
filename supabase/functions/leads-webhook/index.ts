@@ -1,5 +1,9 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-webhook-secret',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+}
 import webpush from 'npm:web-push@3.6.7'
 
 const WEBHOOK_SECRET = Deno.env.get('LEADS_WEBHOOK_SECRET') ?? ''
@@ -219,3 +223,4 @@ Deno.serve(async (req) => {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
 })
+
