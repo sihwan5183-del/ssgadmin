@@ -179,10 +179,16 @@ export async function logLeadStatusChange({
   // 채널별 상태값 → action_type 정확한 매핑
   const getActionType = (status: string, ch: string | null): { action_type: string; is_counted: boolean; reason: string | null } => {
     const s = status.trim();
-    const c = ch ?? '';
+    // 채널 정규화: 'udak', '유닥', '유닧', '유닥(UDak)' 등 → 'udak'
+    const rawC = (ch ?? '').toLowerCase();
+    const c = rawC.includes('dogmaru') || rawC.includes('도그마루') ? 'dogmaru'
+      : rawC.includes('udak') || rawC.includes('유닥') || rawC.includes('유닧') ? 'udak'
+      : rawC.includes('moyo') || rawC.includes('모요') ? 'moyo'
+      : rawC.includes('meta') || rawC.includes('메타') ? 'meta'
+      : (ch ?? '');
 
     // ── 메타광고 ──────────────────────────────────────────────
-    if (c === 'meta' || c === '메타' || (!c.includes('dogmaru') && !c.includes('udak') && !c.includes('moyo'))) {
+    if (c === 'meta' || c === '' || (!['dogmaru','udak','moyo'].includes(c))) {
       if (s === '케어중') return { action_type: 'call_attempt', is_counted: true, reason: null };
       // 띄어쓰기 변형 포함: "부재 중", "부재중", "부재"
       if (s === '부재중' || s === '부재 중' || s === '부재') return { action_type: 'absent', is_counted: true, reason: null };
@@ -193,8 +199,8 @@ export async function logLeadStatusChange({
     }
 
     // ── 도그마루 ──────────────────────────────────────────────
-    if (c === 'dogmaru' || c === '도그마루') {
-      if (s === '부재케어' || s === '부재') return { action_type: 'absent', is_counted: true, reason: null };
+    if (c === 'dogmaru') {
+      if (s === '부재케어' || s === '부재케어대상' || s === '부재') return { action_type: 'absent', is_counted: true, reason: null };
       if (s === '재케어' || s === '재케어대상') return { action_type: 'recare_registered', is_counted: true, reason: null };
       if (s === '실패' || s === '개통철회') return { action_type: 'failed', is_counted: true, reason: null };
       if (s === '해피콜O' || s === '해피콜o') return { action_type: 'call_connected', is_counted: true, reason: null };
@@ -206,7 +212,7 @@ export async function logLeadStatusChange({
     }
 
     // ── 유닥 ──────────────────────────────────────────────────
-    if (c === 'udak' || c === '유닥' || c === '유닧') {
+    if (c === 'udak') {
       if (s === '성공') return { action_type: 'consultation_success', is_counted: true, reason: null };
       if (s === '실패') return { action_type: 'failed', is_counted: true, reason: null };
       if (s === '부재' || s === '미재케어') return { action_type: 'absent', is_counted: true, reason: null };
