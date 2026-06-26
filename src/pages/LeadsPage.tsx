@@ -2963,6 +2963,14 @@ export default function LeadsPage() {
           <BulkActionBar count={bulk.selectedCount} onClear={bulk.clear}>
             <Button
               size="sm"
+              variant="outline"
+              onClick={() => downloadCSV('selected')}
+              className="h-10 lg:h-8"
+            >
+              <Download className="size-4 lg:size-3.5 mr-1" /> CSV 다운로드
+            </Button>
+            <Button
+              size="sm"
               variant="destructive"
               onClick={() => setBulkDeleteOpen(true)}
               className="h-10 lg:h-8"
