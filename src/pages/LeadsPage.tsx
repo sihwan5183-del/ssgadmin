@@ -1265,6 +1265,1723 @@ export default function LeadsPage() {
     URL.revokeObjectURL(url);
   };
 
+  const PAGE_SIZE = 50;
+  const [page, setPage] = useState(0);
+
+  const pagedFiltered = useMemo(() => {
+    const start = page * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, page]);
+
+  // 필터/검색/탭 변경 시 첫 페이지로 리셋
+  useEffect(() => {
+    setPage(0);
+  }, [search, sourceTab, fStatus, fCarrier, fProduct, fCampaign, fAssignee, fBranch, fActivation, fCancellation]);
+
+  // ── 일괄 선택/삭제 ──
+  const filteredIds = useMemo(() => pagedFiltered.map((r) => r.id), [pagedFiltered]);
+  const bulk = useBulkSelection<string>(filteredIds);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  async function bulkDelete() {
+    setBulkBusy(true);
+    const ids = bulk.selectedIds;
+    const deleterName = user?.user_metadata?.display_name ?? user?.email ?? "unknown";
+    const now = new Date().toISOString();
+
+    // soft-delete: 실제 삭제 대신 deleted_at, deleted_by 마킹
+    const { error } = await supabase
+      .from("leads")
+      .update({ deleted_at: now, deleted_by: deleterName })
+      .in("id", ids);
+    setBulkBusy(false);
+    if (error) {
+      toast.error("삭제 실패: " + error.message);
+      return;
+    }
+    setRows((prev) => prev.filter((r) => !ids.includes(r.id)));
+    toast.success(`${ids.length}건이 휴지통으로 이동되었습니다`);
+    setBulkDeleteOpen(false);
+    bulk.clear();
+
+    // 관리자(김시환)에게 푸시 알림
+    try {
+      await supabase.functions.invoke("leads-webhook", {
+        body: {
+          _admin_notify: true,
+          type: "trash",
+          table: "leads",
+          count: ids.length,
+          deleted_by: deleterName,
+          deleted_at: now,
+        },
+      });
+    } catch (_) {}
+  }
+
+  const sourceCounts = useMemo(() => {
+    let dogmaru = 0;
+    let meta = 0;
+    let udak = 0;
+    for (const r of rows) {
+      if (r.channel === "유닥") udak++;
+      else if (r.campaign_name === DOGMARU_CAMPAIGN) dogmaru++;
+      else if (r.campaign_name) meta++;
+    }
+    return { meta, dogmaru, udak };
+  }, [rows]);
+
+  const stats = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return {
+      total: rows.length,
+      todayNew: rows.filter((r) => r.created_at.slice(0, 10) === today).length,
+      completed: rows.filter((r) => r.status === "개통 완료").length,
+      newCount: rows.filter((r) => r.status === "신규 접수").length,
+    };
+  }, [rows]);
+
+  // 도그마루 완료건 판단 (PC용)
+  // memo + activation_status 기반 상태 자동 분류
+  // 도그마루 건 하나를 정확히 하나의 탭으로 분류하는 단일 함수 (PC용)
+  function getDogmaruTabPC(r: any): string {
+    return getDogmaruTab(r);
+  }
+
+  // 탭 전환시 pcCareTab 리셋
+  useEffect(() => { setPcCareTab("all"); }, [sourceTab]);
+
+  // ── 경로별 성과 매트릭스 (메타 / 도그마루 / 기타) ──
+  const matrix = useMemo(() => {
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const getMonthStr = (offset: number) => {
+      const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      return `${y}-${m}`;
+    };
+    const getWeekRange = (offset: number) => {
+      const d = new Date(now);
+      const day = d.getDay() === 0 ? 6 : d.getDay() - 1;
+      d.setDate(d.getDate() - day + offset * 7);
+      const start = d.toISOString().slice(0, 10);
+      const end = new Date(d.getTime() + 6 * 86400000).toISOString().slice(0, 10);
+      return { start, end };
+    };
+    const inRange = (iso: string) => {
+      if (period === "all") return true;
+      if (period === "this_month") return iso.slice(0, 7) === getMonthStr(0);
+      if (period === "last_month") return iso.slice(0, 7) === getMonthStr(-1);
+      if (period === "this_week") { const w = getWeekRange(0); return iso.slice(0,10) >= w.start && iso.slice(0,10) <= w.end; }
+      if (period === "last_week") { const w = getWeekRange(-1); return iso.slice(0,10) >= w.start && iso.slice(0,10) <= w.end; }
+      if (period === "custom") return (!customStart || iso.slice(0,10) >= customStart) && (!customEnd || iso.slice(0,10) <= customEnd);
+      return true;
+    };
+    const empty = () => ({ total: 0, today: 0, done: 0, recare: 0, absent: 0, fail: 0 });
+    const meta = empty();
+    const dogmaru = empty();
+    const udak = empty();
+    const other = empty();
+
+    for (const r of rows) {
+      const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
+      const isUdakR = r.channel === "유닥" || r.channel === "메타광고";
+
+      let dateIso = "";
+      const rd = r.registration_date;
+      if (rd && rd.includes("/")) {
+        const parts = rd.split("/");
+        const mo = parts[0].padStart(2, "0");
+        const dy = parts[1]?.padStart(2, "0") ?? "01";
+        dateIso = `2026-${mo}-${dy}`;
+      } else if (rd && rd.length >= 10) {
+        dateIso = rd.slice(0, 10);
+      } else {
+        dateIso = r.created_at.slice(0, 10);
+      }
+      if (!inRange(dateIso)) continue;
+
+      const bucket = isDogmaru ? dogmaru : isUdakR ? udak : meta;
+      bucket.total += 1;
+      if (dateIso === today) bucket.today += 1;
+      if (isDogmaru) {
+        const tab = getDogmaruTab(r);
+        if (tab === "완료") bucket.done += 1;
+        else if (tab === "재케어") bucket.recare += 1;
+        else if (tab === "부재케어") bucket.absent += 1;
+        else if (tab === "실패") bucket.fail += 1;
+      } else {
+        if (r.status === "개통 완료") bucket.done += 1;
+        if (r.status === "재케어") bucket.recare += 1;
+        if (r.status === "부재 중") bucket.absent += 1;
+        if (r.status === "실패" || r.status === "취소") bucket.fail += 1;
+      }
+    }
+    for (const r of inquiryRows) {
+      if (!inRange(r.created_at)) continue;
+      other.total += 1;
+      if (r.created_at.slice(0, 10) === today) other.today += 1;
+      if (r.status === "개통완료") other.done += 1;
+      if (r.status === "재케어") other.recare += 1;
+      if (r.status === "부재") other.absent += 1;
+      if (r.status === "실패" || r.status === "취소") other.fail += 1;
+    }
+    return { meta, dogmaru, udak, other };
+  }, [rows, inquiryRows, period, customStart, customEnd, sourceTab]);
+
+  // ── 직원별 성과 매트릭스 (담당자/매니저 단위 집계) ──
+  const staffMatrix = useMemo(() => {
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const getMonthStr2 = (offset: number) => {
+      const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      return `${y}-${m}`;
+    };
+    const getWeekRange2 = (offset: number) => {
+      const d = new Date(now);
+      const day = d.getDay() === 0 ? 6 : d.getDay() - 1;
+      d.setDate(d.getDate() - day + offset * 7);
+      const start = d.toISOString().slice(0, 10);
+      const end = new Date(d.getTime() + 6 * 86400000).toISOString().slice(0, 10);
+      return { start, end };
+    };
+    const inRange = (iso: string) => {
+      if (period === "all") return true;
+      if (period === "this_month") return iso.slice(0, 7) === getMonthStr2(0);
+      if (period === "last_month") return iso.slice(0, 7) === getMonthStr2(-1);
+      if (period === "this_week") { const w = getWeekRange2(0); return iso.slice(0,10) >= w.start && iso.slice(0,10) <= w.end; }
+      if (period === "last_week") { const w = getWeekRange2(-1); return iso.slice(0,10) >= w.start && iso.slice(0,10) <= w.end; }
+      if (period === "custom") return (!customStart || iso.slice(0,10) >= customStart) && (!customEnd || iso.slice(0,10) <= customEnd);
+      return true;
+    };
+    const empty = () => ({ total: 0, today: 0, done: 0, recare: 0, absent: 0, fail: 0 });
+    const map = new Map<string, ReturnType<typeof empty>>();
+    const bump = (name: string) => {
+      let b = map.get(name);
+      if (!b) { b = empty(); map.set(name, b); }
+      return b;
+    };
+    for (const r of rows) {
+      if (!inRange(r.created_at)) continue;
+      const name = r.assigned_to ? (staff.find((s) => s.user_id === r.assigned_to)?.display_name ?? "(미지정)") : "(미지정)";
+      const b = bump(name);
+      b.total += 1;
+      if (r.created_at.slice(0, 10) === today) b.today += 1;
+      if (r.status === "개통 완료") b.done += 1;
+      if (r.status === "재케어") b.recare += 1;
+      if (r.status === "부재 중") b.absent += 1;
+      if (r.status === "실패" || r.status === "취소") b.fail += 1;
+    }
+    for (const r of inquiryRows) {
+      if (!inRange(r.created_at)) continue;
+      const name = (r.manager && r.manager.trim()) ? r.manager.trim() : "(미지정)";
+      const b = bump(name);
+      b.total += 1;
+      if (r.created_at.slice(0, 10) === today) b.today += 1;
+      if (r.status === "개통완료") b.done += 1;
+      if (r.status === "재케어") b.recare += 1;
+      if (r.status === "부재") b.absent += 1;
+      if (r.status === "실패" || r.status === "취소") b.fail += 1;
+    }
+    return Array.from(map.entries())
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => b.total - a.total);
+  }, [rows, inquiryRows, period, customStart, customEnd, staff]);
+
+  // 날짜 파싱 헬퍼
+  const parseLeadDate = (r: typeof rows[0]) => {
+    const rd = r.registration_date;
+    if (rd && rd.includes("/")) {
+      const parts = rd.split("/");
+      const m = parts[0].padStart(2, "0");
+      const dy = parts[1]?.padStart(2, "0") ?? "01";
+      return `2026-${m}-${dy}`;
+    }
+    if (rd && rd.length >= 10) return rd.slice(0, 10);
+    return (r.created_at ?? "").slice(0, 10);
+  };
+
+  // 메타 일별 추이 (최근 30일)
+  const metaTrendData = useMemo(() => {
+    const now = new Date();
+    const days: { date: string; label: string; count: number }[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const iso = d.toISOString().slice(0, 10);
+      days.push({ date: iso, label: `${d.getMonth()+1}/${d.getDate()}`, count: 0 });
+    }
+    for (const r of rows.filter(r => r.channel !== "유닥" && r.campaign_name !== DOGMARU_CAMPAIGN)) {
+      const iso = parseLeadDate(r);
+      const day = days.find(d => d.date === iso);
+      if (day) day.count++;
+    }
+    return days;
+  }, [rows]);
+
+  // 도그마루 일별 추이 (최근 30일)
+  const dogmaruTrendData = useMemo(() => {
+    const now = new Date();
+    const days: { date: string; label: string; count: number }[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const iso = d.toISOString().slice(0, 10);
+      days.push({ date: iso, label: `${d.getMonth()+1}/${d.getDate()}`, count: 0 });
+    }
+    for (const r of rows.filter(r => r.campaign_name === DOGMARU_CAMPAIGN)) {
+      const iso = parseLeadDate(r);
+      const day = days.find(d => d.date === iso);
+      if (day) day.count++;
+    }
+    return days;
+  }, [rows]);
+
+  // ── 엑셀형 헤더 필터에 들어갈 고유값 (탭별로 분리해 메타↔도그마루 섞이지 않게) ──
+  const metaRows = useMemo(() => rows.filter((r) => r.channel !== "유닥" && r.campaign_name !== DOGMARU_CAMPAIGN), [rows]);
+  const dogmaruRows = useMemo(() => rows.filter((r) => r.campaign_name === DOGMARU_CAMPAIGN), [rows]);
+  const udakRows = useMemo(() => rows.filter((r) => r.channel === "유닥"), [rows]);
+  const valStatus = useMemo(() => metaRows.map((r) => r.status ?? ""), [metaRows]);
+  const valCarrier = useMemo(() => metaRows.map((r) => r.current_carrier ?? ""), [metaRows]);
+  const valProduct = useMemo(() => metaRows.map((r) => r.desired_product ?? ""), [metaRows]);
+  const valCampaign = useMemo(() => metaRows.map((r) => r.campaign_name ?? ""), [metaRows]);
+  const valAssignee = useMemo(
+    () => metaRows.map((r) => (r.assigned_to ? staff.find((s) => s.user_id === r.assigned_to)?.display_name ?? "" : "")),
+    [metaRows, staff],
+  );
+  const valBranch = useMemo(() => dogmaruRows.map((r) => r.branch_name ?? ""), [dogmaruRows]);
+  const valActivation = useMemo(() => dogmaruRows.map((r) => r.activation_status ?? ""), [dogmaruRows]);
+  const valCancellation = useMemo(() => dogmaruRows.map((r) => r.cancellation_status ?? ""), [dogmaruRows]);
+
+  async function updateStatus(id: string, status: string) {
+    console.log("[LeadsPage updateStatus START]", {
+      id,
+      status,
+      userId: user?.id,
+      email: user?.email,
+    });
+    toast.message(`updateStatus 진입: ${status}`);
+    const changedBy = user?.user_metadata?.display_name ?? user?.email ?? "unknown";
+
+    // 부재케어 카운팅 - 기존 횟수 확인
+    let absenceCount = 0;
+    if (status === "부재케어") {
+      const { count } = await supabase
+        .from("lead_status_logs")
+        .select("*", { count: "exact", head: true })
+        .eq("lead_id", id)
+        .eq("status", "부재케어");
+      absenceCount = (count ?? 0) + 1;
+    }
+
+    // 상태 업데이트
+    const updateData: any = { status, last_action_at: new Date().toISOString(), last_action_by: changedBy };
+    // 부재케어면 메모에 횟수 자동 기록
+    if (status === "부재케어") {
+      const currentRow = rows.find(r => r.id === id);
+      const baseMemo = (currentRow?.memo ?? "").replace(/부재\/\d+회/g, "").trim();
+      updateData.memo = [baseMemo, `부재/${absenceCount}회`].filter(Boolean).join(" / ");
+    }
+
+    const { error } = await supabase.from("leads").update(updateData).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+
+    // ── UI 즉시 갱신 (로그 기록 전에 먼저) ──────────────────
+    setRows((p) => {
+      console.log("[setRows before]", p.find((r) => r.id === id)?.status);
+      const next = p.map((r) => (r.id === id ? { ...r, ...updateData } : r));
+      console.log("[setRows after]", next.find((r) => r.id === id)?.status);
+      return next;
+    });
+    if (openLead?.id === id) {
+      console.log("[openLead update]", openLead.status, "→", updateData.status ?? status);
+      setOpenLead({ ...openLead, ...updateData });
+    }
+
+    // ── 부가 로그 기록 (실패해도 UI에 영향 없음) ─────────────
+    const currentRow = rows.find((r) => r.id === id);
+    const previousStatus = currentRow?.status ?? null;
+    const detectChannel = (row: typeof currentRow) => {
+      if (!row) return "meta";
+      if (row.campaign_name === "도그마루_홈캠") return "dogmaru";
+      if (row.channel === "유닥" || row.channel === "유닧") return "udak";
+      if (row.campaign_name?.includes("모요")) return "moyo";
+      if (row.campaign_name) return "meta";
+      return "meta";
+    };
+    const rowChannel = detectChannel(currentRow);
+
+    // lead_status_logs 비동기 (결과 기다리지 않음)
+    supabase.from("lead_status_logs").insert({
+      lead_id: id,
+      status,
+      changed_by: changedBy,
+    }).then(({ error: e }) => {
+      if (e) console.warn('[lead_status_logs] INSERT 실패:', e.message);
+    });
+
+    // activity_logs — 실제 누른 사람(로그인 유저) 기준
+    logLeadStatusChange({
+      leadId: id,
+      staffId: user?.id ?? '',
+      staffName: changedBy,
+      previousStatus,
+      nextStatus: status,
+      channel: rowChannel,
+      createdBy: user?.id ?? '',
+    }).catch((e) => console.warn('[activity_logs] 실패:', e));
+  }
+
+  // 부재케어 카운트 수동 조정
+  async function saveHappyCall(lead: Lead, happy_call: string | null, happy_call_result: string | null) {
+    setHappyCallSaving(true);
+    const changedBy = user?.user_metadata?.display_name ?? user?.email ?? "unknown";
+    const { error } = await supabase.from("leads")
+      .update({ happy_call, happy_call_result })
+      .eq("id", lead.id);
+    if (!error) {
+      const logStatus = happy_call_result
+        ? `영업:${happy_call_result}`
+        : happy_call ? `해피콜:${happy_call}` : "해피콜/영업 초기화";
+      await supabase.from("lead_status_logs").insert({
+        lead_id: lead.id,
+        status: logStatus,
+        changed_by: changedBy,
+      });
+      toast.success("저장되었습니다 ✅");
+      setRows((p) => p.map((r) => r.id === lead.id ? { ...r, happy_call, happy_call_result } : r));
+      if (openLead?.id === lead.id) setOpenLead({ ...lead, happy_call, happy_call_result });
+    }
+    setHappyCallSaving(false);
+  }
+
+  async function adjustAbsenceCount(lead: Lead, delta: number) {
+    const changedBy = user?.user_metadata?.display_name ?? user?.email ?? "unknown";
+    const match = (lead.memo ?? "").match(/부재\/(\d+)회/);
+    const current = match ? parseInt(match[1]) : 0;
+    const next = Math.max(0, current + delta);
+    const baseMemo = (lead.memo ?? "").replace(/부재\/\d+회\s*\/?/g, "").trim();
+    const newMemo = next > 0 ? [baseMemo, `부재/${next}회`].filter(Boolean).join(" / ") : baseMemo;
+    await supabase.from("leads").update({ memo: newMemo }).eq("id", lead.id);
+    // 로그 기록
+    await supabase.from("lead_status_logs").insert({
+      lead_id: lead.id,
+      status: delta > 0 ? `부재케어 +1 (${next}회)` : `부재케어 -1 (${next}회)`,
+      changed_by: changedBy,
+    });
+    setRows(p => p.map(r => r.id === lead.id ? { ...r, memo: newMemo } : r));
+    if (openLead?.id === lead.id) setOpenLead({ ...openLead, memo: newMemo });
+  }
+
+  async function updateAssignee(id: string, assigned_to: string | null) {
+    const { error } = await supabase
+      .from("leads")
+      .update({ assigned_to })
+      .eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    setRows((p) => p.map((r) => (r.id === id ? { ...r, assigned_to } : r)));
+    if (openLead?.id === id) setOpenLead({ ...openLead, assigned_to });
+  }
+
+  const staffName = (uid: string | null | undefined) =>
+    staff.find((s) => s.user_id === uid)?.display_name ?? "";
+
+  async function saveLeadInfo() {
+    if (!openLead) return;
+    setSavingLeadInfo(true);
+    const { error } = await supabase
+      .from("leads")
+      .update({
+        name: editName.trim() || null,
+        phone: editPhone.trim() || null,
+        birth: editBirth.trim() || null,
+      })
+      .eq("id", openLead.id);
+    setSavingLeadInfo(false);
+    if (error) { toast.error("저장 실패: " + error.message); return; }
+    const updated = { ...openLead, name: editName.trim() || null, phone: editPhone.trim() || null, birth: editBirth.trim() || null };
+    setOpenLead(updated);
+    setRows((p) => p.map((r) => (r.id === openLead.id ? { ...r, name: updated.name, phone: updated.phone, birth: updated.birth } : r)));
+    toast.success("고객 정보가 저장되었습니다");
+  }
+
+  async function saveMemo() {
+    if (!openLead) return;
+    const { error } = await supabase
+      .from("leads")
+      .update({ memo: memoDraft })
+      .eq("id", openLead.id);
+    if (error) return toast.error(error.message);
+    setOpenLead({ ...openLead, memo: memoDraft });
+    setRows((p) => p.map((r) => (r.id === openLead.id ? { ...r, memo: memoDraft } : r)));
+    toast.success("메모를 저장했습니다");
+  }
+
+  async function addNote() {
+    if (!openLead || !newNote.trim()) return;
+    const payload = {
+      lead_id: openLead.id,
+      author_id: user?.id ?? null,
+      author_name:
+        (user?.user_metadata?.display_name as string | undefined) ??
+        user?.email ??
+        null,
+      content: newNote.trim(),
+    };
+    const { data, error } = await supabase
+      .from("lead_notes")
+      .insert(payload)
+      .select("*")
+      .single();
+    if (error) return toast.error(error.message);
+    setNotes((p) => [data as LeadNote, ...p]);
+    setNewNote("");
+  }
+
+  async function createLead() {
+    if (!draft.name && !draft.phone) {
+      return toast.error("고객명 또는 연락처는 입력해야 합니다");
+    }
+    const { error } = await supabase.from("leads").insert({
+      ...draft,
+      status: "신규 접수",
+      source: "manual",
+    });
+    if (error) return toast.error(error.message);
+    toast.success("리드를 등록했습니다");
+    setShowCreate(false);
+    setDraft({
+      name: "",
+      phone: "",
+      current_carrier: "",
+      desired_device: "",
+      desired_product: "",
+      campaign_name: "",
+      memo: "",
+    });
+    load();
+  }
+
+  // 모바일 뷰
+  if (isMobile && !mobileFullView) {
+    return <MobileLeadsView
+      rows={rows}
+      loading={loading}
+      sourceTab={sourceTab}
+      setSourceTab={setSourceTab}
+      search={search}
+      setSearch={setSearch}
+      updateStatus={updateStatus}
+      updateAssignee={updateAssignee}
+      adjustAbsenceCount={adjustAbsenceCount}
+      staff={staff}
+      onSwitchToFull={() => setMobileFullView(true)}
+      saveHappyCall={saveHappyCall}
+    />;
+  }
+
+  return (
+    <div className="p-6 space-y-5 text-foreground">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">잠재고객 관리</h1>
+          <p className="text-sm text-foreground/70">
+            메타 광고 등 외부 인입 리드를 통합 관리합니다.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Button variant="outline" className="flex items-center gap-1" onClick={() => setCsvOpen(v => !v)}>
+              <Download className="size-4" /> CSV
+            </Button>
+            {csvOpen && (
+              <div className="absolute right-0 top-full mt-1 z-50 flex flex-col bg-white border rounded shadow-md min-w-[150px]">
+                <button className="px-4 py-2 text-sm text-left hover:bg-slate-50" onClick={() => { downloadCSV(false); setCsvOpen(false); }}>필터 적용 다운로드</button>
+                <button className="px-4 py-2 text-sm text-left hover:bg-slate-50" onClick={() => { downloadCSV(true); setCsvOpen(false); }}>전체 다운로드</button>
+              </div>
+            )}
+          </div>
+          {sourceTab === "other" ? (
+            <Button onClick={() => setIntakeFormOpen(true)}>
+              <Plus className="size-4 mr-1" /> 인입 등록
+            </Button>
+          ) : (
+            <Button onClick={() => setShowCreate(true)}>
+              <Plus className="size-4 mr-1" /> 리드 추가
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* 종합 리드 성과 보드 — 경로별/기간별 매트릭스 */}
+      <Card className="p-4">
+        <div
+          className="flex items-center justify-between gap-3 flex-wrap cursor-pointer mb-1"
+          onClick={() => setDashOpen(v => !v)}
+        >
+          <div className="flex items-center gap-2">
+            <div className="text-sm font-semibold text-slate-900">종합 리드 성과 보드</div>
+            <div className="text-xs text-muted-foreground">
+              {personalView ? "직원별 · 기간별 처리 현황" : "경로별 · 기간별 접수/개통 매트릭스"}
+            </div>
+            <span className={"text-xs text-muted-foreground transition-transform duration-200 inline-block " + (dashOpen ? "rotate-180" : "")}>▼</span>
+          </div>
+          <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+              <span className="text-xs font-semibold text-slate-700">개인별 보기</span>
+              <Switch
+                checked={personalView}
+                onCheckedChange={(v) => startTransition(() => setPersonalView(!!v))}
+              />
+            </label>
+          </div>
+        </div>
+
+        {/* 아코디언 - 기간 필터 */}
+        {dashOpen && (
+          <div className="mt-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="inline-flex rounded-md border border-border bg-muted/40 p-0.5">
+                {([
+                  { k: "all", l: "전체" },
+                  { k: "this_month", l: "이번달" },
+                  { k: "last_month", l: "저번달" },
+                  { k: "this_week", l: "이번주" },
+                  { k: "last_week", l: "지난주" },
+                  { k: "custom", l: "기간설정" },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.k}
+                    type="button"
+                    onClick={() => startTransition(() => setPeriod(opt.k))}
+                    className={
+                      "px-3 py-1.5 text-xs font-semibold rounded transition-colors " +
+                      (period === opt.k
+                        ? "bg-background text-slate-900 shadow-sm"
+                        : "text-muted-foreground hover:text-foreground")
+                    }
+                  >
+                    {opt.l}
+                  </button>
+                ))}
+              </div>
+              {period === "custom" && (
+                <div className="flex items-center gap-1">
+                  <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)} className="text-xs border border-border rounded px-2 py-1 bg-background" />
+                  <span className="text-xs text-muted-foreground">~</span>
+                  <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} className="text-xs border border-border rounded px-2 py-1 bg-background" />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 w-full" />
+            ))}
+          </div>
+        ) : personalView ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="text-xs text-muted-foreground border-b border-border">
+                  <th className="text-left font-medium py-2 px-2 min-w-[140px]">담당자</th>
+                  <th className="text-right font-medium py-2 px-2">전체 접수</th>
+                  <th className="text-right font-medium py-2 px-2">오늘 신규</th>
+                  <th className="text-right font-medium py-2 px-2">개통 완료</th>
+                  <th className="text-right font-medium py-2 px-2">재케어</th>
+                  <th className="text-right font-medium py-2 px-2">부재</th>
+                  <th className="text-right font-medium py-2 px-2">실패</th>
+                </tr>
+              </thead>
+              <tbody className="tabular-nums text-slate-900">
+                {staffMatrix.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-6 text-muted-foreground text-xs">
+                      해당 기간에 처리된 리드가 없습니다.
+                    </td>
+                  </tr>
+                ) : (
+                  staffMatrix.map((s) => (
+                    <tr key={s.name} className="border-b border-border/40 last:border-0 hover:bg-muted/30">
+                      <td className="py-1.5 px-2 font-semibold">{s.name}</td>
+                      <td className="text-right py-1.5 px-2">{s.total.toLocaleString()}</td>
+                      <td className="text-right py-1.5 px-2 text-orange-700">{s.today.toLocaleString()}</td>
+                      <td className="text-right py-1.5 px-2 text-emerald-700 font-semibold">{s.done.toLocaleString()}</td>
+                      <td className="text-right py-1.5 px-2">{s.recare.toLocaleString()}</td>
+                      <td className="text-right py-1.5 px-2">{s.absent.toLocaleString()}</td>
+                      <td className="text-right py-1.5 px-2 text-rose-600">{s.fail.toLocaleString()}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <>
+        {/* Desktop/Tablet: 격자 매트릭스 */}
+        <div className="hidden sm:block overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="text-xs text-muted-foreground border-b border-border">
+                <th className="text-left font-medium py-2 px-2 w-32">지표</th>
+                <th className="text-right font-medium py-2 px-2">메타</th>
+                <th className="text-right font-medium py-2 px-2">도그마루</th>
+                <th className="text-right font-medium py-2 px-2">유닥</th>
+                <th className="text-right font-medium py-2 px-2">기타</th>
+              </tr>
+            </thead>
+            <tbody className="tabular-nums">
+              {([
+                { label: "전체 접수", icon: UserCheck, key: "total" as const, tone: "text-primary" },
+                { label: "오늘 신규", icon: PhoneCall, key: "today" as const, tone: "text-orange-600 dark:text-orange-400" },
+                { label: "개통 완료", icon: CheckCircle2, key: "done" as const, tone: "text-emerald-600 dark:text-emerald-400" },
+                { label: "재케어", icon: RotateCw, key: "recare" as const, tone: "text-zinc-600 dark:text-zinc-300" },
+                { label: "부재", icon: Ban, key: "absent" as const, tone: "text-orange-600 dark:text-orange-400" },
+                { label: "실패", icon: XCircle, key: "fail" as const, tone: "text-rose-600 dark:text-rose-400" },
+              ]).map((row) => {
+                const Icon = row.icon;
+                const m = matrix.meta[row.key];
+                const d = matrix.dogmaru[row.key];
+                const u = matrix.udak[row.key];
+                const o = matrix.other[row.key];
+                return (
+                  <tr key={row.key} className="border-b border-border/40 last:border-0">
+                    <td className="py-1.5 px-2">
+                      <div className="flex items-center gap-2">
+                        <Icon className={"size-4 " + row.tone} />
+                        <span className="font-medium">{row.label}</span>
+                      </div>
+                    </td>
+                    <td className="text-right py-1.5 px-2">{m.toLocaleString()}</td>
+                    <td className="text-right py-1.5 px-2">{d.toLocaleString()}</td>
+                    <td className="text-right py-1.5 px-2">{u.toLocaleString()}</td>
+                    <td className="text-right py-1.5 px-2">{o.toLocaleString()}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile: 세로형 스택 */}
+        <div className="sm:hidden space-y-3">
+          {([
+            { label: "전체 접수", icon: UserCheck, key: "total" as const, tone: "text-primary" },
+            { label: "오늘 신규", icon: PhoneCall, key: "today" as const, tone: "text-orange-600 dark:text-orange-400" },
+            { label: "개통 완료", icon: CheckCircle2, key: "done" as const, tone: "text-emerald-600 dark:text-emerald-400" },
+            { label: "재케어", icon: RotateCw, key: "recare" as const, tone: "text-zinc-600 dark:text-zinc-300" },
+            { label: "부재", icon: Ban, key: "absent" as const, tone: "text-orange-600 dark:text-orange-400" },
+            { label: "실패", icon: XCircle, key: "fail" as const, tone: "text-rose-600 dark:text-rose-400" },
+          ]).map((row) => {
+            const Icon = row.icon;
+            const m = matrix.meta[row.key];
+            const d = matrix.dogmaru[row.key];
+            const u = matrix.udak[row.key];
+            const o = matrix.other[row.key];
+            const sum = m + d + u + o;
+            return (
+              <div key={row.key} className="rounded-lg border border-border bg-background p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Icon className={"size-4 " + row.tone} />
+                    <span className="text-sm font-semibold">{row.label}</span>
+                  </div>
+                  
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  {[
+                    { k: "메타", v: m },
+                    { k: "도그마루", v: d },
+                    { k: "기타", v: o },
+                  ].map((c) => (
+                    <div key={c.k} className="rounded-md bg-muted/50 py-1.5">
+                      <div className="text-[10px] text-muted-foreground whitespace-pre-line leading-tight">{c.k}</div>
+                      <div className="text-sm font-semibold tabular-nums">{c.v.toLocaleString()}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+          </>
+        )}
+      </Card>
+
+      {/* Filters */}
+      {sourceTab !== "other" && (
+        <Card className="p-3 flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[260px] max-w-xl">
+            <Search className="size-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="pl-9 h-10 text-sm"
+              placeholder="고객명 또는 휴대폰 번호로 검색…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="text-xs text-foreground/60">
+            엑셀처럼 각 헤더의 <span className="font-semibold text-foreground/80">▼</span> 를 눌러 다중 선택으로 좁혀보세요.
+          </div>
+          <div className="ml-auto text-xs text-foreground/60 tabular-nums">
+            {filtered.length.toLocaleString()} / {rows.length.toLocaleString()}건
+          </div>
+        </Card>
+      )}
+
+      {/* Table */}
+      <Tabs
+        value={sourceTab}
+        onValueChange={(v) =>
+          startTransition(() => setSourceTab(v as "meta" | "dogmaru" | "udak" | "other"))
+        }
+      >
+        <TabsList className="grid grid-cols-4 w-full max-w-3xl h-12 bg-muted/60 mb-3">
+          <TabsTrigger value="meta" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
+            메타광고
+            <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.meta}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="dogmaru" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
+            도그마루
+            <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.dogmaru}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="udak" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
+            유닥
+            <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.udak ?? 0}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="other" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
+            기타인입
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {/* PC 상태 탭 */}
+      {sourceTab !== "other" && (() => {
+        const tabRows = rows.filter(r => {
+          const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
+          const isUdakR = r.channel === "유닥";
+          if (sourceTab === "dogmaru") return isDogmaru;
+          if (sourceTab === "udak") return isUdakR;
+          return !isDogmaru && !isUdakR;
+        });
+        // 도그마루 탭 카운트: effectiveStatus 기준 (DB status 우선, 없으면 memo 자동분류, 둘 다 없으면 신규 접수)
+        const completeC = tabRows.filter(r => getDogmaruTabPC(r) === "완료").length;
+        const pendingC = tabRows.filter(r => getDogmaruTabPC(r) === "개통대기").length;
+        const deliveryC = tabRows.filter(r => getDogmaruTabPC(r) === "택배발송").length;
+        const subscribeC = tabRows.filter(r => getDogmaruTabPC(r) === "청약대기").length;
+        const newC = sourceTab === "dogmaru"
+          ? tabRows.filter(r => getDogmaruTabPC(r) === "신규 접수").length
+          : tabRows.filter(r => r.status === "신규 접수").length;
+        const absenceC = tabRows.filter(r => getDogmaruTabPC(r) === "부재케어").length;
+        const recareC = tabRows.filter(r => getDogmaruTabPC(r) === "재케어").length;
+        const failC = tabRows.filter(r => getDogmaruTabPC(r) === "실패").length;
+        const pcTabs: { key: string; label: string; color: string }[] = [
+          { key: "all", label: "전체", color: "" },
+          { key: "new", label: `신규 접수 ${newC}`, color: "blue-light" },
+        ];
+        if (sourceTab === "dogmaru") {
+          pcTabs.push({ key: "absence", label: `부재케어 ${absenceC}`, color: "orange" });
+          pcTabs.push({ key: "recare", label: `재케어 ${recareC}`, color: "purple" });
+          pcTabs.push({ key: "fail", label: `실패 ${failC}`, color: "red" });
+          const withdrawC = tabRows.filter(r => getDogmaruTabPC(r) === "개통철회").length;
+          pcTabs.push({ key: "withdraw", label: `개통철회 ${withdrawC}`, color: "rose" });
+          const etcC = tabRows.filter(r => getDogmaruTabPC(r) === "기타").length;
+          pcTabs.push({ key: "etc", label: `기타 ${etcC}`, color: "gray" });
+          pcTabs.push({ key: "delivery", label: `택배발송 ${deliveryC}`, color: "indigo" });
+          pcTabs.push({ key: "subscribe", label: `청약대기 ${subscribeC}`, color: "cyan" });
+          pcTabs.push({ key: "pending", label: `개통대기 ${pendingC}`, color: "teal" });
+          pcTabs.push({ key: "complete", label: `완료 ${completeC}`, color: "blue" });
+          const happyCallC = tabRows.filter(r => (r as any).happy_call === "O").length;
+          const happyResultC = tabRows.filter(r => !!(r as any).happy_call_result).length;
+          const recare4happyC = tabRows.filter(r => (r as any).happy_call === "O" && !(r as any).happy_call_result).length;
+          pcTabs.push({ key: "happy_call", label: `해피콜 ${happyCallC}`, color: "green" });
+          pcTabs.push({ key: "happy_call_result", label: `영업 ${happyResultC}`, color: "emerald" });
+          pcTabs.push({ key: "recare4happy", label: `재케어대상 ${recare4happyC}`, color: "amber" });
+        } else if (sourceTab === "udak") {
+          const successC = tabRows.filter(r => r.status === "성공").length;
+          const failC2 = tabRows.filter(r => r.status === "실패").length;
+          const absUdakC = tabRows.filter(r => r.status === "부재케어").length;
+          const recareUdakC = tabRows.filter(r => r.status === "재케어").length;
+          const deliveryUdakC = tabRows.filter(r => r.status === "택배발송").length;
+          const completeUdakC = tabRows.filter(r => r.status === "개통완료").length;
+          pcTabs.push({ key: "udak_success", label: `성공 ${successC}`, color: "emerald" });
+          pcTabs.push({ key: "udak_fail", label: `실패 ${failC2}`, color: "red" });
+          pcTabs.push({ key: "absence", label: `부재케어 ${absUdakC}`, color: "orange" });
+          pcTabs.push({ key: "recare", label: `재케어 ${recareUdakC}`, color: "purple" });
+          pcTabs.push({ key: "udak_delivery", label: `택배발송 ${deliveryUdakC}`, color: "sky" });
+          pcTabs.push({ key: "udak_complete", label: `개통완료 ${completeUdakC}`, color: "blue" });
+        } else {
+          // 메타 상태값 그대로
+          const careC = tabRows.filter(r => r.status === "케어중").length;
+          const absMetaC = tabRows.filter(r => r.status === "부재 중").length;
+          const recareMetaC = tabRows.filter(r => r.status === "재케어").length;
+          const cancelC = tabRows.filter(r => r.status === "취소").length;
+          const completeMetaC = tabRows.filter(r => r.status === "개통 완료").length;
+          pcTabs.push({ key: "care", label: `케어중 ${careC}`, color: "yellow" });
+          pcTabs.push({ key: "absence", label: `부재 중 ${absMetaC}`, color: "orange" });
+          pcTabs.push({ key: "recare", label: `재케어 ${recareMetaC}`, color: "purple" });
+          pcTabs.push({ key: "cancel", label: `취소 ${cancelC}`, color: "gray" });
+          pcTabs.push({ key: "complete_meta", label: `개통 완료 ${completeMetaC}`, color: "blue" });
+        }
+        function getTabClass(t: { key: string; color: string }) {
+          if (pcCareTab !== t.key) return "bg-background text-muted-foreground border-border/60 hover:bg-muted/40";
+          if (t.color === "blue-light") return "bg-blue-100 text-blue-700 border-blue-300";
+          if (t.color === "yellow") return "bg-yellow-100 text-yellow-700 border-yellow-300";
+          if (t.color === "gray") return "bg-gray-100 text-gray-600 border-gray-300";
+          if (t.color === "rose") return "bg-rose-100 text-rose-700 border-rose-300";
+          if (t.color === "orange") return "bg-orange-100 text-orange-700 border-orange-300";
+          if (t.color === "purple") return "bg-purple-100 text-purple-700 border-purple-300";
+          if (t.color === "red") return "bg-red-100 text-red-700 border-red-300";
+          if (t.color === "indigo") return "bg-indigo-100 text-indigo-700 border-indigo-300";
+          if (t.color === "cyan") return "bg-cyan-100 text-cyan-700 border-cyan-300";
+          if (t.color === "teal") return "bg-teal-100 text-teal-700 border-teal-300";
+          if (t.color === "blue") return "bg-blue-100 text-blue-700 border-blue-300";
+          if (t.color === "green") return "bg-green-100 text-green-700 border-green-300";
+          if (t.color === "emerald") return "bg-emerald-100 text-emerald-700 border-emerald-300";
+          if (t.color === "amber") return "bg-amber-100 text-amber-700 border-amber-300";
+          if (t.color === "sky") return "bg-sky-100 text-sky-700 border-sky-300";
+          if (t.color === "emerald") return "bg-emerald-100 text-emerald-700 border-emerald-300";
+          return "bg-primary text-primary-foreground border-primary";
+        }
+        return (
+          <div className="flex gap-1.5 mb-3 flex-wrap">
+            {pcTabs.map(t => (
+              <button key={t.key} onClick={() => setPcCareTab(t.key as any)}
+                className={"px-3 py-1.5 rounded-full text-xs font-semibold border transition-all " + getTabClass(t)}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
+
+      {sourceTab === "other" ? (
+        <div key="other-intake" className="animate-fade-in">
+          <Suspense fallback={<IntakeSkeleton />}>
+            <ChannelIntakePage
+              embedded
+              formOpen={intakeFormOpen}
+              onFormOpenChange={setIntakeFormOpen}
+            />
+          </Suspense>
+        </div>
+      ) : (
+      <Card key={sourceTab} className="overflow-hidden border-border animate-fade-in">
+        {/* 탭별 일별 추이 차트 + 날짜 필터 */}
+        {(sourceTab === "dogmaru" || sourceTab === "meta") && (
+          <div className="border-b border-border">
+            {/* 아코디언 헤더 */}
+            <div
+              className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-muted/30"
+              onClick={() => setDashOpen(v => !v)}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-slate-700">
+                  {sourceTab === "dogmaru" ? "도그마루" : "메타광고"} 일별 접수 추이 (최근 30일)
+                </span>
+                <span className={"text-xs text-muted-foreground transition-transform duration-200 inline-block " + (dashOpen ? "rotate-180" : "")}>▼</span>
+              </div>
+              {/* 기간 필터 */}
+              <div className="flex items-center gap-1.5 flex-wrap" onClick={e => e.stopPropagation()}>
+                {([
+                  { k: "all", l: "전체" },
+                  { k: "this_month", l: "이번달" },
+                  { k: "last_month", l: "저번달" },
+                  { k: "this_week", l: "이번주" },
+                  { k: "last_week", l: "지난주" },
+                  { k: "custom", l: "기간설정" },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.k}
+                    type="button"
+                    onClick={() => startTransition(() => setPeriod(opt.k))}
+                    className={
+                      "px-2.5 py-1 text-xs font-semibold rounded border transition-colors " +
+                      (period === opt.k
+                        ? "bg-primary text-white border-primary"
+                        : "border-border text-muted-foreground hover:text-foreground")
+                    }
+                  >
+                    {opt.l}
+                  </button>
+                ))}
+                {period === "custom" && (
+                  <div className="flex items-center gap-1">
+                    <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)} className="text-xs border border-border rounded px-2 py-1 bg-background" />
+                    <span className="text-xs text-muted-foreground">~</span>
+                    <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} className="text-xs border border-border rounded px-2 py-1 bg-background" />
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* 차트 - 아코디언으로 열림 */}
+            {dashOpen && (
+              <div className="px-4 pb-4">
+                <ResponsiveContainer width="100%" height={130}>
+                  <LineChart
+                    data={sourceTab === "dogmaru" ? dogmaruTrendData : metaTrendData}
+                    margin={{ top: 4, right: 8, bottom: 0, left: -20 }}
+                  >
+                    <XAxis dataKey="label" tick={{ fontSize: 9 }} interval={4} />
+                    <YAxis tick={{ fontSize: 9 }} allowDecimals={false} width={28} />
+                    <Tooltip formatter={(v: number) => [v + "건", "접수"]} labelFormatter={(l) => l + "일"} contentStyle={{ fontSize: 11 }} />
+                    <Line
+                      type="monotone"
+                      dataKey="count"
+                      stroke={sourceTab === "dogmaru" ? "#ec4899" : "#6366f1"}
+                      strokeWidth={2}
+                      dot={{ r: 2.5, fill: sourceTab === "dogmaru" ? "#ec4899" : "#6366f1", strokeWidth: 0 }}
+                      activeDot={{ r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+        )}
+        {sourceTab === "dogmaru" ? (
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/60 border-b-2 border-border hover:bg-muted/60">
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={bulk.allOnPageSelected}
+                    onCheckedChange={(v) => bulk.togglePage(!!v)}
+                    aria-label="전체 선택"
+                  />
+                </TableHead>
+                <TableHead className="text-foreground font-bold">접수 일자</TableHead>
+                <TableHead className="text-foreground font-bold">고객 성명</TableHead>
+                <TableHead className="text-foreground font-bold">연락처</TableHead>
+                <TableHead className="text-foreground font-bold">
+                  <ColumnFilter label="접수 지점명" values={valBranch} selected={fBranch} onChange={setFBranch} />
+                </TableHead>
+                <TableHead className="text-foreground font-bold">
+                  <ColumnFilter label="개통 상태" values={valActivation} selected={fActivation} onChange={setFActivation} />
+                </TableHead>
+                <TableHead className="text-foreground font-bold">
+                  <ColumnFilter label="해지 및 철회" values={valCancellation} selected={fCancellation} onChange={setFCancellation} />
+                </TableHead>
+                <TableHead className="text-foreground font-bold">가입번호</TableHead>
+                <TableHead className="text-foreground font-bold">택배개통</TableHead>
+                <TableHead className="text-foreground font-bold">비고</TableHead>
+                <TableHead className="text-foreground font-bold w-28 text-xs whitespace-nowrap">최종액션</TableHead>
+                <TableHead className="text-foreground font-bold w-16 text-center">해피콜</TableHead>
+                <TableHead className="text-foreground font-bold w-16 text-center">영업</TableHead>
+                <TableHead className="text-foreground font-bold w-20 text-center">관리</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading && (
+                <TableRow>
+                  <TableCell colSpan={11} className="text-center py-10 text-foreground/60">
+                    불러오는 중…
+                  </TableCell>
+                </TableRow>
+              )}
+              {!loading && pagedFiltered.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-10 text-foreground/60">
+                    도그마루 시트에서 인입된 데이터가 없습니다.
+                  </TableCell>
+                </TableRow>
+              )}
+              {pagedFiltered.map((r) => {
+                const item = toDogmaruItem(r);
+                const isCancelled = !!item.cancellation_status;
+                const isActivated = (item.activation_status ?? "").includes("개통완료");
+                return (
+                  <TableRow
+                    key={item.id}
+                    data-lead-row={item.id}
+                    className={
+                      "cursor-pointer border-b border-border hover:bg-muted/40 transition-colors " +
+                      (highlightId === item.id ? "bg-amber-50 ring-2 ring-amber-400 animate-pulse" : "")
+                    }
+                    onClick={() => setOpenLead(item)}
+                    data-state={bulk.isSelected(item.id) ? "selected" : undefined}
+                  >
+                    <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={bulk.isSelected(item.id)}
+                        onCheckedChange={() => bulk.toggle(item.id)}
+                        aria-label="행 선택"
+                      />
+                    </TableCell>
+                    <TableCell className="tabular-nums text-foreground font-medium py-1.5">
+                      {item.registration_date ?? "-"}
+                    </TableCell>
+                    <TableCell className="font-bold text-foreground py-1.5">
+                      {item.customer_name ?? "-"}
+                    </TableCell>
+                    <TableCell className="tabular-nums text-foreground font-medium py-1.5">
+                      {item.customer_phone ?? "-"}
+                    </TableCell>
+                    <TableCell className="text-foreground py-1.5">{item.branch_name ?? "-"}</TableCell>
+                    <TableCell className="whitespace-nowrap py-1.5">
+                      {item.activation_status ? (
+                        <span
+                          className={
+                            "text-xs font-bold whitespace-nowrap " +
+                            (isActivated
+                              ? "text-emerald-700 dark:text-emerald-300"
+                              : "text-indigo-700 dark:text-indigo-300")
+                          }
+                        >
+                          {item.activation_status}
+                        </span>
+                      ) : (
+                        <span className="text-foreground/40">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap py-1.5">
+                      {isCancelled ? (
+                        <span className="text-xs font-bold whitespace-nowrap text-rose-700 dark:text-rose-300">
+                          {item.cancellation_status}
+                        </span>
+                      ) : (
+                        <span className="text-foreground/40">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="tabular-nums text-foreground/80 py-1.5">
+                      {item.activation_number ?? "-"}
+                    </TableCell>
+                    <TableCell className="text-foreground/80 py-1.5">
+                      {item.pkg_number ?? "-"}
+                    </TableCell>
+                    <TableCell className="text-foreground/80 py-1.5 max-w-[200px] truncate">
+                      {item.memo ?? "-"}
+                    </TableCell>
+                    <TableCell className="py-1.5 text-xs text-gray-500 whitespace-nowrap">
+                      {(item as any).last_action_at ? (
+                        <div className="flex flex-col gap-0.5">
+                          <span>{fmtCompactDate((item as any).last_action_at)}</span>
+                          {(item as any).last_action_by && <span className="text-gray-400 text-[10px]">{(item as any).last_action_by}</span>}
+                        </div>
+                      ) : <span className="text-gray-300">-</span>}
+                    </TableCell>
+                    <TableCell className="text-center py-1.5">
+                      {(item as any).happy_call === "O" ? (
+                        <span className="inline-flex items-center justify-center size-6 rounded-full bg-emerald-100 text-emerald-700 font-bold text-xs border border-emerald-300">O</span>
+                      ) : (item as any).happy_call === "X" ? (
+                        <span className="inline-flex items-center justify-center size-6 rounded-full bg-rose-100 text-rose-700 font-bold text-xs border border-rose-300">X</span>
+                      ) : <span className="text-muted-foreground text-[11px]">-</span>}
+                    </TableCell>
+                    <TableCell className="text-center py-1.5">
+                      {(item as any).happy_call_result === "성공" ? (
+                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold text-[10px] border border-emerald-300">성공</span>
+                      ) : (item as any).happy_call_result === "실패" ? (
+                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-bold text-[10px] border border-rose-300">실패</span>
+                      ) : <span className="text-muted-foreground text-[11px]">-</span>}
+                    </TableCell>
+                    <TableCell className="text-center py-1.5" onClick={(e) => e.stopPropagation()}>
+                      <Button size="sm" variant="ghost" onClick={() => setOpenLead(item)}>
+                        상세
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        ) : (
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/60 border-b-2 border-border hover:bg-muted/60">
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={bulk.allOnPageSelected}
+                  onCheckedChange={(v) => bulk.togglePage(!!v)}
+                  aria-label="전체 선택"
+                />
+              </TableHead>
+              <TableHead className="text-foreground font-bold w-[130px] whitespace-nowrap py-2">접수 일시</TableHead>
+              <TableHead className="text-foreground font-bold">고객명</TableHead>
+              <TableHead className="text-foreground font-bold">연락처</TableHead>
+              <TableHead className="text-foreground font-bold">
+                <ColumnFilter label="현재 통신사" values={valCarrier} selected={fCarrier} onChange={setFCarrier} />
+              </TableHead>
+              <TableHead className="text-foreground font-bold w-[160px] text-xs whitespace-nowrap">희망 기종</TableHead>
+              <TableHead className="text-foreground font-bold w-[200px] text-xs whitespace-nowrap">
+                <ColumnFilter label="희망 상품" values={valProduct} selected={fProduct} onChange={setFProduct} />
+              </TableHead>
+              <TableHead className="text-foreground font-bold w-[120px] text-xs whitespace-nowrap">
+                <ColumnFilter label="캠페인" values={valCampaign} selected={fCampaign} onChange={setFCampaign} />
+              </TableHead>
+              <TableHead className="text-foreground font-bold w-32">
+                <ColumnFilter label="담당자" values={valAssignee} selected={fAssignee} onChange={setFAssignee} />
+              </TableHead>
+              <TableHead className="text-foreground font-bold w-28">
+                <ColumnFilter label="상담 상태" values={valStatus} selected={fStatus} onChange={setFStatus} />
+              </TableHead>
+              <TableHead className="text-foreground font-bold w-[200px]">메모</TableHead>
+              <TableHead className="text-foreground font-bold w-28 text-xs whitespace-nowrap">최종액션</TableHead>
+              {sourceTab !== "udak" && <TableHead className="text-foreground font-bold w-16 text-center">해피콜</TableHead>}
+              {sourceTab !== "udak" && <TableHead className="text-foreground font-bold w-16 text-center">영업</TableHead>}
+              {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-16 text-center text-xs">2ND</TableHead>}
+              {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-16 text-center text-xs">인터넷</TableHead>}
+              {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-16 text-center text-xs">OTT</TableHead>}
+              <TableHead className="text-foreground font-bold w-20 text-center">관리</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading && (
+              <TableRow>
+                <TableCell colSpan={14} className="text-center py-10 text-foreground/60">
+                  불러오는 중…
+                </TableCell>
+              </TableRow>
+            )}
+            {!loading && pagedFiltered.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={12} className="text-center py-10 text-foreground/60">
+                  표시할 리드가 없습니다.
+                </TableCell>
+              </TableRow>
+            )}
+            {pagedFiltered.map((r) => (
+              <TableRow
+                key={r.id}
+                data-lead-row={r.id}
+                className={
+                  "cursor-pointer border-b border-border hover:bg-muted/40 transition-colors " +
+                  (highlightId === r.id ? "bg-amber-50 ring-2 ring-amber-400 animate-pulse" : "")
+                }
+                onClick={() => setOpenLead(r)}
+                data-state={bulk.isSelected(r.id) ? "selected" : undefined}
+              >
+                <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    checked={bulk.isSelected(r.id)}
+                    onCheckedChange={() => bulk.toggle(r.id)}
+                    aria-label="행 선택"
+                  />
+                </TableCell>
+                <TableCell className="tabular-nums text-xs text-foreground font-medium whitespace-nowrap py-1.5">
+                  {fmtCompactDate(r.created_at)}
+                </TableCell>
+                <TableCell className="font-bold text-foreground py-1.5 whitespace-nowrap">{r.name ?? "-"}</TableCell>
+                <TableCell className="tabular-nums text-foreground font-medium py-1.5 whitespace-nowrap">{r.phone ?? "-"}</TableCell>
+                <TableCell className="text-foreground py-1.5">{r.current_carrier ?? "-"}</TableCell>
+                <TableCell className="text-foreground text-xs whitespace-nowrap py-1.5" title={r.desired_device ?? ""}>{r.desired_device ?? "-"}</TableCell>
+                <TableCell className="text-foreground text-xs whitespace-nowrap py-1.5" title={r.desired_product ?? ""}>{r.desired_product ?? "-"}</TableCell>
+                <TableCell className="text-xs text-foreground whitespace-nowrap py-1.5" title={r.campaign_name ?? ""}>
+                  {r.campaign_name ?? "-"}
+                  {sourceTab === "udak" && r.utm_campaign && (
+                    <span className="ml-1 inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-600 border border-orange-200">{r.utm_campaign}</span>
+                  )}
+                </TableCell>
+                <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
+                  <Select
+                    value={r.assigned_to ?? "none"}
+                    onValueChange={(v) => updateAssignee(r.id, v === "none" ? null : v)}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="담당자 지정" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">담당자 지정</SelectItem>
+                      {staff.map((s) => (
+                        <SelectItem key={s.user_id} value={s.user_id}>
+                          {s.display_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
+                  <Select
+                    value={r.status}
+                    onValueChange={(v) => { console.log("[PC status select]", { leadId: r.id, nextStatus: v }); updateStatus(r.id, v); }}
+                  >
+                    <SelectTrigger
+                      className={`h-8 text-xs ${STATUS_COLOR[r.status] ?? ""}`}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(r.campaign_name === "도그마루_홈캠" ? STATUS_OPTIONS_DOGMARU : (r.channel === "유닥" || r.channel === "메타광고") ? STATUS_OPTIONS_UDAK : STATUS_OPTIONS_META).map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell
+                  className="w-[200px] max-w-[200px] text-xs text-foreground whitespace-nowrap overflow-hidden text-ellipsis py-1.5"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenLead(r);
+                  }}
+                >
+                  {(() => {
+                    const absenceMatch = (r.memo ?? "").match(/부재\/(\d+)회/);
+                    const absenceNum = absenceMatch ? parseInt(absenceMatch[1]) : 0;
+                    return (
+                      <div className="flex items-center gap-1.5">
+                        {absenceNum > 0 && (
+                          <span className="flex-shrink-0 text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200">
+                            🚫 {absenceNum}회
+                          </span>
+                        )}
+                        <span>{r.memo?.replace(/부재\/\d+회\s*\/?/g, "").trim() || <span className="italic text-foreground/40">메모 추가…</span>}</span>
+                      </div>
+                    );
+                  })()}
+                </TableCell>
+                <TableCell className="py-1.5 text-xs text-gray-500 whitespace-nowrap">
+                  {r.last_action_at ? (
+                    <div className="flex flex-col gap-0.5">
+                      <span>{fmtCompactDate(r.last_action_at)}</span>
+                      {r.last_action_by && <span className="text-gray-400 text-[10px]">{r.last_action_by}</span>}
+                    </div>
+                  ) : <span className="text-gray-300">-</span>}
+                </TableCell>
+                {sourceTab !== "udak" && (
+                  <TableCell className="text-center py-1.5">
+                    {r.happy_call === "O" ? (
+                      <span className="inline-flex items-center justify-center size-6 rounded-full bg-emerald-100 text-emerald-700 font-bold text-xs border border-emerald-300">O</span>
+                    ) : r.happy_call === "X" ? (
+                      <span className="inline-flex items-center justify-center size-6 rounded-full bg-rose-100 text-rose-700 font-bold text-xs border border-rose-300">X</span>
+                    ) : <span className="text-muted-foreground text-[11px]">-</span>}
+                  </TableCell>
+                )}
+                {sourceTab !== "udak" && (
+                  <TableCell className="text-center py-1.5">
+                    {r.happy_call_result === "성공" ? (
+                      <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold text-[10px] border border-emerald-300">성공</span>
+                    ) : r.happy_call_result === "실패" ? (
+                      <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-bold text-[10px] border border-rose-300">실패</span>
+                    ) : <span className="text-muted-foreground text-[11px]">-</span>}
+                  </TableCell>
+                )}
+                {sourceTab === "udak" && (() => {
+                  const benefits = (r.additional_benefits ?? "").split(",").map(b => b.trim());
+                  const has = (k: string) => benefits.includes(k);
+                  const plan = r.desired_product ?? "";
+                  const is95or115 = plan.includes("95") || plan.includes("115");
+                  const ott = benefits.find(b => b.startsWith("ott_"));
+                  const ottMap: Record<string,string> = { ott_disney:"디즈니+", ott_netflix:"넷플릭스", ott_tving:"티빙", ott_youtube:"유튜브" };
+                  return (
+                    <>
+                      <TableCell className="text-center py-1.5 text-[10px]">
+                        {is95or115 ? (
+                          <div className="flex flex-col gap-0.5 items-center">
+                            {has("watch") && <span className="text-emerald-600 font-bold">⌚</span>}
+                            {has("tab") && <span className="text-blue-600 font-bold">📱</span>}
+                            {!has("watch") && !has("tab") && <span className="text-muted-foreground">-</span>}
+                          </div>
+                        ) : <span className="text-muted-foreground">-</span>}
+                      </TableCell>
+                      <TableCell className="text-center py-1.5 text-[10px]">
+                        {is95or115 ? (
+                          has("internet")
+                            ? <span className="text-emerald-600 font-bold">O</span>
+                            : <span className="text-rose-500 font-bold">X</span>
+                        ) : <span className="text-muted-foreground">-</span>}
+                      </TableCell>
+                      <TableCell className="text-center py-1.5 text-[10px]">
+                        {is95or115 && ott
+                          ? <span className="text-purple-600 font-bold">{ottMap[ott] ?? ott}</span>
+                          : <span className="text-muted-foreground">-</span>}
+                      </TableCell>
+                    </>
+                  );
+                })()}
+                <TableCell className="text-center py-1.5" onClick={(e) => e.stopPropagation()}>
+                  <Button size="sm" variant="ghost" onClick={() => setOpenLead(r)}>
+                    상세
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        )}
+        <PaginationBar
+          page={page}
+          pageSize={PAGE_SIZE}
+          total={filtered.length}
+          onChange={setPage}
+        />
+      </Card>
+      )}
+
+      {/* Detail Sheet */}
+      <Dialog open={!!openLead} onOpenChange={(o) => !o && setOpenLead(null)}>
+        <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          {openLead && (
+            <>
+              {/* Title block */}
+              <DialogHeader className="border-b border-border pb-4">
+                <div className="text-xs font-semibold text-foreground/60">
+                  인입 일시 ·{" "}
+                  {new Date(openLead.created_at).toLocaleString("ko-KR")}
+                </div>
+                <DialogTitle className="text-2xl font-bold text-foreground flex items-center gap-2">
+                  {openLead.name ?? "이름 없음"}
+                  <Badge className={STATUS_COLOR[openLead.status] ?? ""}>
+                    {openLead.status}
+                  </Badge>
+                </DialogTitle>
+                <SheetDescription className="sr-only">
+                  잠재고객 상세 정보
+                </SheetDescription>
+              </DialogHeader>
+
+              {/* Info grid */}
+              <div className="mt-5 rounded-lg border border-border overflow-hidden">
+
+                {/* 유닥 스냅샷 카드 */}
+                {(openLead.channel === "유닥" || openLead.channel === "메타광고") && openLead.desired_device && (
+                  <div className="mx-3 my-3 rounded-xl border border-orange-200 bg-orange-50 p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-base">📱</span>
+                      <span className="font-bold text-sm">{openLead.desired_device}</span>
+                      <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 border border-orange-200">{openLead.channel}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {openLead.current_carrier && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.current_carrier}</span>}
+                      {openLead.storage && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.storage}</span>}
+                      {openLead.color && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.color}</span>}
+                      {openLead.desired_product && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.desired_product}</span>}
+                      {openLead.discount && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.discount}</span>}
+                    </div>
+                    {openLead.additional_benefits && (
+                      <div className="flex flex-wrap gap-1">
+                        {openLead.additional_benefits.split(",").filter(Boolean).map((b, i) => {
+                          const bonusMap: Record<string,string> = {
+                            watch:"갤럭시 워치", tab:"갤럭시 탭", internet:"인터넷",
+                            ott_disney:"디즈니+", ott_netflix:"넷플릭스", ott_tving:"티빙", ott_youtube:"유튜브 프리미엄",
+                          };
+                          return <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 font-medium">🎁 {bonusMap[b.trim()] ?? b.trim()}</span>;
+                        })}
+                      </div>
+                    )}
+                    {openLead.estimated_fee && (
+                      <div className="mt-2 pt-2 border-t border-orange-200">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[11px] text-orange-700 font-semibold">💰 예상 월 부담금</span>
+                          <span className="text-sm font-black text-orange-600">{openLead.estimated_fee.toLocaleString()}원/월</span>
+                        </div>
+                        {openLead.estimated_fee_memo && (
+                          <div className="text-[10px] text-orange-500 mt-0.5 text-right">({openLead.estimated_fee_memo})</div>
+                        )}
+                      </div>
+                    )}
+                    {openLead.utm_campaign && <div className="mt-2 text-[10px] text-orange-500 font-medium">📣 {openLead.utm_campaign}</div>}
+                  </div>
+                )}
+                {/* ── 편집 가능한 고객 기본 정보 ── */}
+                <div className="p-3 border-b border-border/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-semibold text-foreground/60">고객 기본 정보</span>
+                    <Button size="sm" variant="outline" className="h-7 text-xs px-3" onClick={saveLeadInfo} disabled={savingLeadInfo}>
+                      {savingLeadInfo ? "저장 중…" : "저장하기"}
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-muted-foreground">고객명</label>
+                      <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-8 text-xs" placeholder="고객명" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-muted-foreground">연락처</label>
+                      <Input value={editPhone} onChange={(e) => setEditPhone(formatPhone(e.target.value))} className="h-8 text-xs" type="tel" inputMode="numeric" maxLength={14} placeholder="010-0000-0000" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-muted-foreground">생년월일 (6자리)</label>
+                      <Input value={editBirth} onChange={(e) => setEditBirth(e.target.value.replace(/\D+/g, "").slice(0, 6))} className="h-8 text-xs" inputMode="numeric" maxLength={6} placeholder="900101" />
+                    </div>
+                  </div>
+                </div>
+                <InfoRow label="현재 통신사" value={openLead.current_carrier} right={{ label: "희망 기종", value: openLead.desired_device }} />
+                <InfoRow label="희망 상품" value={openLead.desired_product} right={{ label: "인입 경로", value: openLead.campaign_name ?? openLead.source }} />
+                {(openLead.storage || openLead.color) && (
+                  <InfoRow label="용량" value={openLead.storage} right={{ label: "색상", value: openLead.color }} />
+                )}
+                {openLead.discount && (
+                  <InfoRow label="할인방식" value={openLead.discount} right={{ label: "가입유형", value: openLead.jointype }} />
+                )}
+                {(openLead.birth || openLead.consult_time) && (
+                  <InfoRow label="상담 희망 시간" value={openLead.consult_time} right={undefined} />
+                )}
+                {(openLead.channel || openLead.utm_campaign) && (
+                  <InfoRow label="채널" value={openLead.channel} right={{ label: "UTM", value: openLead.utm_campaign }} />
+                )}
+
+                <div className="grid grid-cols-2 divide-x divide-border">
+                  <div className="p-3">
+                    <div className="text-[11px] font-semibold text-foreground/60 mb-1">담당자</div>
+                    <Select
+                      value={openLead.assigned_to ?? "none"}
+                      onValueChange={(v) => updateAssignee(openLead.id, v === "none" ? null : v)}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="담당자 지정" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">담당자 지정</SelectItem>
+                        {staff.map((s) => (
+                          <SelectItem key={s.user_id} value={s.user_id}>
+                            {s.display_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="p-3">
+                    <div className="text-[11px] font-semibold text-foreground/60 mb-1">상담 상태</div>
+                    <Select
+                      value={openLead.status}
+                      onValueChange={(v) => { console.log("[Detail status select]", { leadId: openLead?.id, nextStatus: v }); updateStatus(openLead.id, v); }}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(openLead.campaign_name === "도그마루_홈캠" ? STATUS_OPTIONS_DOGMARU : (openLead.channel === "유닥" || openLead.channel === "메타광고") ? STATUS_OPTIONS_UDAK : STATUS_OPTIONS_META).map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {s}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* 해피콜 - 유닥/메타광고는 숨김 */}
+              {(openLead.channel !== "유닥" && openLead.channel !== "메타광고") && (
+              <div className="mt-4 p-4 rounded-xl border border-border bg-muted/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-bold text-foreground">📞 해피콜</div>
+                  <div className="text-[10px] text-muted-foreground">해피콜 팀 작성</div>
+                </div>
+                <div className="flex gap-2">
+                  {(["O", "X"] as const).map((v) => (
+                    <button key={v} onClick={() => setOpenLead({ ...openLead, happy_call: openLead.happy_call === v ? null : v })}
+                      className={`flex-1 py-2.5 rounded-lg border text-sm font-bold transition-colors ${openLead.happy_call === v ? (v === "O" ? "bg-emerald-100 text-emerald-700 border-emerald-400" : "bg-rose-100 text-rose-700 border-rose-400") : "bg-background border-border text-muted-foreground hover:bg-muted/60"}`}>
+                      {v === "O" ? "✅ O (상담 원함)" : "❌ X (거절)"}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-muted-foreground">{openLead.happy_call === "O" ? "✅ 인터넷 상담 받을게요!" : openLead.happy_call === "X" ? "❌ 필요 없어요" : "미설정"}</span>
+                  <div className="flex gap-2">
+                    {openLead.happy_call && <button onClick={() => { setOpenLead({ ...openLead, happy_call: null }); saveHappyCall(openLead, null, openLead.happy_call_result); }} className="px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:bg-muted/60">초기화</button>}
+                    <button onClick={() => saveHappyCall(openLead, openLead.happy_call, openLead.happy_call_result)} disabled={happyCallSaving} className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50">
+                      {happyCallSaving ? "저장 중..." : "저장"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              )}
+              {/* 영업 결과 - 유닥/메타광고는 숨김 */}
+              {(openLead.channel !== "유닥" && openLead.channel !== "메타광고") && (
+              <div className={`mt-2 p-4 rounded-xl border space-y-2 transition-opacity ${openLead.happy_call === "O" ? "border-border bg-muted/30 opacity-100" : "border-dashed border-border/50 bg-muted/10 opacity-40 pointer-events-none"}`}>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-bold text-foreground">💼 영업 결과</div>
+                  <div className="text-[10px] text-muted-foreground">해피콜 O인 경우만 활성</div>
+                </div>
+                <div className="flex gap-2">
+                  {([["성공","bg-emerald-100 text-emerald-700 border-emerald-400"],["실패","bg-rose-100 text-rose-700 border-rose-400"],["부재","bg-orange-100 text-orange-700 border-orange-400"]] as const).map(([v, ac]) => (
+                    <button key={v} onClick={() => setOpenLead({ ...openLead, happy_call_result: openLead.happy_call_result === v ? null : v })}
+                      className={`flex-1 py-2.5 rounded-lg border text-sm font-bold transition-colors ${openLead.happy_call_result === v ? ac : "bg-background border-border text-muted-foreground"}`}>
+                      {v === "성공" ? "✅ 성공" : v === "실패" ? "❌ 실패" : "📵 부재"}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-muted-foreground">{openLead.happy_call_result ? `현재: ${openLead.happy_call_result}` : "⚠️ 미설정 — 재케어 대상"}</span>
+                  <div className="flex gap-2">
+                    {openLead.happy_call_result && <button onClick={() => { setOpenLead({ ...openLead, happy_call_result: null }); saveHappyCall(openLead, openLead.happy_call, null); }} className="px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:bg-muted/60">초기화</button>}
+                    <button onClick={() => saveHappyCall(openLead, openLead.happy_call, openLead.happy_call_result)} disabled={happyCallSaving} className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50">
+                      {happyCallSaving ? "저장 중..." : "저장"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              )}
+
+              {/* Consultation memo feed */}
+              <div className="mt-6">
+                <div className="text-sm font-bold text-foreground mb-2">상담 메모</div>
+                {/* 부재케어 카운터 */}
+                <div className="flex items-center gap-3 bg-orange-50 rounded-xl px-4 py-2.5 border border-orange-200 mb-3">
+                  <span className="text-xs font-semibold text-orange-700 flex-shrink-0">🚫 부재케어</span>
+                  <div className="flex items-center gap-2 ml-auto">
+                    <button
+                      onClick={() => adjustAbsenceCount(openLead, -1)}
+                      className="size-7 rounded-full bg-white border border-orange-300 text-orange-700 font-bold active:scale-90 transition-transform flex items-center justify-center"
+                    >−</button>
+                    <span className="text-base font-bold text-orange-700 min-w-[2rem] text-center">
+                      {(() => { const m = (openLead.memo ?? "").match(/부재\/(\d+)회/); return (m ? m[1] : 0) + "회"; })()}
+                    </span>
+                    <button
+                      onClick={() => adjustAbsenceCount(openLead, 1)}
+                      className="size-7 rounded-full bg-white border border-orange-300 text-orange-700 font-bold active:scale-90 transition-transform flex items-center justify-center"
+                    >+</button>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-border p-3 bg-muted/30">
+                  {(openLead.channel !== "유닥" && openLead.channel !== "메타광고") && (
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      onClick={() => {
+                        const date = openLead.registration_date ?? openLead.created_at?.slice(0,10) ?? "";
+                        const month = date ? date.slice(5,7).replace(/^0/, "") : "0";
+                        const day = date ? date.slice(8,10).replace(/^0/, "") : "0";
+                        const msg = `고객님 안녕하세요.\n${month}월 ${day}일 설치하신 홈캠 관련하여 해피콜 연락드린 유플러스 상담원 입니다\n*추가적인 문의사항은 편히 연락 남겨주세요`;
+                        const phone = (openLead.phone ?? "").replace(/[^0-9]/g, "");
+                        window.open(`sms:${phone}?body=${encodeURIComponent(msg)}`, "_blank");
+                      }}
+                      className="flex-1 py-2 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors"
+                    >📞 해피콜 문자</button>
+                    <button
+                      onClick={() => {
+                        const date = openLead.registration_date ?? openLead.created_at?.slice(0,10) ?? "";
+                        const month = date ? date.slice(5,7).replace(/^0/, "") : "0";
+                        const day = date ? date.slice(8,10).replace(/^0/, "") : "0";
+                        const msg = `고객님 안녕하세요.\n${month}월 ${day}일 설치하신 홈캠 관련하여 해피콜 연락드렸으나 부재로 문자 남깁니다\n*통화 가능하신 시간 남겨주시면 연락드리겠습니다`;
+                        const phone = (openLead.phone ?? "").replace(/[^0-9]/g, "");
+                        window.open(`sms:${phone}?body=${encodeURIComponent(msg)}`, "_blank");
+                      }}
+                      className="flex-1 py-2 rounded-lg border border-orange-300 bg-orange-50 text-orange-700 text-xs font-semibold hover:bg-orange-100 transition-colors"
+                    >📵 부재중 문자</button>
+                  </div>
+                  )}
+                  <Textarea
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                    placeholder="새로운 상담 내용을 입력하세요"
+                    rows={3}
+                    className="bg-background"
+                  />
+                  <div className="text-right mt-2">
+                    <Button size="sm" onClick={addNote} disabled={!newNote.trim()}>
+                      메모 저장
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  {(() => {
+                    // 노트 + 상태 로그 합쳐서 시간순 정렬
+                    const allItems = [
+                      ...notes.map(n => ({ type: "note" as const, id: n.id, at: n.created_at, author: n.author_name, content: n.content })),
+                      ...statusLogs.map(l => ({ type: "status" as const, id: l.id, at: l.changed_at, author: l.changed_by, content: l.status })),
+                    ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+                    return (
+                      <>
+                        <div className="text-xs font-semibold text-foreground/70">
+                          누적 상담 이력 ({allItems.length})
+                        </div>
+                        {allItems.length === 0 && (
+                          <div className="text-sm text-foreground/50 italic py-4 text-center border border-dashed border-border rounded-lg">
+                            아직 기록된 상담 이력이 없습니다.
+                          </div>
+                        )}
+                        <ol className="relative border-l-2 border-border ml-2 space-y-3">
+                          {allItems.map(item => (
+                            <li key={item.type + item.id} className="ml-4">
+                              <div className={"absolute -left-[7px] mt-1.5 size-3 rounded-full border-2 border-background " + (item.type === "status" ? "bg-orange-400" : "bg-primary")} />
+                              <div className={"rounded-lg border p-3 " + (item.type === "status" ? "bg-orange-50 border-orange-200" : "bg-background border-border")}>
+                                <div className="text-[11px] text-foreground/60 flex justify-between font-medium">
+                                  <span className="font-semibold text-foreground flex items-center gap-1.5">
+                                    {item.author ?? "—"}
+                                    {item.type === "status" && (
+                                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700">상태변경</span>
+                                    )}
+                                  </span>
+                                  <span>{new Date(item.at).toLocaleString("ko-KR")}</span>
+                                </div>
+                                <div className={"whitespace-pre-wrap mt-1.5 text-sm " + (item.type === "status" ? "font-semibold text-orange-700" : "text-foreground")}>
+                                  {item.type === "status" ? "→ " + item.content : item.content}
+                                </div>
+                              </div>
+                            </li>
+                          ))}
+                        </ol>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Lead Sheet */}
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent className="w-full max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>리드 수동 추가</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4 space-y-3">
+            {DRAFT_FIELDS.map(({ key, label }) => (
+              <div key={key} className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">{label}</label>
+                <Input
+                  value={draft[key]}
+                  onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
+                />
+              </div>
+            ))}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">메모</label>
+              <Textarea
+                rows={3}
+                value={draft.memo}
+                onChange={(e) => setDraft({ ...draft, memo: e.target.value })}
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setShowCreate(false)}>
+                취소
+              </Button>
+              <Button onClick={createLead}>등록</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {sourceTab !== "other" && (
+        <>
+          <BulkActionBar count={bulk.selectedCount} onClear={bulk.clear}>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => setBulkDeleteOpen(true)}
+              className="h-10 lg:h-8"
+            >
+              <Trash2 className="size-4 lg:size-3.5 mr-1" /> 선택 삭제
+            </Button>
+          </BulkActionBar>
+          <BulkDeleteDialog
+            open={bulkDeleteOpen}
+            onOpenChange={setBulkDeleteOpen}
+            count={bulk.selectedCount}
+            itemLabel="건의 잠재고객을 삭제하시겠습니까?"
+            onConfirm={bulkDelete}
+            loading={bulkBusy}
+            confirmLabel="삭제"
+          />
+        </>
+      )}
+      </div>
+  );
+}
+
 function Field({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
@@ -1298,4 +3015,3 @@ function InfoRow({
     </div>
   );
 }
-
