@@ -1233,8 +1233,8 @@ export default function LeadsPage() {
   }, [rows, search, sourceTab, period, customStart, customEnd, fStatus, fCarrier, fProduct, fCampaign, fAssignee, fBranch, fActivation, fCancellation, staff, pcCareTab]);
 
   // ── CSV 다운로드 ──
-  const downloadCSV = (all: boolean) => {
-    const data = all ? rows : filtered;
+  const downloadCSV = (mode: 'all' | 'filtered' | 'selected') => {
+    const data = mode === 'all' ? rows : mode === 'selected' ? rows.filter(r => bulk.selectedIds.includes(r.id)) : filtered;
     const DQ = String.fromCharCode(34);
     const headers = ['접수일시','고객명','연락처','현재통신사','희망기종','희망상품','캠페인','담당자','상담상태','채널','메모'];
     const esc = (v: unknown) => { const s = String(v ?? '').replace(new RegExp(DQ,'g'), DQ+DQ); return DQ+s+DQ; };
@@ -1258,7 +1258,7 @@ export default function LeadsPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    const label = all ? '전체' : '필터';
+    const label = mode === 'all' ? '전체' : mode === 'selected' ? '선택' : '필터';
     const dt = new Date().toISOString().slice(0,10);
     a.download = '리드_'+label+'_'+dt+'.csv';
     a.click();
@@ -1799,8 +1799,11 @@ export default function LeadsPage() {
             </Button>
             {csvOpen && (
               <div className="absolute right-0 top-full mt-1 z-50 flex flex-col bg-white border rounded shadow-md min-w-[150px]">
-                <button className="px-4 py-2 text-sm text-left hover:bg-slate-50" onClick={() => { downloadCSV(false); setCsvOpen(false); }}>필터 적용 다운로드</button>
-                <button className="px-4 py-2 text-sm text-left hover:bg-slate-50" onClick={() => { downloadCSV(true); setCsvOpen(false); }}>전체 다운로드</button>
+                {bulk.selectedCount > 0 && (
+                  <button className="px-4 py-2 text-sm text-left hover:bg-slate-50 text-pink-600 font-medium" onClick={() => { downloadCSV('selected'); setCsvOpen(false); }}>선택 항목만 ({bulk.selectedCount}건)</button>
+                )}
+                <button className="px-4 py-2 text-sm text-left hover:bg-slate-50" onClick={() => { downloadCSV('filtered'); setCsvOpen(false); }}>필터 적용 다운로드</button>
+                <button className="px-4 py-2 text-sm text-left hover:bg-slate-50" onClick={() => { downloadCSV('all'); setCsvOpen(false); }}>전체 다운로드</button>
               </div>
             )}
           </div>
