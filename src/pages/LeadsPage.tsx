@@ -2409,6 +2409,104 @@ export default function LeadsPage() {
               })}
             </TableBody>
           </Table>
+        ) : sourceTab === "allinone" ? (
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/60 border-b-2 border-border hover:bg-muted/60">
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={bulk.allOnPageSelected}
+                  onCheckedChange={(v) => bulk.togglePage(!!v)}
+                  aria-label="전체 선택"
+                />
+              </TableHead>
+              <TableHead className="text-foreground font-bold w-[120px] whitespace-nowrap py-2">접수 일시</TableHead>
+              <TableHead className="text-foreground font-bold">고객명</TableHead>
+              <TableHead className="text-foreground font-bold">연락처</TableHead>
+              <TableHead className="text-foreground font-bold">휴대폰 통신사</TableHead>
+              <TableHead className="text-foreground font-bold">인터넷 통신사</TableHead>
+              <TableHead className="text-foreground font-bold">진행 방식</TableHead>
+              <TableHead className="text-foreground font-bold">요금제</TableHead>
+              <TableHead className="text-foreground font-bold">결합 인원</TableHead>
+              <TableHead className="text-foreground font-bold">예상 월요금</TableHead>
+              <TableHead className="text-foreground font-bold">상담 가능 시간</TableHead>
+              <TableHead className="text-foreground font-bold w-32">
+                <ColumnFilter label="담당자" values={valAssignee} selected={fAssignee} onChange={setFAssignee} />
+              </TableHead>
+              <TableHead className="text-foreground font-bold w-28">
+                <ColumnFilter label="상담 상태" values={valStatus} selected={fStatus} onChange={setFStatus} />
+              </TableHead>
+              <TableHead className="text-foreground font-bold w-[180px]">메모</TableHead>
+              <TableHead className="text-foreground font-bold w-20 text-center">관리</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading && (
+              <TableRow>
+                <TableCell colSpan={15} className="text-center py-10 text-foreground/60">불러오는 중…</TableCell>
+              </TableRow>
+            )}
+            {!loading && pagedFiltered.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={15} className="text-center py-10 text-foreground/60">표시할 리드가 없습니다.</TableCell>
+              </TableRow>
+            )}
+            {pagedFiltered.map((r) => (
+              <TableRow
+                key={r.id}
+                data-lead-row={r.id}
+                className={"cursor-pointer border-b border-border hover:bg-muted/40 transition-colors " + (highlightId === r.id ? "bg-amber-50 ring-2 ring-amber-400 animate-pulse" : "")}
+                onClick={() => setOpenLead(r)}
+                data-state={bulk.isSelected(r.id) ? "selected" : undefined}
+              >
+                <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
+                  <Checkbox checked={bulk.isSelected(r.id)} onCheckedChange={() => bulk.toggle(r.id)} aria-label="행 선택" />
+                </TableCell>
+                <TableCell className="tabular-nums text-xs text-foreground font-medium whitespace-nowrap py-1.5">
+                  {fmtCompactDate(r.created_at)}
+                </TableCell>
+                <TableCell className="font-bold text-foreground py-1.5 whitespace-nowrap">{r.name ?? "-"}</TableCell>
+                <TableCell className="tabular-nums text-foreground font-medium py-1.5 whitespace-nowrap">{r.phone ?? "-"}</TableCell>
+                <TableCell className="text-foreground text-xs py-1.5">{(r as any).carrier ?? r.current_carrier ?? "-"}</TableCell>
+                <TableCell className="text-foreground text-xs py-1.5">{(r as any).internet_carrier ?? "-"}</TableCell>
+                <TableCell className="text-foreground text-xs py-1.5">
+                  {(r as any).jointype === "usim" ? "유심만 변경" : (r as any).jointype === "phone" ? "핸드폰도 변경" : (r as any).jointype ?? "-"}
+                </TableCell>
+                <TableCell className="text-foreground text-xs whitespace-nowrap py-1.5">
+                  {r.plan ? `${Number(r.plan).toLocaleString()}원` : "-"}
+                </TableCell>
+                <TableCell className="text-foreground text-xs py-1.5">{(r as any).bundling ?? "-"}</TableCell>
+                <TableCell className="text-foreground text-xs font-bold py-1.5 whitespace-nowrap">
+                  {r.estimated_fee ? `${r.estimated_fee.toLocaleString()}원` : "-"}
+                </TableCell>
+                <TableCell className="text-foreground text-xs py-1.5">{(r as any).consult_time ?? "-"}</TableCell>
+                <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
+                  <Select value={r.assigned_to ?? "none"} onValueChange={(v) => updateAssignee(r.id, v === "none" ? null : v)}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="담당자 지정" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">담당자 지정</SelectItem>
+                      {staff.map((s) => (<SelectItem key={s.user_id} value={s.user_id}>{s.display_name}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
+                  <Select value={r.status} onValueChange={(v) => updateStatus(r.id, v)}>
+                    <SelectTrigger className={`h-8 text-xs ${STATUS_COLOR[r.status] ?? ""}`}><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {STATUS_OPTIONS_META.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell className="text-foreground text-xs py-1.5 max-w-[180px]">
+                  <div className="line-clamp-2">{r.memo ?? "-"}</div>
+                </TableCell>
+                <TableCell className="text-center py-1.5" onClick={(e) => e.stopPropagation()}>
+                  <Button size="sm" variant="ghost" onClick={() => setOpenLead(r)}>상세</Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
         ) : (
         <Table>
           <TableHeader>
@@ -3042,4 +3140,5 @@ function InfoRow({
     </div>
   );
 }
+
 
