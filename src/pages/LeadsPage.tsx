@@ -154,6 +154,7 @@ function MobileLeadsView({
   saveHappyCall: (lead: Lead, happy_call: string | null, happy_call_result: string | null) => Promise<void>;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [csvOpen, setCsvOpen] = useState(false);
   const [statusLoading, setStatusLoading] = useState<string | null>(null);
   const [absenceModal, setAbsenceModal] = useState<Lead | null>(null);
   const [recareModal, setRecareModal] = useState<Lead | null>(null);
@@ -1799,14 +1800,16 @@ export default function LeadsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="relative group">
-            <Button variant="outline" className="flex items-center gap-1">
+          <div className="relative">
+            <Button variant="outline" className="flex items-center gap-1" onClick={() => setCsvOpen(v => !v)}>
               <Download className="size-4" /> CSV
             </Button>
-            <div className="absolute right-0 top-full mt-1 z-50 hidden group-hover:flex flex-col bg-white border rounded shadow-md min-w-[130px]">
-              <button className="px-4 py-2 text-sm text-left hover:bg-slate-50" onClick={() => downloadCSV(false)}>필터 적용 다운로드</button>
-              <button className="px-4 py-2 text-sm text-left hover:bg-slate-50" onClick={() => downloadCSV(true)}>전체 다운로드</button>
-            </div>
+            {csvOpen && (
+              <div className="absolute right-0 top-full mt-1 z-50 flex flex-col bg-white border rounded shadow-md min-w-[150px]">
+                <button className="px-4 py-2 text-sm text-left hover:bg-slate-50" onClick={() => { downloadCSV(false); setCsvOpen(false); }}>필터 적용 다운로드</button>
+                <button className="px-4 py-2 text-sm text-left hover:bg-slate-50" onClick={() => { downloadCSV(true); setCsvOpen(false); }}>전체 다운로드</button>
+              </div>
+            )}
           </div>
           {sourceTab === "other" ? (
             <Button onClick={() => setIntakeFormOpen(true)}>
