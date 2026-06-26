@@ -39,7 +39,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserCheck, PhoneCall, CheckCircle2, Plus, Search, RotateCw, Ban, XCircle } from "lucide-react";
+import { UserCheck, PhoneCall, CheckCircle2, Plus, Search, RotateCw, Ban, XCircle, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -1231,6 +1231,46 @@ export default function LeadsPage() {
     });
   }, [rows, search, sourceTab, period, customStart, customEnd, fStatus, fCarrier, fProduct, fCampaign, fAssignee, fBranch, fActivation, fCancellation, staff, pcCareTab]);
 
+  // ── CSV 다운로드 ──
+  const downloadCSV = (all: boolean) => {
+    const data = all ? rows : filtered;
+    const headers = ["접수일시", "고객명", "연락처", "현재통신사", "희망기종", "희망상품", "캠페인", "담당자", "상담상태", "채널", "메모"];
+    const escape = (v: unknown) => {
+      const s = String(v ?? "").replace(/"/g, """");
+      return `"${s}"`;
+    };
+    const getAssigneeName = (id: string | null) => {
+      if (!id) return "";
+      const found = staff.find((s: any) => s.user_id === id || s.id === id);
+      return found?.name ?? found?.full_name ?? id;
+    };
+    const csvRows = data.map(r => [
+      r.registration_date ?? r.created_at?.slice(0, 10) ?? "",
+      r.customer_name ?? r.name ?? "",
+      r.customer_phone ?? r.phone ?? "",
+      r.current_carrier ?? "",
+      r.desired_device ?? "",
+      r.desired_product ?? "",
+      r.campaign_name ?? "",
+      getAssigneeName(r.assignee_id ?? null),
+      r.status ?? "",
+      r.channel ?? "",
+      r.memo ?? "",
+    ].map(escape).join(","));
+    const bom = "﻿";
+    const csv = bom + [headers.map(h => `"${h}"`).join(","), ...csvRows].join("
+");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const label = all ? "전체" : "필터";
+    const date = new Date().toISOString().slice(0, 10);
+    a.download = `리드_${label}_${date}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const PAGE_SIZE = 50;
   const [page, setPage] = useState(0);
 
@@ -1758,15 +1798,26 @@ export default function LeadsPage() {
             메타 광고 등 외부 인입 리드를 통합 관리합니다.
           </p>
         </div>
-        {sourceTab === "other" ? (
-          <Button onClick={() => setIntakeFormOpen(true)}>
-            <Plus className="size-4 mr-1" /> 인입 등록
-          </Button>
-        ) : (
-          <Button onClick={() => setShowCreate(true)}>
-            <Plus className="size-4 mr-1" /> 리드 추가
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <div className="relative group">
+            <Button variant="outline" className="flex items-center gap-1">
+              <Download className="size-4" /> CSV
+            </Button>
+            <div className="absolute right-0 top-full mt-1 z-50 hidden group-hover:flex flex-col bg-white border rounded shadow-md min-w-[130px]">
+              <button className="px-4 py-2 text-sm text-left hover:bg-slate-50" onClick={() => downloadCSV(false)}>필터 적용 다운로드</button>
+              <button className="px-4 py-2 text-sm text-left hover:bg-slate-50" onClick={() => downloadCSV(true)}>전체 다운로드</button>
+            </div>
+          </div>
+          {sourceTab === "other" ? (
+            <Button onClick={() => setIntakeFormOpen(true)}>
+              <Plus className="size-4 mr-1" /> 인입 등록
+            </Button>
+          ) : (
+            <Button onClick={() => setShowCreate(true)}>
+              <Plus className="size-4 mr-1" /> 리드 추가
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* 종합 리드 성과 보드 — 경로별/기간별 매트릭스 */}
@@ -2968,3 +3019,4 @@ function InfoRow({
     </div>
   );
 }
+
