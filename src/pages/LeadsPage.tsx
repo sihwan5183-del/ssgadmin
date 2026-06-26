@@ -154,7 +154,6 @@ function MobileLeadsView({
   saveHappyCall: (lead: Lead, happy_call: string | null, happy_call_result: string | null) => Promise<void>;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [csvOpen, setCsvOpen] = useState(false);
   const [statusLoading, setStatusLoading] = useState<string | null>(null);
   const [absenceModal, setAbsenceModal] = useState<Lead | null>(null);
   const [recareModal, setRecareModal] = useState<Lead | null>(null);
@@ -958,7 +957,8 @@ export default function LeadsPage() {
   }, []);
   const [searchParams, setSearchParams] = useSearchParams();
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
-  const [mobileFullView, setMobileFullView] = useState(false); // 모바일에서 전체 PC 뷰 전환
+  const [mobileFullView, setMobileFullView] = useState(false);
+  const [csvOpen, setCsvOpen] = useState(false); // 모바일에서 전체 PC 뷰 전환
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", handler);
