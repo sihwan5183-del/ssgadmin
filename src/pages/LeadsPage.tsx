@@ -1330,7 +1330,8 @@ export default function LeadsPage() {
       else if (r.campaign_name === DOGMARU_CAMPAIGN) dogmaru++;
       else if (r.campaign_name) meta++;
     }
-    return { meta, dogmaru, udak };
+    const allinone = rows.filter(r => r.source === "allinone" || r.channel === "올인원").length;
+  return { meta, dogmaru, udak, allinone };
   }, [rows]);
 
   const stats = useMemo(() => {
