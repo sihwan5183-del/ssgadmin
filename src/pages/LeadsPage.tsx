@@ -1176,11 +1176,12 @@ export default function LeadsPage() {
     };
     return rows.filter((r) => {
       const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
-      const isUdak = r.channel === "유닥";
+      const isUdak = r.channel === "유닥" || r.channel === "유닥(UDak)" || r.channel === "udak";
+      const isManual = r.source === "manual";
       if (sourceTab === "dogmaru" && !isDogmaru) return false;
       if (sourceTab === "udak" && !isUdak) return false;
-      if (sourceTab === "meta" && (isDogmaru || isUdak)) return false;
-      if (sourceTab === "other" && (isDogmaru || isUdak)) return false;
+      if (sourceTab === "other" && !isManual) return false;
+      if (sourceTab === "meta" && (isDogmaru || isUdak || isManual)) return false;
       if (!inPeriod(r)) return false;
       // 도그마루: 단일 분류 함수로 정확히 하나의 탭에만 배치
       if (isDogmaru) {
@@ -1260,7 +1261,8 @@ export default function LeadsPage() {
       return f?.display_name ?? f?.name ?? r.assigned_to;
     };
     const selSet = new Set(bulk.selectedIds);
-    const base = mode === 'all' ? rows : mode === 'selected' ? rows.filter(r => selSet.has(r.id)) : filtered;
+    const allSelected = mode === 'selected' ? rows.filter(r => selSet.has(r.id)) : null;
+    const base = mode === 'all' ? rows : mode === 'selected' ? (allSelected ?? []) : filtered;
     let hdrs: string[];
     let fn: (r: any) => unknown[];
     if (sourceTab === 'dogmaru') {
