@@ -833,6 +833,11 @@ const LEADS_SELECT = `
   bundling,
   jointype,
   discount,
+  is_minor,
+  guardian_name,
+  guardian_birth,
+  guardian_phone,
+  guardian_relation,
   consult_time,
   estimated_fee,
   additional_benefits
@@ -926,6 +931,11 @@ type Lead = {
   estimated_fee_memo: string | null;
   last_action_at: string | null;
   last_action_by: string | null;
+  is_minor: boolean | null;
+  guardian_name: string | null;
+  guardian_birth: string | null;
+  guardian_phone: string | null;
+  guardian_relation: string | null;
 };
 
 type LeadNote = {
@@ -1261,8 +1271,8 @@ export default function LeadsPage() {
     let hdrs: string[];
     let fn: (r: any) => unknown[];
     if (sourceTab === 'allinone') {
-      hdrs = ['접수일시', '고객명', '연락처', '휴대폰통신사', '인터넷통신사', '진행방식', '요금제', '결합인원', '예상월요금', '상담가능시간', '담당자', '상담상태', '메모'];
-      fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', r.current_carrier ?? '', (r as any).internet_carrier ?? '', (r as any).discount ?? '', r.desired_product ?? '', (r as any).bundling ?? '', (r as any).estimated_fee ?? '', (r as any).consult_time ?? '', getA(r), r.status ?? '', r.memo ?? ''];
+      hdrs = ['접수일시', '고객명', '연락처', '생년월일', '휴대폰통신사', '인터넷통신사', '진행방식', '요금제', '결합인원', '예상월요금', '상담가능시간', '담당자', '상담상태', '미성년자', '법정대리인명', '법정대리인연락처', '법정대리인관계', '메모'];
+      fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', (r as any).birth ?? '', r.current_carrier ?? '', (r as any).internet_carrier ?? '', (r as any).discount ?? '', r.desired_product ?? '', (r as any).bundling ?? '', (r as any).estimated_fee ?? '', (r as any).consult_time ?? '', getA(r), r.status ?? '', (r as any).is_minor ? 'Y' : '', (r as any).guardian_name ?? '', (r as any).guardian_phone ?? '', (r as any).guardian_relation ?? '', r.memo ?? ''];
     } else {
       hdrs = ['접수일시', '고객명', '연락처', '현재통신사', '희망기종', '희망상품', '캠페인', '담당자', '상담상태', '채널', '메모'];
       fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', r.current_carrier ?? '', r.desired_device ?? '', r.desired_product ?? '', r.campaign_name ?? '', getA(r), r.status ?? '', r.channel ?? '', r.memo ?? ''];
@@ -2787,6 +2797,20 @@ export default function LeadsPage() {
                     )}
                     {(openLead.birth || openLead.consult_time) && (
                       <InfoRow label="상담 희망 시간" value={openLead.consult_time} right={undefined} />
+                    )}
+                    {(openLead as any).is_minor && (
+                      <div className="mt-3 p-3 rounded-xl border-2 border-red-300 bg-red-50 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">⚠️ 미성년자</span>
+                          <span className="text-[11px] text-red-500">법정대리인 정보 확인 필요</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                          <div><span className="text-muted-foreground">이름</span><div className="font-semibold text-foreground mt-0.5">{(openLead as any).guardian_name ?? "–"}</div></div>
+                          <div><span className="text-muted-foreground">관계</span><div className="font-semibold text-foreground mt-0.5">{(openLead as any).guardian_relation ?? "–"}</div></div>
+                          <div><span className="text-muted-foreground">연락처</span><div className="font-semibold text-foreground mt-0.5">{(openLead as any).guardian_phone ?? "–"}</div></div>
+                          <div><span className="text-muted-foreground">생년월일</span><div className="font-semibold text-foreground mt-0.5">{(openLead as any).guardian_birth ?? "–"}</div></div>
+                        </div>
+                      </div>
                     )}
                     {(openLead.channel || openLead.utm_campaign) && (
                       <InfoRow label="채널" value={openLead.channel} right={{ label: "UTM", value: openLead.utm_campaign }} />
