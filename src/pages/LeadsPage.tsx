@@ -2419,16 +2419,23 @@ export default function LeadsPage() {
               <TableHead className="text-foreground font-bold w-[130px] whitespace-nowrap py-2">접수 일시</TableHead>
               <TableHead className="text-foreground font-bold">고객명</TableHead>
               <TableHead className="text-foreground font-bold">연락처</TableHead>
-              <TableHead className="text-foreground font-bold">
+              {sourceTab !== "allinone" && <TableHead className="text-foreground font-bold">
                 <ColumnFilter label="현재 통신사" values={valCarrier} selected={fCarrier} onChange={setFCarrier} />
-              </TableHead>
-              <TableHead className="text-foreground font-bold w-[160px] text-xs whitespace-nowrap">희망 기종</TableHead>
-              <TableHead className="text-foreground font-bold w-[200px] text-xs whitespace-nowrap">
+              </TableHead>}
+              {sourceTab === "allinone" && <TableHead className="text-foreground font-bold text-xs whitespace-nowrap">휴대폰 통신사</TableHead>}
+              {sourceTab === "allinone" && <TableHead className="text-foreground font-bold text-xs whitespace-nowrap">인터넷 통신사</TableHead>}
+              {sourceTab !== "allinone" && <TableHead className="text-foreground font-bold w-[160px] text-xs whitespace-nowrap">희망 기종</TableHead>}
+              {sourceTab === "allinone" && <TableHead className="text-foreground font-bold text-xs whitespace-nowrap">진행방식</TableHead>}
+              {sourceTab === "allinone" && <TableHead className="text-foreground font-bold text-xs whitespace-nowrap">요금제</TableHead>}
+              {sourceTab === "allinone" && <TableHead className="text-foreground font-bold text-xs whitespace-nowrap">결합인원</TableHead>}
+              {sourceTab === "allinone" && <TableHead className="text-foreground font-bold text-xs whitespace-nowrap">예상월요금</TableHead>}
+              {sourceTab === "allinone" && <TableHead className="text-foreground font-bold text-xs whitespace-nowrap">상담가능시간</TableHead>}
+              {sourceTab !== "allinone" && <TableHead className="text-foreground font-bold w-[200px] text-xs whitespace-nowrap">
                 <ColumnFilter label="희망 상품" values={valProduct} selected={fProduct} onChange={setFProduct} />
-              </TableHead>
-              <TableHead className="text-foreground font-bold w-[120px] text-xs whitespace-nowrap">
+              </TableHead>}
+              {sourceTab !== "allinone" && <TableHead className="text-foreground font-bold w-[120px] text-xs whitespace-nowrap">
                 <ColumnFilter label="캠페인" values={valCampaign} selected={fCampaign} onChange={setFCampaign} />
-              </TableHead>
+              </TableHead>}
               <TableHead className="text-foreground font-bold w-32">
                 <ColumnFilter label="담당자" values={valAssignee} selected={fAssignee} onChange={setFAssignee} />
               </TableHead>
@@ -2437,8 +2444,8 @@ export default function LeadsPage() {
               </TableHead>
               <TableHead className="text-foreground font-bold w-[200px]">메모</TableHead>
               <TableHead className="text-foreground font-bold w-28 text-xs whitespace-nowrap">최종액션</TableHead>
-              {sourceTab !== "udak" && <TableHead className="text-foreground font-bold w-16 text-center">해피콜</TableHead>}
-              {sourceTab !== "udak" && <TableHead className="text-foreground font-bold w-16 text-center">영업</TableHead>}
+              {sourceTab !== "udak" && sourceTab !== "allinone" && <TableHead className="text-foreground font-bold w-16 text-center">해피콜</TableHead>}
+              {sourceTab !== "udak" && sourceTab !== "allinone" && <TableHead className="text-foreground font-bold w-16 text-center">영업</TableHead>}
               {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-16 text-center text-xs">2ND</TableHead>}
               {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-16 text-center text-xs">인터넷</TableHead>}
               {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-16 text-center text-xs">OTT</TableHead>}
