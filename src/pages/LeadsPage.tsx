@@ -142,7 +142,7 @@ function MobileLeadsView({
 }: {
   rows: Lead[];
   loading: boolean;
-  sourceTab: "meta" | "dogmaru" | "udak" | "allinone" | "other";
+  sourceTab: "meta" | "dogmaru" | "udak" | "other";
   setSourceTab: (t: "meta" | "dogmaru" | "udak" | "other") => void;
   search: string;
   setSearch: (s: string) => void;
@@ -189,12 +189,10 @@ function MobileLeadsView({
     return rows.filter(r => {
       const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
       const isUdak = r.channel === "유닥";
-      const isAllinone = r.channel === "올인원";
       if (sourceTab === "dogmaru" && !isDogmaru) return false;
-      if (sourceTab === "meta" && (isDogmaru || isUdak || isAllinone)) return false;
+      if (sourceTab === "meta" && (isDogmaru || isUdak)) return false;
       if (sourceTab === "udak" && !isUdak) return false;
-      if (sourceTab === "allinone" && !isAllinone) return false;
-      if (sourceTab === "other" && (isDogmaru || isUdak || isAllinone)) return false;
+      if (sourceTab === "other" && (isDogmaru || isUdak)) return false;
       // 도그마루: 단일 분류 함수로 정확히 하나의 탭에만 배치
       if (isDogmaru) {
         const tab = getDogmaruTabMobile(r);
@@ -236,12 +234,10 @@ function MobileLeadsView({
   // 현재 탭 내 케어 카운트
   const tabRows = useMemo(() => rows.filter(r => {
     const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
-    const isAllinoneRow = r.channel === "올인원";
     if (sourceTab === "dogmaru") return isDogmaru;
     if (sourceTab === "udak") return isUdakRow(r);
-    if (sourceTab === "allinone") return isAllinoneRow;
-    if (sourceTab === "meta") return !isDogmaru && !isUdakRow(r) && !isAllinoneRow;
-    return !isDogmaru && !isUdakRow(r) && !isAllinoneRow;
+    if (sourceTab === "meta") return !isDogmaru && !isUdakRow(r);
+    return !isDogmaru && !isUdakRow(r);
   }), [rows, sourceTab]);
   // 도그마루 탭 카운트: effectiveStatus 기준 (DB status 우선, 없으면 memo 자동분류, 둘 다 없으면 신규 접수)
   const completeCount = tabRows.filter(r => getDogmaruTabMobile(r) === "완료").length;
@@ -314,7 +310,6 @@ function MobileLeadsView({
           { key: "meta", label: "메타광고", count: metaCount },
           { key: "dogmaru", label: "도그마루", count: dogmaruCount },
           { key: "udak", label: "유닥", count: udakCount },
-        { key: "allinone", label: "올인원", count: rows.filter(r => r.channel === "올인원").length },
           { key: "other", label: "기타인입", count: 0 },
         ] as const).map(t => (
           <button key={t.key} onClick={() => setSourceTab(t.key)}
@@ -972,7 +967,7 @@ export default function LeadsPage() {
   const [rows, setRows] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru" | "udak" | "allinone" | "other">("meta");
+  const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru" | "udak" | "other">("meta");
   const [pcCareTab, setPcCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "delivery" | "subscribe" | "pending" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc">("all");
   const [openLead, setOpenLead] = useState<Lead | null>(null);
   const [editName, setEditName] = useState("");
@@ -1182,12 +1177,10 @@ export default function LeadsPage() {
     return rows.filter((r) => {
       const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
       const isUdak = r.channel === "유닥";
-      const isAllinone = r.channel === "올인원";
       if (sourceTab === "dogmaru" && !isDogmaru) return false;
       if (sourceTab === "udak" && !isUdak) return false;
-      if (sourceTab === "allinone" && !isAllinone) return false;
-      if (sourceTab === "meta" && (isDogmaru || isUdak || isAllinone)) return false;
-      if (sourceTab === "other" && (isDogmaru || isUdak || isAllinone)) return false;
+      if (sourceTab === "meta" && (isDogmaru || isUdak)) return false;
+      if (sourceTab === "other" && (isDogmaru || isUdak)) return false;
       if (!inPeriod(r)) return false;
       // 도그마루: 단일 분류 함수로 정확히 하나의 탭에만 배치
       if (isDogmaru) {
@@ -1259,59 +1252,38 @@ export default function LeadsPage() {
   // ── CSV 다운로드 ──
   const downloadCSV = (mode: 'all' | 'filtered' | 'selected') => {
     const DQ = String.fromCharCode(34);
-    const esc = (v: unknown) => { const s = String(v ?? '').replace(new RegExp(DQ,'g'), DQ+DQ); return DQ+s+DQ; };
+    const esc = (v: unknown) => { const s = String(v ?? '').replace(new RegExp(DQ, 'g'), DQ + DQ); return DQ + s + DQ; };
     const r2c = (cols: unknown[]) => cols.map(esc).join(',');
-    const getA = (r: any) => { if (!r.assigned_to) return ''; const f = staff.find((s:any)=>s.user_id===r.assigned_to); return f?.display_name??f?.name??r.assigned_to; };
+    const getA = (r: any) => {
+      if (!r.assigned_to) return '';
+      const f = staff.find((s: any) => s.user_id === r.assigned_to);
+      return f?.display_name ?? f?.name ?? r.assigned_to;
+    };
     const selSet = new Set(bulk.selectedIds);
-    const base = mode==='all' ? rows : mode==='selected' ? rows.filter(r=>selSet.has(r.id)) : filtered;
+    const base = mode === 'all' ? rows : mode === 'selected' ? rows.filter(r => selSet.has(r.id)) : filtered;
     let hdrs: string[];
-    let fn: (r:any)=>unknown[];
-    if (sourceTab==='dogmaru') {
-      hdrs=['접수일자','고객성명','연락처','가입번호','접수지점','개통상태','해지및철회','택배개통','비고'];
-      fn=r=>[r.registration_date??r.created_at?.slice(0,10)??'',r.customer_name??r.name??'',r.customer_phone??r.phone??'',r.activation_number??'',r.branch_name??'',r.activation_status??'',r.cancellation_status??'',r.pkg_number??'',r.memo??''];
-    } else if (sourceTab==='other') {
-      hdrs=['접수일시','고객명','연락처','현재통신사','진행방식','요금제','담당자','상담상태','메모'];
-      fn=r=>[r.registration_date??r.created_at?.slice(0,10)??'',r.customer_name??r.name??'',r.customer_phone??r.phone??'',r.current_carrier??'',r.discount??'',r.desired_product??'',getA(r),r.status??'',r.memo??''];
+    let fn: (r: any) => unknown[];
+    if (sourceTab === 'dogmaru') {
+      hdrs = ['접수일자', '고객성명', '연락처', '가입번호', '접수지점', '개통상태', '해지및철회', '택배개통', '비고'];
+      fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', r.activation_number ?? '', r.branch_name ?? '', r.activation_status ?? '', r.cancellation_status ?? '', r.pkg_number ?? '', r.memo ?? ''];
+    } else if (sourceTab === 'other') {
+      hdrs = ['접수일시', '고객명', '연락처', '현재통신사', '진행방식', '요금제', '담당자', '상담상태', '메모'];
+      fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', r.current_carrier ?? '', r.discount ?? '', r.desired_product ?? '', getA(r), r.status ?? '', r.memo ?? ''];
     } else {
-      hdrs=['접수일시','고객명','연락처','현재통신사','희망기종','희망상품','캠페인','담당자','상담상태','채널','메모'];
-      fn=r=>[r.registration_date??r.created_at?.slice(0,10)??'',r.customer_name??r.name??'',r.customer_phone??r.phone??'',r.current_carrier??'',r.desired_device??'',r.desired_product??'',r.campaign_name??'',getA(r),r.status??'',r.channel??'',r.memo??''];
+      hdrs = ['접수일시', '고객명', '연락처', '현재통신사', '희망기종', '희망상품', '캠페인', '담당자', '상담상태', '채널', '메모'];
+      fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', r.current_carrier ?? '', r.desired_device ?? '', r.desired_product ?? '', r.campaign_name ?? '', getA(r), r.status ?? '', r.channel ?? '', r.memo ?? ''];
     }
-    const csvRows = base.map(r=>r2c(fn(r)));
-    const bom='\uFEFF';
-    const csv=bom+[r2c(hdrs),...csvRows].join('\n');
-    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;
-    const tl=sourceTab==='meta'?'메타':sourceTab==='dogmaru'?'도그마루':sourceTab==='udak'?'유닥':sourceTab==='allinone'?'올인원':'기타인입';
-    const ml=mode==='all'?'전체':mode==='selected'?'선택':'필터';
-    const dt=new Date().toISOString().slice(0,10);
-    a.download='리드_'+tl+'_'+ml+'_'+dt+'.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-    const csvRows = data.map(r => [
-      r.registration_date??r.created_at?.slice(0,10)??'',
-      r.customer_name??r.name??'',
-      r.customer_phone??r.phone??'',
-      r.current_carrier??'',
-      r.desired_device??'',
-      r.desired_product??'',
-      r.campaign_name??'',
-      getAssigneeName(r),
-      r.status??'',
-      r.channel??'',
-      r.memo??'',
-    ].map(esc).join(','));
+    const csvRows = base.map(r => r2c(fn(r)));
     const bom = '\uFEFF';
-    const csv = bom + [headers.map(h=>DQ+h+DQ).join(','),...csvRows].join('\n');
-    const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    const csv = bom + [r2c(hdrs), ...csvRows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    const label = mode === 'all' ? '전체' : mode === 'selected' ? '선택' : '필터';
-    const dt = new Date().toISOString().slice(0,10);
-    a.download = '리드_'+label+'_'+dt+'.csv';
+    const tl = sourceTab === 'meta' ? '메타' : sourceTab === 'dogmaru' ? '도그마루' : sourceTab === 'udak' ? '유닥' : sourceTab === 'allinone' ? '올인원' : '기타인입';
+    const ml = mode === 'all' ? '전체' : mode === 'selected' ? '선택' : '필터';
+    const dt = new Date().toISOString().slice(0, 10);
+    a.download = '리드_' + tl + '_' + ml + '_' + dt + '.csv';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -1358,14 +1330,12 @@ export default function LeadsPage() {
     let dogmaru = 0;
     let meta = 0;
     let udak = 0;
-    let allinone = 0;
     for (const r of rows) {
-      if (r.channel === "올인원") allinone++;
-      else if (r.channel === "유닥") udak++;
+      if (r.channel === "유닥") udak++;
       else if (r.campaign_name === DOGMARU_CAMPAIGN) dogmaru++;
       else if (r.campaign_name) meta++;
     }
-    return { meta, dogmaru, udak, allinone };
+    return { meta, dogmaru, udak };
   }, [rows]);
 
   const stats = useMemo(() => {
@@ -1423,7 +1393,6 @@ export default function LeadsPage() {
 
     for (const r of rows) {
       const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
-      const isAllinoneR2 = r.channel === "올인원";
       const isUdakR = r.channel === "유닥" || r.channel === "메타광고";
 
       let dateIso = "";
@@ -1440,7 +1409,7 @@ export default function LeadsPage() {
       }
       if (!inRange(dateIso)) continue;
 
-      const bucket = isDogmaru ? dogmaru : isAllinoneR2 ? meta : isUdakR ? udak : meta;
+      const bucket = isDogmaru ? dogmaru : isUdakR ? udak : meta;
       bucket.total += 1;
       if (dateIso === today) bucket.today += 1;
       if (isDogmaru) {
@@ -1836,7 +1805,7 @@ export default function LeadsPage() {
               <Download className="size-4" /> CSV
             </Button>
             {csvOpen && (
-              <div className="absolute right-0 top-full mt-1 z-50 flex flex-col bg-white border rounded shadow-md min-w-[150px]">
+              <div className="absolute right-0 top-full mt-1 z-50 flex flex-col bg-white border rounded shadow-md min-w-[160px]">
                 {bulk.selectedCount > 0 && (
                   <button className="px-4 py-2 text-sm text-left hover:bg-slate-50 text-pink-600 font-medium" onClick={() => { downloadCSV('selected'); setCsvOpen(false); }}>선택 항목만 ({bulk.selectedCount}건)</button>
                 )}
@@ -2080,10 +2049,10 @@ export default function LeadsPage() {
       <Tabs
         value={sourceTab}
         onValueChange={(v) =>
-          startTransition(() => setSourceTab(v as "meta" | "dogmaru" | "udak" | "allinone" | "other"))
+          startTransition(() => setSourceTab(v as "meta" | "dogmaru" | "udak" | "other"))
         }
       >
-        <TabsList className="grid grid-cols-5 w-full max-w-4xl h-12 bg-muted/60 mb-3">
+        <TabsList className="grid grid-cols-4 w-full max-w-3xl h-12 bg-muted/60 mb-3">
           <TabsTrigger value="meta" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
             메타광고
             <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.meta}</Badge>
@@ -2096,10 +2065,6 @@ export default function LeadsPage() {
             유닥
             <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.udak ?? 0}</Badge>
           </TabsTrigger>
-          <TabsTrigger value="allinone" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
-            올인원
-            <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.allinone ?? 0}</Badge>
-          </TabsTrigger>
           <TabsTrigger value="other" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
             기타인입
           </TabsTrigger>
@@ -2111,11 +2076,9 @@ export default function LeadsPage() {
         const tabRows = rows.filter(r => {
           const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
           const isUdakR = r.channel === "유닥";
-          const isAllinoneR = r.channel === "올인원";
           if (sourceTab === "dogmaru") return isDogmaru;
           if (sourceTab === "udak") return isUdakR;
-          if (sourceTab === "allinone") return isAllinoneR;
-          return !isDogmaru && !isUdakR && !isAllinoneR;
+          return !isDogmaru && !isUdakR;
         });
         // 도그마루 탭 카운트: effectiveStatus 기준 (DB status 우선, 없으면 memo 자동분류, 둘 다 없으면 신규 접수)
         const completeC = tabRows.filter(r => getDogmaruTabPC(r) === "완료").length;
@@ -2437,104 +2400,6 @@ export default function LeadsPage() {
               })}
             </TableBody>
           </Table>
-        ) : sourceTab === "allinone" ? (
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/60 border-b-2 border-border hover:bg-muted/60">
-              <TableHead className="w-10">
-                <Checkbox
-                  checked={bulk.allOnPageSelected}
-                  onCheckedChange={(v) => bulk.togglePage(!!v)}
-                  aria-label="전체 선택"
-                />
-              </TableHead>
-              <TableHead className="text-foreground font-bold w-[120px] whitespace-nowrap py-2">접수 일시</TableHead>
-              <TableHead className="text-foreground font-bold">고객명</TableHead>
-              <TableHead className="text-foreground font-bold">연락처</TableHead>
-              <TableHead className="text-foreground font-bold">휴대폰 통신사</TableHead>
-              <TableHead className="text-foreground font-bold">인터넷 통신사</TableHead>
-              <TableHead className="text-foreground font-bold">진행 방식</TableHead>
-              <TableHead className="text-foreground font-bold">요금제</TableHead>
-              <TableHead className="text-foreground font-bold">결합 인원</TableHead>
-              <TableHead className="text-foreground font-bold">예상 월요금</TableHead>
-              <TableHead className="text-foreground font-bold">상담 가능 시간</TableHead>
-              <TableHead className="text-foreground font-bold w-32">
-                <ColumnFilter label="담당자" values={valAssignee} selected={fAssignee} onChange={setFAssignee} />
-              </TableHead>
-              <TableHead className="text-foreground font-bold w-28">
-                <ColumnFilter label="상담 상태" values={valStatus} selected={fStatus} onChange={setFStatus} />
-              </TableHead>
-              <TableHead className="text-foreground font-bold w-[180px]">메모</TableHead>
-              <TableHead className="text-foreground font-bold w-20 text-center">관리</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading && (
-              <TableRow>
-                <TableCell colSpan={15} className="text-center py-10 text-foreground/60">불러오는 중…</TableCell>
-              </TableRow>
-            )}
-            {!loading && pagedFiltered.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={15} className="text-center py-10 text-foreground/60">표시할 리드가 없습니다.</TableCell>
-              </TableRow>
-            )}
-            {pagedFiltered.map((r) => (
-              <TableRow
-                key={r.id}
-                data-lead-row={r.id}
-                className={"cursor-pointer border-b border-border hover:bg-muted/40 transition-colors " + (highlightId === r.id ? "bg-amber-50 ring-2 ring-amber-400 animate-pulse" : "")}
-                onClick={() => setOpenLead(r)}
-                data-state={bulk.isSelected(r.id) ? "selected" : undefined}
-              >
-                <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
-                  <Checkbox checked={bulk.isSelected(r.id)} onCheckedChange={() => bulk.toggle(r.id)} aria-label="행 선택" />
-                </TableCell>
-                <TableCell className="tabular-nums text-xs text-foreground font-medium whitespace-nowrap py-1.5">
-                  {fmtCompactDate(r.created_at)}
-                </TableCell>
-                <TableCell className="font-bold text-foreground py-1.5 whitespace-nowrap">{r.name ?? "-"}</TableCell>
-                <TableCell className="tabular-nums text-foreground font-medium py-1.5 whitespace-nowrap">{r.phone ?? "-"}</TableCell>
-                <TableCell className="text-foreground text-xs py-1.5">{(r as any).carrier ?? r.current_carrier ?? "-"}</TableCell>
-                <TableCell className="text-foreground text-xs py-1.5">{(r as any).internet_carrier ?? "-"}</TableCell>
-                <TableCell className="text-foreground text-xs py-1.5">
-                  {(r as any).jointype === "usim" ? "유심만 변경" : (r as any).jointype === "phone" ? "핸드폰도 변경" : (r as any).jointype ?? "-"}
-                </TableCell>
-                <TableCell className="text-foreground text-xs whitespace-nowrap py-1.5">
-                  {r.plan ? `${Number(r.plan).toLocaleString()}원` : "-"}
-                </TableCell>
-                <TableCell className="text-foreground text-xs py-1.5">{(r as any).bundling ?? "-"}</TableCell>
-                <TableCell className="text-foreground text-xs font-bold py-1.5 whitespace-nowrap">
-                  {r.estimated_fee ? `${r.estimated_fee.toLocaleString()}원` : "-"}
-                </TableCell>
-                <TableCell className="text-foreground text-xs py-1.5">{(r as any).consult_time ?? "-"}</TableCell>
-                <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
-                  <Select value={r.assigned_to ?? "none"} onValueChange={(v) => updateAssignee(r.id, v === "none" ? null : v)}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="담당자 지정" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">담당자 지정</SelectItem>
-                      {staff.map((s) => (<SelectItem key={s.user_id} value={s.user_id}>{s.display_name}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
-                  <Select value={r.status} onValueChange={(v) => updateStatus(r.id, v)}>
-                    <SelectTrigger className={`h-8 text-xs ${STATUS_COLOR[r.status] ?? ""}`}><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {STATUS_OPTIONS_META.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell className="text-foreground text-xs py-1.5 max-w-[180px]">
-                  <div className="line-clamp-2">{r.memo ?? "-"}</div>
-                </TableCell>
-                <TableCell className="text-center py-1.5" onClick={(e) => e.stopPropagation()}>
-                  <Button size="sm" variant="ghost" onClick={() => setOpenLead(r)}>상세</Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
         ) : (
         <Table>
           <TableHeader>
@@ -3109,7 +2974,7 @@ export default function LeadsPage() {
               onClick={() => downloadCSV('selected')}
               className="h-10 lg:h-8"
             >
-              <Download className="size-4 lg:size-3.5 mr-1" /> CSV 다운로드
+              <Download className="size-4 lg:size-3.5 mr-1" /> CSV
             </Button>
             <Button
               size="sm"
@@ -3168,5 +3033,3 @@ function InfoRow({
     </div>
   );
 }
-
-
