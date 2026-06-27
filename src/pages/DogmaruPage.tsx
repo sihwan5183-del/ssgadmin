@@ -1096,8 +1096,13 @@ export default function LeadsPage() {
     };
     return rows.filter((r) => {
       const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
+      const isUdakR = r.channel === "유닥" || r.channel === "유닥(UDak)" || r.channel === "udak";
+      const isAllinoneR = r.source === "allinone" || r.channel === "올인원";
       if (sourceTab === "dogmaru" && !isDogmaru) return false;
-      if (sourceTab === "meta" && isDogmaru) return false;
+      if (sourceTab === "udak" && !isUdakR) return false;
+      if (sourceTab === "allinone" && !isAllinoneR) return false;
+      if (sourceTab === "meta" && (isDogmaru || isUdakR || isAllinoneR)) return false;
+      if (sourceTab === "other" && (isDogmaru || isUdakR || isAllinoneR)) return false;
       if (!inPeriod(r)) return false;
       // 도그마루: 단일 분류 함수로 정확히 하나의 탭에만 배치
       if (isDogmaru) {
