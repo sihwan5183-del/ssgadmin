@@ -967,7 +967,7 @@ export default function LeadsPage() {
   const [rows, setRows] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru" | "udak" | "other">("meta");
+  const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru" | "udak" | "allinone" | "other">("meta");
   const [pcCareTab, setPcCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "delivery" | "subscribe" | "pending" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc">("all");
   const [openLead, setOpenLead] = useState<Lead | null>(null);
   const [editName, setEditName] = useState("");
@@ -1177,10 +1177,12 @@ export default function LeadsPage() {
     return rows.filter((r) => {
       const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
       const isUdak = r.channel === "유닥" || r.channel === "유닥(UDak)" || r.channel === "udak";
+      const isAllinone = r.source === "allinone" || r.channel === "올인원";
       if (sourceTab === "dogmaru" && !isDogmaru) return false;
       if (sourceTab === "udak" && !isUdak) return false;
-      if (sourceTab === "meta" && (isDogmaru || isUdak)) return false;
-      if (sourceTab === "other" && (isDogmaru || isUdak)) return false;
+      if (sourceTab === "allinone" && !isAllinone) return false;
+      if (sourceTab === "meta" && (isDogmaru || isUdak || isAllinone)) return false;
+      if (sourceTab === "other" && (isDogmaru || isUdak || isAllinone)) return false;
       if (!inPeriod(r)) return false;
       // 도그마루: 단일 분류 함수로 정확히 하나의 탭에만 배치
       if (isDogmaru) {
@@ -1264,16 +1266,8 @@ export default function LeadsPage() {
     const base = mode === 'all' ? rows : mode === 'selected' ? (allSelected ?? []) : filtered;
     let hdrs: string[];
     let fn: (r: any) => unknown[];
-    if (sourceTab === 'dogmaru') {
-      hdrs = ['접수일자', '고객성명', '연락처', '가입번호', '접수지점', '개통상태', '해지및철회', '택배개통', '비고'];
-      fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', r.activation_number ?? '', r.branch_name ?? '', r.activation_status ?? '', r.cancellation_status ?? '', r.pkg_number ?? '', r.memo ?? ''];
-    } else if (sourceTab === 'other') {
-      hdrs = ['접수일시', '고객명', '연락처', '현재통신사', '진행방식', '요금제', '담당자', '상담상태', '메모'];
-      fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', r.current_carrier ?? '', r.discount ?? '', r.desired_product ?? '', getA(r), r.status ?? '', r.memo ?? ''];
-    } else {
-      hdrs = ['접수일시', '고객명', '연락처', '현재통신사', '희망기종', '희망상품', '캠페인', '담당자', '상담상태', '채널', '메모'];
-      fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', r.current_carrier ?? '', r.desired_device ?? '', r.desired_product ?? '', r.campaign_name ?? '', getA(r), r.status ?? '', r.channel ?? '', r.memo ?? ''];
-    }
+    hdrs = ['접수일시', '고객명', '연락처', '현재통신사', '희망기종', '희망상품', '캠페인', '담당자', '상담상태', '채널', '메모'];
+    fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', r.current_carrier ?? '', r.desired_device ?? '', r.desired_product ?? '', r.campaign_name ?? '', getA(r), r.status ?? '', r.channel ?? '', r.memo ?? ''];
     const csvRows = base.map(r => r2c(fn(r)));
     const bom = '\uFEFF';
     const csv = bom + [r2c(hdrs), ...csvRows].join('\n');
