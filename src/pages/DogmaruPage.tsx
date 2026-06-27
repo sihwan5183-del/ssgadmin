@@ -2210,7 +2210,7 @@ export default function LeadsPage() {
                 />
               </TableHead>
               <TableHead className="text-foreground font-bold w-[130px] whitespace-nowrap py-2">접수 일시</TableHead>
-              <TableHead className="text-foreground font-bold">고객명</TableHead>
+              <TableHead className="text-foreground font-bold w-[80px] whitespace-nowrap">고객명</TableHead>
               <TableHead className="text-foreground font-bold">연락처</TableHead>
               <TableHead className="text-foreground font-bold">
                 <ColumnFilter label="현재 통신사" values={valCarrier} selected={fCarrier} onChange={setFCarrier} />
@@ -2721,19 +2721,21 @@ function InfoRow({
   right,
 }: {
   label: string;
-  value: string | null;
-  right: { label: string; value: string | null };
+  value: string | null | undefined;
+  right?: { label: string; value: string | null | undefined } | null;
 }) {
   return (
-    <div className="grid grid-cols-2 divide-x divide-border border-b border-border last:border-b-0">
+    <div className={`grid divide-x divide-border border-b border-border last:border-b-0 ${right ? "grid-cols-2" : "grid-cols-1"}`}>
       <div className="p-3">
         <div className="text-[11px] font-semibold text-foreground/60 mb-0.5">{label}</div>
         <div className="text-sm font-semibold text-foreground">{value || "-"}</div>
       </div>
-      <div className="p-3">
-        <div className="text-[11px] font-semibold text-foreground/60 mb-0.5">{right.label}</div>
-        <div className="text-sm font-semibold text-foreground">{right.value || "-"}</div>
-      </div>
+      {right && (
+        <div className="p-3">
+          <div className="text-[11px] font-semibold text-foreground/60 mb-0.5">{right.label}</div>
+          <div className="text-sm font-semibold text-foreground">{right.value || "-"}</div>
+        </div>
+      )}
     </div>
   );
 }
