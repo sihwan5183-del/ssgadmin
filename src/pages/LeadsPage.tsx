@@ -2508,12 +2508,12 @@ export default function LeadsPage() {
                 {sourceTab === "allinone" && <TableCell className="text-foreground text-xs py-1.5 whitespace-nowrap">{(r as any).estimated_fee ? Number((r as any).estimated_fee).toLocaleString()+"원" : "-"}</TableCell>}
                 {sourceTab === "allinone" && <TableCell className="text-foreground text-xs py-1.5 whitespace-nowrap">{(r as any).consult_time ?? "-"}</TableCell>}
                 {sourceTab !== "allinone" && <TableCell className="text-foreground text-xs whitespace-nowrap py-1.5" title={r.desired_product ?? ""}>{r.desired_product ?? "-"}</TableCell>}
-                <TableCell className="text-xs text-foreground whitespace-nowrap py-1.5" title={r.campaign_name ?? ""}>
+                {sourceTab !== "allinone" && <TableCell className="text-xs text-foreground whitespace-nowrap py-1.5" title={r.campaign_name ?? ""}>
                   {r.campaign_name ?? "-"}
                   {sourceTab === "udak" && r.utm_campaign && (
                     <span className="ml-1 inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-600 border border-orange-200">{r.utm_campaign}</span>
                   )}
-                </TableCell>
+                </TableCell>}
                 <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
                   <Select
                     value={r.assigned_to ?? "none"}
