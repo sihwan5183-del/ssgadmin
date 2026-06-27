@@ -2731,19 +2731,37 @@ export default function LeadsPage() {
                     </div>
                   </div>
                 </div>
-                <InfoRow label="현재 통신사" value={openLead.current_carrier} right={{ label: "희망 기종", value: openLead.desired_device }} />
-                <InfoRow label="희망 상품" value={openLead.desired_product} right={{ label: "인입 경로", value: openLead.campaign_name ?? openLead.source }} />
-                {(openLead.storage || openLead.color) && (
-                  <InfoRow label="용량" value={openLead.storage} right={{ label: "색상", value: openLead.color }} />
-                )}
-                {openLead.discount && (
-                  <InfoRow label="할인방식" value={openLead.discount} right={{ label: "가입유형", value: openLead.jointype }} />
-                )}
-                {(openLead.birth || openLead.consult_time) && (
-                  <InfoRow label="상담 희망 시간" value={openLead.consult_time} right={undefined} />
-                )}
-                {(openLead.channel || openLead.utm_campaign) && (
-                  <InfoRow label="채널" value={openLead.channel} right={{ label: "UTM", value: openLead.utm_campaign }} />
+                {openLead.channel === "올인원" ? (
+                  <>
+                    <InfoRow label="휴대폰 통신사" value={openLead.current_carrier} right={{ label: "인터넷 통신사", value: (openLead as any).internet_carrier }} />
+                    <InfoRow label="진행방식" value={(openLead as any).jointype === "usim" ? "유심만 변경" : (openLead as any).jointype === "phone" ? "핸드폰도 변경" : (openLead as any).jointype} right={{ label: "할인방식", value: (openLead as any).discount === "pub" ? "공시지원금" : (openLead as any).discount === "sel" ? "선택약정" : (openLead as any).discount }} />
+                    <InfoRow label="원하는 기기" value={openLead.desired_device} right={{ label: "요금제", value: openLead.desired_product }} />
+                    {(openLead.storage || openLead.color) && (
+                      <InfoRow label="용량" value={openLead.storage} right={{ label: "색상", value: openLead.color }} />
+                    )}
+                    {(openLead as any).additional_benefits && (
+                      <InfoRow label="추가 혜택" value={(openLead as any).additional_benefits} right={undefined} />
+                    )}
+                    <InfoRow label="결합 인원" value={(openLead as any).bundling} right={{ label: "예상 월요금", value: (openLead as any).estimated_fee ? Number((openLead as any).estimated_fee).toLocaleString() + "원" : null }} />
+                    <InfoRow label="상담 희망 시간" value={(openLead as any).consult_time} right={undefined} />
+                  </>
+                ) : (
+                  <>
+                    <InfoRow label="현재 통신사" value={openLead.current_carrier} right={{ label: "희망 기종", value: openLead.desired_device }} />
+                    <InfoRow label="희망 상품" value={openLead.desired_product} right={{ label: "인입 경로", value: openLead.campaign_name ?? openLead.source }} />
+                    {(openLead.storage || openLead.color) && (
+                      <InfoRow label="용량" value={openLead.storage} right={{ label: "색상", value: openLead.color }} />
+                    )}
+                    {openLead.discount && (
+                      <InfoRow label="할인방식" value={openLead.discount} right={{ label: "가입유형", value: openLead.jointype }} />
+                    )}
+                    {(openLead.birth || openLead.consult_time) && (
+                      <InfoRow label="상담 희망 시간" value={openLead.consult_time} right={undefined} />
+                    )}
+                    {(openLead.channel || openLead.utm_campaign) && (
+                      <InfoRow label="채널" value={openLead.channel} right={{ label: "UTM", value: openLead.utm_campaign }} />
+                    )}
+                  </>
                 )}
 
                 <div className="grid grid-cols-2 divide-x divide-border">
@@ -2862,7 +2880,7 @@ export default function LeadsPage() {
                 </div>
 
                 <div className="rounded-lg border border-border p-3 bg-muted/30">
-                  {(openLead.channel !== "유닥" && openLead.channel !== "메타광고") && (
+                  {(openLead.channel !== "유닥" && openLead.channel !== "메타광고" && openLead.channel !== "올인원") && (
                   <div className="flex gap-2 mb-2">
                     <button
                       onClick={() => {
