@@ -2418,8 +2418,23 @@ export default function LeadsPage() {
               {/* Info grid */}
               <div className="mt-5 rounded-lg border border-border overflow-hidden">
                 <InfoRow label="고객명" value={openLead.name} right={{ label: "연락처", value: openLead.phone }} />
-                <InfoRow label="현재 통신사" value={openLead.current_carrier} right={{ label: "희망 기종", value: openLead.desired_device }} />
-                <InfoRow label="희망 상품" value={openLead.desired_product} right={{ label: "인입 경로", value: openLead.campaign_name ?? openLead.source }} />
+                {openLead.channel === "올인원" ? (
+                  <>
+                    <InfoRow label="휴대폰 통신사" value={openLead.current_carrier} right={{ label: "인터넷 통신사", value: (openLead as any).internet_carrier }} />
+                    <InfoRow label="진행방식" value={(openLead as any).jointype === "usim" ? "유심만 변경" : (openLead as any).jointype === "phone" ? "핸드폰도 변경" : (openLead as any).jointype} right={{ label: "할인방식", value: (openLead as any).discount === "pub" ? "공시지원금" : (openLead as any).discount === "sel" ? "선택약정" : (openLead as any).discount }} />
+                    <InfoRow label="원하는 기기" value={openLead.desired_device} right={{ label: "요금제", value: openLead.desired_product }} />
+                    {(openLead as any).additional_benefits && (
+                      <InfoRow label="추가 혜택" value={(openLead as any).additional_benefits} right={undefined} />
+                    )}
+                    <InfoRow label="결합 인원" value={(openLead as any).bundling} right={{ label: "예상 월요금", value: (openLead as any).estimated_fee ? Number((openLead as any).estimated_fee).toLocaleString() + "원" : null }} />
+                    <InfoRow label="상담 희망 시간" value={(openLead as any).consult_time} right={undefined} />
+                  </>
+                ) : (
+                  <>
+                    <InfoRow label="현재 통신사" value={openLead.current_carrier} right={{ label: "희망 기종", value: openLead.desired_device }} />
+                    <InfoRow label="희망 상품" value={openLead.desired_product} right={{ label: "인입 경로", value: openLead.campaign_name ?? openLead.source }} />
+                  </>
+                )}
                 <div className="grid grid-cols-2 divide-x divide-border">
                   <div className="p-3">
                     <div className="text-[11px] font-semibold text-foreground/60 mb-1">담당자</div>
