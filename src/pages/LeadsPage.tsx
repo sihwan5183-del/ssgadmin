@@ -2676,7 +2676,43 @@ export default function LeadsPage() {
               {/* Info grid */}
               <div className="mt-5 rounded-lg border border-border overflow-hidden">
 
-                {/* 유닥 스냅샷 카드 */}
+                {/* 올인원 스냅샷 카드 */}
+        {openLead.channel === "올인원" && (
+          <div className="mx-3 my-3 rounded-xl border border-blue-200 bg-blue-50 p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-base">🏠</span>
+              <span className="font-bold text-sm">U+ 올인원</span>
+              <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-600 border border-blue-200">올인원</span>
+            </div>
+            <div className="flex flex-wrap gap-1 mb-2">
+              {openLead.current_carrier && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-blue-200 font-medium">📱 {openLead.current_carrier}</span>}
+              {(openLead as any).internet_carrier && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-blue-200 font-medium">🌐 {(openLead as any).internet_carrier}</span>}
+              {(openLead as any).jointype && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-blue-200 font-medium">{(openLead as any).jointype === "usim" ? "유심만 변경" : (openLead as any).jointype === "phone" ? "핸드폰도 변경" : (openLead as any).jointype}</span>}
+              {(openLead as any).discount && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-blue-200 font-medium">{(openLead as any).discount === "pub" ? "공시지원금" : (openLead as any).discount === "sel" ? "선택약정" : (openLead as any).discount}</span>}
+              {openLead.desired_product && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-blue-200 font-medium">{openLead.desired_product}</span>}
+              {(openLead as any).bundling && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-blue-200 font-medium">👨‍👩‍👧 {(openLead as any).bundling}</span>}
+            </div>
+            {openLead.desired_device && (
+              <div className="text-[11px] text-blue-700 font-medium mb-1">📱 {openLead.desired_device}</div>
+            )}
+            {(openLead as any).additional_benefits && (
+              <div className="flex flex-wrap gap-1 mb-2">
+                {String((openLead as any).additional_benefits).split("/").filter(Boolean).map((b: string, i: number) => (
+                  <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200 font-medium">🎁 {b.trim()}</span>
+                ))}
+              </div>
+            )}
+            {(openLead as any).estimated_fee && (
+              <div className="mt-2 pt-2 border-t border-blue-200">
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] text-blue-700 font-semibold">💰 예상 월요금</span>
+                  <span className="text-sm font-black text-blue-600">{Number((openLead as any).estimated_fee).toLocaleString()}원/월</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        {/* 유닥 스냅샷 카드 */}
                 {(openLead.channel === "유닥" || openLead.channel === "메타광고") && openLead.desired_device && (
                   <div className="mx-3 my-3 rounded-xl border border-orange-200 bg-orange-50 p-3">
                     <div className="flex items-center gap-2 mb-2">
