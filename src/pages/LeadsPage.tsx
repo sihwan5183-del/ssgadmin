@@ -2490,9 +2490,16 @@ export default function LeadsPage() {
                 </TableCell>
                 <TableCell className="font-bold text-foreground py-1.5 whitespace-nowrap">{r.name ?? "-"}</TableCell>
                 <TableCell className="tabular-nums text-foreground font-medium py-1.5 whitespace-nowrap">{r.phone ?? "-"}</TableCell>
-                <TableCell className="text-foreground py-1.5">{r.current_carrier ?? "-"}</TableCell>
-                <TableCell className="text-foreground text-xs whitespace-nowrap py-1.5" title={r.desired_device ?? ""}>{r.desired_device ?? "-"}</TableCell>
-                <TableCell className="text-foreground text-xs whitespace-nowrap py-1.5" title={r.desired_product ?? ""}>{r.desired_product ?? "-"}</TableCell>
+                {sourceTab !== "allinone" && <TableCell className="text-foreground py-1.5">{r.current_carrier ?? "-"}</TableCell>}
+                {sourceTab === "allinone" && <TableCell className="text-foreground py-1.5 whitespace-nowrap">{(r as any).carrier ?? r.current_carrier ?? "-"}</TableCell>}
+                {sourceTab === "allinone" && <TableCell className="text-foreground py-1.5 whitespace-nowrap">{(r as any).internet_carrier ?? "-"}</TableCell>}
+                {sourceTab !== "allinone" && <TableCell className="text-foreground text-xs whitespace-nowrap py-1.5" title={r.desired_device ?? ""}>{r.desired_device ?? "-"}</TableCell>}
+                {sourceTab === "allinone" && <TableCell className="text-foreground text-xs py-1.5 whitespace-nowrap">{(r as any).jointype ?? "-"}</TableCell>}
+                {sourceTab === "allinone" && <TableCell className="text-foreground text-xs py-1.5 whitespace-nowrap">{(r as any).desired_product ?? "-"}</TableCell>}
+                {sourceTab === "allinone" && <TableCell className="text-foreground text-xs py-1.5 whitespace-nowrap">{(r as any).bundling ?? "-"}</TableCell>}
+                {sourceTab === "allinone" && <TableCell className="text-foreground text-xs py-1.5 whitespace-nowrap">{(r as any).estimated_fee ? Number((r as any).estimated_fee).toLocaleString()+"원" : "-"}</TableCell>}
+                {sourceTab === "allinone" && <TableCell className="text-foreground text-xs py-1.5 whitespace-nowrap">{(r as any).consult_time ?? "-"}</TableCell>}
+                {sourceTab !== "allinone" && <TableCell className="text-foreground text-xs whitespace-nowrap py-1.5" title={r.desired_product ?? ""}>{r.desired_product ?? "-"}</TableCell>}
                 <TableCell className="text-xs text-foreground whitespace-nowrap py-1.5" title={r.campaign_name ?? ""}>
                   {r.campaign_name ?? "-"}
                   {sourceTab === "udak" && r.utm_campaign && (
