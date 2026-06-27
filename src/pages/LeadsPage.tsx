@@ -1258,16 +1258,82 @@ export default function LeadsPage() {
 
   // ── CSV 다운로드 ──
   const downloadCSV = (mode: 'all' | 'filtered' | 'selected') => {
-    const selectedSet = new Set(bulk.selectedIds);
-    const data = mode === 'all' ? rows : mode === 'selected' ? rows.filter(r => selectedSet.has(r.id)) : filtered;
     const DQ = String.fromCharCode(34);
-    const headers = ['접수일시','고객명','연락처','현재통신사','희망기종','희망상품','캠페인','담당자','상담상태','채널','메모'];
     const esc = (v: unknown) => { const s = String(v ?? '').replace(new RegExp(DQ,'g'), DQ+DQ); return DQ+s+DQ; };
-    const getAssigneeName = (lead: any) => {
-      if (!lead.assigned_to) return '';
-      const f = staff.find((s: any) => s.user_id === lead.assigned_to);
-      return f?.display_name ?? f?.name ?? lead.assigned_to;
+    const row2csv = (cols: unknown[]) => cols.map(esc).join(',');
+    const getAssignee = (r: any) => {
+      if (!r.assigned_to) return '';
+      const f = staff.find((s: any) => s.user_id === r.assigned_to);
+      return f?.display_name ?? f?.name ?? r.assigned_to;
     };
+    const selectedSet = new Set(bulk.selectedIds);
+    const baseData = mode === 'all' ? rows : mode === 'selected' ? rows.filter(r => selectedSet.has(r.id)) : filtered;
+
+    let headers: string[] = [];
+    let rowFn: (r: any) => unknown[];
+
+    if (sourceTab === 'dogmaru') {
+      headers = ['접수일자','고객성명','연락처','가입번호','접수지점','개통상태','해지및철회','택배개통','비고'];
+      rowFn = r => [
+        r.registration_date ?? r.created_at?.slice(0,10) ?? '',
+        r.customer_name ?? r.name ?? '',
+        r.customer_phone ?? r.phone ?? '',
+        r.activation_number ?? '',
+        r.branch_name ?? '',
+        r.activation_status ?? '',
+        r.cancellation_status ?? '',
+        r.pkg_number ?? '',
+        r.memo ?? '',
+      ];
+    } else if (sourceTab === 'other') {
+      headers = ['접수일시','고객명','연락처','휴대폰통신사','인터넷통신사','진행방식','요금제','결합인원','예상월요금','상담가능시간','담당자','상담상태','메모'];
+      rowFn = r => [
+        r.registration_date ?? r.created_at?.slice(0,10) ?? '',
+        r.customer_name ?? r.name ?? '',
+        r.customer_phone ?? r.phone ?? '',
+        r.current_carrier ?? '',
+        r.channel ?? '',
+        r.discount ?? '',
+        r.desired_product ?? '',
+        r.jointype ?? '',
+        r.estimated_fee ?? '',
+        r.consult_time ?? '',
+        getAssignee(r),
+        r.status ?? '',
+        r.memo ?? '',
+      ];
+    } else {
+      // meta, udak, allinone 공통
+      headers = ['접수일시','고객명','연락처','현재통신사','희망기종','희망상품','캠페인','담당자','상담상태','채널','메모'];
+      rowFn = r => [
+        r.registration_date ?? r.created_at?.slice(0,10) ?? '',
+        r.customer_name ?? r.name ?? '',
+        r.customer_phone ?? r.phone ?? '',
+        r.current_carrier ?? '',
+        r.desired_device ?? '',
+        r.desired_product ?? '',
+        r.campaign_name ?? '',
+        getAssignee(r),
+        r.status ?? '',
+        r.channel ?? '',
+        r.memo ?? '',
+      ];
+    }
+
+    const csvRows = baseData.map(r => row2csv(rowFn(r)));
+    const bom = '\uFEFF';
+    const csv = bom + [row2csv(headers), ...csvRows].join('\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const tabLabel = sourceTab === 'meta' ? '메타' : sourceTab === 'dogmaru' ? '도그마루' : sourceTab === 'udak' ? '유닥' : sourceTab === 'allinone' ? '올인원' : '기타인입';
+    const modeLabel = mode === 'all' ? '전체' : mode === 'selected' ? '선택' : '필터';
+    const dt = new Date().toISOString().slice(0,10);
+    a.download = '리드_' + tabLabel + '_' + modeLabel + '_' + dt + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
     const csvRows = data.map(r => [
       r.registration_date??r.created_at?.slice(0,10)??'',
       r.customer_name??r.name??'',
