@@ -1258,11 +1258,16 @@ export default function LeadsPage() {
 
   // ── CSV 다운로드 ──
   const downloadCSV = (mode: 'all' | 'filtered' | 'selected') => {
-    const data = mode === 'all' ? rows : mode === 'selected' ? rows.filter(r => bulk.selectedIds.includes(r.id)) : filtered;
+    const selectedSet = new Set(bulk.selectedIds);
+    const data = mode === 'all' ? rows : mode === 'selected' ? rows.filter(r => selectedSet.has(r.id)) : filtered;
     const DQ = String.fromCharCode(34);
     const headers = ['접수일시','고객명','연락처','현재통신사','희망기종','희망상품','캠페인','담당자','상담상태','채널','메모'];
     const esc = (v: unknown) => { const s = String(v ?? '').replace(new RegExp(DQ,'g'), DQ+DQ); return DQ+s+DQ; };
-    const getName = (id: string | null) => { if (!id) return ''; const f = staff.find((s:any)=>s.user_id===id||s.id===id); return f?.name??f?.full_name??id; };
+    const getAssigneeName = (lead: any) => {
+      if (!lead.assigned_to) return '';
+      const f = staff.find((s: any) => s.user_id === lead.assigned_to);
+      return f?.display_name ?? f?.name ?? lead.assigned_to;
+    };
     const csvRows = data.map(r => [
       r.registration_date??r.created_at?.slice(0,10)??'',
       r.customer_name??r.name??'',
@@ -1271,7 +1276,7 @@ export default function LeadsPage() {
       r.desired_device??'',
       r.desired_product??'',
       r.campaign_name??'',
-      getName(r.assignee_id??null),
+      getAssigneeName(r),
       r.status??'',
       r.channel??'',
       r.memo??'',
