@@ -2273,7 +2273,7 @@ export default function LeadsPage() {
                 </TableHead>
                 <TableHead className="text-foreground font-bold">접수 일자</TableHead>
                 <TableHead className="text-foreground font-bold">고객 성명</TableHead>
-                <TableHead className="text-foreground font-bold">연락처</TableHead>
+                <TableHead className="text-foreground font-bold w-[110px] whitespace-nowrap">연락처</TableHead>
                 <TableHead className="text-foreground font-bold">
                   <ColumnFilter label="접수 지점명" values={valBranch} selected={fBranch} onChange={setFBranch} />
                 </TableHead>
@@ -2417,8 +2417,8 @@ export default function LeadsPage() {
                 />
               </TableHead>
               <TableHead className="text-foreground font-bold w-[130px] whitespace-nowrap py-2">접수 일시</TableHead>
-              <TableHead className="text-foreground font-bold">고객명</TableHead>
-              <TableHead className="text-foreground font-bold">연락처</TableHead>
+              <TableHead className="text-foreground font-bold w-[80px] whitespace-nowrap">고객명</TableHead>
+              <TableHead className="text-foreground font-bold w-[110px] whitespace-nowrap">연락처</TableHead>
               {sourceTab !== "allinone" && <TableHead className="text-foreground font-bold">
                 <ColumnFilter label="현재 통신사" values={valCarrier} selected={fCarrier} onChange={setFCarrier} />
               </TableHead>}
