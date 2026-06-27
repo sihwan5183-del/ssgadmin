@@ -1266,8 +1266,13 @@ export default function LeadsPage() {
     const base = mode === 'all' ? rows : mode === 'selected' ? (allSelected ?? []) : filtered;
     let hdrs: string[];
     let fn: (r: any) => unknown[];
-    hdrs = ['접수일시', '고객명', '연락처', '현재통신사', '희망기종', '희망상품', '캠페인', '담당자', '상담상태', '채널', '메모'];
-    fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', r.current_carrier ?? '', r.desired_device ?? '', r.desired_product ?? '', r.campaign_name ?? '', getA(r), r.status ?? '', r.channel ?? '', r.memo ?? ''];
+    if (sourceTab === 'allinone') {
+      hdrs = ['접수일시', '고객명', '연락처', '휴대폰통신사', '인터넷통신사', '진행방식', '요금제', '결합인원', '예상월요금', '상담가능시간', '담당자', '상담상태', '메모'];
+      fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', r.current_carrier ?? '', (r as any).internet_carrier ?? '', (r as any).discount ?? '', r.desired_product ?? '', (r as any).bundling ?? '', (r as any).estimated_fee ?? '', (r as any).consult_time ?? '', getA(r), r.status ?? '', r.memo ?? ''];
+    } else {
+      hdrs = ['접수일시', '고객명', '연락처', '현재통신사', '희망기종', '희망상품', '캠페인', '담당자', '상담상태', '채널', '메모'];
+      fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', r.current_carrier ?? '', r.desired_device ?? '', r.desired_product ?? '', r.campaign_name ?? '', getA(r), r.status ?? '', r.channel ?? '', r.memo ?? ''];
+    }
     const csvRows = base.map(r => r2c(fn(r)));
     const bom = '\uFEFF';
     const csv = bom + [r2c(hdrs), ...csvRows].join('\n');
