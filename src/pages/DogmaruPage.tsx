@@ -106,7 +106,7 @@ function MobileLeadsView({
 }: {
   rows: Lead[];
   loading: boolean;
-  sourceTab: "meta" | "dogmaru" | "other";
+  sourceTab: "meta" | "dogmaru" | "udak" | "allinone" | "other";
   setSourceTab: (t: "meta" | "dogmaru" | "other") => void;
   search: string;
   setSearch: (s: string) => void;
@@ -151,9 +151,13 @@ function MobileLeadsView({
   const filtered = useMemo(() => {
     return rows.filter(r => {
       const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
+      const isUdak = r.channel === "유닥" || r.channel === "유닥(UDak)" || r.channel === "udak";
+      const isAllinone = r.source === "allinone" || r.channel === "올인원";
       if (sourceTab === "dogmaru" && !isDogmaru) return false;
-      if (sourceTab === "meta" && isDogmaru) return false;
-      if (sourceTab === "other" && isDogmaru) return false;
+      if (sourceTab === "udak" && !isUdak) return false;
+      if (sourceTab === "allinone" && !isAllinone) return false;
+      if (sourceTab === "meta" && (isDogmaru || isUdak || isAllinone)) return false;
+      if (sourceTab === "other" && (isDogmaru || isUdak || isAllinone)) return false;
       // 도그마루: 단일 분류 함수로 정확히 하나의 탭에만 배치
       if (isDogmaru) {
         const tab = getDogmaruTabMobile(r);
@@ -891,7 +895,7 @@ export default function LeadsPage() {
   const [rows, setRows] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru" | "other">("meta");
+  const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru" | "udak" | "allinone" | "other">("meta");
   const [pcCareTab, setPcCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "pending" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc" | "happy_call" | "happy_call_result" | "recare4happy">("all");
   const [openLead, setOpenLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState<LeadNote[]>([]);
@@ -1864,7 +1868,7 @@ export default function LeadsPage() {
           startTransition(() => setSourceTab(v as "meta" | "dogmaru" | "other"))
         }
       >
-        <TabsList className="grid grid-cols-3 w-full max-w-2xl h-12 bg-muted/60 mb-3">
+        <TabsList className="grid grid-cols-5 w-full max-w-4xl h-12 bg-muted/60 mb-3">
           <TabsTrigger value="meta" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
             메타광고
             <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.meta}</Badge>
@@ -1872,6 +1876,12 @@ export default function LeadsPage() {
           <TabsTrigger value="dogmaru" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
             도그마루
             <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.dogmaru}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="udak" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
+            유닥
+          </TabsTrigger>
+          <TabsTrigger value="allinone" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
+            올인원
           </TabsTrigger>
           <TabsTrigger value="other" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
             기타인입
