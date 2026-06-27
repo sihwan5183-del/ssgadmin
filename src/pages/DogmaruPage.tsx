@@ -2496,7 +2496,8 @@ export default function LeadsPage() {
                 </div>
               </div>
 
-              {/* 영업 결과 */}
+              {openLead.channel !== "올인원" && (<>
+        {/* 영업 결과 */}
               <div className={`mt-2 p-4 rounded-xl border space-y-2 transition-opacity ${openLead.happy_call === "O" ? "border-border bg-muted/30 opacity-100" : "border-dashed border-border/50 bg-muted/10 opacity-40 pointer-events-none"}`}>
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-bold text-foreground">💼 영업 결과</div>
