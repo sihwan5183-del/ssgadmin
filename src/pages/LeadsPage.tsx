@@ -1239,6 +1239,23 @@ export default function LeadsPage() {
     });
   }, [rows, search, sourceTab, period, customStart, customEnd, fStatus, fCarrier, fProduct, fCampaign, fAssignee, fBranch, fActivation, fCancellation, staff, pcCareTab]);
 
+  const PAGE_SIZE = 50;
+  const [page, setPage] = useState(0);
+
+  const pagedFiltered = useMemo(() => {
+    const start = page * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, page]);
+
+  // 필터/검색/탭 변경 시 첫 페이지로 리셋
+  useEffect(() => {
+    setPage(0);
+  }, [search, sourceTab, fStatus, fCarrier, fProduct, fCampaign, fAssignee, fBranch, fActivation, fCancellation]);
+
+  // ── 일괄 선택/삭제 ──
+  const filteredIds = useMemo(() => pagedFiltered.map((r) => r.id), [pagedFiltered]);
+  const bulk = useBulkSelection<string>(filteredIds);
+
   // ── CSV 다운로드 ──
   const downloadCSV = (mode: 'all' | 'filtered' | 'selected') => {
     const data = mode === 'all' ? rows : mode === 'selected' ? rows.filter(r => bulk.selectedIds.includes(r.id)) : filtered;
@@ -1272,22 +1289,6 @@ export default function LeadsPage() {
     URL.revokeObjectURL(url);
   };
 
-  const PAGE_SIZE = 50;
-  const [page, setPage] = useState(0);
-
-  const pagedFiltered = useMemo(() => {
-    const start = page * PAGE_SIZE;
-    return filtered.slice(start, start + PAGE_SIZE);
-  }, [filtered, page]);
-
-  // 필터/검색/탭 변경 시 첫 페이지로 리셋
-  useEffect(() => {
-    setPage(0);
-  }, [search, sourceTab, fStatus, fCarrier, fProduct, fCampaign, fAssignee, fBranch, fActivation, fCancellation]);
-
-  // ── 일괄 선택/삭제 ──
-  const filteredIds = useMemo(() => pagedFiltered.map((r) => r.id), [pagedFiltered]);
-  const bulk = useBulkSelection<string>(filteredIds);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
   async function bulkDelete() {
