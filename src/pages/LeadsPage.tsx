@@ -2061,6 +2061,10 @@ export default function LeadsPage() {
             유닥
             <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.udak ?? 0}</Badge>
           </TabsTrigger>
+          <TabsTrigger value="allinone" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
+            올인원
+            <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.allinone ?? 0}</Badge>
+          </TabsTrigger>
           <TabsTrigger value="other" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
             기타인입
           </TabsTrigger>
