@@ -2529,6 +2529,7 @@ export default function LeadsPage() {
                   </div>
                 </div>
               </div>
+            </>)}
 
               {/* Consultation memo feed */}
               <div className="mt-6">
