@@ -841,7 +841,15 @@ const LEADS_SELECT = `
   estimated_fee_memo,
   pkg_number,
   last_action_at,
-  last_action_by
+  last_action_by,
+  channel,
+  internet_carrier,
+  bundling,
+  jointype,
+  discount,
+  consult_time,
+  estimated_fee,
+  additional_benefits
 `;
 
 const cleanText = (value: unknown) => {
