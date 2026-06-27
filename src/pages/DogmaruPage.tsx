@@ -780,7 +780,14 @@ const LEADS_SELECT = `
   happy_call,
   happy_call_result,
   last_action_at,
-  last_action_by
+  last_action_by,
+  channel,
+  internet_carrier,
+  bundling,
+  jointype,
+  discount,
+  consult_time,
+  estimated_fee
 `;
 
 const cleanText = (value: unknown) => {
