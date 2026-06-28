@@ -838,6 +838,7 @@ const LEADS_SELECT = `
   guardian_birth,
   guardian_phone,
   guardian_relation,
+  internet_new,
   consult_time,
   estimated_fee,
   additional_benefits
