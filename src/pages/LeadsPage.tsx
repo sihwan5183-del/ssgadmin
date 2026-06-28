@@ -2683,6 +2683,11 @@ export default function LeadsPage() {
             <div className="flex flex-wrap gap-1 mb-2">
               {openLead.current_carrier && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-blue-200 font-medium">📱 {openLead.current_carrier}</span>}
               {(openLead as any).internet_carrier && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-blue-200 font-medium">🌐 {(openLead as any).internet_carrier}</span>}
+              {(openLead as any).internet_carrier && (openLead as any).internet_carrier !== 'LGU+' && (openLead as any).internet_new !== null && (openLead as any).internet_new !== undefined && (
+                <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${(openLead as any).internet_new ? 'bg-green-100 border border-green-400 text-green-700' : 'bg-red-100 border border-red-400 text-red-700'}`}>
+                  인터넷 신규가입 {(openLead as any).internet_new ? 'O' : 'X'}
+                </span>
+              )}
               {(openLead as any).jointype && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-blue-200 font-medium">{(openLead as any).jointype === "usim" ? "유심만 변경" : (openLead as any).jointype === "phone" ? "핸드폰도 변경" : (openLead as any).jointype}</span>}
               {(openLead as any).discount && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-blue-200 font-medium">{(openLead as any).discount === "pub" ? "공시지원금" : (openLead as any).discount === "sel" ? "선택약정" : (openLead as any).discount}</span>}
               {openLead.desired_product && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-blue-200 font-medium">{openLead.desired_product}</span>}
