@@ -44,6 +44,7 @@ import { PushScheduleSettings } from "@/components/admin/PushScheduleSettings";
 import { NotificationRulesManager } from "@/components/admin/NotificationRulesManager";
 import { LeadsNotifierSettings } from "@/components/admin/LeadsNotifierSettings";
 import { FieldTeamsManager } from "@/components/admin/FieldTeamsManager";
+import { LandingSettingsPanel } from "@/components/admin/LandingSettingsPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole, type AppRole } from "@/hooks/useRole";
@@ -208,6 +209,9 @@ export default function AdminPage() {
           </TabsTrigger>
           <TabsTrigger value="leads_notify" className="gap-2">
             <BellRing className="size-4" /> 실시간 인입 알림
+          </TabsTrigger>
+          <TabsTrigger value="landing" className="gap-2">
+            <Smartphone className="size-4" /> 랜딩 설정
           </TabsTrigger>
         </TabsList>
 
@@ -436,6 +440,10 @@ export default function AdminPage() {
               💡 admin은 모든 설정을, manager는 향후 확장 권한을, user는 기본 입력만 가능합니다.
             </p>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="landing">
+          <LandingSettingsPanel upsert={upsert} settings={settings} />
         </TabsContent>
       </Tabs>
     </div>
