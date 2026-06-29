@@ -1591,7 +1591,12 @@ export default function LeadsPage() {
     }
 
     // 상태 업데이트
+    // 첫 케어 시각 기록 (신규 접수 → 다른 상태로 바뀔 때 한 번만)
+    const currentLead = rows.find(r => r.id === id);
+    const isFirstContact = currentLead?.status === '신규 접수' && status !== '신규 접수' && !currentLead?.first_contact_at;
+
     const updateData: any = { status, last_action_at: new Date().toISOString(), last_action_by: changedBy };
+    if (isFirstContact) updateData.first_contact_at = new Date().toISOString();
     // 부재케어면 메모에 횟수 자동 기록
     if (status === "부재케어") {
       const currentRow = rows.find(r => r.id === id);
