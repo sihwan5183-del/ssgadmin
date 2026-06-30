@@ -932,6 +932,7 @@ type Lead = {
   estimated_fee_memo: string | null;
   last_action_at: string | null;
   last_action_by: string | null;
+  first_contact_at: string | null;
   is_minor: boolean | null;
   guardian_name: string | null;
   guardian_birth: string | null;
@@ -1553,6 +1554,32 @@ export default function LeadsPage() {
     return days;
   }, [rows]);
 
+  // ── 첫 케어 소요시간 위젯 (오늘 신규 접수 → 첫 액션까지) ──
+  const careSpeedStats = useMemo(() => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const contacted = rows.filter(r => {
+      if (!r.first_contact_at || !r.created_at) return false;
+      return r.first_contact_at.slice(0, 10) === todayStr || r.created_at.slice(0, 10) === todayStr;
+    });
+    if (contacted.length === 0) {
+      return { avgMinutes: null as number | null, within30: 0, total: 0, slowest: null as Lead | null };
+    }
+    const diffs = contacted.map(r => {
+      const mins = (new Date(r.first_contact_at!).getTime() - new Date(r.created_at).getTime()) / 60000;
+      return { row: r, mins };
+    }).filter(d => d.mins >= 0);
+    const avgMinutes = diffs.reduce((s, d) => s + d.mins, 0) / (diffs.length || 1);
+    const within30 = diffs.filter(d => d.mins <= 30).length;
+    const slowest = diffs.reduce((max, d) => (!max || d.mins > max.mins ? d : max), null as { row: Lead; mins: number } | null);
+    return {
+      avgMinutes,
+      within30,
+      total: diffs.length,
+      slowest: slowest ? slowest.row : null,
+      slowestMinutes: slowest ? slowest.mins : null,
+    };
+  }, [rows]);
+
   // ── 엑셀형 헤더 필터에 들어갈 고유값 (탭별로 분리해 메타↔도그마루 섞이지 않게) ──
   const metaRows = useMemo(() => rows.filter((r) => r.channel !== "유닥" && r.campaign_name !== DOGMARU_CAMPAIGN), [rows]);
   const dogmaruRows = useMemo(() => rows.filter((r) => r.campaign_name === DOGMARU_CAMPAIGN), [rows]);
@@ -1836,6 +1863,49 @@ export default function LeadsPage() {
           )}
         </div>
       </div>
+
+      {/* 오늘 첫 케어 소요시간 위젯 */}
+      <Card className="p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <PhoneCall className="size-4 text-pink-600" />
+          <div className="text-sm font-semibold text-slate-900">오늘 첫 케어 소요시간</div>
+          <div className="text-xs text-muted-foreground">신규 접수 → 첫 상태 변경까지</div>
+        </div>
+        {careSpeedStats.total === 0 ? (
+          <div className="text-sm text-muted-foreground">오늘 케어 처리된 건이 아직 없습니다.</div>
+        ) : (
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">평균 소요시간</div>
+              <div className={`text-2xl font-bold ${careSpeedStats.avgMinutes! <= 30 ? "text-green-600" : careSpeedStats.avgMinutes! <= 120 ? "text-amber-600" : "text-red-600"}`}>
+                {careSpeedStats.avgMinutes! < 60
+                  ? `${Math.round(careSpeedStats.avgMinutes!)}분`
+                  : `${Math.floor(careSpeedStats.avgMinutes! / 60)}시간 ${Math.round(careSpeedStats.avgMinutes! % 60)}분`}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">30분 이내 처리율</div>
+              <div className="text-2xl font-bold text-slate-900">
+                {Math.round((careSpeedStats.within30 / careSpeedStats.total) * 100)}%
+                <span className="text-sm font-normal text-muted-foreground ml-1">
+                  ({careSpeedStats.within30}/{careSpeedStats.total}건)
+                </span>
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">가장 느린 건</div>
+              <div className="text-2xl font-bold text-red-600">
+                {careSpeedStats.slowestMinutes! < 60
+                  ? `${Math.round(careSpeedStats.slowestMinutes!)}분`
+                  : `${Math.floor(careSpeedStats.slowestMinutes! / 60)}시간 ${Math.round(careSpeedStats.slowestMinutes! % 60)}분`}
+                <span className="text-sm font-normal text-muted-foreground ml-1">
+                  ({careSpeedStats.slowest?.name || "이름없음"})
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </Card>
 
       {/* 종합 리드 성과 보드 — 경로별/기간별 매트릭스 */}
       <Card className="p-4">
