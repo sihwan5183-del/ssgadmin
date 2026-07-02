@@ -1600,7 +1600,11 @@ export default function LeadsPage() {
   const metaRows = useMemo(() => rows.filter((r) => r.channel !== "유닥" && r.campaign_name !== DOGMARU_CAMPAIGN), [rows]);
   const dogmaruRows = useMemo(() => rows.filter((r) => r.campaign_name === DOGMARU_CAMPAIGN), [rows]);
   const udakRows = useMemo(() => rows.filter((r) => r.channel === "유닥"), [rows]);
-  const valStatus = useMemo(() => metaRows.map((r) => r.status ?? ""), [metaRows]);
+  // 상태 필터 옵션: 통일 상태값 고정 (도그마루 제외 채널 공통)
+  // DB에 구버전 값(부재 중/케어중/취소 등)이 있어도 필터는 새 값 기준
+  const valStatus = useMemo(() => [
+    "신규 접수", "부재", "재케어", "실패", "성공", "개통완료",
+  ], []);
   const valCarrier = useMemo(() => metaRows.map((r) => r.current_carrier ?? ""), [metaRows]);
   const valProduct = useMemo(() => metaRows.map((r) => r.desired_product ?? ""), [metaRows]);
   const valCampaign = useMemo(() => metaRows.map((r) => r.campaign_name ?? ""), [metaRows]);
