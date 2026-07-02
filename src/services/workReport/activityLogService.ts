@@ -197,7 +197,7 @@ export async function logLeadStatusChange({
       if (s === '성공') return { action_type: 'consultation_success', is_counted: true, reason: null };
       if (s === '개통완료') return { action_type: 'activation_completed', is_counted: false, reason: 'sales 기준 집계' };
       // 구버전 값 하위호환 (기존 DB 데이터)
-      if (s === '케어중') return { action_type: 'call_attempt', is_counted: true, reason: null };
+      if (s === '케어중') return { action_type: 'recare_registered', is_counted: true, reason: null }; // 케어중 = 재케어로 통일
       if (s === '부재중' || s === '부재 중') return { action_type: 'absent', is_counted: true, reason: null };
       if (s === '취소') return { action_type: 'failed', is_counted: true, reason: null };
       if (s === '개통 완료') return { action_type: 'activation_completed', is_counted: false, reason: 'sales 기준 집계' };
