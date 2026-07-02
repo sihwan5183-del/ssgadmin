@@ -73,7 +73,7 @@ interface UserRow {
 export default function AdminPage() {
   const { user } = useAuth();
   const { isAdmin, loading: roleLoading } = useRole();
-  const { widgets, strategyTarget, monthlyTarget, upsert, refresh } = useAppSettings();
+  const { settings, widgets, strategyTarget, monthlyTarget, upsert, refresh } = useAppSettings();
 
   const [localWidgets, setLocalWidgets] = useState<DashboardWidgets>(widgets);
   const [localStrategy, setLocalStrategy] = useState<number>(strategyTarget);
@@ -449,3 +449,4 @@ export default function AdminPage() {
     </div>
   );
 }
+
