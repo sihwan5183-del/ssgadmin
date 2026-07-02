@@ -5,7 +5,8 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useRole } from "@/hooks/useRole";
 import { useIncentivePolicies } from "@/hooks/useIncentivePolicies";
-import { useNetFeeFormula, sumRevenue, sumOffer } from "@/hooks/useNetFeeFormula";
+import { useNetFeeFormula } from "@/hooks/useNetFeeFormula";
+import { calcDashboardProfit, calcMonthlyMoyoFee } from "@/lib/profit";
 import { calcFullIncentive, DEFAULT_LINKAGE } from "@/lib/incentiveEngine";
 import { Lock, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, Download } from "lucide-react";
 import {
@@ -154,7 +155,8 @@ export default function ProfitPage() {
       setLoading(true);
       const { data } = await supabase
         .from("sales")
-        .select("id, open_date, open_month, manager, device_model, product, sale_type, net_fee, unit_price, vas_fee, distributor_amount, extra_subsidy, cash_support_amount, customer_support_amount, corp_card_amount, receivable_amount, trade_in_confirmed, trade_in_enabled, bundle, custom_fields")
+        .select("id, open_date, open_month, manager, device_model, product, sale_type, net_fee, unit_price, vas_fee, distributor_amount, extra_subsidy, cash_support_amount, customer_support_amount, corp_card_amount, receivable_amount, receivable_paid, trade_in_confirmed, trade_in_enabled, voucher, voucher_returned, cash_open, channel, moyo_excluded, bundle, custom_fields")
+        .is("deleted_at", null)
         .order("open_date", { ascending: false });
       setSales((data as Sale[]) ?? []);
       setLoading(false);
@@ -181,9 +183,12 @@ export default function ProfitPage() {
 
   const saleRows = useMemo(() => {
     return filtered.map((s) => {
-      const revenue = sumRevenue(s as any);
-      const offer = sumOffer(s as any);
-      const netFee = calcNetFee(s as any);
+      // ✅ calcDashboardProfit 단일 공식 (SalesLedger/대시보드와 1원 동일)
+      // 모요 수수료는 총량 정산이므로 건별 차감 안 함 → moyo_excluded:true 강제
+      const p = calcDashboardProfit({ ...s, moyo_excluded: true } as any);
+      const revenue = p.revenue;
+      const offer = p.expense; // moyoFee=0이므로 그대로
+      const netFee = p.profit;
       const saleForIncentive = {
         id: s.id,
         open_date: s.open_date,
@@ -207,8 +212,12 @@ export default function ProfitPage() {
     const totalNetFee = saleRows.reduce((s, r) => s + r.netFee, 0);
     const totalIncentive = saleRows.reduce((s, r) => s + r.incentive, 0);
     const totalProfit = saleRows.reduce((s, r) => s + r.companyProfit, 0);
-    return { totalRevenue, totalOffer, totalNetFee, totalIncentive, totalProfit, count: saleRows.length };
-  }, [saleRows]);
+    // 모요 총량 정산 (기간 내 모요 채널 모바일 건수 × 88,000)
+    const { count: moyoCount, totalFee: moyoFeeTotal } = calcMonthlyMoyoFee(filtered as any[]);
+    // 모요 수수료 차감 후 실제 회사 이익
+    const realProfit = totalProfit - moyoFeeTotal;
+    return { totalRevenue, totalOffer, totalNetFee, totalIncentive, totalProfit, moyoCount, moyoFeeTotal, realProfit, count: saleRows.length };
+  }, [saleRows, filtered]);
 
   const byManager = useMemo(() => {
     const map: Record<string, { name: string; count: number; netFee: number; incentive: number; profit: number }> = {};
@@ -344,17 +353,19 @@ export default function ProfitPage() {
         })()}
 
         {/* 핵심 지표 카드 */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {[
-            { label: "총 수익", value: summary.totalRevenue, color: "text-indigo-600", bg: "bg-indigo-50" },
-            { label: "총 지출", value: summary.totalOffer, color: "text-rose-600", bg: "bg-rose-50" },
-            { label: "순마진(net_fee)", value: summary.totalNetFee, color: "text-emerald-600", bg: "bg-emerald-50" },
-            { label: "인센티브 지급", value: summary.totalIncentive, color: "text-amber-600", bg: "bg-amber-50" },
-            { label: "회사 실이익", value: summary.totalProfit, color: summary.totalProfit >= 0 ? "text-blue-600" : "text-red-600", bg: summary.totalProfit >= 0 ? "bg-blue-50" : "bg-red-50" },
-          ].map(({ label, value, color, bg }) => (
+            { label: "총 수익", value: summary.totalRevenue, sub: null, color: "text-indigo-600" },
+            { label: "총 지출", value: summary.totalOffer, sub: null, color: "text-rose-600" },
+            { label: "순마진(net_fee)", value: summary.totalNetFee, sub: null, color: "text-emerald-600" },
+            { label: "인센티브 지급", value: summary.totalIncentive, sub: null, color: "text-amber-600" },
+            { label: "모요 수수료", value: -summary.moyoFeeTotal, sub: `${summary.moyoCount}건 × 88,000`, color: "text-orange-600" },
+            { label: "회사 실이익", value: summary.realProfit, sub: "모요·인센 차감 후", color: summary.realProfit >= 0 ? "text-blue-600" : "text-red-600" },
+          ].map(({ label, value, sub, color }) => (
             <Card key={label} className="p-4">
               <div className="text-xs text-muted-foreground mb-1">{label}</div>
               <div className={`text-xl font-bold ${color}`}>{wonFull(value)}</div>
+              {sub && <div className="text-xs text-muted-foreground mt-0.5">{sub}</div>}
             </Card>
           ))}
         </div>
@@ -730,3 +741,4 @@ export default function ProfitPage() {
     </div>
   );
 }
+
