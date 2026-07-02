@@ -188,14 +188,19 @@ export async function logLeadStatusChange({
       : (ch ?? '');
 
     // ── 메타광고 ──────────────────────────────────────────────
-    if (c === 'meta' || c === '' || (!['dogmaru','udak','moyo'].includes(c))) {
-      if (s === '케어중') return { action_type: 'call_attempt', is_counted: true, reason: null };
-      // 띄어쓰기 변형 포함: "부재 중", "부재중", "부재"
-      if (s === '부재중' || s === '부재 중' || s === '부재') return { action_type: 'absent', is_counted: true, reason: null };
+    // 통일 상태값 + 구버전 호환 (메타/올인원/기타인입/유닥 공통)
+    if (c !== 'dogmaru') {
+      // 통일 상태값
+      if (s === '부재') return { action_type: 'absent', is_counted: true, reason: null };
       if (s === '재케어') return { action_type: 'recare_registered', is_counted: true, reason: null };
+      if (s === '실패') return { action_type: 'failed', is_counted: true, reason: null };
+      if (s === '성공') return { action_type: 'consultation_success', is_counted: true, reason: null };
+      if (s === '개통완료') return { action_type: 'activation_completed', is_counted: false, reason: 'sales 기준 집계' };
+      // 구버전 값 하위호환 (기존 DB 데이터)
+      if (s === '케어중') return { action_type: 'call_attempt', is_counted: true, reason: null };
+      if (s === '부재중' || s === '부재 중') return { action_type: 'absent', is_counted: true, reason: null };
       if (s === '취소') return { action_type: 'failed', is_counted: true, reason: null };
-      // 띄어쓰기 변형 포함: "개통완료", "개통 완료"
-      if (s === '개통완료' || s === '개통 완료') return { action_type: 'activation_completed', is_counted: false, reason: 'sales 기준 집계' };
+      if (s === '개통 완료') return { action_type: 'activation_completed', is_counted: false, reason: 'sales 기준 집계' };
     }
 
     // ── 도그마루 ──────────────────────────────────────────────
@@ -211,15 +216,7 @@ export async function logLeadStatusChange({
       if (s === '택배발송' || s === '청약대기' || s === '개통대기') return { action_type: 'delivery_sent', is_counted: false, reason: '진행 상태' };
     }
 
-    // ── 유닥 ──────────────────────────────────────────────────
-    if (c === 'udak') {
-      if (s === '성공') return { action_type: 'consultation_success', is_counted: true, reason: null };
-      if (s === '실패') return { action_type: 'failed', is_counted: true, reason: null };
-      if (s === '부재' || s === '미재케어') return { action_type: 'absent', is_counted: true, reason: null };
-      if (s === '재케어') return { action_type: 'recare_registered', is_counted: true, reason: null };
-      if (s === '택배발송') return { action_type: 'delivery_sent', is_counted: false, reason: '진행 상태' };
-      if (s === '개통완료') return { action_type: 'activation_completed', is_counted: false, reason: 'sales 기준 집계' };
-    }
+    // 유닥은 통일 상태값 공통 분기에서 처리됨 (위 블록)
 
     // ── 기타인입 ──────────────────────────────────────────────
     if (s === '미케어') return { action_type: 'status_changed', is_counted: false, reason: '미케어' };
