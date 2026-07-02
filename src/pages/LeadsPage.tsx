@@ -55,14 +55,18 @@ import { logLeadStatusChange } from "@/services/workReport/activityLogService";
 // 메타/도그마루 탭의 초기 진입과 탭 전환 응답성을 잡아준다.
 const ChannelIntakePage = lazy(() => import("@/pages/ChannelIntakePage"));
 // ─── 모바일 영업 전용 뷰 ───────────────────────────────────────────────────
-const MOBILE_STATUS_META = [
+// ── 통일 상태값 (메타/유닥/올인원/기타인입 공통) ──────────
+// 신규 접수 → 부재 → 재케어 → 실패 / 성공 → 개통완료
+const UNIFIED_STATUS = [
   { value: "신규 접수", label: "신규 접수", color: "bg-blue-100 text-blue-700" },
-  { value: "케어중", label: "케어중", color: "bg-yellow-100 text-yellow-700" },
-  { value: "부재 중", label: "부재 중", color: "bg-orange-100 text-orange-700" },
-  { value: "재케어", label: "재케어", color: "bg-purple-100 text-purple-700" },
-  { value: "취소", label: "취소", color: "bg-gray-100 text-gray-600" },
-  { value: "개통 완료", label: "개통 완료", color: "bg-emerald-100 text-emerald-700" },
+  { value: "부재",     label: "부재",     color: "bg-orange-100 text-orange-700" },
+  { value: "재케어",   label: "재케어",   color: "bg-purple-100 text-purple-700" },
+  { value: "실패",     label: "실패",     color: "bg-red-100 text-red-700" },
+  { value: "성공",     label: "성공",     color: "bg-emerald-100 text-emerald-700" },
+  { value: "개통완료", label: "개통완료", color: "bg-blue-100 text-blue-700" },
 ];
+// 하위 호환 alias
+const MOBILE_STATUS_META = UNIFIED_STATUS;
 const MOBILE_STATUS_DOGMARU = [
   { value: "신규 접수", label: "신규 접수", color: "bg-blue-100 text-blue-700" },
   { value: "상담중", label: "상담중", color: "bg-yellow-100 text-yellow-700" },
@@ -73,15 +77,8 @@ const MOBILE_STATUS_DOGMARU = [
   { value: "기타", label: "기타", color: "bg-gray-100 text-gray-600" },
   { value: "개통완료", label: "개통완료", color: "bg-emerald-100 text-emerald-700" },
 ];
-const MOBILE_STATUS_UDAK = [
-  { value: "신규 접수", label: "신규 접수", color: "bg-blue-100 text-blue-700" },
-  { value: "성공", label: "성공", color: "bg-emerald-100 text-emerald-700" },
-  { value: "실패", label: "실패", color: "bg-red-100 text-red-700" },
-  { value: "부재케어", label: "부재케어", color: "bg-orange-100 text-orange-700" },
-  { value: "재케어", label: "재케어", color: "bg-purple-100 text-purple-700" },
-  { value: "택배발송", label: "택배발송", color: "bg-sky-100 text-sky-700" },
-  { value: "개통완료", label: "개통완료", color: "bg-emerald-100 text-emerald-700" },
-];
+// 유닥도 통일 상태값 사용
+const MOBILE_STATUS_UDAK = UNIFIED_STATUS;
 // 호환용
 const MOBILE_STATUS_OPTIONS = MOBILE_STATUS_META;
 
@@ -209,11 +206,11 @@ function MobileLeadsView({
         else if (careTab === "complete" && tab !== "완료") return false;
       } else {
         if (careTab === "new" && r.status !== "신규 접수") return false;
-        if (careTab === "absence" && r.status !== "부재 중") return false;
+        if (careTab === "absence" && r.status !== "부재") return false;
         if (careTab === "recare" && r.status !== "재케어") return false;
-        if (careTab === "care" && r.status !== "케어중") return false;
-        if (careTab === "cancel" && r.status !== "취소") return false;
-        if (careTab === "complete_meta" && r.status !== "개통 완료") return false;
+        // care 탭 제거 (통일 후 삭제)
+        if (careTab === "cancel" && r.status !== "실패") return false;
+        if (careTab === "complete_meta" && r.status !== "개통완료") return false;
       }
       // 검색
       if (search) {
@@ -251,8 +248,8 @@ function MobileLeadsView({
   const recareCount = tabRows.filter(r => getDogmaruTabMobile(r) === "재케어").length;
   const failCount = tabRows.filter(r => getDogmaruTabMobile(r) === "실패").length;
   // 메타 카운트
-  const careCount = tabRows.filter(r => r.status === "케어중").length;
-  const absMetaCount = tabRows.filter(r => r.status === "부재 중").length;
+  const careCount = tabRows.filter(r => r.status === "부재").length; // 통일: 부재
+  const absMetaCount = tabRows.filter(r => r.status === "부재").length;
   const recareMetaCount = tabRows.filter(r => r.status === "재케어").length;
   const cancelCount = tabRows.filter(r => r.status === "취소").length;
   const completeMetaCount = tabRows.filter(r => r.status === "개통 완료").length;
@@ -515,7 +512,7 @@ function MobileLeadsView({
                   <div className="pt-3">
                     <div className="text-xs text-muted-foreground mb-2 font-medium">상태 변경</div>
                     <div className="grid grid-cols-3 gap-1.5">
-                      {(sourceTab === "dogmaru" ? MOBILE_STATUS_DOGMARU : sourceTab === "udak" ? MOBILE_STATUS_UDAK : MOBILE_STATUS_META).map(s => (
+                      {(sourceTab === "dogmaru" ? MOBILE_STATUS_DOGMARU : UNIFIED_STATUS).map(s => (
                         <button key={s.value}
                           onClick={() => {
                             if (s.value === "부재케어") { setAbsenceModal(lead); return; }
@@ -642,7 +639,7 @@ function MobileLeadsView({
               {ABSENCE_REASONS.map(r => (
                 <button key={r}
                   onClick={() => {
-                    handleStatus(absenceModal, "부재케어");
+                    handleStatus(absenceModal, "부재");
                     const ch = getChannel(absenceModal);
                     const tmpl = templates.find(t => t.channel === ch && t.title === r && t.type === "absence");
                     const msg = tmpl?.content ?? `안녕하세요 고객님, 연락드렸으나 ${r === "통화중" ? "통화 중이신 것 같아" : "자리를 비우신 것 같아"} 문자 남깁니다. 편하신 시간에 연락 부탁드립니다 :)`;
@@ -763,14 +760,12 @@ const IntakeSkeleton = memo(function IntakeSkeleton() {
 });
 import { ColumnFilter, matchesFilter, type FilterSelection } from "@/components/common/ColumnFilter";
 
-const STATUS_OPTIONS_META = [
-  "신규 접수",
-  "케어중",
-  "부재 중",
-  "재케어",
-  "취소",
-  "개통 완료",
+// PC 테이블 드롭다운 — 통일 상태값
+const STATUS_OPTIONS_UNIFIED = [
+  "신규 접수", "부재", "재케어", "실패", "성공", "개통완료",
 ] as const;
+// alias
+const STATUS_OPTIONS_META = STATUS_OPTIONS_UNIFIED;
 
 const STATUS_OPTIONS_DOGMARU = [
   "신규 접수",
@@ -783,29 +778,33 @@ const STATUS_OPTIONS_DOGMARU = [
   "개통완료",
 ] as const;
 
-const STATUS_OPTIONS_UDAK = [
-  "신규 접수", "성공", "실패", "부재케어", "재케어", "택배발송", "개통완료",
-] as const;
+// 유닥도 통일 상태값 사용
+const STATUS_OPTIONS_UDAK = STATUS_OPTIONS_UNIFIED;
 
 const STATUS_OPTIONS = [...STATUS_OPTIONS_META, ...STATUS_OPTIONS_DOGMARU, ...STATUS_OPTIONS_UDAK] as const;
 type Status = string;
 
 // 파스텔 배경 제거: 흰 배경 + 진한 텍스트/테두리로 명도 대비 확보
+// 통일 상태값 + 도그마루 전용 상태값 색상
 const STATUS_COLOR: Record<string, string> = {
+  // 통일 상태값 (메타/유닥/올인원/기타인입)
   "신규 접수": "bg-background text-red-700 border border-red-600 font-bold dark:text-red-300 dark:border-red-400",
-  "케어중": "bg-background text-blue-700 border border-blue-600 font-bold dark:text-blue-300 dark:border-blue-400",
-  "부재 중": "bg-background text-orange-700 border border-orange-600 font-bold dark:text-orange-300 dark:border-orange-400",
-  "재케어": "bg-background text-violet-700 border border-violet-600 font-bold dark:text-violet-300 dark:border-violet-400",
-  "개통 완료": "bg-background text-emerald-700 border border-emerald-600 font-bold dark:text-emerald-300 dark:border-emerald-400",
-  "취소": "bg-background text-rose-700 border border-rose-600 font-bold dark:text-rose-300 dark:border-rose-400",
-  "상담중": "bg-background text-yellow-700 border border-yellow-600 font-bold dark:text-yellow-300 dark:border-yellow-400",
-  "부재케어": "bg-background text-orange-700 border border-orange-600 font-bold dark:text-orange-300 dark:border-orange-400",
-  "실패": "bg-background text-red-700 border border-red-600 font-bold dark:text-red-300 dark:border-red-400",
-  "개통철회": "bg-background text-rose-700 border border-rose-600 font-bold dark:text-rose-300 dark:border-rose-400",
-  "기타": "bg-background text-gray-600 border border-gray-400 font-bold dark:text-gray-300 dark:border-gray-500",
-  "개통완료": "bg-background text-emerald-700 border border-emerald-600 font-bold dark:text-emerald-300 dark:border-emerald-400",
-  "성공": "bg-background text-emerald-700 border border-emerald-600 font-bold dark:text-emerald-300 dark:border-emerald-400",
-  "택배발송": "bg-background text-sky-700 border border-sky-600 font-bold dark:text-sky-300 dark:border-sky-400",
+  "부재":      "bg-background text-orange-700 border border-orange-600 font-bold dark:text-orange-300 dark:border-orange-400",
+  "재케어":    "bg-background text-violet-700 border border-violet-600 font-bold dark:text-violet-300 dark:border-violet-400",
+  "실패":      "bg-background text-red-700 border border-red-600 font-bold dark:text-red-300 dark:border-red-400",
+  "성공":      "bg-background text-emerald-700 border border-emerald-600 font-bold dark:text-emerald-300 dark:border-emerald-400",
+  "개통완료":  "bg-background text-blue-700 border border-blue-600 font-bold dark:text-blue-300 dark:border-blue-400",
+  // 도그마루 전용 상태값 (그대로 유지)
+  "상담중":    "bg-background text-yellow-700 border border-yellow-600 font-bold dark:text-yellow-300 dark:border-yellow-400",
+  "부재케어":  "bg-background text-orange-700 border border-orange-600 font-bold dark:text-orange-300 dark:border-orange-400",
+  "개통철회":  "bg-background text-rose-700 border border-rose-600 font-bold dark:text-rose-300 dark:border-rose-400",
+  "기타":      "bg-background text-gray-600 border border-gray-400 font-bold dark:text-gray-300 dark:border-gray-500",
+  "택배발송":  "bg-background text-sky-700 border border-sky-600 font-bold dark:text-sky-300 dark:border-sky-400",
+  // 구버전 값 하위호환 (기존 DB 데이터)
+  "케어중":    "bg-background text-blue-700 border border-blue-600 font-bold dark:text-blue-300 dark:border-blue-400",
+  "부재 중":   "bg-background text-orange-700 border border-orange-600 font-bold dark:text-orange-300 dark:border-orange-400",
+  "취소":      "bg-background text-rose-700 border border-rose-600 font-bold dark:text-rose-300 dark:border-rose-400",
+  "개통 완료": "bg-background text-blue-700 border border-blue-600 font-bold dark:text-blue-300 dark:border-blue-400",
 };
 
 
@@ -2215,31 +2214,18 @@ export default function LeadsPage() {
           pcTabs.push({ key: "happy_call", label: `해피콜 ${happyCallC}`, color: "green" });
           pcTabs.push({ key: "happy_call_result", label: `영업 ${happyResultC}`, color: "emerald" });
           pcTabs.push({ key: "recare4happy", label: `재케어대상 ${recare4happyC}`, color: "amber" });
-        } else if (sourceTab === "udak") {
-          const successC = tabRows.filter(r => r.status === "성공").length;
-          const failC2 = tabRows.filter(r => r.status === "실패").length;
-          const absUdakC = tabRows.filter(r => r.status === "부재케어").length;
-          const recareUdakC = tabRows.filter(r => r.status === "재케어").length;
-          const deliveryUdakC = tabRows.filter(r => r.status === "택배발송").length;
-          const completeUdakC = tabRows.filter(r => r.status === "개통완료").length;
-          pcTabs.push({ key: "udak_success", label: `성공 ${successC}`, color: "emerald" });
-          pcTabs.push({ key: "udak_fail", label: `실패 ${failC2}`, color: "red" });
-          pcTabs.push({ key: "absence", label: `부재케어 ${absUdakC}`, color: "orange" });
-          pcTabs.push({ key: "recare", label: `재케어 ${recareUdakC}`, color: "purple" });
-          pcTabs.push({ key: "udak_delivery", label: `택배발송 ${deliveryUdakC}`, color: "sky" });
-          pcTabs.push({ key: "udak_complete", label: `개통완료 ${completeUdakC}`, color: "blue" });
         } else {
-          // 메타 상태값 그대로
-          const careC = tabRows.filter(r => r.status === "케어중").length;
-          const absMetaC = tabRows.filter(r => r.status === "부재 중").length;
-          const recareMetaC = tabRows.filter(r => r.status === "재케어").length;
-          const cancelC = tabRows.filter(r => r.status === "취소").length;
-          const completeMetaC = tabRows.filter(r => r.status === "개통 완료").length;
-          pcTabs.push({ key: "care", label: `케어중 ${careC}`, color: "yellow" });
-          pcTabs.push({ key: "absence", label: `부재 중 ${absMetaC}`, color: "orange" });
-          pcTabs.push({ key: "recare", label: `재케어 ${recareMetaC}`, color: "purple" });
-          pcTabs.push({ key: "cancel", label: `취소 ${cancelC}`, color: "gray" });
-          pcTabs.push({ key: "complete_meta", label: `개통 완료 ${completeMetaC}`, color: "blue" });
+          // ── 통일 상태값 (메타 / 유닥 / 올인원 / 기타인입 공통) ──
+          const absC      = tabRows.filter(r => r.status === "부재").length;
+          const recareC2  = tabRows.filter(r => r.status === "재케어").length;
+          const failC2    = tabRows.filter(r => r.status === "실패").length;
+          const successC  = tabRows.filter(r => r.status === "성공").length;
+          const completeC = tabRows.filter(r => r.status === "개통완료").length;
+          pcTabs.push({ key: "absence",       label: `부재 ${absC}`,         color: "orange" });
+          pcTabs.push({ key: "recare",        label: `재케어 ${recareC2}`,   color: "purple" });
+          pcTabs.push({ key: "cancel",        label: `실패 ${failC2}`,       color: "red" });
+          pcTabs.push({ key: "udak_success",  label: `성공 ${successC}`,     color: "emerald" });
+          pcTabs.push({ key: "complete_meta", label: `개통완료 ${completeC}`, color: "blue" });
         }
         function getTabClass(t: { key: string; color: string }) {
           if (pcCareTab !== t.key) return "bg-background text-muted-foreground border-border/60 hover:bg-muted/40";
@@ -2661,7 +2647,7 @@ export default function LeadsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {(r.campaign_name === "도그마루_홈캠" ? STATUS_OPTIONS_DOGMARU : (r.channel === "유닥" || r.channel === "메타광고") ? STATUS_OPTIONS_UDAK : STATUS_OPTIONS_META).map((s) => (
+                      {(r.campaign_name === "도그마루_홈캠" ? STATUS_OPTIONS_DOGMARU : STATUS_OPTIONS_UNIFIED).map((s) => (
                         <SelectItem key={s} value={s}>
                           {s}
                         </SelectItem>
@@ -2975,7 +2961,7 @@ export default function LeadsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {(openLead.campaign_name === "도그마루_홈캠" ? STATUS_OPTIONS_DOGMARU : openLead.channel === "올인원" ? STATUS_OPTIONS_META : (openLead.channel === "유닥" || openLead.channel === "메타광고") ? STATUS_OPTIONS_UDAK : STATUS_OPTIONS_META).map((s) => (
+                        {(openLead.campaign_name === "도그마루_홈캠" ? STATUS_OPTIONS_DOGMARU : STATUS_OPTIONS_UNIFIED).map((s) => (
                           <SelectItem key={s} value={s}>
                             {s}
                           </SelectItem>
