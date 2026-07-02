@@ -2128,7 +2128,7 @@ export default function LeadsPage() {
                     <TableCell className="font-bold text-foreground py-1.5">
                       {item.customer_name ?? "-"}
                     </TableCell>
-                    <TableCell className="tabular-nums text-foreground font-medium py-1.5">
+                    <TableCell className="tabular-nums text-foreground font-medium py-1.5 whitespace-nowrap">
                       {item.customer_phone ?? "-"}
                     </TableCell>
                     <TableCell className="text-foreground py-1.5">{item.branch_name ?? "-"}</TableCell>
