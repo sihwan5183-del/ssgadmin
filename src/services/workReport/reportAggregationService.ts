@@ -32,10 +32,12 @@ export interface ChannelSummary {
 
 // 채널별 표시할 상태값 순서
 export const CHANNEL_STATUS_ORDER: Record<string, string[]> = {
-  meta:    ['신규접수', '신규 접수', '케어중', '부재중', '재케어', '취소', '개통완료'],
-  dogmaru: ['신규접수', '신규 접수', '부재케어', '재케어', '재케어대상', '해피콜', '영업', '실패', '개통철회', '기타', '택배발송', '청약대기', '개통대기', '완료'],
-  udak:    ['신규접수', '신규 접수', '성공', '실패', '부재케어', '부재', '재케어', '택배발송', '개통완료'],
-  other:   ['성공', '실패', '재케어', '미케어', '부재', '신규접수', '신규 접수'],
+  // 통일 상태값 (메타/유닥/올인원/기타인입 공통)
+  meta:    ['신규 접수', '부재', '재케어', '실패', '성공', '개통완료'],
+  udak:    ['신규 접수', '부재', '재케어', '실패', '성공', '개통완료'],
+  other:   ['신규 접수', '부재', '재케어', '실패', '성공', '개통완료'],
+  // 도그마루 전용 (별도 유지)
+  dogmaru: ['신규 접수', '부재케어', '재케어', '실패', '개통철회', '택배발송', '청약대기', '개통대기', '완료'],
 };
 
 export interface DailyReportSummary {
@@ -115,7 +117,7 @@ export async function getDailyWorkReportData({
 
   let query = supabase
     .from('activity_logs')
-    .select(`*, leads!left(customer_name)`)
+    .select(`*, leads!left(customer_name, name)`)
     .gte('created_at', start)
     .lte('created_at', end)
     .order('created_at', { ascending: true });
@@ -129,7 +131,7 @@ export async function getDailyWorkReportData({
 
   const logs: DailyReportLog[] = (data ?? []).map((r: any) => ({
     ...r,
-    customer_name: r.leads?.customer_name ?? null,
+    customer_name: r.leads?.customer_name ?? r.leads?.name ?? null,
     leads: undefined,
   }));
 
