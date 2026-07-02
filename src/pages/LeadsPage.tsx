@@ -483,7 +483,24 @@ function MobileLeadsView({
                   )}
                 </div>
                 {phone && (
-                  <a href={`tel:${phone}`} onClick={e => e.stopPropagation()}
+                  <a href={`tel:${phone}`}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      // 전화 버튼 클릭 → activity_logs 자동 기록
+                      if (user?.id) {
+                        try {
+                          await insertActivityLog({
+                            staff_id: user.id,
+                            staff_name: staffName(user.id),
+                            action_type: "call_attempt",
+                            lead_id: lead.id,
+                            memo: `전화 시도: ${phone} (${lead.name ?? lead.customer_name ?? "고객"})`,
+                            is_counted: true,
+                            created_by: user.id,
+                          });
+                        } catch (_) { /* 로그 실패 시 전화는 그냥 진행 */ }
+                      }
+                    }}
                     className="flex-shrink-0 size-11 rounded-full bg-emerald-500 flex items-center justify-center shadow-md active:scale-90 transition-transform">
                     <span className="text-white text-xl">📞</span>
                   </a>
@@ -2569,7 +2586,36 @@ export default function LeadsPage() {
                   {fmtCompactDate(r.created_at)}
                 </TableCell>
                 <TableCell className="font-bold text-foreground py-1.5 whitespace-nowrap">{r.name ?? "-"}</TableCell>
-                <TableCell className="tabular-nums text-foreground font-medium py-1.5 whitespace-nowrap">{r.phone ?? "-"}</TableCell>
+                <TableCell className="tabular-nums text-foreground font-medium py-1.5 whitespace-nowrap">
+                  <div className="flex items-center gap-1.5">
+                    <span>{r.phone ?? "-"}</span>
+                    {r.phone && (
+                      <a
+                        href={`tel:${r.phone}`}
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (user?.id) {
+                            try {
+                              await insertActivityLog({
+                                staff_id: user.id,
+                                staff_name: staffName(user.id),
+                                action_type: "call_attempt",
+                                lead_id: r.id,
+                                memo: `전화 시도: ${r.phone} (${r.name ?? r.customer_name ?? "고객"})`,
+                                is_counted: true,
+                                created_by: user.id,
+                              });
+                            } catch (_) {}
+                          }
+                        }}
+                        className="inline-flex items-center justify-center size-6 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition-colors shrink-0"
+                        title="전화 걸기"
+                      >
+                        <PhoneCall className="size-3" />
+                      </a>
+                    )}
+                  </div>
+                </TableCell>
                 {sourceTab !== "allinone" && <TableCell className="text-foreground py-1.5">{r.current_carrier ?? "-"}</TableCell>}
                 {sourceTab === "allinone" && <TableCell className="text-foreground py-1.5 whitespace-nowrap">{(r as any).carrier ?? r.current_carrier ?? "-"}</TableCell>}
                 {sourceTab === "allinone" && <TableCell className="text-foreground py-1.5 whitespace-nowrap">{(r as any).internet_carrier ?? "-"}</TableCell>}
@@ -3178,3 +3224,4 @@ function InfoRow({
     </div>
   );
 }
+
