@@ -17,3 +17,39 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
   }
 });
+
+// Invalid Refresh Token 등 만료 토큰 에러 → 조용히 세션 정리 후 로그아웃
+// (콘솔 에러 AuthApiError: Invalid Refresh Token 방지)
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'TOKEN_REFRESHED') return;
+  if (event === 'SIGNED_OUT') {
+    // 세션스토리지 Supabase 잔여 토큰 정리
+    if (typeof window !== 'undefined') {
+      try {
+        Object.keys(sessionStorage)
+          .filter(k => k.startsWith('sb-'))
+          .forEach(k => sessionStorage.removeItem(k));
+      } catch { /* noop */ }
+    }
+  }
+});
+
+// 토큰 갱신 실패(400) → 세션 만료 처리 (페이지 리로드 없이 조용히)
+// Supabase JS v2는 자체적으로 재시도하므로, 실패 시 signOut만 호출
+if (typeof window !== 'undefined') {
+  const _origFetch = window.fetch;
+  // 토큰 갱신 엔드포인트만 인터셉트
+  window.fetch = async function(input: RequestInfo | URL, init?: RequestInit) {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : (input as Request).url;
+    const res = await _origFetch(input, init);
+    if (
+      url.includes('/auth/v1/token') &&
+      (url.includes('grant_type=refresh_token') || url.includes('vpe=refresh_token')) &&
+      res.status === 400
+    ) {
+      // 조용히 세션 초기화 (콘솔 에러 억제)
+      supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+    }
+    return res;
+  };
+}
