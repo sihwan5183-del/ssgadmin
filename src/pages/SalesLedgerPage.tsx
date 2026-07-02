@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useFieldOptions } from "@/hooks/useFieldOptions";
-import { calcDashboardProfit } from "@/lib/profit";
+import { calcDashboardProfit, calcMonthlyMoyoFee } from "@/lib/profit";
 import { useDashboardStaff } from "@/hooks/useDashboardStaff";
 import { UnifiedCalendarWidget } from "@/components/dashboard/UnifiedCalendarWidget";
 
@@ -599,8 +599,6 @@ const SalesLedgerPage = () => {
     let totalVoucher = 0;
     let totalTradeIn = 0;
     let totalOfferExpense = 0; // 모요 수수료 제외한 순수 지출 합계
-    let moyoFeeTotal = 0;
-    let moyoCount = 0;
     for (const r of all) {
       const p = calcDashboardProfit(r as any);
       totalCommission += p.salesCommission;
@@ -608,11 +606,10 @@ const SalesLedgerPage = () => {
       totalReceivable += p.receivableAmount;
       totalVoucher += p.voucherAmount;
       totalTradeIn += p.tradeInConfirmed;
-      // 지출에서 모요 수수료 제외 → 순수 오퍼/지출 항목만
-      totalOfferExpense += p.expense - p.moyoFee;
-      moyoFeeTotal += p.moyoFee;
-      if (p.moyoFee > 0) moyoCount += 1;
+      totalOfferExpense += p.expense; // moyoFee는 이미 0
     }
+    // 모요 수수료 총량 정산 (건별 차감 아닌 월 총 판매건수 × 88,000)
+    const { count: moyoCount, totalFee: moyoFeeTotal } = calcMonthlyMoyoFee(all);
     const totalRebate = totalCommission + totalVas; // 단가표 + 부가서비스 (순수 영업)
     const totalRevenuePure = totalRebate + totalReceivable + totalVoucher + totalTradeIn;
     // 최종 수익 = (순수 수익) - (순수 지출) - (모요 수수료) ← 마지막에 차감
@@ -1604,3 +1601,4 @@ const SummaryCard = ({
 };
 
 export default SalesLedgerPage;
+
