@@ -14,6 +14,7 @@ import {
   insertActivityLog,
   cancelActivityLog,
 } from '@/services/workReport/activityLogService';
+import { getSalesDoneCount } from '@/services/workReport/workReportService';
 import { getAbsentRepeatCases, type AbsentRepeatCase } from '@/services/workReport/absentRepeatService';
 import {
   ACTION_TYPE_LABEL,
@@ -246,6 +247,7 @@ export default function ActivityLogs() {
   const [nameMap, setNameMap] = useState<Map<string, string>>(new Map());
 
   const [repeatCases, setRepeatCases] = useState<AbsentRepeatCase[]>([]);
+  const [salesActivation, setSalesActivation] = useState<Record<string, number>>({});
   const [filter, setFilter] = useState<ActivityLogFilter>({
     dateFrom: getKstTodayString(),
     dateTo: getKstTodayString(),
@@ -268,6 +270,16 @@ export default function ActivityLogs() {
       };
       const data = await fetchActivityLogs(effectiveFilter);
       setLogs(data);
+      // sales 기준 개통완료 (담당자별)
+      const from = filter.dateFrom ?? getKstTodayString();
+      const to = filter.dateTo ?? getKstTodayString();
+      const salesDone = await getSalesDoneCount(from, to);
+      // display_name → staff_id 역매핑
+      const activationByName: Record<string, number> = {};
+      Object.entries(salesDone.byStaff).forEach(([sid, v]) => {
+        activationByName[sid] = v.activation;
+      });
+      setSalesActivation(activationByName);
       // 반복 부재 감지
       const repeats = await getAbsentRepeatCases(
         filter.dateFrom ?? getKstTodayString(),
@@ -301,6 +313,7 @@ export default function ActivityLogs() {
   // 담당자별 집계 (현재 필터 기준)
   const staffSummary = (() => {
     const map = new Map<string, {
+      id: string;
       name: string;
       total: number;
       counted: number;
@@ -315,7 +328,7 @@ export default function ActivityLogs() {
       const id = l.staff_id;
       const name = nameMap.get(id) ?? l.staff_name ?? id.slice(0, 6);
       if (!map.has(id)) map.set(id, {
-        name, total: 0, counted: 0,
+        id, name, total: 0, counted: 0,
         call_attempt: 0, absent: 0, recare: 0,
         failed: 0, consultation_success: 0, activation_completed: 0,
       });
@@ -327,7 +340,7 @@ export default function ActivityLogs() {
       if (l.action_type === 'recare_registered' || l.action_type === 'recare_completed') s.recare++;
       if (l.action_type === 'failed') s.failed++;
       if (l.action_type === 'consultation_success') s.consultation_success++;
-      if (l.action_type === 'activation_completed') s.activation_completed++;
+      // activation_completed는 sales 기준으로 별도 집계 (leads 로그 중복 방지)
     }
     return Array.from(map.values()).sort((a, b) => b.counted - a.counted);
   })();
@@ -453,7 +466,7 @@ export default function ActivityLogs() {
                   { label: '재케어',   value: s.recare,       color: 'text-yellow-600', bg: 'bg-yellow-50' },
                   { label: '실패',     value: s.failed,       color: 'text-red-500',   bg: 'bg-red-50' },
                   { label: '상담성공', value: s.consultation_success, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                  { label: '개통완료', value: s.activation_completed, color: 'text-pink-600',    bg: 'bg-pink-50' },
+                  { label: '개통완료(실적)', value: salesActivation[s.id] ?? 0, color: 'text-pink-600', bg: 'bg-pink-50' },
                 ].map((item) => (
                   <div key={item.label} className={`rounded-xl ${item.bg} px-2 py-2 text-center`}>
                     <div className={`text-lg font-bold ${item.color}`}>{item.value}</div>
