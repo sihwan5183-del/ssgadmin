@@ -40,8 +40,6 @@ const won = (n: number) =>
   n >= 10000 ? `${(n / 10000).toFixed(1)}만` : `${Math.round(n).toLocaleString()}원`;
 const wonFull = (n: number) => `${Math.round(n).toLocaleString()}원`;
 
-// 판매실적장표(SalesLedgerPage)와 동일한 5대 수익 / 5대 오퍼 계산 로직을 그대로 재사용
-// (src/hooks/useNetFeeFormula.ts) — 총수익 - 지출(총오퍼) = 순이익
 const COLORS = ["#6366f1", "#ec4899", "#10b981", "#f59e0b", "#3b82f6", "#8b5cf6"];
 const OTHER_COLOR = "#94a3b8";
 
@@ -51,7 +49,12 @@ const normalizeSaleType = (st: string | null) => {
   return s.replace("USIM ", "").replace("기기변경", "기변").replace("번호이동", "MNP");
 };
 
-// 해당 날짜가 속한 주의 월요일(YYYY-MM-DD) 반환
+// MNP 여부 판단 (번호이동 계열 전부 포함)
+const isMNP = (sale_type: string | null) => {
+  const s = (sale_type ?? "").trim();
+  return s.includes("번호이동") || s.toUpperCase().includes("MNP");
+};
+
 const mondayOf = (dateStr: string) => {
   const d = new Date(dateStr + "T00:00:00");
   const day = d.getDay();
@@ -121,7 +124,6 @@ export default function SalesAnalyticsPage() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   };
 
-  // 기간 필터 + 건별 지표(총수익/지출/순이익) 계산
   const saleRows = useMemo(() => {
     return sales
       .filter((s) => {
@@ -151,16 +153,19 @@ export default function SalesAnalyticsPage() {
           dateKey,
           weekKey: dateKey ? mondayOf(dateKey) : "",
           monthKey: (s.open_month ?? s.open_date ?? "").slice(0, 7),
+          isMNP: isMNP(s.sale_type),
         };
       });
   }, [sales, period]);
 
-  // 핵심 지표 (선택 기간 전체 합계)
+  // 핵심 지표 (선택 기간 전체 합계) — MNP 건수 포함
   const summary = useMemo(() => {
     const totalRevenue = saleRows.reduce((s, r) => s + r.revenue, 0);
     const totalOffer = saleRows.reduce((s, r) => s + r.offer, 0);
     const totalProfit = saleRows.reduce((s, r) => s + r.profit, 0);
-    return { totalRevenue, totalOffer, totalProfit, count: saleRows.length };
+    const mnpCount = saleRows.filter(r => r.isMNP).length;
+    const mnpRate = saleRows.length > 0 ? (mnpCount / saleRows.length) * 100 : 0;
+    return { totalRevenue, totalOffer, totalProfit, count: saleRows.length, mnpCount, mnpRate };
   }, [saleRows]);
 
   type Row = (typeof saleRows)[number];
@@ -173,7 +178,6 @@ export default function SalesAnalyticsPage() {
     return "전체";
   };
 
-  // 구분 상위 카테고리 (선택 지표 기준 상위 6개, 나머지는 "기타")
   const topCategories = useMemo(() => {
     if (breakdown === "none") return [];
     const totals: Record<string, number> = {};
@@ -202,10 +206,9 @@ export default function SalesAnalyticsPage() {
       return `${d.getMonth() + 1}/${d.getDate()}`;
     }
     if (granularity === "week") return weekLabel(key);
-    return key.slice(2).replace("-", "."); // "2026-06" -> "26.06"
+    return key.slice(2).replace("-", ".");
   };
 
-  // 추이 차트용 집계 (기간 단위 x 구분)
   const chartData = useMemo(() => {
     const map: Record<string, any> = {};
     for (const r of saleRows) {
@@ -231,7 +234,6 @@ export default function SalesAnalyticsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saleRows, granularity, breakdown, topCategories, metric]);
 
-  // 구분별 합계 (상세 리스트)
   const breakdownTable = useMemo(() => {
     if (breakdown === "none") return [];
     const totals: Record<string, { value: number; count: number }> = {};
@@ -290,23 +292,34 @@ export default function SalesAnalyticsPage() {
               <span className="text-xs text-muted-foreground ml-2">{summary.count}건</span>
             </div>
 
-            {/* 핵심 지표 카드 */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {/* 핵심 지표 카드 — MNP 건수 추가 */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               {[
-                { label: "총수익", value: summary.totalRevenue, color: "text-indigo-600" },
-                { label: "지출(총오퍼)", value: summary.totalOffer, color: "text-rose-600" },
+                { label: "총수익", value: wonFull(summary.totalRevenue), sub: null, color: "text-indigo-600" },
+                { label: "지출(총오퍼)", value: wonFull(summary.totalOffer), sub: null, color: "text-rose-600" },
                 {
                   label: "순이익",
-                  value: summary.totalProfit,
+                  value: wonFull(summary.totalProfit),
+                  sub: null,
                   color: summary.totalProfit >= 0 ? "text-emerald-600" : "text-red-600",
                 },
-                { label: "판매 건수", value: summary.count, color: "text-foreground", isCount: true },
-              ].map(({ label, value, color, isCount }: any) => (
+                {
+                  label: "판매 건수",
+                  value: `${summary.count.toLocaleString()}건`,
+                  sub: null,
+                  color: "text-foreground",
+                },
+                {
+                  label: "MNP (번호이동)",
+                  value: `${summary.mnpCount}건`,
+                  sub: `전체의 ${summary.mnpRate.toFixed(1)}%`,
+                  color: "text-violet-600",
+                },
+              ].map(({ label, value, sub, color }) => (
                 <Card key={label} className="p-4">
                   <div className="text-xs text-muted-foreground mb-1">{label}</div>
-                  <div className={`text-xl font-bold ${color}`}>
-                    {isCount ? `${value.toLocaleString()}건` : wonFull(value)}
-                  </div>
+                  <div className={`text-xl font-bold ${color}`}>{value}</div>
+                  {sub && <div className="text-xs text-muted-foreground mt-0.5">{sub}</div>}
                 </Card>
               ))}
             </div>
