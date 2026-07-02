@@ -298,6 +298,40 @@ export default function ActivityLogs() {
   const countedCount = logs.filter((l) => l.is_counted).length;
   const notCountedCount = logs.filter((l) => !l.is_counted).length;
 
+  // 담당자별 집계 (현재 필터 기준)
+  const staffSummary = (() => {
+    const map = new Map<string, {
+      name: string;
+      total: number;
+      counted: number;
+      call_attempt: number;
+      absent: number;
+      recare: number;
+      failed: number;
+      consultation_success: number;
+      activation_completed: number;
+    }>();
+    for (const l of logs) {
+      const id = l.staff_id;
+      const name = nameMap.get(id) ?? l.staff_name ?? id.slice(0, 6);
+      if (!map.has(id)) map.set(id, {
+        name, total: 0, counted: 0,
+        call_attempt: 0, absent: 0, recare: 0,
+        failed: 0, consultation_success: 0, activation_completed: 0,
+      });
+      const s = map.get(id)!;
+      s.total++;
+      if (l.is_counted) s.counted++;
+      if (l.action_type === 'call_attempt') s.call_attempt++;
+      if (l.action_type === 'absent') s.absent++;
+      if (l.action_type === 'recare_registered' || l.action_type === 'recare_completed') s.recare++;
+      if (l.action_type === 'failed') s.failed++;
+      if (l.action_type === 'consultation_success') s.consultation_success++;
+      if (l.action_type === 'activation_completed') s.activation_completed++;
+    }
+    return Array.from(map.values()).sort((a, b) => b.counted - a.counted);
+  })();
+
   return (
     <div className="space-y-5">
       {showTestModal && user && (
@@ -397,6 +431,46 @@ export default function ActivityLogs() {
           </div>
         ))}
       </div>
+
+      {/* 담당자별 요약 카드 — 관리자만 */}
+      {canViewAll && staffSummary.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {staffSummary.map((s) => (
+            <div key={s.name} className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+              {/* 헤더 */}
+              <div className="flex items-center justify-between mb-3">
+                <span className="font-bold text-gray-900 text-sm">{s.name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400">전체 {s.total}건</span>
+                  <span className="text-xs font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">인정 {s.counted}건</span>
+                </div>
+              </div>
+              {/* 행동 유형별 수치 */}
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { label: '통화시도', value: s.call_attempt, color: 'text-blue-600', bg: 'bg-blue-50' },
+                  { label: '부재',     value: s.absent,       color: 'text-orange-500', bg: 'bg-orange-50' },
+                  { label: '재케어',   value: s.recare,       color: 'text-yellow-600', bg: 'bg-yellow-50' },
+                  { label: '실패',     value: s.failed,       color: 'text-red-500',   bg: 'bg-red-50' },
+                  { label: '상담성공', value: s.consultation_success, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                  { label: '개통완료', value: s.activation_completed, color: 'text-pink-600',    bg: 'bg-pink-50' },
+                ].map((item) => (
+                  <div key={item.label} className={`rounded-xl ${item.bg} px-2 py-2 text-center`}>
+                    <div className={`text-lg font-bold ${item.color}`}>{item.value}</div>
+                    <div className="text-[10px] text-gray-400 mt-0.5">{item.label}</div>
+                  </div>
+                ))}
+              </div>
+              {/* 미인정 표시 */}
+              {(s.total - s.counted) > 0 && (
+                <div className="mt-2 text-[11px] text-red-400 text-right">
+                  미인정 {s.total - s.counted}건 포함
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* 반복 부재케어 감지 */}
       {repeatCases.length > 0 && (
@@ -542,3 +616,4 @@ export default function ActivityLogs() {
     </div>
   );
 }
+
