@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { Card } from "@/components/ui/card";
@@ -7,7 +7,7 @@ import { useRole } from "@/hooks/useRole";
 import { useIncentivePolicies } from "@/hooks/useIncentivePolicies";
 import { useNetFeeFormula, sumRevenue, sumOffer } from "@/hooks/useNetFeeFormula";
 import { calcFullIncentive, DEFAULT_LINKAGE } from "@/lib/incentiveEngine";
-import { Lock, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp } from "lucide-react";
+import { Lock, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, Download } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend, Cell,
@@ -47,23 +47,18 @@ function detectAnomalies(s: Sale & { netFee?: number }): AnomalyFlag[] {
   const unit = s.unit_price ?? 0;
   const dist = s.distributor_amount ?? 0;
 
-  // 1. DB net_fee와 계산값이 500원 이상 차이 (직접 입력 의심)
   if (unit > 0 && Math.abs(dbNet - calcNet) > 500) {
     flags.push({ emoji: "⚠️", label: `net_fee 불일치 (DB:${dbNet.toLocaleString()} / 계산:${Math.round(calcNet).toLocaleString()})` });
   }
-  // 2. DB net_fee가 비정상적으로 큼 (100만 초과)
   if (dbNet > 1_000_000) {
     flags.push({ emoji: "🚨", label: `DB net_fee 비정상 과다 (${dbNet.toLocaleString()}원)` });
   }
-  // 3. 계산 net_fee가 -50만 미만
   if (calcNet < -500_000) {
     flags.push({ emoji: "🔴", label: `순마진 과다 손실 (${Math.round(calcNet).toLocaleString()}원)` });
   }
-  // 4. distributor_amount = 0인데 unit_price > 0
   if (dist === 0 && unit > 0) {
     flags.push({ emoji: "❓", label: "유통망 지급액 0원 (누락 의심)" });
   }
-  // 5. open_date NULL
   if (!s.open_date) {
     flags.push({ emoji: "📭", label: "개통일 미입력" });
   }
@@ -81,11 +76,68 @@ const COLORS = ["#6366f1", "#ec4899", "#10b981", "#f59e0b", "#3b82f6", "#8b5cf6"
 
 type Period = "this_month" | "last_month" | "3months" | "all";
 
+// PDF 다운로드 함수 (html2canvas + jsPDF CDN 동적 로드)
+async function downloadAsPDF(element: HTMLElement, filename: string) {
+  // html2canvas 동적 로드
+  await new Promise<void>((resolve, reject) => {
+    if ((window as any).html2canvas) { resolve(); return; }
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+    s.onload = () => resolve();
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+  // jsPDF 동적 로드
+  await new Promise<void>((resolve, reject) => {
+    if ((window as any).jspdf) { resolve(); return; }
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+    s.onload = () => resolve();
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+
+  const canvas = await (window as any).html2canvas(element, {
+    scale: 2,
+    useCORS: true,
+    backgroundColor: "#ffffff",
+    logging: false,
+  });
+
+  const imgData = canvas.toDataURL("image/png");
+  const { jsPDF } = (window as any).jspdf;
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const imgW = pageW - 20;
+  const imgH = (canvas.height * imgW) / canvas.width;
+
+  let y = 10;
+  let remaining = imgH;
+  let srcY = 0;
+
+  while (remaining > 0) {
+    const sliceH = Math.min(remaining, pageH - 20);
+    const sliceCanvas = document.createElement("canvas");
+    sliceCanvas.width = canvas.width;
+    sliceCanvas.height = (sliceH / imgH) * canvas.height;
+    const ctx = sliceCanvas.getContext("2d")!;
+    ctx.drawImage(canvas, 0, srcY, canvas.width, sliceCanvas.height, 0, 0, canvas.width, sliceCanvas.height);
+    pdf.addImage(sliceCanvas.toDataURL("image/png"), "PNG", 10, y, imgW, sliceH);
+    remaining -= sliceH;
+    srcY += sliceCanvas.height;
+    if (remaining > 0) { pdf.addPage(); y = 10; }
+  }
+
+  pdf.save(filename);
+}
+
 export default function ProfitPage() {
   const { isAdmin, loading: roleLoading } = useRole();
   const { policies } = useIncentivePolicies();
   const { calc: calcNetFee } = useNetFeeFormula();
   const navigate = useNavigate();
+  const printRef = useRef<HTMLDivElement>(null);
 
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,6 +147,7 @@ export default function ProfitPage() {
   const PAGE_SIZE = 50;
   const [selectedManager, setSelectedManager] = useState<string | null>(null);
   const [mgPage, setMgPage] = useState(0);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -126,16 +179,11 @@ export default function ProfitPage() {
     });
   }, [sales, period]);
 
-  // 건별 수익 계산
   const saleRows = useMemo(() => {
     return filtered.map((s) => {
       const revenue = sumRevenue(s as any);
       const offer = sumOffer(s as any);
-      // 항상 공식으로 재계산 (DB net_fee 직접입력 오류 방지)
-      // DB값은 이상 감지 비교용으로만 보존 (s.net_fee)
       const netFee = calcNetFee(s as any);
-
-      // 직원 인센티브 계산
       const saleForIncentive = {
         id: s.id,
         open_date: s.open_date,
@@ -149,19 +197,10 @@ export default function ProfitPage() {
       const incentiveResult = calcFullIncentive([saleForIncentive], policies, DEFAULT_LINKAGE, 0);
       const incentive = incentiveResult.total;
       const companyProfit = netFee - incentive;
-
-      return {
-        ...s,
-        revenue,
-        offer,
-        netFee,
-        incentive,
-        companyProfit,
-      };
+      return { ...s, revenue, offer, netFee, incentive, companyProfit };
     });
   }, [filtered, policies, calcNetFee]);
 
-  // 요약 지표
   const summary = useMemo(() => {
     const totalRevenue = saleRows.reduce((s, r) => s + r.revenue, 0);
     const totalOffer = saleRows.reduce((s, r) => s + r.offer, 0);
@@ -171,7 +210,6 @@ export default function ProfitPage() {
     return { totalRevenue, totalOffer, totalNetFee, totalIncentive, totalProfit, count: saleRows.length };
   }, [saleRows]);
 
-  // 직원별 집계
   const byManager = useMemo(() => {
     const map: Record<string, { name: string; count: number; netFee: number; incentive: number; profit: number }> = {};
     for (const r of saleRows) {
@@ -185,7 +223,6 @@ export default function ProfitPage() {
     return Object.values(map).sort((a, b) => b.profit - a.profit);
   }, [saleRows]);
 
-  // 일별 추이 (선택 기간)
   const byDay = useMemo(() => {
     const map: Record<string, { date: string; label: string; netFee: number; incentive: number; profit: number; count: number }> = {};
     for (const r of saleRows) {
@@ -202,7 +239,6 @@ export default function ProfitPage() {
     return Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
   }, [saleRows]);
 
-  // 월별 추이 (전체 기간)
   const byMonth = useMemo(() => {
     const map: Record<string, { month: string; netFee: number; incentive: number; profit: number; count: number }> = {};
     for (const s of sales) {
@@ -219,6 +255,22 @@ export default function ProfitPage() {
     }
     return Object.values(map).sort((a, b) => a.month.localeCompare(b.month)).slice(-6);
   }, [sales, policies, calcNetFee]);
+
+  const periodLabel = period === "this_month" ? "이번달" : period === "last_month" ? "저번달" : period === "3months" ? "최근3개월" : "전체";
+
+  const handleDownload = async () => {
+    if (!printRef.current || downloading) return;
+    setDownloading(true);
+    try {
+      const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+      await downloadAsPDF(printRef.current, `수익분석_${periodLabel}_${today}.pdf`);
+    } catch (e) {
+      alert("PDF 생성 중 오류가 발생했습니다.");
+      console.error(e);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   if (roleLoading) return <div className="p-10 text-center text-muted-foreground">권한 확인 중...</div>;
   if (!isAdmin) return (
@@ -237,29 +289,44 @@ export default function ProfitPage() {
       <Header title="수익 분석" subtitle="판매 건별 순수익 · 인센티브 · 회사 실이익 분석" />
       <div className="p-6 space-y-6">
 
-        {/* 기간 필터 */}
-        <div className="flex items-center gap-2">
-          {([
-            { k: "this_month", l: "이번달" },
-            { k: "last_month", l: "저번달" },
-            { k: "3months", l: "최근 3개월" },
-            { k: "all", l: "전체" },
-          ] as const).map((opt) => (
-            <button
-              key={opt.k}
-              onClick={() => setPeriod(opt.k)}
-              className={
-                "px-3 py-1.5 text-xs font-semibold rounded border transition-colors " +
-                (period === opt.k
-                  ? "bg-primary text-white border-primary"
-                  : "border-border text-muted-foreground hover:text-foreground")
-              }
-            >
-              {opt.l}
-            </button>
-          ))}
-          <span className="text-xs text-muted-foreground ml-2">{summary.count}건</span>
+        {/* 기간 필터 + 다운로드 버튼 */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            {([
+              { k: "this_month", l: "이번달" },
+              { k: "last_month", l: "저번달" },
+              { k: "3months", l: "최근 3개월" },
+              { k: "all", l: "전체" },
+            ] as const).map((opt) => (
+              <button
+                key={opt.k}
+                onClick={() => setPeriod(opt.k)}
+                className={
+                  "px-3 py-1.5 text-xs font-semibold rounded border transition-colors " +
+                  (period === opt.k
+                    ? "bg-primary text-white border-primary"
+                    : "border-border text-muted-foreground hover:text-foreground")
+                }
+              >
+                {opt.l}
+              </button>
+            ))}
+            <span className="text-xs text-muted-foreground ml-2">{summary.count}건</span>
+          </div>
+
+          {/* PDF 다운로드 버튼 */}
+          <button
+            onClick={handleDownload}
+            disabled={downloading}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded border border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors disabled:opacity-50"
+          >
+            <Download className="size-3.5" />
+            {downloading ? "생성 중..." : "PDF 다운로드"}
+          </button>
         </div>
+
+        {/* 인쇄 영역 */}
+        <div ref={printRef} className="space-y-6 bg-white">
 
         {/* 이상 건 요약 배너 */}
         {(() => {
@@ -296,7 +363,7 @@ export default function ProfitPage() {
         <Card className="p-4">
           <div className="text-sm font-semibold mb-4">
             일별 수익 추이
-            <span className="text-xs text-muted-foreground font-normal ml-2">({period === "this_month" ? "이번달" : period === "last_month" ? "저번달" : period === "3months" ? "최근 3개월" : "전체"})</span>
+            <span className="text-xs text-muted-foreground font-normal ml-2">({periodLabel})</span>
           </div>
           {byDay.length === 0 ? (
             <div className="text-center text-muted-foreground text-sm py-8">해당 기간 데이터 없음</div>
@@ -547,6 +614,8 @@ export default function ProfitPage() {
 
         </Card>
 
+        </div>{/* /printRef */}
+
         {/* 개인 상세 모달 */}
         {selectedManager && (() => {
           const mgRows = saleRows.filter(r => r.manager === selectedManager);
@@ -565,7 +634,6 @@ export default function ProfitPage() {
             monthMap[m].profit += r.companyProfit;
             monthMap[m].count++;
           }
-          // 전체 기간 월별도 포함
           for (const s of sales.filter(s => s.manager === selectedManager)) {
             const m = (s.open_month ?? s.open_date ?? "").slice(0, 7);
             if (!m || monthMap[m]) continue;
@@ -580,13 +648,12 @@ export default function ProfitPage() {
                 <div className="sticky top-0 bg-background border-b px-6 py-4 flex items-center justify-between rounded-t-2xl">
                   <div>
                     <div className="font-bold text-lg">{selectedManager}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">{period === "this_month" ? "이번달" : period === "last_month" ? "저번달" : period === "3months" ? "최근 3개월" : "전체"} 기준</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{periodLabel} 기준</div>
                   </div>
                   <button onClick={() => { setSelectedManager(null); setMgPage(0); }} className="text-muted-foreground hover:text-foreground text-xl font-bold px-2">✕</button>
                 </div>
 
                 <div className="p-6 space-y-6">
-                  {/* 요약 */}
                   <div className="grid grid-cols-4 gap-3">
                     {[
                       { label: "판매건수", value: `${mgSummary.count}건`, color: "text-foreground" },
@@ -601,7 +668,6 @@ export default function ProfitPage() {
                     ))}
                   </div>
 
-                  {/* 월별 추이 차트 */}
                   {monthData.length > 0 && (
                     <div>
                       <div className="text-xs font-semibold text-muted-foreground mb-2">월별 추이</div>
@@ -618,7 +684,6 @@ export default function ProfitPage() {
                     </div>
                   )}
 
-                  {/* 건별 목록 */}
                   <div>
                     <div className="text-xs font-semibold text-muted-foreground mb-2">건별 상세 ({mgRows.length}건)</div>
                     <table className="w-full text-xs">
