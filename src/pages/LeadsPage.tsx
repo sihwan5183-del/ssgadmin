@@ -2216,11 +2216,13 @@ export default function LeadsPage() {
           pcTabs.push({ key: "recare4happy", label: `재케어대상 ${recare4happyC}`, color: "amber" });
         } else {
           // ── 통일 상태값 (메타 / 유닥 / 올인원 / 기타인입 공통) ──
+          const newC      = tabRows.filter(r => r.status === "신규 접수").length;
           const absC      = tabRows.filter(r => r.status === "부재").length;
           const recareC2  = tabRows.filter(r => r.status === "재케어").length;
           const failC2    = tabRows.filter(r => r.status === "실패").length;
           const successC  = tabRows.filter(r => r.status === "성공").length;
           const completeC = tabRows.filter(r => r.status === "개통완료").length;
+          pcTabs.push({ key: "new",           label: `신규 접수 ${newC}`,    color: "blue-light" });
           pcTabs.push({ key: "absence",       label: `부재 ${absC}`,         color: "orange" });
           pcTabs.push({ key: "recare",        label: `재케어 ${recareC2}`,   color: "purple" });
           pcTabs.push({ key: "cancel",        label: `실패 ${failC2}`,       color: "red" });
