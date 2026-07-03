@@ -39,15 +39,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ColumnFilter, matchesFilter, type FilterSelection } from "@/components/common/ColumnFilter";
 
-const FAIL_REASONS = [
-  "가격(지원금) 불만",
-  "결합/위약금 문제",
-  "기기 재고 없음",
-  "타사 유지",
-  "단순 변심",
-  "연락 두절",
-  "기타",
-] as const;
+const FAIL_REASONS: string[] = [];  // DB에서 동적 로드
 
 const STATUS_CONFIG: Record<string, { icon: typeof PhoneOff; color: string; label: string }> = {
   미처리: { icon: AlertTriangle, color: "hsl(25 95% 45%)", label: "미처리" },
@@ -121,6 +113,15 @@ function TimelineDialog({
   const [action, setAction] = useState("전화");
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // fail_reasons 로드
+  useEffect(() => {
+    supabase.from("fail_reasons")
+      .select("id, label, sort_order")
+      .eq("is_active", true)
+      .order("sort_order")
+      .then(({ data }) => { if (data) setFailReasons(data as any[]); });
+  }, []);
 
   useEffect(() => {
     if (!inquiry) return;
@@ -240,6 +241,7 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
   const [editStatus, setEditStatus] = useState("");
   const [editRetryAt, setEditRetryAt] = useState("");
   const [editFailReason, setEditFailReason] = useState("");
+  const [failReasons, setFailReasons] = useState<{id:string;label:string}[]>([]);
   // 상세 수정 다이얼로그
   const [detailRow, setDetailRow] = useState<InquiryRow | null>(null);
   const [detail, setDetail] = useState<{
