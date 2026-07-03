@@ -570,7 +570,7 @@ export default function ActivityLogs() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-xs text-gray-500 border-b border-gray-100 bg-gray-50">
-                  {['시간', '담당자', '채널', '고객(lead_id)', '행동유형', '결과', '이전상태', '변경상태', '인정여부', '미인정 사유', '메모', ''].map((h) => (
+                  {['시간', '담당자', '채널', '고객명', '행동유형', '결과', '이전상태', '변경상태', '인정여부', '미인정 사유', '메모', ''].map((h) => (
                     <th key={h} className="py-2.5 px-3 font-medium text-left whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
