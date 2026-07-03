@@ -5,6 +5,7 @@
 // ============================================================
 import { supabase } from '@/integrations/supabase/client';
 import { getKstDateRangeUtc } from './dateUtils';
+import { resolveStaffDisplayNames } from './staffDisplayService';
 
 // ── 채널 분류 헬퍼 ────────────────────────────────────────────
 export function detectChannel(
@@ -252,19 +253,17 @@ export async function getStaffFunnelData(
   const yStr = yDate.toISOString().slice(0, 10);
   const { start: yStart, end: yEnd } = getKstDateRangeUtc(yStr, yStr);
 
-  const [{ data: leads }, { data: staff }, { data: yesterdayLeads }] = await Promise.all([
+  const [{ data: leads }, { data: yesterdayLeads }] = await Promise.all([
     supabase.from('leads')
       .select('id, channel, campaign_name, source, status, last_action_at, assigned_to')
       .gte('created_at', start).lte('created_at', end).is('deleted_at', null),
-    supabase.from('users').select('id, display_name'),
     supabase.from('leads')
       .select('assigned_to, channel, campaign_name, source, status')
       .gte('created_at', yStart).lte('created_at', yEnd).is('deleted_at', null),
   ]);
 
-  const staffNameMap = new Map<string, string>(
-    (staff ?? []).map((s: any) => [s.id, s.display_name ?? s.id])
-  );
+  const allAssignedIds = [...new Set((leads ?? []).map((l: any) => l.assigned_to).filter(Boolean))] as string[];
+  const staffNameMap = await resolveStaffDisplayNames(allAssignedIds);
 
   const map = new Map<string, {
     staff_id: string | null;
@@ -410,8 +409,7 @@ export async function getFunnelDrillLeads(
   const staffIds = [...new Set(filtered.map((l: any) => l.assigned_to).filter(Boolean))];
   let staffNameMap = new Map<string, string>();
   if (staffIds.length > 0) {
-    const { data: staffData } = await supabase.from('users').select('id, display_name').in('id', staffIds);
-    staffNameMap = new Map((staffData ?? []).map((s: any) => [s.id, s.display_name ?? s.id]));
+    staffNameMap = await resolveStaffDisplayNames(staffIds);
   }
 
   const isAbsent = (s: string) => ['부재케어', '부재 중', '부재'].includes(s);
