@@ -2749,7 +2749,11 @@ export default function LeadsPage() {
                             🚫 {absenceNum}회
                           </span>
                         )}
-                        <span>{r.memo?.replace(/부재\/\d+회\s*\/?/g, "").trim() || <span className="italic text-foreground/40">메모 추가…</span>}</span>
+                        <span>{
+                          r.status === "실패" || r.status === "취소"
+                            ? (() => { const m = (r.memo ?? "").match(/\[실패:([^\]]+)\]/); return m ? <span className="text-red-500 font-semibold text-xs">{m[1]}</span> : <span className="italic text-red-300 text-xs">사유 미선택</span>; })()
+                            : r.memo?.replace(/부재\/\d+회\s*\/?/g, "").trim() || <span className="italic text-foreground/40">메모 추가…</span>
+                        }</span>
                       </div>
                     );
                   })()}
@@ -3103,39 +3107,43 @@ export default function LeadsPage() {
                 </div>
                 )}
 
-                {/* 실패/취소 상태 → 실패사유 버튼 */}
+                {/* 실패/취소 상태 → 아코디언 실패사유 */}
                 {openLead.status === "실패" || openLead.status === "취소" ? (
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap gap-2">
-                      {failReasons.length === 0 ? (
-                        <p className="text-xs text-gray-400">리포트 설정에서 실패 사유를 등록해주세요</p>
-                      ) : failReasons.map(r => (
-                        <button
-                          key={r.id}
-                          onClick={async () => {
-                            const memo = `[실패:${r.label}]`;
-                            await supabase.from("leads").update({ memo }).eq("id", openLead.id);
-                            setOpenLead({ ...openLead, memo });
-                            setRows(p => p.map(row => row.id === openLead.id ? { ...row, memo } : row));
-                            const { data: lg } = await supabase.from("activity_logs").select("id").eq("lead_id", openLead.id).eq("action_type", "failed").order("created_at", { ascending: false }).limit(1).single();
-                            if (lg?.id) await supabase.from("activity_logs").update({ fail_reason: r.label }).eq("id", lg.id);
-                          }}
-                          className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-all active:scale-95 ${
-                            (openLead.memo ?? "").includes(`[실패:${r.label}]`)
-                              ? "bg-red-100 border-red-400 text-red-700 shadow-sm scale-105"
-                              : "bg-red-50 border-red-200 text-red-500 hover:bg-red-100"
-                          }`}
-                        >
-                          {r.label}
-                        </button>
-                      ))}
+                  <div className="border border-red-200 rounded-xl overflow-hidden">
+                    {/* 현재 선택된 사유 헤더 */}
+                    <div className="flex items-center justify-between px-4 py-3 bg-red-50">
+                      <span className="text-xs text-red-400">실패 사유</span>
+                      <span className="text-sm font-bold text-red-700">
+                        {(openLead.memo?.match(/\[실패:([^\]]+)\]/) ?? [])[1] ?? "선택 안 됨"}
+                      </span>
                     </div>
-                    {openLead.memo && openLead.memo.includes("[실패:") && (
-                      <div className="mt-2 px-3 py-2 bg-red-50 rounded-lg border border-red-100">
-                        <span className="text-xs text-red-500 font-semibold">선택된 사유: </span>
-                        <span className="text-xs text-red-700 font-bold">{(openLead.memo.match(/\[실패:([^\]]+)\]/) ?? [])[1] ?? ""}</span>
-                      </div>
-                    )}
+                    {/* 사유 목록 */}
+                    <div className="divide-y divide-red-100">
+                      {failReasons.length === 0 ? (
+                        <p className="text-xs text-gray-400 px-4 py-3">리포트 설정에서 실패 사유를 등록해주세요</p>
+                      ) : failReasons.map(r => {
+                        const isSelected = (openLead.memo ?? "").includes(`[실패:${r.label}]`);
+                        return (
+                          <button
+                            key={r.id}
+                            onClick={async () => {
+                              const memo = `[실패:${r.label}]`;
+                              await supabase.from("leads").update({ memo }).eq("id", openLead.id);
+                              setOpenLead({ ...openLead, memo });
+                              setRows(p => p.map(row => row.id === openLead.id ? { ...row, memo } : row));
+                              const { data: lg } = await supabase.from("activity_logs").select("id").eq("lead_id", openLead.id).eq("action_type", "failed").order("created_at", { ascending: false }).limit(1).single();
+                              if (lg?.id) await supabase.from("activity_logs").update({ fail_reason: r.label }).eq("id", lg.id);
+                            }}
+                            className={`w-full flex items-center justify-between px-4 py-3 text-sm transition-colors ${
+                              isSelected ? "bg-red-100 text-red-700 font-bold" : "bg-white text-gray-700 hover:bg-red-50"
+                            }`}
+                          >
+                            <span>{r.label}</span>
+                            {isSelected && <span className="text-red-500 text-base">✓</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 ) : (
                   /* 일반 상태 → 상담내용 입력 */
