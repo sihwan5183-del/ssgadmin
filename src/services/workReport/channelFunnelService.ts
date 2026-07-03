@@ -472,3 +472,169 @@ export async function getFunnelDrillLeads(
       : 999,
   })).sort((a, b) => b.days_since_last_action - a.days_since_last_action);
 }
+
+// ============================================================
+// 실패 사유 분석
+// ============================================================
+export interface FailReasonRow {
+  reason: string;
+  channel: string;
+  count: number;
+  leads: { id: string; customer_name: string; customer_phone: string | null; assigned_name: string; memo: string | null; created_at: string }[];
+}
+
+export const FAIL_REASON_LABELS = [
+  '이동의사 없음', '약정/결합으로 불가', '요금 부담',
+  '업셀 거절', '연락두절', '타사 장기고객', '고객 직접 취소', '기타'
+] as const;
+
+export async function getFailReasonStats(
+  from: string, to: string, filterChannel?: ChannelKey
+): Promise<{ byReason: Record<string, Record<string, number>>; total: Record<string, number> }> {
+  const { start, end } = getKstDateRangeUtc(from, to);
+
+  const { data: logs } = await supabase
+    .from('activity_logs')
+    .select('fail_reason, channel, lead_id')
+    .eq('action_type', 'failed')
+    .not('fail_reason', 'is', null)
+    .gte('created_at', start)
+    .lte('created_at', end);
+
+  const byReason: Record<string, Record<string, number>> = {};
+  const total: Record<string, number> = {};
+
+  for (const log of (logs ?? [])) {
+    const ch = log.channel ?? 'other';
+    const reason = log.fail_reason ?? '기타';
+    if (filterChannel && filterChannel !== 'all' && ch !== filterChannel) continue;
+    if (!byReason[reason]) byReason[reason] = {};
+    byReason[reason][ch] = (byReason[reason][ch] ?? 0) + 1;
+    total[reason] = (total[reason] ?? 0) + 1;
+  }
+
+  // activity_logs.fail_reason 없는 경우 leads.memo 파싱으로 보완
+  const { data: failLeads } = await supabase
+    .from('leads')
+    .select('id, memo, channel, campaign_name, source')
+    .in('status', ['실패', '취소'])
+    .gte('created_at', start)
+    .lte('created_at', end)
+    .is('deleted_at', null);
+
+  for (const lead of (failLeads ?? [])) {
+    const ch = detectChannel(lead.channel, lead.campaign_name, lead.source);
+    if (filterChannel && filterChannel !== 'all' && ch !== filterChannel) continue;
+    const memo = lead.memo ?? '';
+    // [실패:사유] 패턴 파싱
+    const match = memo.match(/\[실패:([^\]]+)\]/);
+    const reason = match ? match[1].trim() : null;
+    if (!reason) continue;
+    if (!byReason[reason]) byReason[reason] = {};
+    byReason[reason][ch] = (byReason[reason][ch] ?? 0) + 1;
+    total[reason] = (total[reason] ?? 0) + 1;
+  }
+
+  return { byReason, total };
+}
+
+// ============================================================
+// 부재 횟수별 전환 분석
+// ============================================================
+export interface AbsentCountRow {
+  absent_count: number;
+  total: number;
+  success: number;
+  fail: number;
+  still_absent: number;
+  recare: number;
+  success_rate: number;
+  fail_rate: number;
+}
+
+export async function getAbsentCountAnalysis(
+  from: string, to: string, filterChannel?: ChannelKey
+): Promise<AbsentCountRow[]> {
+  const { start, end } = getKstDateRangeUtc(from, to);
+
+  const { data: leads } = await supabase
+    .from('leads')
+    .select('id, memo, status, channel, campaign_name, source')
+    .gte('created_at', start)
+    .lte('created_at', end)
+    .is('deleted_at', null)
+    .not('memo', 'is', null);
+
+  const map = new Map<number, { total: number; success: number; fail: number; still_absent: number; recare: number }>();
+
+  for (const lead of (leads ?? [])) {
+    const memo = lead.memo ?? '';
+    const match = memo.match(/부재\/(\d+)회/);
+    if (!match) continue;
+    const cnt = parseInt(match[1]);
+    const ch = detectChannel(lead.channel, lead.campaign_name, lead.source);
+    if (filterChannel && filterChannel !== 'all' && ch !== filterChannel) continue;
+
+    if (!map.has(cnt)) map.set(cnt, { total: 0, success: 0, fail: 0, still_absent: 0, recare: 0 });
+    const r = map.get(cnt)!;
+    r.total++;
+    const st = lead.status ?? '';
+    if (['성공', '개통 완료', '개통완료'].includes(st)) r.success++;
+    else if (['실패', '취소'].includes(st)) r.fail++;
+    else if (['부재케어', '부재 중', '부재'].includes(st)) r.still_absent++;
+    else if (st === '재케어') r.recare++;
+  }
+
+  const pct = (n: number, d: number) => d > 0 ? Math.round(n / d * 1000) / 10 : 0;
+
+  return Array.from(map.entries())
+    .map(([cnt, r]) => ({
+      absent_count: cnt,
+      ...r,
+      success_rate: pct(r.success, r.total),
+      fail_rate: pct(r.fail, r.total),
+    }))
+    .sort((a, b) => a.absent_count - b.absent_count);
+}
+
+// ============================================================
+// 시간대별 부재율 분석
+// ============================================================
+export interface HourlyAbsentRow {
+  hour: number;
+  attempt: number;
+  absent: number;
+  absent_rate: number;
+}
+
+export async function getHourlyAbsentStats(
+  from: string, to: string, filterChannel?: ChannelKey
+): Promise<HourlyAbsentRow[]> {
+  const { start, end } = getKstDateRangeUtc(from, to);
+
+  const { data: logs } = await supabase
+    .from('activity_logs')
+    .select('action_type, channel, created_at')
+    .in('action_type', ['call_attempt', 'absent'])
+    .gte('created_at', start)
+    .lte('created_at', end);
+
+  const map = new Map<number, { attempt: number; absent: number }>();
+  for (let h = 9; h <= 21; h++) map.set(h, { attempt: 0, absent: 0 });
+
+  for (const log of (logs ?? [])) {
+    const ch = log.channel ?? 'other';
+    if (filterChannel && filterChannel !== 'all' && ch !== filterChannel) continue;
+    const kstHour = new Date(new Date(log.created_at).getTime() + 9 * 3600000).getHours();
+    if (!map.has(kstHour)) map.set(kstHour, { attempt: 0, absent: 0 });
+    const r = map.get(kstHour)!;
+    if (log.action_type === 'call_attempt') r.attempt++;
+    if (log.action_type === 'absent') r.absent++;
+  }
+
+  const pct = (n: number, d: number) => d > 0 ? Math.round(n / d * 1000) / 10 : 0;
+
+  return Array.from(map.entries())
+    .map(([hour, r]) => ({ hour, ...r, absent_rate: pct(r.absent, r.attempt + r.absent) }))
+    .sort((a, b) => a.hour - b.hour);
+}
