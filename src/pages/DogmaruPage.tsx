@@ -77,7 +77,7 @@ const MOBILE_STATUS_OPTIONS = MOBILE_STATUS_META;
 
 const ABSENCE_REASONS = ["통화중", "부재"];
 const RECARE_REASONS = ["가격 재상담", "기기 미정", "타사 비교중", "시기 조율", "가족 상의", "기타"];
-const FAIL_REASONS = ["가격", "재고", "개통시기", "기타"];
+const FAIL_REASONS: string[] = [];  // DB에서 동적 로드
 const DOGMARU_CAMPAIGN = "도그마루_홈캠";
 
 // ── 도그마루 상태 분류 함수 (PC/모바일 공통) ──
@@ -892,6 +892,7 @@ export default function LeadsPage() {
   const [pcCareTab, setPcCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "pending" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc" | "happy_call" | "happy_call_result" | "recare4happy">("all");
   const [openLead, setOpenLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState<LeadNote[]>([]);
+  const [failReasons, setFailReasons] = useState<{id:string;label:string}[]>([]);
   const [statusLogs, setStatusLogs] = useState<any[]>([]);
   const [newNote, setNewNote] = useState("");
   const [memoDraft, setMemoDraft] = useState("");
@@ -1002,6 +1003,15 @@ export default function LeadsPage() {
       supabase.removeChannel(ich);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // fail_reasons 로드 (최초 1회)
+  useEffect(() => {
+    supabase.from("fail_reasons")
+      .select("id, label, sort_order")
+      .eq("is_active", true)
+      .order("sort_order")
+      .then(({ data }) => { if (data) setFailReasons(data as any[]); });
   }, []);
 
   // Load notes for open lead
@@ -2619,6 +2629,39 @@ export default function LeadsPage() {
                       📵 부재중 문자
                     </button>
                   </div>
+                  {openLead.status === "실패" || openLead.status === "취소" ? (
+                    <div className="space-y-2">
+                      <div className="text-xs font-semibold text-gray-500 mb-1">실패 사유 선택</div>
+                      <div className="flex flex-wrap gap-2">
+                        {failReasons.map(r => (
+                          <button
+                            key={r.id}
+                            onClick={async () => {
+                              const memo = `[실패:${r.label}]`;
+                              await supabase.from("leads").update({ memo }).eq("id", openLead.id);
+                              setOpenLead({ ...openLead, memo });
+                              setRows(p => p.map(row => row.id === openLead.id ? { ...row, memo } : row));
+                              const { data: lg } = await supabase.from("activity_logs").select("id").eq("lead_id", openLead.id).eq("action_type", "failed").order("created_at", { ascending: false }).limit(1).single();
+                              if (lg?.id) await supabase.from("activity_logs").update({ fail_reason: r.label }).eq("id", lg.id);
+                            }}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95 ${
+                              (openLead.memo ?? "").includes(`[실패:${r.label}]`)
+                                ? "bg-red-100 border-red-400 text-red-700 shadow-sm"
+                                : "bg-red-50 border-red-200 text-red-500 hover:bg-red-100"
+                            }`}
+                          >
+                            {r.label}
+                          </button>
+                        ))}
+                      </div>
+                      {openLead.memo && openLead.memo.includes("[실패:") && (
+                        <div className="text-xs text-red-400 mt-1">
+                          선택된 사유: {(openLead.memo.match(/\[실패:([^\]]+)\]/) ?? [])[1] ?? ""}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                  <div>
                   <Textarea
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
@@ -2631,6 +2674,8 @@ export default function LeadsPage() {
                       메모 저장
                     </Button>
                   </div>
+                  </div>
+                  )}
                 </div>
 
                 <div className="mt-4 space-y-3">
