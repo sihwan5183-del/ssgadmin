@@ -1420,10 +1420,15 @@ export default function LeadsPage() {
 
     for (const r of rows) {
       const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
-      const isUdakR = r.channel === "유닥" || r.channel === "메타광고";
+      const isUdakR = r.channel === "유닭" || r.channel === "메타광고";
+      const isAllinone = r.source === "allinone" || r.channel === "올인원";
+      if (sourceTab === "dogmaru" && !isDogmaru) continue;
+      if (sourceTab === "meta" && (isDogmaru || isUdakR || isAllinone)) continue;
+      if (sourceTab === "udak" && !isUdakR) continue;
+      if (sourceTab === "allinone" && !isAllinone) continue;
+      if (sourceTab === "other") continue;
 
-      let dateIso = "";
-      const rd = r.registration_date;
+      let dateIsoonst rd = r.registration_date;
       if (rd && rd.includes("/")) {
         const parts = rd.split("/");
         const mo = parts[0].padStart(2, "0");
