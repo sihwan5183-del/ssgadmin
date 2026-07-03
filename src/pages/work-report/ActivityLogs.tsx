@@ -461,17 +461,29 @@ export default function ActivityLogs() {
               {/* 행동 유형별 수치 */}
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { label: '통화시도', value: s.call_attempt, color: 'text-blue-600', bg: 'bg-blue-50' },
-                  { label: '부재',     value: s.absent,       color: 'text-orange-500', bg: 'bg-orange-50' },
-                  { label: '재케어',   value: s.recare,       color: 'text-yellow-600', bg: 'bg-yellow-50' },
-                  { label: '실패',     value: s.failed,       color: 'text-red-500',   bg: 'bg-red-50' },
-                  { label: '상담성공', value: s.consultation_success, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                  { label: '개통완료(실적)', value: salesActivation[s.id] ?? 0, color: 'text-pink-600', bg: 'bg-pink-50' },
+                  { label: '통화시도', value: s.call_attempt, color: 'text-blue-600', bg: 'bg-blue-50', action: 'call_attempt' as const },
+                  { label: '부재',     value: s.absent,       color: 'text-orange-500', bg: 'bg-orange-50', action: 'absent' as const },
+                  { label: '재케어',   value: s.recare,       color: 'text-yellow-600', bg: 'bg-yellow-50', action: 'recare_registered' as const },
+                  { label: '실패',     value: s.failed,       color: 'text-red-500',   bg: 'bg-red-50', action: 'failed' as const },
+                  { label: '상담성공', value: s.consultation_success, color: 'text-emerald-600', bg: 'bg-emerald-50', action: 'consultation_success' as const },
+                  { label: '개통완료(실적)', value: salesActivation[s.id] ?? 0, color: 'text-pink-600', bg: 'bg-pink-50', action: null },
                 ].map((item) => (
-                  <div key={item.label} className={`rounded-xl ${item.bg} px-2 py-2 text-center`}>
+                  <button
+                    key={item.label}
+                    onClick={() => {
+                      if (item.action && item.value > 0) {
+                        setFilter((f) => ({ ...f, staffId: s.id, actionType: item.action as any }));
+                        setTimeout(() => {
+                          document.getElementById('activity-log-table')?.scrollIntoView({ behavior: 'smooth' });
+                        }, 100);
+                      }
+                    }}
+                    disabled={!item.action || item.value === 0}
+                    className={`rounded-xl ${item.bg} px-2 py-2 text-center w-full transition-all ${item.action && item.value > 0 ? 'hover:ring-2 hover:ring-offset-1 hover:ring-gray-300 cursor-pointer active:scale-95' : 'cursor-default'}`}
+                  >
                     <div className={`text-lg font-bold ${item.color}`}>{item.value}</div>
                     <div className="text-[10px] text-gray-400 mt-0.5">{item.label}</div>
-                  </div>
+                  </button>
                 ))}
               </div>
               {/* 미인정 표시 */}
@@ -529,6 +541,7 @@ export default function ActivityLogs() {
       )}
 
       {/* 로그 테이블 */}
+      <div id="activity-log-table" />}
       <SectionCard>
         {loading ? (
           <div className="py-16 text-center text-sm text-gray-400">로딩 중...</div>
