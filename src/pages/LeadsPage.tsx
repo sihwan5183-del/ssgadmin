@@ -1706,6 +1706,7 @@ export default function LeadsPage() {
     supabase.from("lead_status_logs").insert({
       lead_id: id,
       status,
+      previous_status: previousStatus ?? null,
       changed_by: changedBy,
     }).then(({ error: e }) => {
       if (e) console.warn('[lead_status_logs] INSERT 실패:', e.message);
