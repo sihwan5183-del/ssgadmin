@@ -1005,7 +1005,7 @@ export default function LeadsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [intakeFormOpen, setIntakeFormOpen] = useState(false);
   const [inquiryRows, setInquiryRows] = useState<{ created_at: string; status: string | null; manager: string | null }[]>([]);
-  const [period, setPeriod] = useState<"all" | "yesterday" | "this_month" | "last_month" | "this_week" | "last_week" | "custom">("all");
+  const [period, setPeriod] = useState<"all" | "today" | "yesterday" | "this_month" | "last_month" | "this_week" | "last_week" | "custom">("all");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const [dashOpen, setDashOpen] = useState(false);
@@ -1189,6 +1189,7 @@ export default function LeadsPage() {
       } else {
         iso = (r.created_at ?? "").slice(0, 10);
       }
+      if (period === "today") return iso === new Date().toISOString().slice(0,10);
       if (period === "yesterday") { const d = new Date(); d.setDate(d.getDate()-1); const yd = d.toISOString().slice(0,10); return iso === yd; }
       if (period === "this_month") return iso.slice(0, 7) === getMonthStrF(0);
       if (period === "last_month") return iso.slice(0, 7) === getMonthStrF(-1);
@@ -1402,6 +1403,7 @@ export default function LeadsPage() {
     };
     const inRange = (iso: string) => {
       if (period === "all") return true;
+      if (period === "today") return iso.slice(0,10) === new Date().toISOString().slice(0,10);
       if (period === "yesterday") { const d = new Date(); d.setDate(d.getDate()-1); const yd = d.toISOString().slice(0,10); return iso.slice(0,10) === yd; }
       if (period === "this_month") return iso.slice(0, 7) === getMonthStr(0);
       if (period === "last_month") return iso.slice(0, 7) === getMonthStr(-1);
@@ -1450,6 +1452,7 @@ export default function LeadsPage() {
         if (r.status === "실패" || r.status === "취소") bucket.fail += 1;
       }
     }
+    if (sourceTab === "all" || sourceTab === "other") {
     for (const r of inquiryRows) {
       if (!inRange(r.created_at)) continue;
       other.total += 1;
@@ -1458,6 +1461,7 @@ export default function LeadsPage() {
       if (r.status === "재케어") other.recare += 1;
       if (r.status === "부재") other.absent += 1;
       if (r.status === "실패" || r.status === "취소") other.fail += 1;
+    }
     }
     return { meta, dogmaru, udak, other };
   }, [rows, inquiryRows, period, customStart, customEnd, sourceTab]);
@@ -1482,6 +1486,7 @@ export default function LeadsPage() {
     };
     const inRange = (iso: string) => {
       if (period === "all") return true;
+      if (period === "today") return iso.slice(0,10) === new Date().toISOString().slice(0,10);
       if (period === "yesterday") { const d = new Date(); d.setDate(d.getDate()-1); const yd = d.toISOString().slice(0,10); return iso.slice(0,10) === yd; }
       if (period === "this_month") return iso.slice(0, 7) === getMonthStr2(0);
       if (period === "last_month") return iso.slice(0, 7) === getMonthStr2(-1);
@@ -1976,6 +1981,7 @@ export default function LeadsPage() {
               <div className="inline-flex rounded-md border border-border bg-muted/40 p-0.5">
                 {([
                   { k: "all", l: "전체" },
+                  { k: "today", l: "오늘" },
                   { k: "yesterday", l: "전일" },
                   { k: "this_month", l: "이번달" },
                   { k: "last_month", l: "저번달" },
@@ -2314,6 +2320,7 @@ export default function LeadsPage() {
               <div className="flex items-center gap-1.5 flex-wrap" onClick={e => e.stopPropagation()}>
                 {([
                   { k: "all", l: "전체" },
+                  { k: "today", l: "오늘" },
                   { k: "yesterday", l: "전일" },
                   { k: "this_month", l: "이번달" },
                   { k: "last_month", l: "저번달" },
