@@ -1383,6 +1383,7 @@ export type Database = {
           changed_by: string | null
           id: string
           lead_id: string
+          previous_status: string | null
           status: string
         }
         Insert: {
@@ -1390,6 +1391,7 @@ export type Database = {
           changed_by?: string | null
           id?: string
           lead_id: string
+          previous_status?: string | null
           status: string
         }
         Update: {
@@ -1397,6 +1399,7 @@ export type Database = {
           changed_by?: string | null
           id?: string
           lead_id?: string
+          previous_status?: string | null
           status?: string
         }
         Relationships: [
