@@ -754,6 +754,7 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
                 {selectedIds.size}건 선택됨
               </span>
             )}
+            <PeriodFilter />
             <Button
               size="sm"
               variant="outline"
