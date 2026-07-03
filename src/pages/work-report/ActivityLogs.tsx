@@ -541,7 +541,7 @@ export default function ActivityLogs() {
       )}
 
       {/* 로그 테이블 */}
-      <div id="activity-log-table" />}
+      <div id="activity-log-table" />
       <SectionCard>
         {loading ? (
           <div className="py-16 text-center text-sm text-gray-400">로딩 중...</div>
