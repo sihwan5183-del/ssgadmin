@@ -70,6 +70,7 @@ import ProgressDelay from "./pages/work-report/ProgressDelay.tsx";
 import IncentiveDashboard from "./pages/work-report/IncentiveDashboard.tsx";
 import ReportSettings from "./pages/work-report/ReportSettings.tsx";
 import StaffPerformanceAnalysis from "./pages/work-report/StaffPerformanceAnalysis.tsx";
+import ChannelFunnelPage from "./pages/work-report/ChannelFunnelPage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -190,6 +191,7 @@ const App = () => {
                         <Route path="/work-report/activity-logs" element={<ActivityLogs />} />
                         <Route path="/work-report/progress-delay" element={<ProgressDelay />} />
               <Route path="/work-report/staff-performance" element={<StaffPerformanceAnalysis />} />
+                         <Route path="/work-report/channel-funnel" element={<ChannelFunnelPage />} />
                         <Route path="/work-report/incentive" element={<IncentiveDashboard />} />
                         <Route path="/work-report/settings" element={<AdminOnlyRoute><ReportSettings /></AdminOnlyRoute>} />
                         <Route path="*" element={<NotFound />} />
