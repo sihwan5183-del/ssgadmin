@@ -1098,8 +1098,8 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
                 <Select value={editFailReason} onValueChange={setEditFailReason}>
                   <SelectTrigger className="h-9"><SelectValue placeholder="사유 선택" /></SelectTrigger>
                   <SelectContent>
-                    {FAIL_REASONS.map((r) => (
-                      <SelectItem key={r} value={r}>{r}</SelectItem>
+                    {failReasons.map((r) => (
+                      <SelectItem key={r.id} value={r.label}>{r.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
