@@ -2927,7 +2927,7 @@ export default function LeadsPage() {
                           <div><span className="text-muted-foreground">이름</span><div className="font-semibold text-foreground mt-0.5">{(openLead as any).guardian_name ?? "–"}</div></div>
                           <div><span className="text-muted-foreground">관계</span><div className="font-semibold text-foreground mt-0.5">{(openLead as any).guardian_relation ?? "–"}</div></div>
                           <div><span className="text-muted-foreground">연락처</span><div className="font-semibold text-foreground mt-0.5">{(openLead as any).guardian_phone ?? "–"}</div></div>
-                          <div><span className="text-muted-foreground">생년월일</span><div className="font-semibold text-foreground mt-0.5">{(openLead as any).guardian_birth ?? "–"}</div></div>
+                          <div><span className="text-muted-foreground">생년월일</span><div className="font-semibold text-foreground mt-0.5">{openLead.birth ?? "–"}</div></div>
                         </div>
                       </div>
                     )}
