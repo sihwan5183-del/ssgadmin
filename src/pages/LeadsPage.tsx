@@ -1843,6 +1843,11 @@ export default function LeadsPage() {
       .single();
     if (error) return toast.error(error.message);
     setNotes((p) => [data as LeadNote, ...p]);
+    // B방식: leads.memo도 최신 상담내용으로 업데이트
+    const newMemo = newNote.trim();
+    await supabase.from("leads").update({ memo: newMemo }).eq("id", openLead.id);
+    setOpenLead({ ...openLead, memo: newMemo });
+    setRows((p) => p.map((r) => (r.id === openLead.id ? { ...r, memo: newMemo } : r)));
     setNewNote("");
   }
 
