@@ -542,6 +542,26 @@ export default function ActivityLogs() {
 
       {/* 로그 테이블 */}
       <div id="activity-log-table" />
+      {/* 필터 적용 중 표시 + 초기화 버튼 */}
+      {(filter.staffId || filter.actionType) && (
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-pink-50 border border-pink-100 rounded-xl">
+          <span className="text-xs text-pink-700 font-medium flex-1">
+            필터 적용 중 —
+            {filter.staffId && staffSummary.find(s => s.id === filter.staffId)?.name && (
+              <> 담당자: <strong>{staffSummary.find(s => s.id === filter.staffId)?.name}</strong></>
+            )}
+            {filter.actionType && (
+              <> 행동: <strong>{{ call_attempt: '통화시도', absent: '부재', recare_registered: '재케어', failed: '실패', consultation_success: '상담성공' }[filter.actionType] ?? filter.actionType}</strong></>
+            )}
+          </span>
+          <button
+            onClick={() => setFilter((f) => ({ ...f, staffId: undefined, actionType: '' }))}
+            className="text-xs font-semibold text-pink-600 hover:text-pink-800 px-3 py-1 rounded-lg bg-white border border-pink-200 hover:bg-pink-50 transition-colors"
+          >
+            ✕ 전체 보기
+          </button>
+        </div>
+      )}
       <SectionCard>
         {loading ? (
           <div className="py-16 text-center text-sm text-gray-400">로딩 중...</div>
