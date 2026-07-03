@@ -389,7 +389,7 @@ export async function getFunnelDrillLeads(
 
   // 기본 leads 조회
   let q = supabase.from('leads')
-    .select('id, customer_name, customer_phone, assigned_to, channel, campaign_name, source, status, created_at, last_action_at, memo')
+    .select('id, name, phone, customer_name, customer_phone, assigned_to, channel, campaign_name, source, status, created_at, last_action_at, memo')
     .gte('created_at', start).lte('created_at', end)
     .is('deleted_at', null);
 
@@ -458,8 +458,8 @@ export async function getFunnelDrillLeads(
   const todayMs = new Date(today).getTime();
   return targetLeads.map((l: any) => ({
     id: l.id,
-    customer_name: l.customer_name,
-    customer_phone: l.customer_phone,
+    customer_name: l.name ?? l.customer_name ?? '(이름없음)',
+    customer_phone: l.phone ?? l.customer_phone ?? null,
     assigned_to: l.assigned_to,
     assigned_name: staffNameMap.get(l.assigned_to) ?? '(미지정)',
     channel: detectChannel(l.channel, l.campaign_name, l.source),
