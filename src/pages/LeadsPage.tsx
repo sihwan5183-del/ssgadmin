@@ -2907,6 +2907,7 @@ export default function LeadsPage() {
                 ) : (
                   <>
                     <InfoRow label="현재 통신사" value={openLead.current_carrier} right={{ label: "희망 기종", value: openLead.desired_device }} />
+                    <InfoRow label="생년월일" value={openLead.birth} />
                     <InfoRow label="희망 상품" value={openLead.desired_product} right={{ label: "인입 경로", value: openLead.campaign_name ?? openLead.source }} />
                     {(openLead.storage || openLead.color) && (
                       <InfoRow label="용량" value={openLead.storage} right={{ label: "색상", value: openLead.color }} />
