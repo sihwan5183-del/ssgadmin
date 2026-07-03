@@ -84,7 +84,16 @@ const MOBILE_STATUS_OPTIONS = MOBILE_STATUS_META;
 
 const ABSENCE_REASONS = ["통화중", "부재"];
 const RECARE_REASONS = ["가격 재상담", "기기 미정", "타사 비교중", "시기 조율", "가족 상의", "기타"];
-const FAIL_REASONS = ["가격", "재고", "개통시기", "기타"];
+const FAIL_REASONS = [
+  "이동의사 없음",
+  "약정/결합으로 불가",
+  "요금 부담",
+  "업셀 거절",
+  "연락두절",
+  "타사 장기고객",
+  "고객 직접 취소",
+  "기타",
+];
 const DOGMARU_CAMPAIGN = "도그마루_홈캠";
 
 // ── 도그마루 상태 분류 함수 (PC/모바일 공통) ──
@@ -720,13 +729,25 @@ function MobileLeadsView({
                 disabled={!failReason}
                 onClick={async () => {
                   await handleStatus(failModal, "실패");
-                  if (failMemo.trim()) {
-                    const memo = `[실패:${failReason}] ${failMemo.trim()}`;
-                    await supabase.from("leads").update({ memo }).eq("id", failModal.id);
-                  } else {
-                    await supabase.from("leads").update({ memo: `[실패:${failReason}]` }).eq("id", failModal.id);
+                  const memoText = failMemo.trim()
+                    ? `[실패:${failReason}] ${failMemo.trim()}`
+                    : `[실패:${failReason}]`;
+                  await supabase.from("leads").update({ memo: memoText }).eq("id", failModal.id);
+                  // fail_reason을 activity_logs에도 저장 (가장 최근 failed 로그 업데이트)
+                  const { data: recentLog } = await supabase
+                    .from("activity_logs")
+                    .select("id")
+                    .eq("lead_id", failModal.id)
+                    .eq("action_type", "failed")
+                    .order("created_at", { ascending: false })
+                    .limit(1)
+                    .single();
+                  if (recentLog?.id) {
+                    await supabase.from("activity_logs")
+                      .update({ fail_reason: failReason, memo: failMemo.trim() || null })
+                      .eq("id", recentLog.id);
                   }
-                  setFailModal(null);
+                  setFailModal(null); setFailReason(""); setFailMemo("");
                 }}
                 className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-medium disabled:opacity-30">
                 실패 확정
