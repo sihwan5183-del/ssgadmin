@@ -3,6 +3,8 @@
 // ============================================================
 import { useState, useEffect, useCallback } from 'react';
 import { Save, Plus, Trash2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+function useSupabase() { return { supabase }; }
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRole } from '@/hooks/useRole';
@@ -30,6 +32,83 @@ function ToggleSetting({ label, description, defaultChecked }: {
       >
         <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-4' : 'translate-x-1'}`} />
       </button>
+    </div>
+  );
+}
+
+// ── 실패사유 관리 컴포넌트 ──────────────────────────────────
+function FailReasonSettings({ userId }: { userId: string }) {
+  const [reasons, setReasons] = useState<{id:string;label:string;sort_order:number;is_active:boolean}[]>([]);
+  const [newLabel, setNewLabel] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { supabase } = useSupabase();
+
+  const load = async () => {
+    const { data } = await supabase.from('fail_reasons').select('*').order('sort_order');
+    if (data) setReasons(data as any);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleAdd = async () => {
+    if (!newLabel.trim()) return;
+    const maxOrder = reasons.length > 0 ? Math.max(...reasons.map(r => r.sort_order)) : 0;
+    await supabase.from('fail_reasons').insert({ label: newLabel.trim(), sort_order: maxOrder + 1, created_by: userId });
+    setNewLabel('');
+    load();
+  };
+
+  const handleToggle = async (id: string, is_active: boolean) => {
+    await supabase.from('fail_reasons').update({ is_active: !is_active }).eq('id', id);
+    load();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('삭제하시겠습니까?')) return;
+    await supabase.from('fail_reasons').delete().eq('id', id);
+    load();
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <input
+          value={newLabel}
+          onChange={e => setNewLabel(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }}
+          placeholder="새 실패 사유 입력 후 Enter"
+          className="flex-1 text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-pink-400"
+        />
+        <button
+          onClick={handleAdd}
+          disabled={!newLabel.trim()}
+          className="px-4 py-2 bg-pink-500 text-white text-sm font-semibold rounded-lg hover:bg-pink-600 disabled:opacity-40"
+        >
+          + 추가
+        </button>
+      </div>
+      <div className="space-y-2">
+        {reasons.map((r, i) => (
+          <div key={r.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${r.is_active ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100 opacity-50'}`}>
+            <span className="text-xs text-gray-400 w-5 text-center font-mono">{i+1}</span>
+            <span className={`flex-1 text-sm font-medium ${r.is_active ? 'text-gray-800' : 'text-gray-400 line-through'}`}>{r.label}</span>
+            <button
+              onClick={() => handleToggle(r.id, r.is_active)}
+              className={`text-xs px-2.5 py-1 rounded-lg font-semibold border transition-colors ${r.is_active ? 'bg-green-50 border-green-200 text-green-600 hover:bg-green-100' : 'bg-gray-100 border-gray-200 text-gray-400 hover:bg-gray-200'}`}
+            >
+              {r.is_active ? '활성' : '비활성'}
+            </button>
+            <button
+              onClick={() => handleDelete(r.id)}
+              className="text-xs px-2.5 py-1 rounded-lg bg-red-50 border border-red-200 text-red-500 hover:bg-red-100 font-semibold"
+            >
+              삭제
+            </button>
+          </div>
+        ))}
+        {reasons.length === 0 && <p className="text-sm text-gray-400 text-center py-4">등록된 실패 사유가 없습니다</p>}
+      </div>
+      <p className="text-[11px] text-gray-400">※ 비활성화된 항목은 선택 화면에 표시되지 않습니다. 삭제 시 기존 기록에는 영향 없습니다.</p>
     </div>
   );
 }
@@ -269,6 +348,12 @@ export default function ReportSettings() {
             </p>
           </>
         )}
+      </SectionCard>
+
+      {/* 실패 사유 관리 */}
+      <SectionCard title="실패 사유 관리">
+        <p className="text-xs text-gray-400 mb-3">잠재고객 실패 처리 시 표시될 사유 항목을 관리합니다. 추가/비활성화/삭제 가능합니다.</p>
+        {user && <FailReasonSettings userId={user.id} />}
       </SectionCard>
     </div>
   );
