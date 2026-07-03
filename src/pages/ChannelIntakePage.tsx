@@ -30,6 +30,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatPhone } from "@/lib/phoneFormat";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePeriod } from "@/contexts/PeriodContext";
+import { PeriodFilter } from "@/components/layout/PeriodFilter";
 import { InquiryForm } from "@/components/inquiries/InquiryForm";
 import { InquiryDetailDialog } from "@/components/inquiries/InquiryDetailDialog";
 import { useInquiryStatuses } from "@/hooks/useInquiryStatuses";
