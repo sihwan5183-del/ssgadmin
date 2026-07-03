@@ -1891,7 +1891,10 @@ export default function LeadsPage() {
       {sourceTab !== "other" && (() => {
         const tabRows = rows.filter(r => {
           const isDogmaru = r.campaign_name === DOGMARU_CAMPAIGN;
-          return sourceTab === "dogmaru" ? isDogmaru : !isDogmaru;
+          if (sourceTab === "dogmaru") return isDogmaru;
+          if (sourceTab === "udak") return r.channel === "유닥";
+          if (sourceTab === "meta") return !isDogmaru && r.channel !== "유닥";
+          return !isDogmaru && r.channel !== "유닥";
         });
         // 도그마루 탭 카운트: effectiveStatus 기준 (DB status 우선, 없으면 memo 자동분류, 둘 다 없으면 신규 접수)
         const completeC = tabRows.filter(r => getDogmaruTabPC(r) === "완료").length;
@@ -2450,6 +2453,7 @@ export default function LeadsPage() {
                 ) : (
                   <>
                     <InfoRow label="현재 통신사" value={openLead.current_carrier} right={{ label: "희망 기종", value: openLead.desired_device }} />
+                    <InfoRow label="생년월일" value={openLead.birth} />
                     <InfoRow label="희망 상품" value={openLead.desired_product} right={{ label: "인입 경로", value: openLead.campaign_name ?? openLead.source }} />
                   </>
                 )}
