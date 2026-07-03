@@ -1698,6 +1698,21 @@ export default function LeadsPage() {
       channel: rowChannel,
       createdBy: user?.id ?? '',
     }).catch((e) => console.warn('[activity_logs] 실패:', e));
+
+  // ── Meta CAPI 신호 전송 (개통완료=좋은신호, 실패=나쁜신호) ──
+  if (status === '개통완료' || status === '실패') {
+    const capiEventType = status === '개통완료' ? 'good' : 'bad';
+    fetch('https://ebggtghzqtxfylbhqfoh.supabase.co/functions/v1/meta-capi', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event_type: capiEventType,
+        lead_id: id,
+        phone: currentRow?.phone ?? '',
+        name: currentRow?.name ?? '',
+      }),
+    }).catch((e) => console.warn('[meta-capi] 실패:', e));
+  }
   }
 
   // 부재케어 카운트 수동 조정
