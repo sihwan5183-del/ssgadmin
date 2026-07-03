@@ -2198,9 +2198,9 @@ export default function LeadsPage() {
         const failC = tabRows.filter(r => getDogmaruTabPC(r) === "실패").length;
         const pcTabs: { key: string; label: string; color: string }[] = [
           { key: "all", label: "전체", color: "" },
-          { key: "new", label: `신규 접수 ${newC}`, color: "blue-light" },
         ];
         if (sourceTab === "dogmaru") {
+          pcTabs.push({ key: "new", label: `신규 접수 ${newC}`, color: "blue-light" });
           pcTabs.push({ key: "absence", label: `부재케어 ${absenceC}`, color: "orange" });
           pcTabs.push({ key: "recare", label: `재케어 ${recareC}`, color: "purple" });
           pcTabs.push({ key: "fail", label: `실패 ${failC}`, color: "red" });
