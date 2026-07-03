@@ -462,5 +462,3 @@ export default function ChannelFunnelPage() {
     </div>
   );
 }
-ENDTSX
-echo "페이지 생성 완료, $(wc -l < /tmp/ChannelFunnelPage_new.tsx)라인"
