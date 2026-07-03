@@ -1428,7 +1428,8 @@ export default function LeadsPage() {
       if (sourceTab === "allinone" && !isAllinone) continue;
       if (sourceTab === "other") continue;
 
-      let dateIsoonst rd = r.registration_date;
+      let dateIso = "";
+      const rd = r.registration_date;
       if (rd && rd.includes("/")) {
         const parts = rd.split("/");
         const mo = parts[0].padStart(2, "0");
