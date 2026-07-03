@@ -1503,6 +1503,14 @@ export default function LeadsPage() {
       return b;
     };
     for (const r of rows) {
+      const isDogmaruS = r.campaign_name === DOGMARU_CAMPAIGN;
+      const isUdakS = r.channel === "유닭" || r.channel === "메타광고";
+      const isAllinoneS = r.source === "allinone" || r.channel === "올인원";
+      if (sourceTab === "dogmaru" && !isDogmaruS) continue;
+      if (sourceTab === "meta" && (isDogmaruS || isUdakS || isAllinoneS)) continue;
+      if (sourceTab === "udak" && !isUdakS) continue;
+      if (sourceTab === "allinone" && !isAllinoneS) continue;
+      if (sourceTab === "other") continue;
       if (!inRange(r.created_at)) continue;
       const name = r.assigned_to ? (staff.find((s) => s.user_id === r.assigned_to)?.display_name ?? "(미지정)") : "(미지정)";
       const b = bump(name);
@@ -1513,6 +1521,7 @@ export default function LeadsPage() {
       if (r.status === "부재 중") b.absent += 1;
       if (r.status === "실패" || r.status === "취소") b.fail += 1;
     }
+    if (sourceTab === "all" || sourceTab === "other") {
     for (const r of inquiryRows) {
       if (!inRange(r.created_at)) continue;
       const name = (r.manager && r.manager.trim()) ? r.manager.trim() : "(미지정)";
@@ -1524,10 +1533,11 @@ export default function LeadsPage() {
       if (r.status === "부재") b.absent += 1;
       if (r.status === "실패" || r.status === "취소") b.fail += 1;
     }
+    }
     return Array.from(map.entries())
       .map(([name, v]) => ({ name, ...v }))
       .sort((a, b) => b.total - a.total);
-  }, [rows, inquiryRows, period, customStart, customEnd, staff]);
+  }, [rows, inquiryRows, period, customStart, customEnd, staff, sourceTab]);
 
   // 날짜 파싱 헬퍼
   const parseLeadDate = (r: typeof rows[0]) => {
