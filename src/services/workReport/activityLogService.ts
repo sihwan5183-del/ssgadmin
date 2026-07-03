@@ -17,6 +17,7 @@ export async function fetchActivityLogs(
     .select(`
       *,
       leads!left (
+        name,
         customer_name
       )
     `)
@@ -51,7 +52,7 @@ export async function fetchActivityLogs(
   // leads join 결과 flatten
   return (data ?? []).map((row: any) => ({
     ...row,
-    customer_name: row.leads?.customer_name ?? null,
+    customer_name: row.leads?.name ?? row.leads?.customer_name ?? null,
   }));
 }
 
