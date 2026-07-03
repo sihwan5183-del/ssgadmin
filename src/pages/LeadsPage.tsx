@@ -1005,7 +1005,7 @@ export default function LeadsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [intakeFormOpen, setIntakeFormOpen] = useState(false);
   const [inquiryRows, setInquiryRows] = useState<{ created_at: string; status: string | null; manager: string | null }[]>([]);
-  const [period, setPeriod] = useState<"all" | "this_month" | "last_month" | "this_week" | "last_week" | "custom">("all");
+  const [period, setPeriod] = useState<"all" | "yesterday" | "this_month" | "last_month" | "this_week" | "last_week" | "custom">("all");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const [dashOpen, setDashOpen] = useState(false);
@@ -1189,6 +1189,7 @@ export default function LeadsPage() {
       } else {
         iso = (r.created_at ?? "").slice(0, 10);
       }
+      if (period === "yesterday") { const d = new Date(); d.setDate(d.getDate()-1); const yd = d.toISOString().slice(0,10); return iso === yd; }
       if (period === "this_month") return iso.slice(0, 7) === getMonthStrF(0);
       if (period === "last_month") return iso.slice(0, 7) === getMonthStrF(-1);
       if (period === "this_week") { const w = getWeekRangeF(0); return iso >= w.start && iso <= w.end; }
@@ -1401,6 +1402,7 @@ export default function LeadsPage() {
     };
     const inRange = (iso: string) => {
       if (period === "all") return true;
+      if (period === "yesterday") { const d = new Date(); d.setDate(d.getDate()-1); const yd = d.toISOString().slice(0,10); return iso.slice(0,10) === yd; }
       if (period === "this_month") return iso.slice(0, 7) === getMonthStr(0);
       if (period === "last_month") return iso.slice(0, 7) === getMonthStr(-1);
       if (period === "this_week") { const w = getWeekRange(0); return iso.slice(0,10) >= w.start && iso.slice(0,10) <= w.end; }
@@ -1480,6 +1482,7 @@ export default function LeadsPage() {
     };
     const inRange = (iso: string) => {
       if (period === "all") return true;
+      if (period === "yesterday") { const d = new Date(); d.setDate(d.getDate()-1); const yd = d.toISOString().slice(0,10); return iso.slice(0,10) === yd; }
       if (period === "this_month") return iso.slice(0, 7) === getMonthStr2(0);
       if (period === "last_month") return iso.slice(0, 7) === getMonthStr2(-1);
       if (period === "this_week") { const w = getWeekRange2(0); return iso.slice(0,10) >= w.start && iso.slice(0,10) <= w.end; }
@@ -1973,6 +1976,7 @@ export default function LeadsPage() {
               <div className="inline-flex rounded-md border border-border bg-muted/40 p-0.5">
                 {([
                   { k: "all", l: "전체" },
+                  { k: "yesterday", l: "전일" },
                   { k: "this_month", l: "이번달" },
                   { k: "last_month", l: "저번달" },
                   { k: "this_week", l: "이번주" },
@@ -2310,6 +2314,7 @@ export default function LeadsPage() {
               <div className="flex items-center gap-1.5 flex-wrap" onClick={e => e.stopPropagation()}>
                 {([
                   { k: "all", l: "전체" },
+                  { k: "yesterday", l: "전일" },
                   { k: "this_month", l: "이번달" },
                   { k: "last_month", l: "저번달" },
                   { k: "this_week", l: "이번주" },
