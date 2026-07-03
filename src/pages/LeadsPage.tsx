@@ -84,16 +84,7 @@ const MOBILE_STATUS_OPTIONS = MOBILE_STATUS_META;
 
 const ABSENCE_REASONS = ["통화중", "부재"];
 const RECARE_REASONS = ["가격 재상담", "기기 미정", "타사 비교중", "시기 조율", "가족 상의", "기타"];
-const FAIL_REASONS = [
-  "이동의사 없음",
-  "약정/결합으로 불가",
-  "요금 부담",
-  "업셀 거절",
-  "연락두절",
-  "타사 장기고객",
-  "고객 직접 취소",
-  "기타",
-];
+const FAIL_REASONS: string[] = [];  // DB에서 동적 로드 (failReasons state 사용)
 const DOGMARU_CAMPAIGN = "도그마루_홈캠";
 
 // ── 도그마루 상태 분류 함수 (PC/모바일 공통) ──
@@ -704,15 +695,15 @@ function MobileLeadsView({
               <div className="text-xs text-muted-foreground mt-0.5">{displayName(failModal)}</div>
             </div>
             <div className="p-4 space-y-2">
-              {FAIL_REASONS.map(r => (
-                <button key={r}
-                  onClick={() => setFailReason(r)}
+              {failReasons.map(r => (
+                <button key={r.id}
+                  onClick={() => setFailReason(r.label)}
                   className={`w-full py-3 rounded-xl border font-medium text-sm active:scale-95 transition-all ${
-                    failReason === r
+                    failReason === r.label
                       ? "bg-red-100 border-red-400 text-red-700 shadow-sm"
                       : "bg-red-50 border-red-200 text-red-600"
                   }`}>
-                  {r}
+                  {r.label}
                 </button>
               ))}
               <textarea
