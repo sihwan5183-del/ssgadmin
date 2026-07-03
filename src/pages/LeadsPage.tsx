@@ -3078,8 +3078,13 @@ export default function LeadsPage() {
               )}
               {/* Consultation memo feed */}
               <div className="mt-6">
-                <div className="text-sm font-bold text-foreground mb-2">상담 메모</div>
-                {/* 부재케어 카운터 */}
+                {/* 헤더 - 상태에 따라 텍스트 변경 */}
+                <div className="text-sm font-bold text-foreground mb-2">
+                  {openLead.status === "실패" || openLead.status === "취소" ? "실패 사유" : "상담 메모"}
+                </div>
+
+                {/* 부재케어 카운터 - 실패/취소 아닐 때만 표시 */}
+                {openLead.status !== "실패" && openLead.status !== "취소" && (
                 <div className="flex items-center gap-3 bg-orange-50 rounded-xl px-4 py-2.5 border border-orange-200 mb-3">
                   <span className="text-xs font-semibold text-orange-700 flex-shrink-0">🚫 부재케어</span>
                   <div className="flex items-center gap-2 ml-auto">
@@ -3096,85 +3101,85 @@ export default function LeadsPage() {
                     >+</button>
                   </div>
                 </div>
+                )}
 
-                <div className="rounded-lg border border-border p-3 bg-muted/30">
-                  {(openLead.channel !== "유닥" && openLead.channel !== "메타광고" && openLead.channel !== "올인원") && (
-                  <div className="flex gap-2 mb-2">
-                    <button
-                      onClick={() => {
-                        const date = openLead.registration_date ?? openLead.created_at?.slice(0,10) ?? "";
-                        const month = date ? date.slice(5,7).replace(/^0/, "") : "0";
-                        const day = date ? date.slice(8,10).replace(/^0/, "") : "0";
-                        const msg = `고객님 안녕하세요.\n${month}월 ${day}일 설치하신 홈캠 관련하여 해피콜 연락드린 유플러스 상담원 입니다\n*추가적인 문의사항은 편히 연락 남겨주세요`;
-                        const phone = (openLead.phone ?? "").replace(/[^0-9]/g, "");
-                        window.open(`sms:${phone}?body=${encodeURIComponent(msg)}`, "_blank");
-                      }}
-                      className="flex-1 py-2 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors"
-                    >📞 해피콜 문자</button>
-                    <button
-                      onClick={() => {
-                        const date = openLead.registration_date ?? openLead.created_at?.slice(0,10) ?? "";
-                        const month = date ? date.slice(5,7).replace(/^0/, "") : "0";
-                        const day = date ? date.slice(8,10).replace(/^0/, "") : "0";
-                        const msg = `고객님 안녕하세요.\n${month}월 ${day}일 설치하신 홈캠 관련하여 해피콜 연락드렸으나 부재로 문자 남깁니다\n*통화 가능하신 시간 남겨주시면 연락드리겠습니다`;
-                        const phone = (openLead.phone ?? "").replace(/[^0-9]/g, "");
-                        window.open(`sms:${phone}?body=${encodeURIComponent(msg)}`, "_blank");
-                      }}
-                      className="flex-1 py-2 rounded-lg border border-orange-300 bg-orange-50 text-orange-700 text-xs font-semibold hover:bg-orange-100 transition-colors"
-                    >📵 부재중 문자</button>
-                  </div>
-                  )}
-                  {/* 실패 상태일 때 실패사유 버튼 표시 */}
-                  {openLead.status === "실패" || openLead.status === "취소" ? (
-                    <div className="space-y-2">
-                      <div className="text-xs font-semibold text-gray-500 mb-1">실패 사유 선택</div>
-                      <div className="flex flex-wrap gap-2">
-                        {failReasons.map(r => (
-                          <button
-                            key={r.id}
-                            onClick={async () => {
-                              const memo = `[실패:${r.label}]`;
-                              await supabase.from("leads").update({ memo }).eq("id", openLead.id);
-                              setOpenLead({ ...openLead, memo });
-                              setRows(p => p.map(row => row.id === openLead.id ? { ...row, memo } : row));
-                              // activity_logs 최신 failed 로그에도 저장
-                              const { data: lg } = await supabase.from("activity_logs").select("id").eq("lead_id", openLead.id).eq("action_type", "failed").order("created_at", { ascending: false }).limit(1).single();
-                              if (lg?.id) await supabase.from("activity_logs").update({ fail_reason: r.label }).eq("id", lg.id);
-                            }}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95 ${
-                              (openLead.memo ?? "").includes(`[실패:${r.label}]`)
-                                ? "bg-red-100 border-red-400 text-red-700 shadow-sm"
-                                : "bg-red-50 border-red-200 text-red-500 hover:bg-red-100"
-                            }`}
-                          >
-                            {r.label}
-                          </button>
-                        ))}
-                      </div>
-                      {/* 현재 선택된 사유 표시 */}
-                      {openLead.memo && openLead.memo.includes("[실패:") && (
-                        <div className="text-xs text-red-400 mt-1">
-                          선택된 사유: {(openLead.memo.match(/\[실패:([^\]]+)\]/) ?? [])[1] ?? ""}
-                        </div>
-                      )}
+                {/* 실패/취소 상태 → 실패사유 버튼 */}
+                {openLead.status === "실패" || openLead.status === "취소" ? (
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      {failReasons.length === 0 ? (
+                        <p className="text-xs text-gray-400">리포트 설정에서 실패 사유를 등록해주세요</p>
+                      ) : failReasons.map(r => (
+                        <button
+                          key={r.id}
+                          onClick={async () => {
+                            const memo = `[실패:${r.label}]`;
+                            await supabase.from("leads").update({ memo }).eq("id", openLead.id);
+                            setOpenLead({ ...openLead, memo });
+                            setRows(p => p.map(row => row.id === openLead.id ? { ...row, memo } : row));
+                            const { data: lg } = await supabase.from("activity_logs").select("id").eq("lead_id", openLead.id).eq("action_type", "failed").order("created_at", { ascending: false }).limit(1).single();
+                            if (lg?.id) await supabase.from("activity_logs").update({ fail_reason: r.label }).eq("id", lg.id);
+                          }}
+                          className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-all active:scale-95 ${
+                            (openLead.memo ?? "").includes(`[실패:${r.label}]`)
+                              ? "bg-red-100 border-red-400 text-red-700 shadow-sm scale-105"
+                              : "bg-red-50 border-red-200 text-red-500 hover:bg-red-100"
+                          }`}
+                        >
+                          {r.label}
+                        </button>
+                      ))}
                     </div>
-                  ) : (
-                  <div>
-                  <Textarea
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
-                    placeholder="새로운 상담 내용을 입력하세요"
-                    rows={3}
-                    className="bg-background"
-                  />
-                  <div className="text-right mt-2">
-                    <Button size="sm" onClick={addNote} disabled={!newNote.trim()}>
-                      메모 저장
-                    </Button>
+                    {openLead.memo && openLead.memo.includes("[실패:") && (
+                      <div className="mt-2 px-3 py-2 bg-red-50 rounded-lg border border-red-100">
+                        <span className="text-xs text-red-500 font-semibold">선택된 사유: </span>
+                        <span className="text-xs text-red-700 font-bold">{(openLead.memo.match(/\[실패:([^\]]+)\]/) ?? [])[1] ?? ""}</span>
+                      </div>
+                    )}
                   </div>
+                ) : (
+                  /* 일반 상태 → 상담내용 입력 */
+                  <div className="rounded-lg border border-border p-3 bg-muted/30">
+                    {(openLead.channel !== "유닥" && openLead.channel !== "메타광고" && openLead.channel !== "올인원") && (
+                    <div className="flex gap-2 mb-2">
+                      <button
+                        onClick={() => {
+                          const date = openLead.registration_date ?? openLead.created_at?.slice(0,10) ?? "";
+                          const month = date ? date.slice(5,7).replace(/^0/, "") : "0";
+                          const day = date ? date.slice(8,10).replace(/^0/, "") : "0";
+                          const msg = `고객님 안녕하세요.\n${month}월 ${day}일 설치하신 홈캠 관련하여 해피콜 연락드린 유플러스 상담원 입니다\n*추가적인 문의사항은 편히 연락 남겨주세요`;
+                          const phone = (openLead.phone ?? "").replace(/[^0-9]/g, "");
+                          window.open(`sms:${phone}?body=${encodeURIComponent(msg)}`, "_blank");
+                        }}
+                        className="flex-1 py-2 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors"
+                      >📞 해피콜 문자</button>
+                      <button
+                        onClick={() => {
+                          const date = openLead.registration_date ?? openLead.created_at?.slice(0,10) ?? "";
+                          const month = date ? date.slice(5,7).replace(/^0/, "") : "0";
+                          const day = date ? date.slice(8,10).replace(/^0/, "") : "0";
+                          const msg = `고객님 안녕하세요.\n${month}월 ${day}일 설치하신 홈캠 관련하여 해피콜 연락드렸으나 부재로 문자 남깁니다\n*통화 가능하신 시간 남겨주시면 연락드리겠습니다`;
+                          const phone = (openLead.phone ?? "").replace(/[^0-9]/g, "");
+                          window.open(`sms:${phone}?body=${encodeURIComponent(msg)}`, "_blank");
+                        }}
+                        className="flex-1 py-2 rounded-lg border border-orange-300 bg-orange-50 text-orange-700 text-xs font-semibold hover:bg-orange-100 transition-colors"
+                      >📵 부재중 문자</button>
+                    </div>
+                    )}
+                    <Textarea
+                      value={newNote}
+                      onChange={(e) => setNewNote(e.target.value)}
+                      placeholder="새로운 상담 내용을 입력하세요"
+                      rows={3}
+                      className="bg-background"
+                    />
+                    <div className="text-right mt-2">
+                      <Button size="sm" onClick={addNote} disabled={!newNote.trim()}>
+                        메모 저장
+                      </Button>
+                    </div>
                   </div>
-                  )}
-                </div>
+                )}
 
                 <div className="mt-4 space-y-3">
                   {(() => {
