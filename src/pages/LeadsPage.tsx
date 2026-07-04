@@ -1011,6 +1011,9 @@ export default function LeadsPage() {
   const [happyCallSaving, setHappyCallSaving] = useState(false);
   const [notes, setNotes] = useState<LeadNote[]>([]);
   const [failReasons, setFailReasons] = useState<{id:string;label:string;sort_order:number}[]>([]);
+  const [failModal, setFailModal] = useState<Lead | null>(null);
+  const [failReason, setFailReason] = useState("");
+  const [failMemo, setFailMemo] = useState("");
   const [statusLogs, setStatusLogs] = useState<any[]>([]);
   const [newNote, setNewNote] = useState("");
   const [memoDraft, setMemoDraft] = useState("");
@@ -2716,7 +2719,7 @@ export default function LeadsPage() {
                 <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
                   <Select
                     value={r.status}
-                    onValueChange={(v) => { console.log("[PC status select]", { leadId: r.id, nextStatus: v }); updateStatus(r.id, v); }}
+                    onValueChange={(v) => { console.log("[PC status select]", { leadId: r.id, nextStatus: v }); if (v === "실패") { setFailModal(r); setFailReason(""); setFailMemo(""); return; } updateStatus(r.id, v); }}
                   >
                     <SelectTrigger
                       className={`h-8 text-xs ${STATUS_COLOR[r.status] ?? ""}`}
@@ -3037,7 +3040,7 @@ export default function LeadsPage() {
                     <div className="text-[11px] font-semibold text-foreground/60 mb-1">상담 상태</div>
                     <Select
                       value={openLead.status}
-                      onValueChange={(v) => { console.log("[Detail status select]", { leadId: openLead?.id, nextStatus: v }); updateStatus(openLead.id, v); }}
+                      onValueChange={(v) => { console.log("[Detail status select]", { leadId: openLead?.id, nextStatus: v }); if (v === "실패") { setFailModal(openLead); setFailReason(""); setFailMemo(""); return; } updateStatus(openLead.id, v); }}
                     >
                       <SelectTrigger className="h-9">
                         <SelectValue />
@@ -3302,6 +3305,59 @@ export default function LeadsPage() {
           />
         </>
       )}
+
+      {/* 실패 모달 - PC */}
+      {failModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={() => setFailModal(null)}>
+          <div className="bg-background rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="font-bold text-base">실패 사유</div>
+            <div className="text-xs text-muted-foreground">{failModal.name ?? "이름 없음"} · {failModal.phone ?? ""}</div>
+            <div className="space-y-2">
+              {failReasons.length === 0 ? (
+                <p className="text-xs text-gray-400 py-2">리포트 설정에서 실패 사유를 등록해주세요</p>
+              ) : failReasons.map(r => (
+                <button
+                  key={r.id}
+                  onClick={() => setFailReason(r.label)}
+                  className={`w-full text-left px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
+                    failReason === r.label
+                      ? "bg-red-100 border-red-400 text-red-700 font-bold"
+                      : "bg-background border-border text-foreground hover:bg-muted/60"
+                  }`}
+                >{r.label}</button>
+              ))}
+            </div>
+            <textarea
+              className="w-full rounded-xl border border-border bg-muted/30 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+              rows={3}
+              placeholder="추가 메모 (선택)"
+              value={failMemo}
+              onChange={e => setFailMemo(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <button onClick={() => setFailModal(null)} className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground">취소</button>
+              <button
+                disabled={!failReason}
+                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold disabled:opacity-40"
+                onClick={async () => {
+                  await updateStatus(failModal.id, "실패");
+                  const memoText = failMemo.trim()
+                    ? `[실패:${failReason}] ${failMemo.trim()}`
+                    : `[실패:${failReason}]`;
+                  await supabase.from("leads").update({ memo: memoText }).eq("id", failModal.id);
+                  setRows(p => p.map(row => row.id === failModal.id ? { ...row, memo: memoText } : row));
+                  if (openLead?.id === failModal.id) setOpenLead(prev => prev ? { ...prev, memo: memoText } : prev);
+                  const { data: lg } = await supabase.from("activity_logs").select("id")
+                    .eq("lead_id", failModal.id).eq("action_type", "failed")
+                    .order("created_at", { ascending: false }).limit(1).single();
+                  if (lg?.id) await supabase.from("activity_logs").update({ fail_reason: failReason, memo: failMemo.trim() || null }).eq("id", lg.id);
+                  setFailModal(null); setFailReason(""); setFailMemo("");
+                }}
+              >실패 확정</button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
   );
 }
@@ -3339,4 +3395,5 @@ function InfoRow({
     </div>
   );
 }
+
 
