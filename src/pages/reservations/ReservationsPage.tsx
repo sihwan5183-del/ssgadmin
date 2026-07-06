@@ -1,8 +1,9 @@
 // ============================================================
 // 사전예약 관리 — 목록 메인 페이지
+// 채널별 탭 + 날짜 필터 + 상태 필터
 // ============================================================
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, RotateCw, BarChart2 } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Plus, Search, RotateCw, BarChart2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -16,17 +17,22 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useDashboardStaff } from '@/hooks/useDashboardStaff';
 import { WorkReportHeader, SectionCard } from '@/pages/work-report/_shared';
-import {
-  fetchReservations,
-  fetchReservationStats,
-} from '@/services/reservationService';
+import { fetchReservations } from '@/services/reservationService';
 import type { Reservation, ReservationStatus } from '@/types/reservation';
 import { RESERVATION_STATUS_LIST } from '@/types/reservation';
 import { ReservationAddModal } from './ReservationAddModal';
 import { ReservationDetailModal } from './ReservationDetailModal';
 import { formatPhone } from '@/lib/phoneFormat';
+import { supabase } from '@/integrations/supabase/client';
 
 const PAGE_SIZE = 50;
+
+const CHANNEL_TABS = [
+  { value: '',           label: '전체' },
+  { value: '메타광고',   label: '메타광고' },
+  { value: '네이버 검색광고', label: '네이버 검색광고' },
+  { value: '기타',       label: '기타' },
+];
 
 function StatusBadge({ status }: { status: ReservationStatus }) {
   const found = RESERVATION_STATUS_LIST.find((s) => s.value === status);
@@ -42,94 +48,149 @@ export default function ReservationsPage() {
   const { staff } = useDashboardStaff();
   const navigate = useNavigate();
 
+  // 전체 데이터 (채널별 카운트용)
+  const [allRows, setAllRows] = useState<Reservation[]>([]);
+  // 필터된 표시 데이터
   const [rows, setRows] = useState<Reservation[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
 
+  // 필터 상태
+  const [channelTab, setChannelTab] = useState('');
+  const [statusFilter, setStatusFilter] = useState<ReservationStatus | ''>('');
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ReservationStatus | ''>('');
+  const [dateStart, setDateStart] = useState('');
+  const [dateEnd, setDateEnd] = useState('');
 
-  const [stats, setStats] = useState<{ total: number; byStatus: Record<string, number> } | null>(null);
-
+  // 모달
   const [addOpen, setAddOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
 
+  // 전체 데이터 로드 (채널별 카운트용)
+  const loadAll = useCallback(async () => {
+    const { data } = await supabase
+      .from('reservations')
+      .select('id, status, channel, contact_date');
+    setAllRows((data ?? []) as any[]);
+  }, []);
+
+  // 필터 적용 데이터 로드
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [res, s] = await Promise.all([
-        fetchReservations({ status: statusFilter || undefined, search, page, pageSize: PAGE_SIZE }),
-        fetchReservationStats(),
-      ]);
+      const res = await fetchReservations({
+        status: statusFilter || undefined,
+        search,
+        page,
+        pageSize: PAGE_SIZE,
+        channel: channelTab || undefined,
+        dateStart: dateStart || undefined,
+        dateEnd: dateEnd || undefined,
+      } as any);
       setRows(res.data);
       setTotal(res.count);
-      setStats(s);
     } catch (e: any) {
       toast.error('데이터 로드 실패: ' + e.message);
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, search, page]);
+  }, [statusFilter, search, page, channelTab, dateStart, dateEnd]);
 
+  useEffect(() => { loadAll(); }, [loadAll]);
   useEffect(() => { load(); }, [load]);
+
+  // 채널별 카운트
+  const channelCounts = useMemo(() => {
+    const counts: Record<string, number> = { '': allRows.length };
+    CHANNEL_TABS.slice(1).forEach(tab => {
+      counts[tab.value] = allRows.filter(r => (r as any).channel === tab.value).length;
+    });
+    return counts;
+  }, [allRows]);
+
+  // 상태별 카운트 (현재 채널 탭 기준)
+  const statusCounts = useMemo(() => {
+    const filtered = channelTab ? allRows.filter(r => (r as any).channel === channelTab) : allRows;
+    const counts: Record<string, number> = {};
+    RESERVATION_STATUS_LIST.forEach(s => {
+      counts[s.value] = filtered.filter(r => r.status === s.value).length;
+    });
+    return counts;
+  }, [allRows, channelTab]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  const handleSearch = () => {
-    setSearch(searchInput);
-    setPage(1);
+  const handleSearch = () => { setSearch(searchInput); setPage(1); };
+  const handleReset = () => {
+    setSearch(''); setSearchInput(''); setStatusFilter('');
+    setDateStart(''); setDateEnd(''); setPage(1);
+  };
+  const handleTabChange = (val: string) => {
+    setChannelTab(val); setPage(1); setStatusFilter('');
   };
 
   return (
-    <div className="p-6 space-y-5 max-w-[1400px] mx-auto">
+    <div className="p-6 space-y-4 max-w-[1400px] mx-auto">
       <WorkReportHeader
         title="사전예약 관리"
-        description="갤럭시 Z 폴더블8 사전예약 고객을 단계별로 관리합니다"
+        description="갤럭시 Z 폴더블8 사전예약 고객을 채널별·단계별로 관리합니다"
         rightSlot={
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/reservations/stats')}
-              className="gap-1.5 text-gray-600"
-            >
+            <Button variant="outline" size="sm" onClick={() => navigate('/reservations/stats')} className="gap-1.5 text-gray-600">
               <BarChart2 className="size-4" /> 통계
             </Button>
-            <Button
-              size="sm"
-              onClick={() => setAddOpen(true)}
-              className="gap-1.5 bg-pink-500 hover:bg-pink-600 text-white"
-            >
+            <Button size="sm" onClick={() => setAddOpen(true)} className="gap-1.5 bg-pink-500 hover:bg-pink-600 text-white">
               <Plus className="size-4" /> 신규 등록
             </Button>
           </div>
         }
       />
 
-      {/* KPI 요약 */}
-      {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-          {RESERVATION_STATUS_LIST.map((s) => (
-            <button
-              key={s.value}
-              onClick={() => { setStatusFilter(statusFilter === s.value ? '' : s.value); setPage(1); }}
-              className={`rounded-xl border p-3 text-left transition-all hover:shadow-md ${
-                statusFilter === s.value ? 'ring-2 ring-pink-400 shadow-md' : ''
-              } ${s.color.replace('text-', 'border-').split(' ')[0]} bg-white`}
-            >
-              <div className="text-[10px] text-gray-500 font-medium">{s.label}</div>
-              <div className="text-xl font-bold mt-0.5">{stats.byStatus[s.value] ?? 0}</div>
-            </button>
-          ))}
-        </div>
-      )}
+      {/* 채널별 탭 */}
+      <div className="flex items-center gap-0 border-b border-gray-200">
+        {CHANNEL_TABS.map(tab => (
+          <button
+            key={tab.value}
+            onClick={() => handleTabChange(tab.value)}
+            className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+              channelTab === tab.value
+                ? 'border-pink-500 text-pink-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {tab.label}
+            <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
+              channelTab === tab.value ? 'bg-pink-100 text-pink-600' : 'bg-gray-100 text-gray-500'
+            }`}>
+              {channelCounts[tab.value] ?? 0}
+            </span>
+          </button>
+        ))}
+      </div>
 
-      {/* 필터 */}
+      {/* 상태별 KPI 카드 */}
+      <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+        {RESERVATION_STATUS_LIST.map((s) => (
+          <button
+            key={s.value}
+            onClick={() => { setStatusFilter(statusFilter === s.value ? '' : s.value); setPage(1); }}
+            className={`rounded-xl border p-2.5 text-left transition-all hover:shadow-md bg-white ${
+              statusFilter === s.value ? 'ring-2 ring-pink-400 shadow-md' : 'border-gray-100'
+            }`}
+          >
+            <div className="text-[10px] text-gray-400 font-medium truncate">{s.label}</div>
+            <div className="text-lg font-bold mt-0.5">{statusCounts[s.value] ?? 0}</div>
+          </button>
+        ))}
+      </div>
+
+      {/* 검색 + 날짜 필터 */}
       <SectionCard>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex-1 min-w-[200px] flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* 검색 */}
+          <div className="flex gap-1.5 flex-1 min-w-[180px]">
             <Input
               placeholder="고객명 · 연락처 검색"
               value={searchInput}
@@ -141,8 +202,27 @@ export default function ReservationsPage() {
               <Search className="size-4" />
             </Button>
           </div>
+
+          {/* 날짜 필터 */}
+          <div className="flex items-center gap-1.5">
+            <input
+              type="date"
+              value={dateStart}
+              onChange={e => { setDateStart(e.target.value); setPage(1); }}
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700"
+            />
+            <span className="text-xs text-gray-400">~</span>
+            <input
+              type="date"
+              value={dateEnd}
+              onChange={e => { setDateEnd(e.target.value); setPage(1); }}
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700"
+            />
+          </div>
+
+          {/* 상태 필터 */}
           <Select value={statusFilter || '_all_'} onValueChange={(v) => { setStatusFilter((v === '_all_' ? '' : v) as ReservationStatus | ''); setPage(1); }}>
-            <SelectTrigger className="w-[130px] text-sm">
+            <SelectTrigger className="w-[120px] text-sm">
               <SelectValue placeholder="전체 상태" />
             </SelectTrigger>
             <SelectContent>
@@ -152,10 +232,11 @@ export default function ReservationsPage() {
               ))}
             </SelectContent>
           </Select>
-          <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setSearchInput(''); setStatusFilter(''); setPage(1); }}>
-            초기화
+
+          <Button variant="ghost" size="sm" onClick={handleReset} className="gap-1 text-gray-400">
+            <X className="size-3.5" /> 초기화
           </Button>
-          <Button variant="ghost" size="icon" onClick={load} className="shrink-0">
+          <Button variant="ghost" size="icon" onClick={() => { loadAll(); load(); }} className="shrink-0">
             <RotateCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
           <span className="text-xs text-gray-400 ml-auto">총 {total}건</span>
@@ -168,39 +249,30 @@ export default function ReservationsPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50">
-                <TableHead className="text-xs w-[40px]">#</TableHead>
+                <TableHead className="text-xs w-[36px]">#</TableHead>
+                <TableHead className="text-xs w-[110px]">접수일</TableHead>
                 <TableHead className="text-xs">고객명</TableHead>
                 <TableHead className="text-xs">연락처</TableHead>
                 <TableHead className="text-xs">생년월일</TableHead>
                 <TableHead className="text-xs">통신사</TableHead>
                 <TableHead className="text-xs">채널</TableHead>
-                <TableHead className="text-xs">관심기기</TableHead>
                 <TableHead className="text-xs">상태</TableHead>
                 <TableHead className="text-xs">담당자</TableHead>
-                <TableHead className="text-xs">인입일</TableHead>
                 <TableHead className="text-xs">메모</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-12 text-sm text-gray-400">
-                    로딩 중...
-                  </TableCell>
+                  <TableCell colSpan={10} className="text-center py-12 text-sm text-gray-400">로딩 중...</TableCell>
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-12 text-sm text-gray-400">
-                    데이터가 없습니다
-                  </TableCell>
+                  <TableCell colSpan={10} className="text-center py-12 text-sm text-gray-400">데이터가 없습니다</TableCell>
                 </TableRow>
               ) : (
                 rows.map((r, idx) => (
-                  <TableRow
-                    key={r.id}
-                    className="cursor-pointer hover:bg-pink-50/50 transition-colors"
-                    onClick={() => setDetailId(r.id)}
-                  >
+                  <TableRow key={r.id} className="cursor-pointer hover:bg-pink-50/50 transition-colors" onClick={() => setDetailId(r.id)}>
                     <TableCell className="text-xs text-gray-400">{(page - 1) * PAGE_SIZE + idx + 1}</TableCell>
                     <TableCell className="text-xs text-gray-500 whitespace-nowrap">
                       {r.contact_date ? new Date(r.contact_date).toLocaleDateString('ko-KR') : '-'}
@@ -209,20 +281,25 @@ export default function ReservationsPage() {
                     <TableCell className="text-sm text-gray-600">{formatPhone(r.phone)}</TableCell>
                     <TableCell className="text-xs text-gray-500">{(r as any).birth_date ?? '-'}</TableCell>
                     <TableCell className="text-sm text-gray-600">{r.carrier ?? '-'}</TableCell>
-                    <TableCell className="text-sm text-gray-600">{r.channel ?? '-'}</TableCell>
-                    <TableCell className="text-sm text-gray-600">{r.device_interest ?? '-'}</TableCell>
+                    <TableCell className="text-sm text-gray-600">
+                      {r.channel ? (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          r.channel === '메타광고' ? 'bg-blue-100 text-blue-700' :
+                          r.channel === '네이버 검색광고' ? 'bg-green-100 text-green-700' :
+                          'bg-gray-100 text-gray-600'
+                        }`}>{r.channel}</span>
+                      ) : '-'}
+                    </TableCell>
                     <TableCell>
                       <StatusBadge status={r.status} />
-                      {(r.status === '상담실패') && r.fail_reason && (
+                      {r.status === '상담실패' && r.fail_reason && (
                         <div className="text-[10px] text-red-400 mt-0.5">{r.fail_reason.reason}</div>
                       )}
                     </TableCell>
                     <TableCell className="text-sm text-gray-600">
                       {r.assigned_to ? (staff.find(s => s.user_id === r.assigned_to)?.display_name ?? '-') : '-'}
                     </TableCell>
-                    <TableCell className="text-xs text-gray-500 max-w-[160px] truncate">
-                      {r.memo ?? '-'}
-                    </TableCell>
+                    <TableCell className="text-xs text-gray-500 max-w-[140px] truncate">{r.memo ?? '-'}</TableCell>
                   </TableRow>
                 ))
               )}
@@ -230,36 +307,21 @@ export default function ReservationsPage() {
           </Table>
         </div>
 
-        {/* 페이지네이션 */}
         {totalPages > 1 && (
           <div className="flex justify-center items-center gap-2 pt-4">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>이전</Button>
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>이전</Button>
             <span className="text-sm text-gray-500">{page} / {totalPages}</span>
-            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>다음</Button>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>다음</Button>
           </div>
         )}
       </SectionCard>
 
-      {/* 모달 */}
       {addOpen && (
-        <ReservationAddModal
-          open={addOpen}
-          onClose={() => setAddOpen(false)}
-          onDone={() => { setAddOpen(false); load(); }}
-        />
+        <ReservationAddModal open={addOpen} onClose={() => setAddOpen(false)} onDone={() => { setAddOpen(false); loadAll(); load(); }} />
       )}
       {detailId && (
-        <ReservationDetailModal
-          reservationId={detailId}
-          onClose={() => setDetailId(null)}
-          onDone={() => { setDetailId(null); load(); }}
-        />
+        <ReservationDetailModal reservationId={detailId} onClose={() => setDetailId(null)} onDone={() => { setDetailId(null); loadAll(); load(); }} />
       )}
     </div>
   );
 }
-
-
-
-
-
