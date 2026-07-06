@@ -11,7 +11,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { insertReservation } from '@/services/reservationService';
-import { CARRIER_OPTIONS, CHANNEL_OPTIONS, DEVICE_OPTIONS } from '@/types/reservation';
+import { CARRIER_OPTIONS, CHANNEL_OPTIONS } from '@/types/reservation';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Props {
@@ -27,7 +27,8 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
   const [phone, setPhone] = useState('');
   const [carrier, setCarrier] = useState('');
   const [channel, setChannel] = useState('');
-  const [device, setDevice] = useState('갤럭시 Z 폴더블8');
+  const device = '갤럭시 Z 폴더블8'; // 고정
+  const [birthDate, setBirthDate] = useState('');
   const [memo, setMemo] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -44,6 +45,7 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
         channel: channel || undefined,
         device_interest: device || undefined,
         memo: memo.trim() || undefined,
+        birth_date: birthDate || undefined,
         assigned_to: user?.id,
         status: '신규',
       });
@@ -131,6 +133,17 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
           </div>
 
           <div>
+            <label className="text-xs text-gray-500 mb-1 block">생년월일</label>
+            <Input
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+              placeholder="예) 19900101"
+              maxLength={8}
+              className="text-sm"
+            />
+          </div>
+
+          <div>
             <label className="text-xs text-gray-500 mb-1 block">메모</label>
             <Textarea
               value={memo}
@@ -158,4 +171,5 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
     </Dialog>
   );
 }
+
 
