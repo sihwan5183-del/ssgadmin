@@ -687,17 +687,15 @@ function MobileLeadsView({
       )}
 
       {/* 실패 모달 */}
-      {failModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setFailModal(null); }}>
-          <div className="bg-background rounded-2xl w-full max-w-sm shadow-2xl" onMouseDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-4 border-b">
-              <div className="font-bold text-base">실패 사유</div>
-              <div className="text-xs text-muted-foreground mt-0.5">{displayName(failModal)}</div>
-            </div>
-            <div className="p-4 space-y-2">
+      <Dialog open={!!failModal} onOpenChange={(open) => { if (!open) { setFailModal(null); setFailReason(""); setFailMemo(""); } }}>
+        <DialogContent className="max-w-sm" onOpenAutoFocus={e => e.preventDefault()}>
+            <div className="font-bold text-base">실패 사유</div>
+            <div className="text-xs text-muted-foreground mt-0.5">{failModal ? displayName(failModal) : ""}</div>
+            <div className="space-y-2 mt-2">
               {failReasons.map(r => (
                 <button key={r.id}
-                  onClick={() => setFailReason(r.label)}
+                  onPointerDown={e => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); setFailReason(r.label); }}
                   className={`w-full py-3 rounded-xl border font-medium text-sm active:scale-95 transition-all ${
                     failReason === r.label
                       ? "bg-red-100 border-red-400 text-red-700 shadow-sm"
@@ -708,24 +706,24 @@ function MobileLeadsView({
               ))}
               <textarea
                 value={failMemo}
+                onPointerDown={e => e.stopPropagation()}
                 onChange={e => setFailMemo(e.target.value)}
                 placeholder="추가 메모 (선택)"
                 rows={3}
                 className="w-full text-sm px-3 py-2 rounded-xl border border-border/60 resize-none mt-1"
               />
             </div>
-            <div className="px-4 pb-4 flex gap-2">
-              <button onClick={(e) => { e.stopPropagation(); setFailModal(null); }} className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground">취소</button>
+            <div className="flex gap-2 mt-2">
+              <button onClick={() => { setFailModal(null); setFailReason(""); setFailMemo(""); }} className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground">취소</button>
               <button
                 disabled={!failReason}
-                onClick={async (e) => {
-                  e.stopPropagation();
+                onClick={async () => {
+                  if (!failModal) return;
                   await handleStatus(failModal, "실패");
                   const memoText = failMemo.trim()
                     ? `[실패:${failReason}] ${failMemo.trim()}`
                     : `[실패:${failReason}]`;
                   await supabase.from("leads").update({ memo: memoText }).eq("id", failModal.id);
-                  // fail_reason을 activity_logs에도 저장 (가장 최근 failed 로그 업데이트)
                   const { data: recentLog } = await supabase
                     .from("activity_logs")
                     .select("id")
@@ -745,9 +743,8 @@ function MobileLeadsView({
                 실패 확정
               </button>
             </div>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -3396,6 +3393,7 @@ function InfoRow({
     </div>
   );
 }
+
 
 
 
