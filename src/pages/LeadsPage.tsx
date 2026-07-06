@@ -3308,10 +3308,9 @@ export default function LeadsPage() {
       )}
 
       {/* 실패 모달 - PC */}
-      {failModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setFailModal(null); }}>
-          <div className="bg-background rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4" onMouseDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
-            <div className="font-bold text-base">실패 사유</div>
+      <Dialog open={!!failModal} onOpenChange={(open) => { if (!open) { setFailModal(null); setFailReason(""); setFailMemo(""); } }}>
+        <DialogContent className="max-w-sm" onOpenAutoFocus={e => e.preventDefault()}>
+            <div className="font-bold text-base pb-1">실패 사유</div>
             <div className="text-xs text-muted-foreground">{failModal?.name ?? "이름 없음"} · {failModal?.phone ?? ""}</div>
             <div className="space-y-2">
               {failReasons.length === 0 ? (
@@ -3319,7 +3318,8 @@ export default function LeadsPage() {
               ) : failReasons.map(r => (
                 <button
                   key={r.id}
-                  onClick={() => setFailReason(r.label)}
+                  onPointerDown={e => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); setFailReason(r.label); }}
                   className={`w-full text-left px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
                     failReason === r.label
                       ? "bg-red-100 border-red-400 text-red-700 font-bold"
@@ -3333,15 +3333,16 @@ export default function LeadsPage() {
               rows={3}
               placeholder="추가 메모 (선택)"
               value={failMemo}
+              onPointerDown={e => e.stopPropagation()}
               onChange={e => setFailMemo(e.target.value)}
             />
             <div className="flex gap-2">
-              <button onClick={(e) => { e.stopPropagation(); setFailModal(null); }} className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground">취소</button>
+              <button onClick={() => { setFailModal(null); setFailReason(""); setFailMemo(""); }} className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground">취소</button>
               <button
                 disabled={!failReason}
                 className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold disabled:opacity-40"
-                onClick={async (e) => {
-                  e.stopPropagation();
+                onClick={async () => {
+                  if (!failModal) return;
                   await updateStatus(failModal.id, "실패");
                   const memoText = failMemo.trim()
                     ? `[실패:${failReason}] ${failMemo.trim()}`
@@ -3359,7 +3360,6 @@ export default function LeadsPage() {
             </div>
         </DialogContent>
       </Dialog>
-      </div>
   );
 }
 
@@ -3396,6 +3396,7 @@ function InfoRow({
     </div>
   );
 }
+
 
 
 
