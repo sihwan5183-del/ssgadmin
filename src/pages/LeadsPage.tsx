@@ -3312,15 +3312,14 @@ export default function LeadsPage() {
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setFailModal(null); }}>
           <div className="bg-background rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4" onMouseDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
             <div className="font-bold text-base">실패 사유</div>
-            <div className="text-xs text-muted-foreground">{failModal.name ?? "이름 없음"} · {failModal.phone ?? ""}</div>
+            <div className="text-xs text-muted-foreground">{failModal?.name ?? "이름 없음"} · {failModal?.phone ?? ""}</div>
             <div className="space-y-2">
               {failReasons.length === 0 ? (
                 <p className="text-xs text-gray-400 py-2">리포트 설정에서 실패 사유를 등록해주세요</p>
               ) : failReasons.map(r => (
                 <button
                   key={r.id}
-                  onMouseDown={e => e.stopPropagation()}
-                  onClick={(e) => { e.stopPropagation(); setFailReason(r.label); }}
+                  onClick={() => setFailReason(r.label)}
                   className={`w-full text-left px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
                     failReason === r.label
                       ? "bg-red-100 border-red-400 text-red-700 font-bold"
@@ -3334,8 +3333,6 @@ export default function LeadsPage() {
               rows={3}
               placeholder="추가 메모 (선택)"
               value={failMemo}
-              onMouseDown={e => e.stopPropagation()}
-              onClick={e => e.stopPropagation()}
               onChange={e => setFailMemo(e.target.value)}
             />
             <div className="flex gap-2">
@@ -3360,9 +3357,8 @@ export default function LeadsPage() {
                 }}
               >실패 확정</button>
             </div>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
       </div>
   );
 }
