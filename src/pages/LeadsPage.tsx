@@ -688,7 +688,7 @@ function MobileLeadsView({
 
       {/* 실패 모달 */}
       {failModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setFailModal(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={(e) => { e.stopPropagation(); setFailModal(null); }}>
           <div className="bg-background rounded-2xl w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="px-5 py-4 border-b">
               <div className="font-bold text-base">실패 사유</div>
@@ -3308,7 +3308,7 @@ export default function LeadsPage() {
 
       {/* 실패 모달 - PC */}
       {failModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={() => setFailModal(null)}>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={(e) => { e.stopPropagation(); setFailModal(null); }}>
           <div className="bg-background rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
             <div className="font-bold text-base">실패 사유</div>
             <div className="text-xs text-muted-foreground">{failModal.name ?? "이름 없음"} · {failModal.phone ?? ""}</div>
