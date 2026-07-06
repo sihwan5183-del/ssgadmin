@@ -248,8 +248,8 @@ function GraphDrawer({ rows, step, channel, onClose }: { rows: Row[]; step: stri
   }, [rows, step, channel]);
   const channelData = CHANNELS.map(ch => ({ channel: ch, count: cnt(rows, step, ch) }));
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-white rounded-t-2xl w-full max-w-4xl max-h-[65vh] overflow-y-auto shadow-2xl p-6" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto shadow-2xl p-6 mx-4" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-base font-bold">{channel ?? '전체'} — {stepInfo?.label ?? step}</h2>
@@ -412,3 +412,4 @@ export default function ReservationStatsPage() {
     </div>
   );
 }
+
