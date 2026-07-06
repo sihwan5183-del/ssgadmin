@@ -85,7 +85,7 @@ export function ReservationAlertSystem() {
     // ── 1. leads 테이블 (메타/도그마루/유닥/올인원/기타) ──
     const { data: leadsData } = await supabase
       .from('leads')
-      .select('id, customer_name, name, customer_phone, phone, source_type, channel, created_at')
+      .select('id, customer_name, name, customer_phone, phone, source, channel, created_at')
       .eq('status', '신규 접수')
       .lt('created_at', cutoff)
       .is('deleted_at', null);
@@ -97,7 +97,7 @@ export function ReservationAlertSystem() {
         'meta': '메타광고', 'dogmaru': '도그마루',
         'udak': '유닥', 'allinone': '올인원',
       };
-      const channel = channelMap[r.source_type] ?? r.channel ?? '기타인입';
+      const channel = r.channel ?? channelMap[r.source] ?? '기타인입';
       results.push({
         id,
         name: r.customer_name ?? r.name ?? '이름없음',
@@ -268,3 +268,4 @@ export function ReservationAlertSystem() {
     </div>
   );
 }
+
