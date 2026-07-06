@@ -141,12 +141,12 @@ export default function ReservationsPage() {
               <Search className="size-4" />
             </Button>
           </div>
-          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v as ReservationStatus | ''); setPage(1); }}>
+          <Select value={statusFilter || '_all_'} onValueChange={(v) => { setStatusFilter((v === '_all_' ? '' : v) as ReservationStatus | ''); setPage(1); }}>
             <SelectTrigger className="w-[130px] text-sm">
               <SelectValue placeholder="전체 상태" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">전체 상태</SelectItem>
+              <SelectItem value="_all_">전체 상태</SelectItem>
               {RESERVATION_STATUS_LIST.map((s) => (
                 <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
               ))}
@@ -256,5 +256,6 @@ export default function ReservationsPage() {
     </div>
   );
 }
+
 
 
