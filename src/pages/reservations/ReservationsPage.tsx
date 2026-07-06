@@ -14,6 +14,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDashboardStaff } from '@/hooks/useDashboardStaff';
 import { WorkReportHeader, SectionCard } from '@/pages/work-report/_shared';
 import {
   fetchReservations,
@@ -38,6 +39,7 @@ function StatusBadge({ status }: { status: ReservationStatus }) {
 
 export default function ReservationsPage() {
   const { user } = useAuth();
+  const { staff } = useDashboardStaff();
   const navigate = useNavigate();
 
   const [rows, setRows] = useState<Reservation[]>([]);
@@ -211,7 +213,7 @@ export default function ReservationsPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-sm text-gray-600">
-                      {(r.assignee as any)?.full_name ?? (r.assignee as any)?.email ?? '-'}
+                      {r.assigned_to ? (staff.find(s => s.user_id === r.assigned_to)?.display_name ?? '-') : '-'}
                     </TableCell>
                     <TableCell className="text-xs text-gray-400">
                       {r.contact_date ? new Date(r.contact_date).toLocaleDateString('ko-KR') : '-'}
@@ -254,4 +256,5 @@ export default function ReservationsPage() {
     </div>
   );
 }
+
 
