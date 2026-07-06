@@ -45,6 +45,7 @@ export interface Reservation {
   device_interest: string | null;
   status: ReservationStatus;
   assigned_to: string | null;
+  birth_date: string | null;
   memo: string | null;
   fail_reason_id: string | null;
   fail_stage: FailStage | null;
@@ -71,6 +72,7 @@ export interface ReservationInsert {
   device_interest?: string;
   status?: ReservationStatus;
   assigned_to?: string;
+  birth_date?: string;
   memo?: string;
   contact_date?: string;
 }
@@ -88,7 +90,7 @@ export interface ReservationUpdate {
 
 export const CARRIER_OPTIONS = ['LG U+', 'SKT', 'KT', '알뜰폰'];
 export const CHANNEL_OPTIONS = ['메타광고', '네이버 검색광고', '기타'];
-export const DEVICE_OPTIONS = ['갤럭시 Z 폴더블8', '갤럭시 Z 플립8', '아이폰17', '기타'];
+export const DEVICE_OPTIONS = ['갤럭시 Z 폴더블8'];
 
 // 실패 상태 판별
 export const isFailStatus = (status: ReservationStatus) =>
@@ -97,4 +99,5 @@ export const isFailStatus = (status: ReservationStatus) =>
 // 완료 상태 판별
 export const isCompleteStatus = (status: ReservationStatus) =>
   status === '예약완료' || status === '개통완료';
+
 
