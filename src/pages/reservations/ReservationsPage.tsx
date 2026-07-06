@@ -114,7 +114,7 @@ export default function ReservationsPage() {
           {RESERVATION_STATUS_LIST.map((s) => (
             <button
               key={s.value}
-              onClick={() => { setStatusFilter(s.value); setPage(1); }}
+              onClick={() => { setStatusFilter(statusFilter === s.value ? '' : s.value); setPage(1); }}
               className={`rounded-xl border p-3 text-left transition-all hover:shadow-md ${
                 statusFilter === s.value ? 'ring-2 ring-pink-400 shadow-md' : ''
               } ${s.color.replace('text-', 'border-').split(' ')[0]} bg-white`}
@@ -201,6 +201,9 @@ export default function ReservationsPage() {
                     onClick={() => setDetailId(r.id)}
                   >
                     <TableCell className="text-xs text-gray-400">{(page - 1) * PAGE_SIZE + idx + 1}</TableCell>
+                    <TableCell className="text-xs text-gray-500 whitespace-nowrap">
+                      {r.contact_date ? new Date(r.contact_date).toLocaleDateString('ko-KR') : '-'}
+                    </TableCell>
                     <TableCell className="text-sm font-medium">{r.name}</TableCell>
                     <TableCell className="text-sm text-gray-600">{formatPhone(r.phone)}</TableCell>
                     <TableCell className="text-sm text-gray-600">{r.carrier ?? '-'}</TableCell>
@@ -214,9 +217,6 @@ export default function ReservationsPage() {
                     </TableCell>
                     <TableCell className="text-sm text-gray-600">
                       {r.assigned_to ? (staff.find(s => s.user_id === r.assigned_to)?.display_name ?? '-') : '-'}
-                    </TableCell>
-                    <TableCell className="text-xs text-gray-400">
-                      {r.contact_date ? new Date(r.contact_date).toLocaleDateString('ko-KR') : '-'}
                     </TableCell>
                     <TableCell className="text-xs text-gray-500 max-w-[160px] truncate">
                       {r.memo ?? '-'}
@@ -256,6 +256,7 @@ export default function ReservationsPage() {
     </div>
   );
 }
+
 
 
 
