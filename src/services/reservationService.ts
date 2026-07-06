@@ -25,6 +25,9 @@ export interface FetchReservationsParams {
   status?: ReservationStatus | '';
   assigned_to?: string;
   search?: string;
+  channel?: string;
+  dateStart?: string;
+  dateEnd?: string;
   page?: number;
   pageSize?: number;
 }
@@ -33,7 +36,7 @@ export async function fetchReservations(params: FetchReservationsParams = {}): P
   data: Reservation[];
   count: number;
 }> {
-  const { status, assigned_to, search, page = 1, pageSize = 50 } = params;
+  const { status, assigned_to, search, channel, dateStart, dateEnd, page = 1, pageSize = 50 } = params;
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
@@ -49,6 +52,9 @@ export async function fetchReservations(params: FetchReservationsParams = {}): P
 
   if (status) query = query.eq('status', status);
   if (assigned_to) query = query.eq('assigned_to', assigned_to);
+  if (channel) query = query.eq('channel', channel);
+  if (dateStart) query = query.gte('contact_date', dateStart);
+  if (dateEnd) query = query.lte('contact_date', dateEnd + 'T23:59:59');
   if (search) {
     query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`);
   }
@@ -149,4 +155,5 @@ export async function fetchReservationStats(): Promise<ReservationStats> {
     activationRate: successCount > 0 ? Math.round((activationCount / successCount) * 100) : 0,
   };
 }
+
 
