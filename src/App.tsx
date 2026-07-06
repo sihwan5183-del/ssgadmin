@@ -57,6 +57,7 @@ import CustomProposalsPage from "./pages/CustomProposalsPage.tsx";
 import LeadsPage from "./pages/LeadsPage.tsx";
 import ReservationsPage from "./pages/reservations/ReservationsPage.tsx";
 import ReservationStatsPage from "./pages/reservations/ReservationStatsPage.tsx";
+import ResponseTimePage from "./pages/reservations/ResponseTimePage.tsx";
 import ProfitPage from "./pages/ProfitPage.tsx";
 import DogmaruPage from "./pages/DogmaruPage.tsx";
 import TrashPage from "./pages/TrashPage.tsx";
@@ -189,6 +190,7 @@ const App = () => {
                         {/* 사전예약 관리 */}
                         <Route path="/reservations" element={<ReservationsPage />} />
                         <Route path="/reservations/stats" element={<ReservationStatsPage />} />
+                        <Route path="/reservations/response-time" element={<ResponseTimePage />} />
                         {/* 영업 활동 리포트 — 신규 독립 카테고리 (1단계: mock data 레이아웃) */}
                         <Route path="/work-report/my-dashboard" element={<MyWorkDashboard />} />
                         <Route path="/work-report/team-dashboard" element={<TeamWorkDashboard />} />
@@ -216,4 +218,5 @@ const App = () => {
 };
 
 export default App;
+
 
