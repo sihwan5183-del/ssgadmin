@@ -14,8 +14,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRole } from '@/hooks/useRole';
-import { WorkReportHeader, SectionCard, WRBadge } from '@/pages/work-report/_shared';
+import { WorkReportHeader, SectionCard } from '@/pages/work-report/_shared';
 import {
   fetchReservations,
   fetchReservationStats,
@@ -39,7 +38,6 @@ function StatusBadge({ status }: { status: ReservationStatus }) {
 
 export default function ReservationsPage() {
   const { user } = useAuth();
-  const { isAdmin, isManager } = useRole();
   const navigate = useNavigate();
 
   const [rows, setRows] = useState<Reservation[]>([]);
@@ -256,3 +254,4 @@ export default function ReservationsPage() {
     </div>
   );
 }
+
