@@ -171,6 +171,7 @@ export default function ReservationsPage() {
                 <TableHead className="text-xs w-[40px]">#</TableHead>
                 <TableHead className="text-xs">고객명</TableHead>
                 <TableHead className="text-xs">연락처</TableHead>
+                <TableHead className="text-xs">생년월일</TableHead>
                 <TableHead className="text-xs">통신사</TableHead>
                 <TableHead className="text-xs">채널</TableHead>
                 <TableHead className="text-xs">관심기기</TableHead>
@@ -206,6 +207,7 @@ export default function ReservationsPage() {
                     </TableCell>
                     <TableCell className="text-sm font-medium">{r.name}</TableCell>
                     <TableCell className="text-sm text-gray-600">{formatPhone(r.phone)}</TableCell>
+                    <TableCell className="text-xs text-gray-500">{(r as any).birth_date ?? '-'}</TableCell>
                     <TableCell className="text-sm text-gray-600">{r.carrier ?? '-'}</TableCell>
                     <TableCell className="text-sm text-gray-600">{r.channel ?? '-'}</TableCell>
                     <TableCell className="text-sm text-gray-600">{r.device_interest ?? '-'}</TableCell>
@@ -256,6 +258,7 @@ export default function ReservationsPage() {
     </div>
   );
 }
+
 
 
 
