@@ -119,7 +119,6 @@ const App = () => {
                   <ProtectedRoute>
                     <AppShell>
                       <LeadsRealtimeNotifier />
-                      <ReservationAlertSystem />
                       <Routes>
                         <Route path="/" element={<Index />} />
                         <Route path="/input" element={<InputPage />} />
@@ -206,6 +205,7 @@ const App = () => {
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </AppShell>
+                    <ReservationAlertSystem />
                   </ProtectedRoute>
                 }
               />
@@ -220,6 +220,7 @@ const App = () => {
 };
 
 export default App;
+
 
 
 
