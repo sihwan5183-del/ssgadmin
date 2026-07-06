@@ -25,6 +25,7 @@ import {
 } from '@/types/reservation';
 import type { ReservationFailReason } from '@/types/reservation';
 import { useRole } from '@/hooks/useRole';
+import { useDashboardStaff } from '@/hooks/useDashboardStaff';
 import { formatPhone } from '@/lib/phoneFormat';
 
 interface Props {
@@ -44,6 +45,7 @@ function StatusBadge({ status }: { status: ReservationStatus }) {
 
 export function ReservationDetailModal({ reservationId, onClose, onDone }: Props) {
   const { isAdmin } = useRole();
+  const { staff } = useDashboardStaff();
 
   const [row, setRow] = useState<Reservation | null>(null);
   const [failReasons, setFailReasons] = useState<ReservationFailReason[]>([]);
@@ -177,7 +179,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                   </div>
                   <div>
                     <span className="text-xs text-gray-400">담당자</span>
-                    <div>{(row.assignee as any)?.full_name ?? (row.assignee as any)?.email ?? '-'}</div>
+                    <div>{row.assigned_to ? (staff.find(s => s.user_id === row.assigned_to)?.display_name ?? '-') : '-'}</div>
                   </div>
                 </div>
               </div>
@@ -224,11 +226,12 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">통신사</label>
-                  <Select value={carrier} onValueChange={setCarrier}>
+                  <Select value={carrier || '_none_'} onValueChange={(v) => setCarrier(v === '_none_' ? '' : v)}>
                     <SelectTrigger className="text-sm">
                       <SelectValue placeholder="선택" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="_none_">선택 안함</SelectItem>
                       {CARRIER_OPTIONS.map((c) => (
                         <SelectItem key={c} value={c}>{c}</SelectItem>
                       ))}
@@ -237,11 +240,12 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">채널</label>
-                  <Select value={channel} onValueChange={setChannel}>
+                  <Select value={channel || '_none_'} onValueChange={(v) => setChannel(v === '_none_' ? '' : v)}>
                     <SelectTrigger className="text-sm">
                       <SelectValue placeholder="선택" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="_none_">선택 안함</SelectItem>
                       {CHANNEL_OPTIONS.map((c) => (
                         <SelectItem key={c} value={c}>{c}</SelectItem>
                       ))}
@@ -392,3 +396,4 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
     </>
   );
 }
+
