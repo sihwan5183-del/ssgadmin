@@ -41,8 +41,7 @@ export async function fetchReservations(params: FetchReservationsParams = {}): P
     .from('reservations')
     .select(
       `*, 
-       fail_reason:reservation_fail_reasons(id, reason, sort_order, created_at),
-       assignee:assigned_to(id, full_name, email)`,
+       fail_reason:reservation_fail_reasons(id, reason, sort_order, created_at)`,
       { count: 'exact' }
     )
     .order('created_at', { ascending: false })
@@ -65,8 +64,7 @@ export async function fetchReservationById(id: string): Promise<Reservation> {
     .from('reservations')
     .select(
       `*, 
-       fail_reason:reservation_fail_reasons(id, reason, sort_order, created_at),
-       assignee:assigned_to(id, full_name, email)`
+       fail_reason:reservation_fail_reasons(id, reason, sort_order, created_at)`
     )
     .eq('id', id)
     .single();
@@ -151,3 +149,4 @@ export async function fetchReservationStats(): Promise<ReservationStats> {
     activationRate: successCount > 0 ? Math.round((activationCount / successCount) * 100) : 0,
   };
 }
+
