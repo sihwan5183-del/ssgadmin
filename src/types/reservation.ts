@@ -87,7 +87,7 @@ export interface ReservationUpdate {
 }
 
 export const CARRIER_OPTIONS = ['LG U+', 'SKT', 'KT', '알뜰폰'];
-export const CHANNEL_OPTIONS = ['메타광고', '모요', '도그마루', '유닥', '올인원', '기타'];
+export const CHANNEL_OPTIONS = ['메타광고', '네이버 검색광고', '기타'];
 export const DEVICE_OPTIONS = ['갤럭시 Z 폴더블8', '갤럭시 Z 플립8', '아이폰17', '기타'];
 
 // 실패 상태 판별
@@ -97,3 +97,4 @@ export const isFailStatus = (status: ReservationStatus) =>
 // 완료 상태 판별
 export const isCompleteStatus = (status: ReservationStatus) =>
   status === '예약완료' || status === '개통완료';
+
