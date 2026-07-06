@@ -8,7 +8,7 @@ import { RotateCw, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { WorkReportHeader, SectionCard, KpiCard } from '@/pages/work-report/_shared';
-import { fetchReservationStats, fetchReservations } from '@/services/reservationService';
+import { fetchReservationStats } from '@/services/reservationService';
 import { RESERVATION_STATUS_LIST } from '@/types/reservation';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -156,3 +156,4 @@ export default function ReservationStatsPage() {
     </div>
   );
 }
+
