@@ -3319,7 +3319,8 @@ export default function LeadsPage() {
               ) : failReasons.map(r => (
                 <button
                   key={r.id}
-                  onClick={() => setFailReason(r.label)}
+                  onMouseDown={e => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); setFailReason(r.label); }}
                   className={`w-full text-left px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
                     failReason === r.label
                       ? "bg-red-100 border-red-400 text-red-700 font-bold"
@@ -3333,6 +3334,8 @@ export default function LeadsPage() {
               rows={3}
               placeholder="추가 메모 (선택)"
               value={failMemo}
+              onMouseDown={e => e.stopPropagation()}
+              onClick={e => e.stopPropagation()}
               onChange={e => setFailMemo(e.target.value)}
             />
             <div className="flex gap-2">
@@ -3397,5 +3400,6 @@ function InfoRow({
     </div>
   );
 }
+
 
 
