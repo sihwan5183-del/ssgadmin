@@ -3,7 +3,7 @@
 // 채널별 탭 + 날짜 필터 + 상태 필터
 // ============================================================
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, Search, RotateCw, BarChart2, X } from 'lucide-react';
+import { Plus, Search, RotateCw, BarChart2, X, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -140,6 +140,9 @@ export default function ReservationsPage() {
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate('/reservations/stats')} className="gap-1.5 text-gray-600">
               <BarChart2 className="size-4" /> 통계
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate('/reservations/response-time')} className="gap-1.5 text-orange-500 border-orange-200 hover:bg-orange-50">
+              <Clock className="size-4" /> 응답시간
             </Button>
             <Button size="sm" onClick={() => setAddOpen(true)} className="gap-1.5 bg-pink-500 hover:bg-pink-600 text-white">
               <Plus className="size-4" /> 신규 등록
