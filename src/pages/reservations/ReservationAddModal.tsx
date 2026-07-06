@@ -87,11 +87,12 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-gray-500 mb-1 block">현재 통신사</label>
-              <Select value={carrier} onValueChange={setCarrier}>
+              <Select value={carrier || '_none_'} onValueChange={(v) => setCarrier(v === '_none_' ? '' : v)}>
                 <SelectTrigger className="text-sm">
                   <SelectValue placeholder="선택" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="_none_">선택 안함</SelectItem>
                   {CARRIER_OPTIONS.map((c) => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
@@ -101,11 +102,12 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
 
             <div>
               <label className="text-xs text-gray-500 mb-1 block">인입 채널</label>
-              <Select value={channel} onValueChange={setChannel}>
+              <Select value={channel || '_none_'} onValueChange={(v) => setChannel(v === '_none_' ? '' : v)}>
                 <SelectTrigger className="text-sm">
                   <SelectValue placeholder="선택" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="_none_">선택 안함</SelectItem>
                   {CHANNEL_OPTIONS.map((c) => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
@@ -156,3 +158,4 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
     </Dialog>
   );
 }
+
