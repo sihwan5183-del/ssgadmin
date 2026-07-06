@@ -603,7 +603,7 @@ function MobileLeadsView({
       {/* 메모 모달 */}
       {memoLead && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setMemoLead(null)}>
-          <div className="bg-background rounded-2xl w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-background rounded-2xl w-full max-w-sm shadow-2xl" onMouseDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
             <div className="px-5 py-4 border-b font-bold text-base">메모 — {displayName(memoLead)}</div>
             <div className="p-4">
               <textarea
@@ -630,7 +630,7 @@ function MobileLeadsView({
       {/* 부재케어 모달 */}
       {absenceModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setAbsenceModal(null)}>
-          <div className="bg-background rounded-2xl w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-background rounded-2xl w-full max-w-sm shadow-2xl" onMouseDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
             <div className="px-5 py-4 border-b">
               <div className="font-bold text-base">부재 사유</div>
               <div className="text-xs text-muted-foreground mt-0.5">{displayName(absenceModal)}</div>
@@ -665,7 +665,7 @@ function MobileLeadsView({
       {/* 재케어 모달 */}
       {recareModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setRecareModal(null)}>
-          <div className="bg-background rounded-2xl w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-background rounded-2xl w-full max-w-sm shadow-2xl" onMouseDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
             <div className="px-5 py-4 border-b">
               <div className="font-bold text-base">재케어 사유</div>
               <div className="text-xs text-muted-foreground mt-0.5">{displayName(recareModal)}</div>
@@ -688,8 +688,8 @@ function MobileLeadsView({
 
       {/* 실패 모달 */}
       {failModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={(e) => { e.stopPropagation(); setFailModal(null); }}>
-          <div className="bg-background rounded-2xl w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setFailModal(null); }}>
+          <div className="bg-background rounded-2xl w-full max-w-sm shadow-2xl" onMouseDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
             <div className="px-5 py-4 border-b">
               <div className="font-bold text-base">실패 사유</div>
               <div className="text-xs text-muted-foreground mt-0.5">{displayName(failModal)}</div>
@@ -715,10 +715,11 @@ function MobileLeadsView({
               />
             </div>
             <div className="px-4 pb-4 flex gap-2">
-              <button onClick={() => setFailModal(null)} className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground">취소</button>
+              <button onClick={(e) => { e.stopPropagation(); setFailModal(null); }} className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground">취소</button>
               <button
                 disabled={!failReason}
-                onClick={async () => {
+                onClick={async (e) => {
+                  e.stopPropagation();
                   await handleStatus(failModal, "실패");
                   const memoText = failMemo.trim()
                     ? `[실패:${failReason}] ${failMemo.trim()}`
@@ -2482,7 +2483,7 @@ export default function LeadsPage() {
                       "cursor-pointer border-b border-border hover:bg-muted/40 transition-colors " +
                       (highlightId === item.id ? "bg-amber-50 ring-2 ring-amber-400 animate-pulse" : "")
                     }
-                    onClick={() => setOpenLead(item)}
+                    onClick={() => { if (failModal) return; setOpenLead(item); }}
                     data-state={bulk.isSelected(item.id) ? "selected" : undefined}
                   >
                     <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
@@ -2559,7 +2560,7 @@ export default function LeadsPage() {
                       ) : <span className="text-muted-foreground text-[11px]">-</span>}
                     </TableCell>
                     <TableCell className="text-center py-1.5" onClick={(e) => e.stopPropagation()}>
-                      <Button size="sm" variant="ghost" onClick={() => setOpenLead(item)}>
+                      <Button size="sm" variant="ghost" onClick={() => { if (failModal) return; setOpenLead(item); }}>
                         상세
                       </Button>
                     </TableCell>
@@ -2638,7 +2639,7 @@ export default function LeadsPage() {
                   "cursor-pointer border-b border-border hover:bg-muted/40 transition-colors " +
                   (highlightId === r.id ? "bg-amber-50 ring-2 ring-amber-400 animate-pulse" : "")
                 }
-                onClick={() => setOpenLead(r)}
+                onClick={() => { if (failModal) return; setOpenLead(r); }}
                 data-state={bulk.isSelected(r.id) ? "selected" : undefined}
               >
                 <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
@@ -2821,7 +2822,7 @@ export default function LeadsPage() {
                   );
                 })()}
                 <TableCell className="text-center py-1.5" onClick={(e) => e.stopPropagation()}>
-                  <Button size="sm" variant="ghost" onClick={() => setOpenLead(r)}>
+                  <Button size="sm" variant="ghost" onClick={() => { if (failModal) return; setOpenLead(r); }}>
                     상세
                   </Button>
                 </TableCell>
@@ -3308,8 +3309,8 @@ export default function LeadsPage() {
 
       {/* 실패 모달 - PC */}
       {failModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={(e) => { e.stopPropagation(); setFailModal(null); }}>
-          <div className="bg-background rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setFailModal(null); }}>
+          <div className="bg-background rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4" onMouseDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
             <div className="font-bold text-base">실패 사유</div>
             <div className="text-xs text-muted-foreground">{failModal.name ?? "이름 없음"} · {failModal.phone ?? ""}</div>
             <div className="space-y-2">
@@ -3335,11 +3336,12 @@ export default function LeadsPage() {
               onChange={e => setFailMemo(e.target.value)}
             />
             <div className="flex gap-2">
-              <button onClick={() => setFailModal(null)} className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground">취소</button>
+              <button onClick={(e) => { e.stopPropagation(); setFailModal(null); }} className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground">취소</button>
               <button
                 disabled={!failReason}
                 className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold disabled:opacity-40"
-                onClick={async () => {
+                onClick={async (e) => {
+                  e.stopPropagation();
                   await updateStatus(failModal.id, "실패");
                   const memoText = failMemo.trim()
                     ? `[실패:${failReason}] ${failMemo.trim()}`
