@@ -120,16 +120,9 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
 
           <div>
             <label className="text-xs text-gray-500 mb-1 block">관심 기기</label>
-            <Select value={device} onValueChange={setDevice}>
-              <SelectTrigger className="text-sm">
-                <SelectValue placeholder="선택" />
-              </SelectTrigger>
-              <SelectContent>
-                {DEVICE_OPTIONS.map((d) => (
-                  <SelectItem key={d} value={d}>{d}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="text-sm px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-700 font-medium">
+              📱 갤럭시 Z 폴더블8
+            </div>
           </div>
 
           <div>
@@ -171,5 +164,6 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
     </Dialog>
   );
 }
+
 
 
