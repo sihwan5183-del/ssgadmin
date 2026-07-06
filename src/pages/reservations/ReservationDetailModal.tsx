@@ -24,6 +24,7 @@ import {
 } from '@/types/reservation';
 import type { ReservationFailReason } from '@/types/reservation';
 import { useRole } from '@/hooks/useRole';
+import { saveStatusLog } from '@/services/responseTimeService';
 import { useDashboardStaff } from '@/hooks/useDashboardStaff';
 import { formatPhone } from '@/lib/phoneFormat';
 
@@ -113,6 +114,20 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
     if (!row) return;
     setSaving(true);
     try {
+      // 상태 변경 시 로그 저장
+      if (status !== row.status && user?.id) {
+        try {
+          await saveStatusLog({
+            reservationId: row.id,
+            fromStatus: row.status,
+            toStatus: status,
+            changedBy: user.id,
+            contactDate: row.contact_date,
+          });
+        } catch (e) {
+          console.warn('로그 저장 실패:', e);
+        }
+      }
       await updateReservation(row.id, {
         status,
         carrier: carrier || undefined,
@@ -399,5 +414,6 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
     </>
   );
 }
+
 
 
