@@ -68,6 +68,8 @@ export function ReservationAlertSystem() {
     (ld ?? []).forEach((r: any) => {
       const id = `leads_${r.id}`;
       if (dismissed.has(id)) return;
+      // 7월 1일 이전 건 제외 (이중 필터)
+      if (new Date(r.created_at) < new Date('2026-07-01T00:00:00+09:00')) return;
       const ck = getChannelKey(r.source, r.channel, 'leads');
       results.push({ id, name: r.customer_name ?? r.name ?? '이름없음', phone: r.customer_phone ?? r.phone ?? '', channel: CHANNEL_CONFIG[ck].label, channelKey: ck, source: 'leads', contact_date: r.created_at, elapsed_min: getElapsedMin(r.created_at) });
     });
@@ -83,6 +85,7 @@ export function ReservationAlertSystem() {
     (rd ?? []).forEach((r: any) => {
       const id = `res_${r.id}`;
       if (dismissed.has(id)) return;
+      if (new Date(r.contact_date) < new Date('2026-07-01T00:00:00+09:00')) return;
       results.push({ id, name: r.name, phone: r.phone, channel: '사전예약', channelKey: 'reservation', source: 'reservations', contact_date: r.contact_date, elapsed_min: getElapsedMin(r.contact_date) });
     });
 
@@ -220,3 +223,4 @@ export function ReservationAlertSystem() {
     </div>
   );
 }
+
