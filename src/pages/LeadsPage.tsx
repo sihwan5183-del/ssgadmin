@@ -3357,6 +3357,7 @@ export default function LeadsPage() {
             </div>
         </DialogContent>
       </Dialog>
+    </div>
   );
 }
 
@@ -3393,6 +3394,7 @@ function InfoRow({
     </div>
   );
 }
+
 
 
 
