@@ -64,6 +64,7 @@ import TrashPage from "./pages/TrashPage.tsx";
 import SmsTemplatePage from "./pages/SmsTemplatePage.tsx";
 import SalesAnalyticsPage from "./pages/SalesAnalyticsPage.tsx";
 import { LeadsRealtimeNotifier } from "./components/leads/LeadsRealtimeNotifier.tsx";
+import { ReservationAlertSystem } from "./pages/reservations/ReservationAlertSystem.tsx";
 // 영업 활동 리포트 — 1단계 신규 독립 카테고리
 import MyWorkDashboard from "./pages/work-report/MyWorkDashboard.tsx";
 import TeamWorkDashboard from "./pages/work-report/TeamWorkDashboard.tsx";
@@ -118,6 +119,7 @@ const App = () => {
                   <ProtectedRoute>
                     <AppShell>
                       <LeadsRealtimeNotifier />
+                      <ReservationAlertSystem />
                       <Routes>
                         <Route path="/" element={<Index />} />
                         <Route path="/input" element={<InputPage />} />
@@ -218,5 +220,6 @@ const App = () => {
 };
 
 export default App;
+
 
 
