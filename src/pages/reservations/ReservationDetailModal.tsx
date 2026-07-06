@@ -21,7 +21,6 @@ import {
   RESERVATION_STATUS_LIST,
   CARRIER_OPTIONS,
   CHANNEL_OPTIONS,
-  DEVICE_OPTIONS,
 } from '@/types/reservation';
 import type { ReservationFailReason } from '@/types/reservation';
 import { useRole } from '@/hooks/useRole';
@@ -174,8 +173,12 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                     <div className="font-semibold">{formatPhone(row.phone)}</div>
                   </div>
                   <div>
-                    <span className="text-xs text-gray-400">인입일</span>
+                    <span className="text-xs text-gray-400">접수일</span>
                     <div>{row.contact_date ? new Date(row.contact_date).toLocaleDateString('ko-KR') : '-'}</div>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-400">생년월일</span>
+                    <div>{(row as any).birth_date ?? '-'}</div>
                   </div>
                   <div>
                     <span className="text-xs text-gray-400">담당자</span>
@@ -396,4 +399,5 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
     </>
   );
 }
+
 
