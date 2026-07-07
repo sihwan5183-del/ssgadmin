@@ -191,14 +191,15 @@ export default function CrmIntakePage() {
                 <TableHead className="text-xs">문의상품</TableHead>
                 <TableHead className="text-xs">상태</TableHead>
                 <TableHead className="text-xs">담당자</TableHead>
+                <TableHead className="text-xs">혜택</TableHead>
                 <TableHead className="text-xs">메모</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={12} className="text-center py-12 text-sm text-gray-400">로딩 중...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={13} className="text-center py-12 text-sm text-gray-400">로딩 중...</TableCell></TableRow>
               ) : rows.length === 0 ? (
-                <TableRow><TableCell colSpan={12} className="text-center py-12 text-sm text-gray-400">데이터가 없습니다</TableCell></TableRow>
+                <TableRow><TableCell colSpan={13} className="text-center py-12 text-sm text-gray-400">데이터가 없습니다</TableCell></TableRow>
               ) : rows.map((r, idx) => (
                 <TableRow key={r.id} className="cursor-pointer hover:bg-pink-50/50 transition-colors"
                   onClick={() => setDetailId(r.id)}>
@@ -217,6 +218,7 @@ export default function CrmIntakePage() {
                   <TableCell className="text-sm text-gray-600">
                     {r.assigned_to ? (staff.find(s => s.user_id === r.assigned_to)?.display_name ?? '-') : '-'}
                   </TableCell>
+                    <TableCell className="text-xs font-medium text-pink-600 max-w-[160px] truncate">{(r as any).product_benefit ?? '-'}</TableCell>
                   <TableCell className="text-xs text-gray-500 max-w-[140px] truncate">{r.memo ?? '-'}</TableCell>
                 </TableRow>
               ))}
@@ -243,3 +245,4 @@ export default function CrmIntakePage() {
     </div>
   );
 }
+
