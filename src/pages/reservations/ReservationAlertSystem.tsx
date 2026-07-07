@@ -16,6 +16,7 @@ const START_DATE = '2026-07-01T00:00:00+09:00';
 
 interface UncaredItem {
   id: string;
+  leadsId: string; // 실제 DB id (leads or reservations)
   name: string;
   phone: string;
   channel: string;
@@ -71,7 +72,7 @@ export function ReservationAlertSystem() {
       // 7월 1일 이전 건 제외 (이중 필터)
       if (new Date(r.created_at) < new Date('2026-07-01T00:00:00+09:00')) return;
       const ck = getChannelKey(r.source, r.channel, 'leads');
-      results.push({ id, name: r.customer_name ?? r.name ?? '이름없음', phone: r.customer_phone ?? r.phone ?? '', channel: CHANNEL_CONFIG[ck].label, channelKey: ck, source: 'leads', contact_date: r.created_at, elapsed_min: getElapsedMin(r.created_at) });
+      results.push({ id, leadsId: r.id, name: r.customer_name ?? r.name ?? '이름없음', phone: r.customer_phone ?? r.phone ?? '', channel: CHANNEL_CONFIG[ck].label, channelKey: ck, source: 'leads', contact_date: r.created_at, elapsed_min: getElapsedMin(r.created_at) });
     });
 
     // reservations
@@ -86,7 +87,7 @@ export function ReservationAlertSystem() {
       const id = `res_${r.id}`;
       if (dismissed.has(id)) return;
       if (new Date(r.contact_date) < new Date('2026-07-01T00:00:00+09:00')) return;
-      results.push({ id, name: r.name, phone: r.phone, channel: '사전예약', channelKey: 'reservation', source: 'reservations', contact_date: r.contact_date, elapsed_min: getElapsedMin(r.contact_date) });
+      results.push({ id, leadsId: r.id, name: r.name, phone: r.phone, channel: '사전예약', channelKey: 'reservation', source: 'reservations', contact_date: r.contact_date, elapsed_min: getElapsedMin(r.contact_date) });
     });
 
     // 채널별로 그룹핑
@@ -191,7 +192,7 @@ export function ReservationAlertSystem() {
                       </div>
                       <div className="flex flex-col gap-1 shrink-0">
                         <button
-                          onClick={() => { addDismissed(item.id); navigate(cfg.path); }}
+                          onClick={() => { addDismissed(item.id); navigate(`${cfg.path}&highlight=${item.leadsId}`); }}
                           className="flex items-center gap-1 text-xs text-white px-2.5 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap"
                           style={{ backgroundColor: cfg.color }}
                         >
@@ -223,4 +224,5 @@ export function ReservationAlertSystem() {
     </div>
   );
 }
+
 
