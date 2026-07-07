@@ -41,6 +41,7 @@ export function CrmAddModal({ open, onClose, onDone }: Props) {
   // 상품 정보
   const [products, setProducts] = useState<string[]>([]);
   const [product, setProduct] = useState('');
+  const [modelName, setModelName] = useState('');
   const [capacity, setCapacity] = useState('');
   const [color, setColor] = useState('');
   const [benefits, setBenefits] = useState<string[]>([]);
@@ -97,6 +98,7 @@ export function CrmAddModal({ open, onClose, onDone }: Props) {
         product_benefit: benefit || null,
         inquiry_content: inquiryContent.trim() || null,
         desired_device: capacity || null,
+        model_name: modelName.trim() || null,
         memo: memo.trim() || null,
         registration_date: new Date().toISOString().slice(0, 10),
       } as any);
@@ -190,6 +192,10 @@ export function CrmAddModal({ open, onClose, onDone }: Props) {
                 </Select>
               </div>
               <div>
+                <label className="text-xs text-gray-500 mb-1 block">제품명 (모델명)</label>
+                <Input value={modelName} onChange={e => setModelName(e.target.value)} placeholder="예) 갤럭시 S25 Ultra" className="text-sm" />
+              </div>
+              <div>
                 <label className="text-xs text-gray-500 mb-1 block">용량</label>
                 <Select value={capacity || '_none_'} onValueChange={v => setCapacity(v === '_none_' ? '' : v)}>
                   <SelectTrigger className="text-sm"><SelectValue placeholder="선택" /></SelectTrigger>
@@ -276,3 +282,4 @@ export function CrmAddModal({ open, onClose, onDone }: Props) {
     </Dialog>
   );
 }
+
