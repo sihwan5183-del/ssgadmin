@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useDeviceModels } from '@/hooks/useDeviceModels';
+import { useFieldOptions } from '@/hooks/useFieldOptions';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDashboardStaff } from '@/hooks/useDashboardStaff';
 
@@ -26,6 +27,7 @@ export function CrmAddModal({ open, onClose, onDone }: Props) {
   const { user } = useAuth();
   const { staff } = useDashboardStaff();
   const { searchModels } = useDeviceModels();
+  const { options: benefits } = useFieldOptions('crm_benefit' as any);
 
   // 기본 정보
   const [name, setName] = useState('');
@@ -48,7 +50,8 @@ export function CrmAddModal({ open, onClose, onDone }: Props) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [capacity, setCapacity] = useState('');
   const [color, setColor] = useState('');
-  const [benefit, setBenefit] = useState('');
+  const [benefitType, setBenefitType] = useState('');
+  const [benefitMemo, setBenefitMemo] = useState('');
 
   // 기타
   const [inquiryContent, setInquiryContent] = useState('');
@@ -95,7 +98,7 @@ export function CrmAddModal({ open, onClose, onDone }: Props) {
         crm_branch: crmBranch || null,
         address: address.trim() || null,
         product_color: color.trim() || null,
-        product_benefit: benefit || null,
+        product_benefit: [benefitType, benefitMemo].filter(Boolean).join(' / ') || null,
         inquiry_content: inquiryContent.trim() || null,
         desired_device: capacity || null,
         model_name: modelName.trim() || null,
@@ -235,8 +238,18 @@ export function CrmAddModal({ open, onClose, onDone }: Props) {
                 <Input value={color} onChange={e => setColor(e.target.value)} placeholder="예) 티타늄 블루" className="text-sm" />
               </div>
               <div className="col-span-2">
-                <label className="text-xs text-gray-500 mb-1 block">혜택 메모 <span className="text-gray-400">(워치/탭/티비프리 등 자유 입력)</span></label>
-                <Input value={benefit} onChange={e => setBenefit(e.target.value)} placeholder="예) 워치7 + 갤탭S10 + 티비프리" className="text-sm" />
+                <label className="text-xs text-gray-500 mb-1 block">혜택</label>
+                <div className="flex gap-2">
+                  <Select value={benefitType || '_none_'} onValueChange={v => setBenefitType(v === '_none_' ? '' : v)}>
+                    <SelectTrigger className="text-sm w-[180px] shrink-0"><SelectValue placeholder="혜택 선택" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none_">선택 안함</SelectItem>
+                      {benefits.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Input value={benefitMemo} onChange={e => setBenefitMemo(e.target.value)}
+                    placeholder="추가 메모 (예: 워치7 + 갤탭S10)" className="text-sm flex-1" />
+                </div>
               </div>
             </div>
           </div>
@@ -301,6 +314,7 @@ export function CrmAddModal({ open, onClose, onDone }: Props) {
     </Dialog>
   );
 }
+
 
 
 
