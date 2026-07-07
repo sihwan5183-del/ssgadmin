@@ -167,6 +167,18 @@ function MobileLeadsView({
   const [failModal, setFailModal] = useState<Lead | null>(null);
   const [detailStatusSelectOpen, setDetailStatusSelectOpen] = useState(false);
   const [failDetailMemo, setFailDetailMemo] = useState('');
+
+  // 상세 모달 열릴 때 기존 메모에서 추가 내용 복원
+  useEffect(() => {
+    if (!openLead) { setFailDetailMemo(''); return; }
+    if (openLead.status === '실패' || openLead.status === '취소') {
+      // [실패:사유] 이후 텍스트 추출
+      const match = (openLead.memo ?? '').match(/\[실패:[^\]]+\]\s*(.*)/s);
+      setFailDetailMemo(match?.[1]?.trim() ?? '');
+    } else {
+      setFailDetailMemo('');
+    }
+  }, [openLead?.id, openLead?.status]);
   const [failReason, setFailReason] = useState("");
   const [failMemo, setFailMemo] = useState("");
 
@@ -1033,6 +1045,18 @@ export default function LeadsPage() {
   const [failModal, setFailModal] = useState<Lead | null>(null);
   const [detailStatusSelectOpen, setDetailStatusSelectOpen] = useState(false);
   const [failDetailMemo, setFailDetailMemo] = useState('');
+
+  // 상세 모달 열릴 때 기존 메모에서 추가 내용 복원
+  useEffect(() => {
+    if (!openLead) { setFailDetailMemo(''); return; }
+    if (openLead.status === '실패' || openLead.status === '취소') {
+      // [실패:사유] 이후 텍스트 추출
+      const match = (openLead.memo ?? '').match(/\[실패:[^\]]+\]\s*(.*)/s);
+      setFailDetailMemo(match?.[1]?.trim() ?? '');
+    } else {
+      setFailDetailMemo('');
+    }
+  }, [openLead?.id, openLead?.status]);
   const [failReason, setFailReason] = useState("");
   const [failMemo, setFailMemo] = useState("");
   const [statusLogs, setStatusLogs] = useState<any[]>([]);
@@ -3608,6 +3632,7 @@ function InfoRow({
     </div>
   );
 }
+
 
 
 
