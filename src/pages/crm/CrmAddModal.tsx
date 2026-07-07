@@ -44,7 +44,6 @@ export function CrmAddModal({ open, onClose, onDone }: Props) {
   const [modelName, setModelName] = useState('');
   const [capacity, setCapacity] = useState('');
   const [color, setColor] = useState('');
-  const [benefits, setBenefits] = useState<string[]>([]);
   const [benefit, setBenefit] = useState('');
 
   // 기타
@@ -58,9 +57,6 @@ export function CrmAddModal({ open, onClose, onDone }: Props) {
     supabase.from('field_options').select('value').eq('field', 'product').eq('active', true)
       .order('sort_order')
       .then(({ data }) => setProducts((data ?? []).map((d: any) => d.value)));
-    supabase.from('field_options').select('value').eq('field', 'crm_benefit').eq('active', true)
-      .order('sort_order')
-      .then(({ data }) => setBenefits((data ?? []).map((d: any) => d.value)));
   }, []);
 
   // 지부 선택 시 매장 로드
@@ -209,15 +205,9 @@ export function CrmAddModal({ open, onClose, onDone }: Props) {
                 <label className="text-xs text-gray-500 mb-1 block">컬러</label>
                 <Input value={color} onChange={e => setColor(e.target.value)} placeholder="예) 티타늄 블루" className="text-sm" />
               </div>
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">혜택</label>
-                <Select value={benefit || '_none_'} onValueChange={v => setBenefit(v === '_none_' ? '' : v)}>
-                  <SelectTrigger className="text-sm"><SelectValue placeholder="혜택 선택" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none_">선택 안함</SelectItem>
-                    {benefits.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+              <div className="col-span-2">
+                <label className="text-xs text-gray-500 mb-1 block">혜택 메모 <span className="text-gray-400">(워치/탭/티비프리 등 자유 입력)</span></label>
+                <Input value={benefit} onChange={e => setBenefit(e.target.value)} placeholder="예) 워치7 + 갤탭S10 + 티비프리" className="text-sm" />
               </div>
             </div>
           </div>
@@ -282,4 +272,5 @@ export function CrmAddModal({ open, onClose, onDone }: Props) {
     </Dialog>
   );
 }
+
 
