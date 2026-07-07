@@ -24,6 +24,7 @@ import {
 } from '@/types/reservation';
 import type { ReservationFailReason } from '@/types/reservation';
 import { useRole } from '@/hooks/useRole';
+import { useFieldOptions } from '@/hooks/useFieldOptions';
 import { saveStatusLog } from '@/services/responseTimeService';
 import { useDashboardStaff } from '@/hooks/useDashboardStaff';
 import { formatPhone } from '@/lib/phoneFormat';
@@ -46,6 +47,7 @@ function StatusBadge({ status }: { status: ReservationStatus }) {
 export function ReservationDetailModal({ reservationId, onClose, onDone }: Props) {
   const { isAdmin } = useRole();
   const { staff } = useDashboardStaff();
+  const { options: colorOptions } = useFieldOptions('reservation_color' as any);
 
   const [row, setRow] = useState<Reservation | null>(null);
   const [failReasons, setFailReasons] = useState<ReservationFailReason[]>([]);
@@ -59,6 +61,8 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
   const [carrier, setCarrier] = useState('');
   const [channel, setChannel] = useState('');
   const [device, setDevice] = useState('');
+  const [capacity, setCapacity] = useState('');
+  const [color, setColor] = useState('');
   const [memo, setMemo] = useState('');
 
   // 실패 사유 모달 (상담실패 선택 시 인터셉트)
@@ -81,6 +85,8 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
         setCarrier(r.carrier ?? '');
         setChannel(r.channel ?? '');
         setDevice(r.device_interest ?? '');
+        setCapacity((r as any).desired_device ?? '');
+        setColor((r as any).product_color ?? '');
         setMemo(r.memo ?? '');
         if (r.fail_reason_id) setSelectedFailReason(r.fail_reason_id);
         if (r.fail_memo) setFailMemo(r.fail_memo);
@@ -133,6 +139,8 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
         carrier: carrier || undefined,
         channel: channel || undefined,
         device_interest: device || undefined,
+        desired_device: capacity || undefined,
+        product_color: color || undefined,
         memo: memo.trim() || undefined,
         fail_reason_id: status === '상담실패' ? selectedFailReason || null : null,
         fail_stage: status === '상담실패' ? '상담' as FailStage : null,
@@ -274,14 +282,34 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
 
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">관심 기기</label>
-                <Select value={device} onValueChange={setDevice}>
-                  <SelectTrigger className="text-sm">
-                    <SelectValue placeholder="선택" />
-                  </SelectTrigger>
+                <Select value={device || '_none_'} onValueChange={v => setDevice(v === '_none_' ? '' : v)}>
+                  <SelectTrigger className="text-sm"><SelectValue placeholder="기기 선택" /></SelectTrigger>
                   <SelectContent>
-                    {DEVICE_OPTIONS.map((d) => (
-                      <SelectItem key={d} value={d}>{d}</SelectItem>
-                    ))}
+                    <SelectItem value="_none_">선택 안함</SelectItem>
+                    <SelectItem value="갤럭시 Z 플립8">갤럭시 Z 플립8</SelectItem>
+                    <SelectItem value="갤럭시 Z 폴드8">갤럭시 Z 폴드8</SelectItem>
+                    <SelectItem value="갤럭시 Z 폴드8 와이드">갤럭시 Z 폴드8 와이드</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">용량</label>
+                <Select value={capacity || '_none_'} onValueChange={v => setCapacity(v === '_none_' ? '' : v)}>
+                  <SelectTrigger className="text-sm"><SelectValue placeholder="선택" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none_">선택 안함</SelectItem>
+                    <SelectItem value="256GB">256GB</SelectItem>
+                    <SelectItem value="512GB">512GB</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="col-span-2">
+                <label className="text-xs text-gray-500 mb-1 block">컬러 <span className="text-gray-400 text-[10px]">(재고/설정 → 필드 옵션)</span></label>
+                <Select value={color || '_none_'} onValueChange={v => setColor(v === '_none_' ? '' : v)}>
+                  <SelectTrigger className="text-sm"><SelectValue placeholder="미정" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none_">미정</SelectItem>
+                    {colorOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -414,6 +442,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
     </>
   );
 }
+
 
 
 
