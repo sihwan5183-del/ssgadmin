@@ -89,6 +89,7 @@ export default function CrmIntakePage() {
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [periodFilter, setPeriodFilter] = useState(''); // 전체/오늘/이번주/이번달
   const [dateStart, setDateStart] = useState('');
   const [dateEnd, setDateEnd] = useState('');
 
@@ -98,6 +99,31 @@ export default function CrmIntakePage() {
 
   const [addOpen, setAddOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
+
+  // 기간 필터 → dateStart/dateEnd 자동 계산
+  const applyPeriod = (period: string) => {
+    setPeriodFilter(period);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (period === 'today') {
+      setDateStart(today.toISOString().slice(0, 10));
+      setDateEnd(today.toISOString().slice(0, 10));
+    } else if (period === 'week') {
+      const day = today.getDay();
+      const mon = new Date(today);
+      mon.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
+      setDateStart(mon.toISOString().slice(0, 10));
+      setDateEnd(today.toISOString().slice(0, 10));
+    } else if (period === 'month') {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      setDateStart(start.toISOString().slice(0, 10));
+      setDateEnd(today.toISOString().slice(0, 10));
+    } else {
+      setDateStart('');
+      setDateEnd('');
+    }
+    setPage(1);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -168,7 +194,7 @@ export default function CrmIntakePage() {
   const handleSearch = () => { setSearch(searchInput); setPage(1); };
   const handleReset = () => {
     setSearch(''); setSearchInput(''); setStatusFilter('');
-    setDateStart(''); setDateEnd(''); setPage(1);
+    setDateStart(''); setDateEnd(''); setPeriodFilter(''); setPage(1);
   };
 
   return (
@@ -218,6 +244,25 @@ export default function CrmIntakePage() {
       {/* 필터 */}
       <SectionCard>
         <div className="flex flex-wrap items-center gap-2">
+          {/* 기간 빠른 선택 */}
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 shrink-0">
+            {[
+              { key: '', label: '전체' },
+              { key: 'today', label: '오늘' },
+              { key: 'week', label: '이번주' },
+              { key: 'month', label: '이번달' },
+            ].map(btn => (
+              <button key={btn.key}
+                onClick={() => applyPeriod(btn.key)}
+                className={`px-3 py-1 text-xs rounded-md font-medium transition-colors ${
+                  periodFilter === btn.key
+                    ? 'bg-white text-pink-600 shadow-sm font-semibold'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}>
+                {btn.label}
+              </button>
+            ))}
+          </div>
           <div className="flex gap-1.5 flex-1 min-w-[180px]">
             <Input placeholder="고객명 · 연락처 검색" value={searchInput}
               onChange={e => setSearchInput(e.target.value)}
@@ -335,3 +380,4 @@ export default function CrmIntakePage() {
     </div>
   );
 }
+
