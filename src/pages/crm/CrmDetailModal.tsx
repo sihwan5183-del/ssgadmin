@@ -44,6 +44,7 @@ export function CrmDetailModal({ leadId, onClose, onDone }: Props) {
   const [branches, setBranches] = useState<string[]>([]);
   const [products, setProducts] = useState<string[]>([]);
   const [product, setProduct] = useState('');
+  const [modelName, setModelName] = useState('');
   const [capacity, setCapacity] = useState('');
   const [color, setColor] = useState('');
   const [benefits, setBenefits] = useState<string[]>([]);
@@ -67,6 +68,7 @@ export function CrmDetailModal({ leadId, onClose, onDone }: Props) {
         setCrmGroup((data as any).crm_group ?? '');
         setCrmBranch((data as any).crm_branch ?? '');
         setProduct(data.desired_product ?? '');
+        setModelName((data as any).model_name ?? '');
         setCapacity(data.desired_device ?? '');
         setColor((data as any).product_color ?? '');
         setBenefit((data as any).product_benefit ?? '');
@@ -102,6 +104,7 @@ export function CrmDetailModal({ leadId, onClose, onDone }: Props) {
         current_carrier: carrier || null,
         desired_product: product || null,
         desired_device: capacity || null,
+        model_name: modelName.trim() || null,
         status,
         assigned_to: assignedTo || null,
         crm_group: crmGroup || null,
@@ -212,6 +215,10 @@ export function CrmDetailModal({ leadId, onClose, onDone }: Props) {
                   </Select>
                 </div>
                 <div>
+                  <label className="text-xs text-gray-500 mb-1 block">제품명 (모델명)</label>
+                  <Input value={modelName} onChange={e => setModelName(e.target.value)} placeholder="예) 갤럭시 S25 Ultra" className="text-sm" />
+                </div>
+                <div>
                   <label className="text-xs text-gray-500 mb-1 block">용량</label>
                   <Select value={capacity || '_none_'} onValueChange={v => setCapacity(v === '_none_' ? '' : v)}>
                     <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
@@ -315,3 +322,4 @@ export function CrmDetailModal({ leadId, onClose, onDone }: Props) {
     </Dialog>
   );
 }
+
