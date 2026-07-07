@@ -18,7 +18,8 @@ export type FieldKey =
   | "inquiry_status"
   | "inquiry_quick_memo"
   | "apartment_result"
-  | "usim_model";
+  | "usim_model"
+  | "crm_benefit";
 
 export interface FieldOption {
   id: string;
@@ -50,3 +51,4 @@ export const useFieldOptions = (field: FieldKey) => {
 
   return { options, loading, refresh };
 };
+
