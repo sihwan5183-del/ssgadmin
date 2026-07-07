@@ -58,6 +58,8 @@ export function CrmDetailModal({ leadId, onClose, onDone }: Props) {
   const [inquiryContent, setInquiryContent] = useState('');
   const [address, setAddress] = useState('');
   const [memo, setMemo] = useState('');
+  const [failReasons, setFailReasons] = useState<{id:string;label:string}[]>([]);
+  const [failDetailMemo, setFailDetailMemo] = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -90,7 +92,19 @@ export function CrmDetailModal({ leadId, onClose, onDone }: Props) {
     load();
     supabase.from('field_options').select('value').eq('field', 'product').eq('active', true).order('sort_order')
       .then(({ data }) => setProducts((data ?? []).map((d: any) => d.value)));
+    supabase.from('fail_reasons').select('id, label, sort_order').eq('is_active', true).order('sort_order')
+      .then(({ data }) => setFailReasons((data ?? []) as any));
   }, [leadId]);
+
+  // 실패 상태일 때 추가 메모 복원
+  useEffect(() => {
+    if (row?.status === '실패') {
+      const match = (row.memo ?? '').match(/\[실패:[^\]]+\]\s*(.*)/s);
+      setFailDetailMemo(match?.[1]?.trim() ?? '');
+    } else {
+      setFailDetailMemo('');
+    }
+  }, [row?.status, row?.memo]);
 
   useEffect(() => {
     if (!crmGroup) { setBranches([]); return; }
@@ -307,6 +321,53 @@ export function CrmDetailModal({ leadId, onClose, onDone }: Props) {
               </div>
             </div>
 
+            {/* 실패 사유 패널 - 실패 상태일 때만 표시 */}
+            {status === '실패' && (
+              <div>
+                <div className="text-xs font-semibold text-gray-500 mb-2">실패 사유</div>
+                <div className="border border-red-200 rounded-xl overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-red-50">
+                    <span className="text-xs text-red-400">현재 사유</span>
+                    <span className="text-sm font-bold text-red-700">
+                      {(memo?.match(/\[실패:([^\]]+)\]/) ?? [])[1] ?? '선택 안 됨'}
+                    </span>
+                  </div>
+                  <div className="divide-y divide-red-100">
+                    {failReasons.length === 0 ? (
+                      <p className="text-xs text-gray-400 px-4 py-3">재고/설정 → 리포트 설정에서 실패 사유를 등록해주세요</p>
+                    ) : failReasons.map(r => {
+                      const isSelected = (memo ?? '').includes(`[실패:${r.label}]`);
+                      return (
+                        <button key={r.id} type="button"
+                          onClick={() => {
+                            const memoText = failDetailMemo.trim()
+                              ? `[실패:${r.label}] ${failDetailMemo.trim()}`
+                              : `[실패:${r.label}]`;
+                            setMemo(memoText);
+                          }}
+                          className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
+                            isSelected ? 'bg-red-100 text-red-700 font-bold' : 'bg-white text-gray-700 hover:bg-red-50'
+                          }`}>
+                          <span>{r.label}</span>
+                          {isSelected && <span className="text-red-500">✓</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="px-4 py-3 border-t border-red-100 bg-white">
+                    <div className="text-[10px] text-red-400 mb-1.5 font-medium">추가 메모 (선택)</div>
+                    <textarea
+                      value={failDetailMemo}
+                      onChange={e => setFailDetailMemo(e.target.value)}
+                      placeholder="상담 내용, 특이사항 등"
+                      rows={2}
+                      className="w-full text-sm px-3 py-2 rounded-lg border border-red-200 bg-red-50/50 resize-none focus:outline-none focus:ring-1 focus:ring-red-300"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* 상세 정보 */}
             <div>
               <div className="text-xs font-semibold text-gray-500 mb-2">상세 정보</div>
@@ -358,6 +419,7 @@ export function CrmDetailModal({ leadId, onClose, onDone }: Props) {
     </Dialog>
   );
 }
+
 
 
 
