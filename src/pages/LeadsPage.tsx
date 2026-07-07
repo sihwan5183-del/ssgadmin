@@ -1300,6 +1300,12 @@ export default function LeadsPage() {
         if (!matchesFilter(r.branch_name, fBranch)) return false;
         if (!matchesFilter(r.activation_status, fActivation)) return false;
         if (!matchesFilter(r.cancellation_status, fCancellation)) return false;
+        const assigneeNameD = r.assigned_to ? staff.find((s) => s.user_id === r.assigned_to)?.display_name ?? "" : "";
+        if (!matchesFilter(assigneeNameD, fAssignee)) return false;
+      } else {
+        // 유닥 / 올인원 / 기타인입
+        const assigneeNameE = r.assigned_to ? staff.find((s) => s.user_id === r.assigned_to)?.display_name ?? "" : "";
+        if (!matchesFilter(assigneeNameE, fAssignee)) return false;
       }
       return true;
     });
@@ -3587,6 +3593,7 @@ function InfoRow({
     </div>
   );
 }
+
 
 
 
