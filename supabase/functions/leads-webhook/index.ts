@@ -181,6 +181,9 @@ Deno.serve(async (req) => {
     }
   }
 
+  // 도그마루 Apps Script에서 보내는 ISO 타임스탬프
+  const registeredAt = pick('registered_at')
+
   const row = {
     name: pick('name', 'customer_name', '고객 성명', '성명'),
     phone,
@@ -199,6 +202,7 @@ Deno.serve(async (req) => {
     activation_status: pick('activation_status', '개통 상태', '개통상태'),
     cancellation_status: pick('cancellation_status', '해지 및 철회', '해지및철회'),
     activation_number: pick('activation_number', '가입번호'),
+    ...(registeredAt ? { created_at: registeredAt } : {}),
   }
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE)
@@ -223,4 +227,5 @@ Deno.serve(async (req) => {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
 })
+
 
