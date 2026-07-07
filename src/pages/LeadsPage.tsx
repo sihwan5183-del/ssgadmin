@@ -1,4 +1,5 @@
 import { lazy, memo, startTransition, Suspense, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { useSearchParams } from "react-router-dom";
@@ -688,22 +689,24 @@ function MobileLeadsView({
       )}
 
       {/* 실패 모달 */}
-      <Dialog open={!!failModal} onOpenChange={(open) => { if (!open) { setFailModal(null); setFailReason(""); setFailMemo(""); } }}>
-        <DialogContent
-          className="max-w-sm z-[120]"
-          onOpenAutoFocus={(e) => e.preventDefault()}
-          onCloseAutoFocus={(e) => e.preventDefault()}
-          onInteractOutside={(e) => e.preventDefault()}
-          onPointerDownCapture={(e) => e.stopPropagation()}
-          onClickCapture={(e) => e.stopPropagation()}
+      {failModal && createPortal(
+        <div
+          className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/60 p-4 pointer-events-auto"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-background p-5 shadow-2xl pointer-events-auto"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="font-bold text-base">실패 사유</div>
             <div className="text-xs text-muted-foreground mt-0.5">{failModal ? displayName(failModal) : ""}</div>
             <div className="space-y-2 mt-2">
               {failReasons.map(r => (
                 <button key={r.id}
                   type="button"
-                  onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); setFailReason(r.label); }}
+                  onPointerDown={(e) => { e.stopPropagation(); setFailReason(r.label); }}
                   onClick={(e) => e.stopPropagation()}
                   className={`w-full py-3 rounded-xl border font-medium text-sm active:scale-95 transition-all ${
                     failReason === r.label
@@ -715,18 +718,24 @@ function MobileLeadsView({
               ))}
               <textarea
                 value={failMemo}
-                  type="button"
-                  onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); setFailReason(r.label); }}
-                  onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+                onChange={e => setFailMemo(e.target.value)}
                 placeholder="추가 메모 (선택)"
                 rows={3}
                 className="w-full text-sm px-3 py-2 rounded-xl border border-border/60 resize-none mt-1"
               />
             </div>
             <div className="flex gap-2 mt-2">
-              <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={() => { setFailModal(null); setFailReason(""); setFailMemo(""); }} className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground">취소</button>
               <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => { setFailModal(null); setFailReason(""); setFailMemo(""); }}
+                className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground"
+              >취소</button>
+              <button
+                type="button"
                 disabled={!failReason}
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={async () => {
                   if (!failModal) return;
                   await handleStatus(failModal, "실패");
@@ -749,12 +758,13 @@ function MobileLeadsView({
                   }
                   setFailModal(null); setFailReason(""); setFailMemo("");
                 }}
-                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-medium disabled:opacity-30">
-                실패 확정
-              </button>
+                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-medium disabled:opacity-30"
+              >실패 확정</button>
             </div>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
@@ -2849,8 +2859,15 @@ export default function LeadsPage() {
       )}
 
       {/* Detail Sheet */}
-      <Dialog open={!!openLead} onOpenChange={(o) => !o && setOpenLead(null)}>
-        <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <Dialog
+        open={!!openLead}
+        modal={!failModal}
+        onOpenChange={(open) => {
+          if (failModal) return;
+          if (!open) setOpenLead(null);
+        }}
+      >
+        <DialogContent className={`w-full max-w-2xl max-h-[90vh] overflow-y-auto${failModal ? " pointer-events-none" : ""}`}>
           {openLead && (
             <>
               {/* Title block */}
@@ -3329,25 +3346,27 @@ export default function LeadsPage() {
       )}
 
       {/* 실패 모달 - PC */}
-      <Dialog open={!!failModal} onOpenChange={(open) => { if (!open) { setFailModal(null); setFailReason(""); setFailMemo(""); } }}>
-        <DialogContent
-          className="max-w-sm z-[120]"
-          onOpenAutoFocus={(e) => e.preventDefault()}
-          onCloseAutoFocus={(e) => e.preventDefault()}
-          onInteractOutside={(e) => e.preventDefault()}
-          onPointerDownCapture={(e) => e.stopPropagation()}
-          onClickCapture={(e) => e.stopPropagation()}
+      {failModal && createPortal(
+        <div
+          className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/60 p-4 pointer-events-auto"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-background p-5 shadow-2xl pointer-events-auto"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="font-bold text-base pb-1">실패 사유</div>
             <div className="text-xs text-muted-foreground">{failModal?.name ?? "이름 없음"} · {failModal?.phone ?? ""}</div>
-            <div className="space-y-2">
+            <div className="space-y-2 mt-3">
               {failReasons.length === 0 ? (
                 <p className="text-xs text-gray-400 py-2">리포트 설정에서 실패 사유를 등록해주세요</p>
               ) : failReasons.map(r => (
                 <button
                   key={r.id}
                   type="button"
-                  onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); setFailReason(r.label); }}
+                  onPointerDown={(e) => { e.stopPropagation(); setFailReason(r.label); }}
                   onClick={(e) => e.stopPropagation()}
                   className={`w-full text-left px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
                     failReason === r.label
@@ -3358,14 +3377,20 @@ export default function LeadsPage() {
               ))}
             </div>
             <textarea
-              className="w-full rounded-xl border border-border bg-muted/30 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full mt-3 rounded-xl border border-border bg-muted/30 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
               rows={3}
               placeholder="추가 메모 (선택)"
+              value={failMemo}
               onPointerDown={(e) => e.stopPropagation()}
               onChange={e => setFailMemo(e.target.value)}
             />
-            <div className="flex gap-2">
-              <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={() => { setFailModal(null); setFailReason(""); setFailMemo(""); }} className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground">취소</button>
+            <div className="flex gap-2 mt-3">
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => { setFailModal(null); setFailReason(""); setFailMemo(""); }}
+                className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground"
+              >취소</button>
               <button
                 type="button"
                 disabled={!failReason}
@@ -3378,8 +3403,8 @@ export default function LeadsPage() {
                     ? `[실패:${failReason}] ${failMemo.trim()}`
                     : `[실패:${failReason}]`;
                   await supabase.from("leads").update({ memo: memoText }).eq("id", failModal.id);
-                  setRows(p => p.map(row => row.id === failModal.id ? { ...row, memo: memoText } : row));
-                  if (openLead?.id === failModal.id) setOpenLead(prev => prev ? { ...prev, memo: memoText } : prev);
+                  setRows(p => p.map(row => row.id === failModal.id ? { ...row, memo: memoText, status: "실패" } : row));
+                  if (openLead?.id === failModal.id) setOpenLead(prev => prev ? { ...prev, memo: memoText, status: "실패" } : prev);
                   const { data: lg } = await supabase.from("activity_logs").select("id")
                     .eq("lead_id", failModal.id).eq("action_type", "failed")
                     .order("created_at", { ascending: false }).limit(1).single();
@@ -3388,8 +3413,10 @@ export default function LeadsPage() {
                 }}
               >실패 확정</button>
             </div>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
@@ -3427,6 +3454,7 @@ function InfoRow({
     </div>
   );
 }
+
 
 
 
