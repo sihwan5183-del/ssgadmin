@@ -64,7 +64,8 @@ export function ReservationAlertSystem() {
       .eq('status', '신규 접수')
       .lt('created_at', cutoff)
       .gte('created_at', START_DATE)
-      .is('deleted_at', null);
+      .is('deleted_at', null)
+      .or('source.is.null,source.neq.crm');
 
     (ld ?? []).forEach((r: any) => {
       const id = `leads_${r.id}`;
@@ -224,5 +225,6 @@ export function ReservationAlertSystem() {
     </div>
   );
 }
+
 
 
