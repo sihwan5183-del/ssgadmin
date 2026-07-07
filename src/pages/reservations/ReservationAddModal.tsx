@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select';
 import { insertReservation } from '@/services/reservationService';
 import { CARRIER_OPTIONS, CHANNEL_OPTIONS } from '@/types/reservation';
+import { useFieldOptions } from '@/hooks/useFieldOptions';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Props {
@@ -22,13 +23,16 @@ interface Props {
 
 export function ReservationAddModal({ open, onClose, onDone }: Props) {
   const { user } = useAuth();
+  const { options: colorOptions, refresh: refreshColors } = useFieldOptions('reservation_color' as any);
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [carrier, setCarrier] = useState('');
   const [channel, setChannel] = useState('');
-  const device = '갤럭시 Z 폴더블8'; // 고정
+  const [device, setDevice] = useState('');
   const [birthDate, setBirthDate] = useState('');
+  const [capacity, setCapacity] = useState('');
+  const [color, setColor] = useState('');
   const [memo, setMemo] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -44,6 +48,8 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
         carrier: carrier || undefined,
         channel: channel || undefined,
         device_interest: device || undefined,
+        desired_device: capacity || undefined,
+        product_color: color || undefined,
         memo: memo.trim() || undefined,
         birth_date: birthDate || undefined,
         assigned_to: user?.id,
@@ -119,10 +125,41 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
           </div>
 
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">관심 기기</label>
-            <div className="text-sm px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-700 font-medium">
-              📱 갤럭시 Z 폴더블8
-            </div>
+            <label className="text-xs text-gray-500 mb-1 block">관심 기기 <span className="text-red-400">*</span></label>
+            <Select value={device || '_none_'} onValueChange={v => setDevice(v === '_none_' ? '' : v)}>
+              <SelectTrigger className="text-sm"><SelectValue placeholder="기기 선택" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_none_">선택 안함</SelectItem>
+                <SelectItem value="갤럭시 Z 플립8">갤럭시 Z 플립8</SelectItem>
+                <SelectItem value="갤럭시 Z 폴드8">갤럭시 Z 폴드8</SelectItem>
+                <SelectItem value="갤럭시 Z 폴드8 와이드">갤럭시 Z 폴드8 와이드</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">용량</label>
+            <Select value={capacity || '_none_'} onValueChange={v => setCapacity(v === '_none_' ? '' : v)}>
+              <SelectTrigger className="text-sm"><SelectValue placeholder="선택" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_none_">선택 안함</SelectItem>
+                <SelectItem value="256GB">256GB</SelectItem>
+                <SelectItem value="512GB">512GB</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="col-span-2">
+            <label className="text-xs text-gray-500 mb-1 block">
+              컬러 <span className="text-gray-400 text-[10px]">(재고/설정 → 필드 옵션에서 추가 가능)</span>
+            </label>
+            <Select value={color || '_none_'} onValueChange={v => setColor(v === '_none_' ? '' : v)}>
+              <SelectTrigger className="text-sm"><SelectValue placeholder="미정" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_none_">미정</SelectItem>
+                {colorOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
@@ -164,6 +201,7 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
     </Dialog>
   );
 }
+
 
 
 
