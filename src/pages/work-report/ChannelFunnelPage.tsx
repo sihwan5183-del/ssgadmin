@@ -3,7 +3,7 @@
 // 탭1: 퍼널 현황 / 탭2: 실패 사유 분석 / 탭3: 심층 분석
 // ============================================================
 import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, ChevronRight, X, AlertTriangle } from 'lucide-react';
+import { RefreshCw, ChevronRight, X, AlertTriangle, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRole } from '@/hooks/useRole';
@@ -84,6 +84,213 @@ function ClickCell({ numerator, denominator, rate, onClick, warn = false }: { nu
       </button>
     </td>
   );
+}
+
+
+// ── 임원 보고서 HTML 생성 ────────────────────────────────────
+function buildReportHTML(
+  period: string,
+  from: string,
+  to: string,
+  filterChannel: string,
+  channelRows: ChannelFunnelRow[],
+  totalRow: ChannelFunnelRow | null,
+  staffRows: StaffFunnelRow[],
+  failReasonData: { byReason: Record<string, Record<string, number>>; total: Record<string, number> } | null,
+) {
+  const now = new Date().toLocaleString('ko-KR');
+  const periodLabel = period === '직접선택' ? `${from} ~ ${to}` : period;
+  const channelLabel = filterChannel === 'all' ? '전체 채널' : (CHANNEL_LABEL[filterChannel] ?? filterChannel);
+
+  const fmtRate = (r?: number) => r !== undefined ? `${r}%` : '-';
+  const fmtN = (n: number) => n > 0 ? `${n}건` : '-';
+
+  const channelTableRows = [...channelRows, ...(totalRow ? [{ ...totalRow, channel: 'total' as any }] : [])]
+    .map(r => `
+      <tr style="${r.channel === 'total' ? 'background:#f8f8f8;font-weight:bold;' : ''}">
+        <td>${r.channel === 'total' ? '전체' : (CHANNEL_LABEL[r.channel] ?? r.channel)}</td>
+        <td>${fmtN(r.new_count)}</td>
+        <td>${fmtN(r.absent_count)}</td>
+        <td>${fmtRate(r.absent_rate)}</td>
+        <td>${fmtN(r.recare_count)}</td>
+        <td>${fmtRate(r.recare_rate)}</td>
+        <td>${fmtN(r.success_count)}</td>
+        <td>${fmtRate(r.recare_success_rate)}</td>
+        <td>${fmtN(r.fail_count)}</td>
+        <td>${fmtRate(r.recare_fail_rate)}</td>
+      </tr>`).join('');
+
+  const staffTableRows = staffRows.map(r => `
+    <tr>
+      <td>${r.staff_name}</td>
+      <td>${CHANNEL_LABEL[r.main_channel] ?? r.main_channel ?? '-'}</td>
+      <td>${fmtN(r.new_count)}</td>
+      <td>${fmtN(r.absent_count)}</td>
+      <td>${fmtN(r.recare_count)}</td>
+      <td>${fmtN(r.success_count)}</td>
+      <td>${fmtN(r.fail_count)}</td>
+      <td>${fmtRate(r.recare_success_rate)}</td>
+    </tr>`).join('');
+
+  const failReasonRows = failReasonData
+    ? Object.entries(failReasonData.total)
+        .sort(([,a],[,b]) => b - a)
+        .map(([reason, total]) => {
+          const byChannel = failReasonData.byReason[reason] ?? {};
+          const allTotal = Object.values(failReasonData.total).reduce((s,v) => s+v, 0);
+          const pct = allTotal > 0 ? Math.round(total / allTotal * 100) : 0;
+          return `<tr>
+            <td>${FAIL_REASON_LABELS[reason] ?? reason}</td>
+            <td>${byChannel['meta'] ?? 0}건</td>
+            <td>${byChannel['dogmaru'] ?? 0}건</td>
+            <td>${byChannel['udak'] ?? 0}건</td>
+            <td>${byChannel['other'] ?? 0}건</td>
+            <td><b>${total}건</b></td>
+            <td>${pct}%</td>
+          </tr>`;
+        }).join('')
+    : '';
+
+  return `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>채널별 퍼널 분석 보고서 — ${periodLabel}</title>
+<style>
+  @page { size: A4; margin: 18mm 15mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; font-size: 11px; color: #1a1a1a; background: white; }
+  .report-wrap { max-width: 780px; margin: 0 auto; padding: 0; }
+  /* 헤더 */
+  .header { border-bottom: 3px solid #e91e8c; padding-bottom: 14px; margin-bottom: 24px; }
+  .header h1 { font-size: 22px; font-weight: 700; color: #e91e8c; letter-spacing: -0.5px; }
+  .header .meta { display: flex; gap: 24px; margin-top: 6px; color: #666; font-size: 11px; }
+  .header .meta span b { color: #333; }
+  /* 섹션 */
+  .section { margin-bottom: 28px; page-break-inside: avoid; }
+  .section-title { font-size: 13px; font-weight: 700; color: #333; border-left: 4px solid #e91e8c; padding-left: 10px; margin-bottom: 12px; }
+  /* 테이블 */
+  table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+  th { background: #fce4f0; color: #b5006a; font-weight: 700; padding: 7px 10px; text-align: center; border: 1px solid #f0c0da; font-size: 10px; }
+  td { padding: 6px 10px; text-align: center; border: 1px solid #f0e0e8; color: #333; }
+  td:first-child { text-align: left; font-weight: 600; color: #1a1a1a; }
+  tr:hover td { background: #fff5fa; }
+  tr:last-child td { background: #f8f8f8; font-weight: 700; }
+  /* KPI 카드 */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .kpi-card { border: 1px solid #f0d0e4; border-radius: 10px; padding: 12px 14px; }
+  .kpi-card .label { font-size: 10px; color: #999; margin-bottom: 4px; }
+  .kpi-card .value { font-size: 20px; font-weight: 700; color: #e91e8c; }
+  .kpi-card .sub { font-size: 10px; color: #aaa; margin-top: 2px; }
+  /* 푸터 */
+  .footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #eee; color: #999; font-size: 10px; display: flex; justify-content: space-between; }
+  @media print {
+        <button
+          onClick={() => {
+            const html = buildReportHTML(period, from, to, filterChannel, channelRows, totalRow, staffRows, failReasonData);
+            const w = window.open('', '_blank');
+            if (w) { w.document.write(html); w.document.close(); }
+          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-pink-500 hover:bg-pink-600 text-white rounded-lg transition-colors font-medium ml-2"
+        >
+          <Printer className="size-3.5" />보고서 출력
+        </button>
+    .no-print { display: none !important; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<div class="report-wrap">
+
+  <!-- 인쇄 버튼 -->
+  <div class="no-print" style="position:fixed;top:16px;right:16px;display:flex;gap:8px;z-index:100;">
+    <button onclick="window.print()" style="background:#e91e8c;color:white;border:none;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">🖨️ PDF 저장 / 인쇄</button>
+    <button onclick="window.close()" style="background:#f0f0f0;color:#666;border:none;padding:10px 16px;border-radius:8px;font-size:13px;cursor:pointer;">닫기</button>
+  </div>
+
+  <!-- 헤더 -->
+  <div class="header">
+    <h1>📊 채널별 퍼널 분석 보고서</h1>
+    <div class="meta">
+      <span><b>기간:</b> ${periodLabel}</span>
+      <span><b>채널:</b> ${channelLabel}</span>
+      <span><b>출력일시:</b> ${now}</span>
+      <span><b>작성:</b> U+다이렉트 영업기획팀</span>
+    </div>
+  </div>
+
+  <!-- KPI 요약 -->
+  ${totalRow ? `
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="label">신규 인입</div>
+      <div class="value">${totalRow.new_count}건</div>
+      <div class="sub">전체 인입 건수</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">재케어 성공률</div>
+      <div class="value">${fmtRate(totalRow.recare_success_rate)}</div>
+      <div class="sub">재케어 → 성공</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">실패 건수</div>
+      <div class="value" style="color:#e74c3c">${totalRow.fail_count}건</div>
+      <div class="sub">재케어 실패율 ${fmtRate(totalRow.recare_fail_rate)}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">부재 건수</div>
+      <div class="value" style="color:#f39c12">${totalRow.absent_count}건</div>
+      <div class="sub">부재율 ${fmtRate(totalRow.absent_rate)}</div>
+    </div>
+  </div>` : ''}
+
+  <!-- 채널별 퍼널 현황 -->
+  <div class="section">
+    <div class="section-title">1. 채널별 퍼널 현황</div>
+    <table>
+      <thead><tr>
+        <th>채널</th><th>신규인입</th><th>부재케어</th><th>부재율</th>
+        <th>재케어</th><th>재케어율</th><th>성공</th><th>재케어성공률</th>
+        <th>실패</th><th>재케어실패율</th>
+      </tr></thead>
+      <tbody>${channelTableRows}</tbody>
+    </table>
+  </div>
+
+  <!-- 담당자별 현황 -->
+  <div class="section">
+    <div class="section-title">2. 담당자별 현황</div>
+    <table>
+      <thead><tr>
+        <th>담당자</th><th>주 채널</th><th>신규인입</th><th>부재케어</th>
+        <th>재케어</th><th>성공</th><th>실패</th><th>재케어성공률</th>
+      </tr></thead>
+      <tbody>${staffTableRows}</tbody>
+    </table>
+  </div>
+
+  <!-- 실패 사유 분석 -->
+  ${failReasonRows ? `
+  <div class="section">
+    <div class="section-title">3. 실패 사유 채널별 분포</div>
+    <table>
+      <thead><tr>
+        <th>실패 사유</th><th>메타광고</th><th>도그마루</th><th>유닥</th><th>기타인입</th><th>합계</th><th>비율</th>
+      </tr></thead>
+      <tbody>${failReasonRows}</tbody>
+    </table>
+  </div>` : ''}
+
+  <!-- 푸터 -->
+  <div class="footer">
+    <span>U+다이렉트 영업기획팀 | 채널별 퍼널 분석 보고서</span>
+    <span>출력: ${now}</span>
+  </div>
+
+</div>
+</body>
+</html>`;
 }
 
 // ── 메인 페이지 ──────────────────────────────────────────────
@@ -462,3 +669,4 @@ export default function ChannelFunnelPage() {
     </div>
   );
 }
+
