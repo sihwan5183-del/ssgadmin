@@ -1160,7 +1160,7 @@ const RankingPage = () => {
 
 /* ─── 상세 대시보드 컴포넌트 ─── */
 function DetailDashboard({ sales }: { sales: SaleDetail[] }) {
-  const [channelTab, setChannelTab] = useState<"전체"|"모요"|"유닥"|"도그마루"|"캠페인">("전체");
+  const [channelTab, setChannelTab] = useState<"전체"|"모요"|"유닥"|"도그마루"|"CRM">("전체");
   const [monthFilter, setMonthFilter] = useState<string>("전체");
 
   // 보유한 월 목록 추출
@@ -1176,7 +1176,7 @@ function DetailDashboard({ sales }: { sales: SaleDetail[] }) {
   const MOYO_CH = ["모요"];
   const UDAK_CH = ["유닥", "유닥(UDak)"];
   const DOGMARU_CH = ["도그마루"];
-  const CAMPAIGN_CH = ["캠페인"];
+  const CAMPAIGN_CH = ["캠페인", "CRM"];  // DB에 "캠페인" 또는 "CRM"으로 저장될 수 있음
 
   const filtered = useMemo(() => {
     return sales.filter(s => {
@@ -1184,7 +1184,7 @@ function DetailDashboard({ sales }: { sales: SaleDetail[] }) {
       if (channelTab === "모요" && !MOYO_CH.includes(ch)) return false;
       if (channelTab === "유닥" && !UDAK_CH.includes(ch)) return false;
       if (channelTab === "도그마루" && !DOGMARU_CH.includes(ch)) return false;
-      if (channelTab === "캠페인" && !CAMPAIGN_CH.includes(ch)) return false;
+      if (channelTab === "CRM" && !CAMPAIGN_CH.includes(ch)) return false;
       if (monthFilter !== "전체" && s.open_date?.slice(0,7) !== monthFilter) return false;
       return true;
     });
@@ -1220,7 +1220,7 @@ function DetailDashboard({ sales }: { sales: SaleDetail[] }) {
     <div className="space-y-4 pt-2">
       {/* 채널 탭 */}
       <div className="flex gap-1 p-1 bg-muted/40 rounded-xl border border-border w-fit">
-        {(["전체","모요","유닥","도그마루","캠페인"] as const).map(t => (
+        {(["전체","모요","유닥","도그마루","CRM"] as const).map(t => (
           <button key={t} onClick={() => setChannelTab(t)}
             className={cn("px-4 py-1.5 text-sm font-semibold rounded-lg transition-colors",
               channelTab === t ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
@@ -1231,7 +1231,8 @@ function DetailDashboard({ sales }: { sales: SaleDetail[] }) {
                t === "모요" ? sales.filter(s => MOYO_CH.includes(s.channel ?? "")).length :
                t === "유닥" ? sales.filter(s => UDAK_CH.includes(s.channel ?? "")).length :
                t === "도그마루" ? sales.filter(s => DOGMARU_CH.includes(s.channel ?? "")).length :
-               sales.filter(s => CAMPAIGN_CH.includes(s.channel ?? "")).length}
+               t === "CRM" ? sales.filter(s => CAMPAIGN_CH.includes(s.channel ?? "")).length :
+               sales.filter(s => UDAK_CH.includes(s.channel ?? "")).length}
             </span>
           </button>
         ))}
@@ -1332,4 +1333,5 @@ function DetailDashboard({ sales }: { sales: SaleDetail[] }) {
 }
 
 export default RankingPage;
+
 
