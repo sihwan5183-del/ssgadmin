@@ -56,6 +56,7 @@ import AddonTasksPage from "./pages/AddonTasksPage.tsx";
 import CustomProposalsPage from "./pages/CustomProposalsPage.tsx";
 import LeadsPage from "./pages/LeadsPage.tsx";
 import ReservationsPage from "./pages/reservations/ReservationsPage.tsx";
+import CrmIntakePage from "./pages/crm/CrmIntakePage.tsx";
 import ReservationStatsPage from "./pages/reservations/ReservationStatsPage.tsx";
 import ResponseTimePage from "./pages/reservations/ResponseTimePage.tsx";
 import ProfitPage from "./pages/ProfitPage.tsx";
@@ -189,6 +190,7 @@ const App = () => {
                         <Route path="/sms-templates" element={<AdminOnlyRoute><SmsTemplatePage /></AdminOnlyRoute>} />
                         <Route path="/sales-analytics" element={<AdminOnlyRoute><SalesAnalyticsPage /></AdminOnlyRoute>} />
                         {/* 사전예약 관리 */}
+                        <Route path="/crm" element={<CrmIntakePage />} />
                         <Route path="/reservations" element={<ReservationsPage />} />
                         <Route path="/reservations/stats" element={<ReservationStatsPage />} />
                         <Route path="/reservations/response-time" element={<ResponseTimePage />} />
@@ -220,6 +222,7 @@ const App = () => {
 };
 
 export default App;
+
 
 
 
