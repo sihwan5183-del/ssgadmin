@@ -11,6 +11,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
+import { useDeviceModels } from '@/hooks/useDeviceModels';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDashboardStaff } from '@/hooks/useDashboardStaff';
 import { useRole } from '@/hooks/useRole';
@@ -27,6 +28,7 @@ export function CrmDetailModal({ leadId, onClose, onDone }: Props) {
   const { user } = useAuth();
   const { staff } = useDashboardStaff();
   const { isAdmin } = useRole();
+  const { searchModels } = useDeviceModels();
 
   const [row, setRow] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -45,6 +47,8 @@ export function CrmDetailModal({ leadId, onClose, onDone }: Props) {
   const [products, setProducts] = useState<string[]>([]);
   const [product, setProduct] = useState('');
   const [modelName, setModelName] = useState('');
+  const [modelSuggestions, setModelSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [capacity, setCapacity] = useState('');
   const [color, setColor] = useState('');
   const [benefit, setBenefit] = useState('');
@@ -211,9 +215,34 @@ export function CrmDetailModal({ leadId, onClose, onDone }: Props) {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
+                <div className="relative">
                   <label className="text-xs text-gray-500 mb-1 block">제품명 (모델명)</label>
-                  <Input value={modelName} onChange={e => setModelName(e.target.value)} placeholder="예) 갤럭시 S25 Ultra" className="text-sm" />
+                  <Input
+                    value={modelName}
+                    onChange={e => {
+                      setModelName(e.target.value);
+                      const results = searchModels(e.target.value, 8);
+                      setModelSuggestions(results.map(r => r.model_name + (r.official_name ? ` (${r.official_name})` : '')));
+                      setShowSuggestions(e.target.value.length > 0 && results.length > 0);
+                    }}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                    placeholder="예) S26, 942 등 검색"
+                    className="text-sm"
+                  />
+                  {showSuggestions && (
+                    <div className="absolute z-50 top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
+                      {modelSuggestions.map((s, i) => (
+                        <button key={i} type="button"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-pink-50 border-b border-gray-50 last:border-0"
+                          onMouseDown={() => {
+                            setModelName(s.split(' (')[0]);
+                            setShowSuggestions(false);
+                          }}>
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">용량</label>
@@ -313,5 +342,6 @@ export function CrmDetailModal({ leadId, onClose, onDone }: Props) {
     </Dialog>
   );
 }
+
 
 
