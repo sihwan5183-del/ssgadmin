@@ -138,6 +138,9 @@ export function CrmDetailModal({ leadId, onClose, onDone }: Props) {
       } as any).eq('id', leadId);
       if (error) throw error;
       toast.success('저장되었습니다');
+      // 저장 후 row 갱신 (메모 복원용)
+      const savedMemo = memo.trim() || null;
+      setRow((prev: any) => prev ? { ...prev, status, memo: savedMemo } : prev);
       onDone();
     } catch (e: any) {
       toast.error('저장 실패: ' + e.message);
@@ -419,6 +422,7 @@ export function CrmDetailModal({ leadId, onClose, onDone }: Props) {
     </Dialog>
   );
 }
+
 
 
 
