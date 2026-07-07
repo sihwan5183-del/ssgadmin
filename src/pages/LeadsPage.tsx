@@ -751,15 +751,17 @@ function MobileLeadsView({
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={async () => {
                   if (!failModal) return;
+                  const targetId = failModal.id;
                   await handleStatus(failModal, "실패");
                   const memoText = failMemo.trim()
                     ? `[실패:${failReason}] ${failMemo.trim()}`
                     : `[실패:${failReason}]`;
-                  await supabase.from("leads").update({ memo: memoText }).eq("id", failModal.id);
+                  const { error: memoErr } = await supabase.from("leads").update({ memo: memoText }).eq("id", targetId);
+                  if (memoErr) { toast.error("메모 저장 실패: " + memoErr.message); return; }
                   const { data: recentLog } = await supabase
                     .from("activity_logs")
                     .select("id")
-                    .eq("lead_id", failModal.id)
+                    .eq("lead_id", targetId)
                     .eq("action_type", "failed")
                     .order("created_at", { ascending: false })
                     .limit(1)
@@ -769,6 +771,7 @@ function MobileLeadsView({
                       .update({ fail_reason: failReason, memo: failMemo.trim() || null })
                       .eq("id", recentLog.id);
                   }
+                  toast.success("실패 처리 완료");
                   setFailModal(null); setFailReason(""); setFailMemo("");
                 }}
                 className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-medium disabled:opacity-30"
@@ -3576,17 +3579,20 @@ export default function LeadsPage() {
                 className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold disabled:opacity-40"
                 onClick={async () => {
                   if (!failModal) return;
-                  await updateStatus(failModal.id, "실패");
+                  const targetId = failModal.id;
+                  await updateStatus(targetId, "실패");
                   const memoText = failMemo.trim()
                     ? `[실패:${failReason}] ${failMemo.trim()}`
                     : `[실패:${failReason}]`;
-                  await supabase.from("leads").update({ memo: memoText }).eq("id", failModal.id);
-                  setRows(p => p.map(row => row.id === failModal.id ? { ...row, memo: memoText, status: "실패" } : row));
-                  if (openLead?.id === failModal.id) setOpenLead(prev => prev ? { ...prev, memo: memoText, status: "실패" } : prev);
+                  const { error: memoErr } = await supabase.from("leads").update({ memo: memoText }).eq("id", targetId);
+                  if (memoErr) { toast.error("메모 저장 실패: " + memoErr.message); return; }
+                  setRows(p => p.map(row => row.id === targetId ? { ...row, memo: memoText, status: "실패" } : row));
+                  if (openLead?.id === targetId) setOpenLead(prev => prev ? { ...prev, memo: memoText, status: "실패" } : prev);
                   const { data: lg } = await supabase.from("activity_logs").select("id")
-                    .eq("lead_id", failModal.id).eq("action_type", "failed")
+                    .eq("lead_id", targetId).eq("action_type", "failed")
                     .order("created_at", { ascending: false }).limit(1).single();
                   if (lg?.id) await supabase.from("activity_logs").update({ fail_reason: failReason, memo: failMemo.trim() || null }).eq("id", lg.id);
+                  toast.success("실패 처리 완료");
                   setFailModal(null); setFailReason(""); setFailMemo("");
                 }}
               >실패 확정</button>
