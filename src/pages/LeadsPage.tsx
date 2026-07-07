@@ -1360,6 +1360,11 @@ export default function LeadsPage() {
 
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkStatusOpen, setBulkStatusOpen] = useState(false);
+  const [bulkFailOpen, setBulkFailOpen] = useState(false);
+  const [bulkSelectedStatus, setBulkSelectedStatus] = useState('');
+  const [bulkFailReason, setBulkFailReason] = useState('');
+  const [bulkFailMemo, setBulkFailMemo] = useState('');
   async function bulkDelete() {
     setBulkBusy(true);
     const ids = bulk.selectedIds;
@@ -1394,6 +1399,35 @@ export default function LeadsPage() {
         },
       });
     } catch (_) {}
+  }
+
+  // 일괄 상태 변경
+  async function bulkUpdateStatus(status: string, failReason?: string, failMemo?: string) {
+    setBulkBusy(true);
+    const ids = bulk.selectedIds;
+    try {
+      const updateData: any = { status };
+      if (status === '실패' && failReason) {
+        const memoText = failMemo?.trim()
+          ? `[실패:${failReason}] ${failMemo.trim()}`
+          : `[실패:${failReason}]`;
+        updateData.memo = memoText;
+      }
+      const { error } = await supabase.from('leads').update(updateData).in('id', ids);
+      if (error) throw error;
+      setRows(prev => prev.map(r => ids.includes(r.id) ? { ...r, ...updateData } : r));
+      toast.success(`${ids.length}건 → "${status}" 처리 완료`);
+      bulk.clear();
+      setBulkStatusOpen(false);
+      setBulkFailOpen(false);
+      setBulkSelectedStatus('');
+      setBulkFailReason('');
+      setBulkFailMemo('');
+    } catch (e: any) {
+      toast.error('일괄 변경 실패: ' + e.message);
+    } finally {
+      setBulkBusy(false);
+    }
   }
 
   const sourceCounts = useMemo(() => {
@@ -3321,6 +3355,14 @@ export default function LeadsPage() {
             <Button
               size="sm"
               variant="outline"
+              onClick={() => setBulkStatusOpen(true)}
+              className="h-10 lg:h-8 bg-pink-50 border-pink-200 text-pink-600 hover:bg-pink-100"
+            >
+              상태 일괄 변경
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
               onClick={() => downloadCSV('selected')}
               className="h-10 lg:h-8"
             >
@@ -3345,6 +3387,94 @@ export default function LeadsPage() {
             confirmLabel="삭제"
           />
         </>
+      )}
+
+      {/* 일괄 상태변경 모달 */}
+      {bulkStatusOpen && createPortal(
+        <div className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/60 p-4 pointer-events-auto"
+          onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-sm rounded-2xl bg-background p-5 shadow-2xl pointer-events-auto"
+            onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
+            <div className="font-bold text-base mb-1">일괄 상태 변경</div>
+            <div className="text-xs text-muted-foreground mb-4">{bulk.selectedCount}건 선택됨</div>
+            <div className="space-y-2">
+              {["신규 접수","부재","재케어","성공","실패","개통완료"].map(s => (
+                <button key={s} type="button"
+                  onPointerDown={e => { e.preventDefault(); e.stopPropagation(); setBulkSelectedStatus(s); }}
+                  onClick={e => e.stopPropagation()}
+                  className={`w-full text-left px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
+                    bulkSelectedStatus === s
+                      ? "bg-pink-100 border-pink-400 text-pink-700 font-bold"
+                      : "bg-background border-border text-foreground hover:bg-muted/60"
+                  }`}>{s}</button>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button type="button" onPointerDown={e => e.stopPropagation()}
+                onClick={() => { setBulkStatusOpen(false); setBulkSelectedStatus(''); }}
+                className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground">취소</button>
+              <button type="button"
+                disabled={!bulkSelectedStatus || bulkBusy}
+                onPointerDown={e => e.stopPropagation()}
+                onClick={() => {
+                  if (bulkSelectedStatus === '실패') {
+                    setBulkStatusOpen(false);
+                    setBulkFailOpen(true);
+                  } else {
+                    bulkUpdateStatus(bulkSelectedStatus);
+                  }
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-pink-500 text-white text-sm font-bold disabled:opacity-40">
+                {bulkBusy ? '처리 중...' : '적용'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* 일괄 실패사유 모달 */}
+      {bulkFailOpen && createPortal(
+        <div className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/60 p-4 pointer-events-auto"
+          onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-sm rounded-2xl bg-background p-5 shadow-2xl pointer-events-auto"
+            onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}>
+            <div className="font-bold text-base text-red-600 mb-1">일괄 실패 처리</div>
+            <div className="text-xs text-muted-foreground mb-4">{bulk.selectedCount}건 · 실패 사유를 선택하세요</div>
+            <div className="space-y-2">
+              {failReasons.map(r => (
+                <button key={r.id} type="button"
+                  onPointerDown={e => { e.preventDefault(); e.stopPropagation(); setBulkFailReason(r.label); }}
+                  onClick={e => e.stopPropagation()}
+                  className={`w-full text-left px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
+                    bulkFailReason === r.label
+                      ? "bg-red-100 border-red-400 text-red-700 font-bold"
+                      : "bg-background border-border text-foreground hover:bg-muted/60"
+                  }`}>{r.label}</button>
+              ))}
+            </div>
+            <textarea
+              className="w-full mt-3 rounded-xl border border-border bg-muted/30 px-3 py-2 text-sm resize-none"
+              rows={2} placeholder="추가 메모 (선택)"
+              value={bulkFailMemo}
+              onPointerDown={e => e.stopPropagation()}
+              onChange={e => setBulkFailMemo(e.target.value)}
+            />
+            <div className="flex gap-2 mt-4">
+              <button type="button" onPointerDown={e => e.stopPropagation()}
+                onClick={() => { setBulkFailOpen(false); setBulkFailReason(''); setBulkFailMemo(''); setBulkStatusOpen(true); }}
+                className="flex-1 py-2.5 rounded-xl border border-border/60 text-sm text-muted-foreground">← 뒤로</button>
+              <button type="button"
+                disabled={!bulkFailReason || bulkBusy}
+                onPointerDown={e => e.stopPropagation()}
+                onClick={() => bulkUpdateStatus('실패', bulkFailReason, bulkFailMemo)}
+                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold disabled:opacity-40">
+                {bulkBusy ? '처리 중...' : '실패 확정'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* 실패 모달 - PC */}
@@ -3456,6 +3586,7 @@ function InfoRow({
     </div>
   );
 }
+
 
 
 
