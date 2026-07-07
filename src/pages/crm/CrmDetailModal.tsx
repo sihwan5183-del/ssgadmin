@@ -134,7 +134,19 @@ export function CrmDetailModal({ leadId, onClose, onDone }: Props) {
         product_color: color.trim() || null,
         product_benefit: [benefitType, benefitMemo].filter(Boolean).join(' / ') || null,
         inquiry_content: inquiryContent.trim() || null,
-        memo: memo.trim() || null,
+        memo: (() => {
+          // 실패 상태일 때 사유 + 추가메모 재조합
+          if (status === '실패') {
+            const reasonMatch = memo?.match(/\[실패:([^\]]+)\]/);
+            const reason = reasonMatch?.[1];
+            if (reason) {
+              return failDetailMemo.trim()
+                ? `[실패:${reason}] ${failDetailMemo.trim()}`
+                : `[실패:${reason}]`;
+            }
+          }
+          return memo.trim() || null;
+        })(),
       } as any).eq('id', leadId);
       if (error) throw error;
       toast.success('저장되었습니다');
