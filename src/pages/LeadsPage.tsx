@@ -1272,7 +1272,7 @@ export default function LeadsPage() {
       } else {
         // 메타 상태값 그대로 사용
         if (pcCareTab === "new" && r.status !== "신규 접수") return false;
-        if (pcCareTab === "absence" && r.status !== "부재 중") return false;
+        if (pcCareTab === "absence" && r.status !== "부재") return false;
         if (pcCareTab === "recare" && r.status !== "재케어") return false;
         if (pcCareTab === "care" && r.status !== "케어중") return false;
         if (pcCareTab === "cancel" && r.status !== "취소") return false;
@@ -3454,6 +3454,7 @@ function InfoRow({
     </div>
   );
 }
+
 
 
 
