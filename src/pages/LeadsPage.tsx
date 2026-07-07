@@ -1280,7 +1280,8 @@ export default function LeadsPage() {
       if (sourceTab === "udak" && !isUdak) return false;
       if (sourceTab === "allinone" && !isAllinone) return false;
       if (sourceTab === "meta" && (isDogmaru || isUdak || isAllinone)) return false;
-      if (sourceTab === "other" && (isDogmaru || isUdak || isAllinone)) return false;
+      const isCrm = r.source === "crm";
+      if (sourceTab === "other" && (isDogmaru || isUdak || isAllinone || isCrm)) return false;
       if (!inPeriod(r)) return false;
       // 도그마루: 단일 분류 함수로 정확히 하나의 탭에만 배치
       if (isDogmaru) {
@@ -3638,6 +3639,7 @@ function InfoRow({
     </div>
   );
 }
+
 
 
 
