@@ -1071,6 +1071,7 @@ export default function LeadsPage() {
       .from("leads")
       .select(LEADS_SELECT)
       .is("deleted_at", null)
+      .neq("source", "crm")
       .order("created_at", { ascending: false })
       .limit(1000);
     if (error) toast.error(error.message);
