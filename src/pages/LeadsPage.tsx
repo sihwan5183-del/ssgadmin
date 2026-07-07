@@ -2322,7 +2322,7 @@ export default function LeadsPage() {
           pcTabs.push({ key: "new",           label: `신규 접수 ${newC}`,    color: "blue-light" });
           pcTabs.push({ key: "absence",       label: `부재 ${absC}`,         color: "orange" });
           pcTabs.push({ key: "recare",        label: `재케어 ${recareC2}`,   color: "purple" });
-          pcTabs.push({ key: "cancel",        label: `실패 ${failC2}`,       color: "red" });
+          pcTabs.push({ key: "fail",          label: `실패 ${failC2}`,       color: "red" });
           pcTabs.push({ key: "udak_success",  label: `성공 ${successC}`,     color: "emerald" });
           pcTabs.push({ key: "complete_meta", label: `개통완료 ${completeC}`, color: "blue" });
         }
@@ -3456,6 +3456,7 @@ function InfoRow({
     </div>
   );
 }
+
 
 
 
