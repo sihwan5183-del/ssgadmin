@@ -166,6 +166,7 @@ function MobileLeadsView({
   const [memoSaving, setMemoSaving] = useState(false);
   const [failModal, setFailModal] = useState<Lead | null>(null);
   const [detailStatusSelectOpen, setDetailStatusSelectOpen] = useState(false);
+  const [failDetailMemo, setFailDetailMemo] = useState('');
   const [failReason, setFailReason] = useState("");
   const [failMemo, setFailMemo] = useState("");
 
@@ -1031,6 +1032,7 @@ export default function LeadsPage() {
   const [failReasons, setFailReasons] = useState<{id:string;label:string;sort_order:number}[]>([]);
   const [failModal, setFailModal] = useState<Lead | null>(null);
   const [detailStatusSelectOpen, setDetailStatusSelectOpen] = useState(false);
+  const [failDetailMemo, setFailDetailMemo] = useState('');
   const [failReason, setFailReason] = useState("");
   const [failMemo, setFailMemo] = useState("");
   const [statusLogs, setStatusLogs] = useState<any[]>([]);
@@ -2907,7 +2909,7 @@ export default function LeadsPage() {
         modal={!failModal}
         onOpenChange={(open) => {
           if (failModal) return;
-          if (!open) setOpenLead(null);
+          if (!open) { setOpenLead(null); setFailDetailMemo(''); }
         }}
       >
         <DialogContent className={`w-full max-w-2xl max-h-[90vh] overflow-y-auto${failModal ? " pointer-events-none" : ""}`}>
@@ -3212,12 +3214,14 @@ export default function LeadsPage() {
                           <button
                             key={r.id}
                             onClick={async () => {
-                              const memo = `[실패:${r.label}]`;
-                              await supabase.from("leads").update({ memo }).eq("id", openLead.id);
-                              setOpenLead({ ...openLead, memo });
-                              setRows(p => p.map(row => row.id === openLead.id ? { ...row, memo } : row));
+                              const memoText = failDetailMemo.trim()
+                                ? `[실패:${r.label}] ${failDetailMemo.trim()}`
+                                : `[실패:${r.label}]`;
+                              await supabase.from("leads").update({ memo: memoText }).eq("id", openLead.id);
+                              setOpenLead({ ...openLead, memo: memoText });
+                              setRows(p => p.map(row => row.id === openLead.id ? { ...row, memo: memoText } : row));
                               const { data: lg } = await supabase.from("activity_logs").select("id").eq("lead_id", openLead.id).eq("action_type", "failed").order("created_at", { ascending: false }).limit(1).single();
-                              if (lg?.id) await supabase.from("activity_logs").update({ fail_reason: r.label }).eq("id", lg.id);
+                              if (lg?.id) await supabase.from("activity_logs").update({ fail_reason: r.label, memo: failDetailMemo.trim() || null }).eq("id", lg.id);
                             }}
                             className={`w-full flex items-center justify-between px-4 py-3 text-sm transition-colors ${
                               isSelected ? "bg-red-100 text-red-700 font-bold" : "bg-white text-gray-700 hover:bg-red-50"
@@ -3228,6 +3232,17 @@ export default function LeadsPage() {
                           </button>
                         );
                       })}
+                    </div>
+                    {/* 추가 메모 입력 */}
+                    <div className="px-4 py-3 border-t border-red-100 bg-white">
+                      <div className="text-[10px] text-red-400 mb-1.5 font-medium">추가 메모 (선택)</div>
+                      <textarea
+                        value={failDetailMemo}
+                        onChange={e => setFailDetailMemo(e.target.value)}
+                        placeholder="상담 내용, 특이사항 등 메모를 입력하세요"
+                        rows={2}
+                        className="w-full text-sm px-3 py-2 rounded-lg border border-red-200 bg-red-50/50 resize-none focus:outline-none focus:ring-1 focus:ring-red-300"
+                      />
                     </div>
                   </div>
                 ) : (
@@ -3593,6 +3608,7 @@ function InfoRow({
     </div>
   );
 }
+
 
 
 
