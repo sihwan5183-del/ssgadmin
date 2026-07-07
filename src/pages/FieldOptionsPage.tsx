@@ -28,6 +28,7 @@ const FIELDS: { key: string; label: string; hint: string }[] = [
   { key: "inquiry_quick_memo", label: "퀵 메모(인입 상세)", hint: "해피콜 부재중, 고민중, 신청서 확인 완료 등 — 인입 상세화면 메모 한 번 클릭으로 입력" },
   { key: "apartment_result", label: "아파트 인입 최종결과", hint: "상담중, 개통완료, 거절, 보류 등 — 아파트 인입고객 결과 옵션" },
   { key: "crm_benefit", label: "CRM 혜택", hint: "CRM 접수 시 혜택 옵션 — 추가/삭제 가능" },
+  { key: "reservation_color", label: "사전예약 컬러", hint: "사전예약 기기 컬러 옵션 — 미정으로 시작, 출시 후 추가" },
 ];
 
 interface Row {
@@ -273,4 +274,5 @@ export default function FieldOptionsPage() {
     </div>
   );
 }
+
 
