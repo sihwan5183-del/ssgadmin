@@ -1813,7 +1813,7 @@ export default function LeadsPage() {
     const detectChannel = (row: typeof currentRow) => {
       if (!row) return "meta";
       if (row.campaign_name === "도그마루_홈캠") return "dogmaru";
-      if (row.channel === "유닥" || row.channel === "유닧") return "udak";
+      if (row.channel === "유닥" || row.channel === "유닥") return "udak";
       if (row.campaign_name?.includes("모요")) return "moyo";
       if (row.campaign_name) return "meta";
       return "meta";
