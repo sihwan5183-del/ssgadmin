@@ -173,7 +173,7 @@ export const exportSalesFullExcel = (
 
   const enriched = rows.map((r) => ({
     ...r,
-    manager: r.manager || uidToName[r.created_by] || r.manager || "",
+    manager: uidToName[r.manager] || (r.manager && !r.manager.includes("-") ? r.manager : "") || uidToName[r.created_by] || "",
   }));
 
   // AOA 방식으로 작성 (셀 단위 type/format 제어)
