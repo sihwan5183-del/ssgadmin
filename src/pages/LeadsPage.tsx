@@ -1841,8 +1841,8 @@ export default function LeadsPage() {
       createdBy: user?.id ?? '',
     }).catch((e) => console.warn('[activity_logs] 실패:', e));
 
-  // ── Meta CAPI 신호 전송 (개통완료=좋은신호, 실패=나쁜신호) ──
-  if (status === '개통완료' || status === '실패') {
+  // ── Meta CAPI 신호 전송 (개통완료=좋은신호, 실패=나쁜신호) — CRM 제외 ──
+  if ((status === '개통완료' || status === '실패') && currentRow?.source !== 'crm') {
     const capiEventType = status === '개통완료' ? 'good' : 'bad';
     fetch('https://ebggtghzqtxfylbhqfoh.supabase.co/functions/v1/meta-capi', {
       method: 'POST',
@@ -3639,6 +3639,7 @@ function InfoRow({
     </div>
   );
 }
+
 
 
 
