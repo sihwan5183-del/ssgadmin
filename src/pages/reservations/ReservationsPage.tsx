@@ -82,6 +82,43 @@ export default function ReservationsPage() {
     else setSelectedIds(new Set(rows.map(r => r.id)));
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`선택한 ${selectedIds.size}건을 삭제하시겠어요?`)) return;
+    try {
+      await Promise.all([...selectedIds].map(id => deleteReservation(id)));
+      toast.success(`${selectedIds.size}건 삭제 완료`);
+      setSelectedIds(new Set());
+      setPage(1);
+    } catch (e: any) {
+      toast.error('삭제 실패: ' + e.message);
+    }
+  };
+
+  const handleCSV = () => {
+    const selected = rows.filter(r => selectedIds.has(r.id));
+    const target = selected.length > 0 ? selected : rows;
+    const header = ['#', '접수일', '고객명', '연락처', '생년월일', '통신사', '채널', '상태', '담당자', '메모'];
+    const csvRows = target.map((r, i) => [
+      i + 1,
+      r.created_at ? new Date(r.created_at).toLocaleDateString('ko-KR') : '',
+      r.name,
+      r.phone,
+      r.birth_date ?? '',
+      r.carrier ?? '',
+      r.channel ?? '',
+      r.status,
+      (r as any).assignee?.full_name ?? '',
+      r.memo ?? ''
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+    const csv = [header.join(','), ...csvRows].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `사전예약_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  };
+
   // 전체 데이터 로드 (채널별 카운트용)
   const loadAll = useCallback(async () => {
     const { data } = await supabase
@@ -157,6 +194,19 @@ export default function ReservationsPage() {
             </Button>
             <Button variant="outline" size="sm" onClick={() => navigate('/reservations/response-time')} className="gap-1.5 text-orange-500 border-orange-200 hover:bg-orange-50">
               <Clock className="size-4" /> 응답시간
+            </Button>
+            {selectedIds.size > 0 && (
+              <>
+                <Button size="sm" variant="outline" onClick={handleCSV} className="gap-1.5 text-green-600 border-green-200 hover:bg-green-50">
+                  CSV ({selectedIds.size})
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleBulkDelete} className="gap-1.5 text-red-500 border-red-200 hover:bg-red-50">
+                  삭제 ({selectedIds.size})
+                </Button>
+              </>
+            )}
+            <Button size="sm" onClick={handleCSV} variant="outline" className="gap-1.5 text-green-600 border-green-200 hover:bg-green-50">
+              CSV 전체
             </Button>
             <Button size="sm" onClick={() => setAddOpen(true)} className="gap-1.5 bg-pink-500 hover:bg-pink-600 text-white">
               <Plus className="size-4" /> 신규 등록
