@@ -30,7 +30,7 @@ const CHANNEL_CONFIG: Record<string, { label: string; color: string; bg: string;
   meta:        { label: '메타광고',   color: '#1d4ed8', bg: '#dbeafe', path: '/leads?tab=meta' },
   dogmaru:     { label: '도그마루',   color: '#92400e', bg: '#fef3c7', path: '/leads?tab=dogmaru' },
   reservation: { label: '사전예약',   color: '#be185d', bg: '#fce7f3', path: '/reservations' },
-  other:       { label: '기타인입',   color: '#374151', bg: '#f3f4f6', path: '/leads?tab=other' },
+  other:       { label: '기타인입',   color: '#374151', bg: '#f3f4f6', path: '/leads' },
 };
 
 function getChannelKey(source: string | null, channel: string | null, tableSource: 'leads' | 'reservations'): string {

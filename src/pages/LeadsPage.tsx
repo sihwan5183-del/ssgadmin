@@ -242,6 +242,7 @@ function MobileLeadsView({
   const metaCount = rows.filter(r => !isUdakRow(r) && r.campaign_name && r.campaign_name !== DOGMARU_CAMPAIGN).length;
   const dogmaruCount = rows.filter(r => r.campaign_name === DOGMARU_CAMPAIGN).length;
   const udakCount = rows.filter(r => isUdakRow(r)).length;
+  const otherCount = rows.filter(r => !isUdakRow(r) && r.campaign_name !== DOGMARU_CAMPAIGN && (!r.campaign_name || r.campaign_name === '')).length;
 
   // 현재 탭 내 케어 카운트
   const tabRows = useMemo(() => rows.filter(r => {
@@ -322,7 +323,7 @@ function MobileLeadsView({
           { key: "meta", label: "메타광고", count: metaCount },
           { key: "dogmaru", label: "도그마루", count: dogmaruCount },
           { key: "udak", label: "유닥", count: udakCount },
-          { key: "other", label: "기타인입", count: 0 },
+          { key: "other", label: "기타인입", count: otherCount },
         ] as const).map(t => (
           <button key={t.key} onClick={() => setSourceTab(t.key)}
             className={`flex-1 py-2.5 text-xs font-semibold border-b-2 transition-colors ${sourceTab === t.key ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}>
