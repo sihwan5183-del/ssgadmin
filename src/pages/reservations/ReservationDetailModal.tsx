@@ -418,7 +418,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
 
       {/* 삭제 확인 모달 */}
       {confirmDelete && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50"
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50"
           onClick={() => setConfirmDelete(false)}>
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6"
             onClick={(e) => e.stopPropagation()}>
