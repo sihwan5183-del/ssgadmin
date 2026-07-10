@@ -67,6 +67,20 @@ export default function ReservationsPage() {
   // 모달
   const [addOpen, setAddOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const toggleSelect = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+  const toggleAll = () => {
+    if (selectedIds.size === rows.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(rows.map(r => r.id)));
+  };
 
   // 전체 데이터 로드 (채널별 카운트용)
   const loadAll = useCallback(async () => {
@@ -252,6 +266,11 @@ export default function ReservationsPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50">
+                <TableHead className="text-xs w-[36px] text-center">
+                  <input type="checkbox" className="w-3.5 h-3.5 cursor-pointer accent-pink-500"
+                    checked={rows.length > 0 && selectedIds.size === rows.length}
+                    onChange={toggleAll} />
+                </TableHead>
                 <TableHead className="text-xs w-[36px]">#</TableHead>
                 <TableHead className="text-xs w-[110px]">접수일</TableHead>
                 <TableHead className="text-xs">고객명</TableHead>
@@ -267,15 +286,21 @@ export default function ReservationsPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-12 text-sm text-gray-400">로딩 중...</TableCell>
+                  <TableCell colSpan={11} className="text-center py-12 text-sm text-gray-400">로딩 중...</TableCell>
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-12 text-sm text-gray-400">데이터가 없습니다</TableCell>
+                  <TableCell colSpan={11} className="text-center py-12 text-sm text-gray-400">데이터가 없습니다</TableCell>
                 </TableRow>
               ) : (
                 rows.map((r, idx) => (
-                  <TableRow key={r.id} className="cursor-pointer hover:bg-pink-50/50 transition-colors" onClick={() => setDetailId(r.id)}>
+                  <TableRow key={r.id} className={`cursor-pointer hover:bg-pink-50/50 transition-colors ${selectedIds.has(r.id) ? 'bg-pink-50' : ''}`} onClick={() => setDetailId(r.id)}>
+                    <TableCell className="text-xs text-center" onClick={(e) => e.stopPropagation()}>
+                      <input type="checkbox" className="w-3.5 h-3.5 cursor-pointer accent-pink-500"
+                        checked={selectedIds.has(r.id)}
+                        onChange={() => {}}
+                        onClick={(e) => toggleSelect(r.id, e)} />
+                    </TableCell>
                     <TableCell className="text-xs text-gray-400">{(page - 1) * PAGE_SIZE + idx + 1}</TableCell>
                     <TableCell className="text-xs text-gray-500 whitespace-nowrap">
                       {r.contact_date ? new Date(r.contact_date).toLocaleDateString('ko-KR') : '-'}
