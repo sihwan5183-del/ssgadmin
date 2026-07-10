@@ -17,7 +17,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useDashboardStaff } from '@/hooks/useDashboardStaff';
 import { WorkReportHeader, SectionCard } from '@/pages/work-report/_shared';
-import { fetchReservations } from '@/services/reservationService';
+import { fetchReservations, deleteReservation } from '@/services/reservationService';
 import type { Reservation, ReservationStatus } from '@/types/reservation';
 import { RESERVATION_STATUS_LIST } from '@/types/reservation';
 import { ReservationAddModal } from './ReservationAddModal';
