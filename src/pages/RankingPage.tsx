@@ -326,8 +326,8 @@ const RankingPage = () => {
     const { data } = await supabase
       .from("sales")
       .select("id, open_date, device_model, product, sale_type, open_method, status, manager, channel, rate_plan, custom_fields")
-      .or(`created_by.eq.${u.user_id},manager.eq.${u.name}`)
-      .in("status", ["개통완료","설치완료","변경완료(업셀용)","택배발송","청약완료"])
+      .eq("manager", u.name)
+      .in("status", COUNTED_STATUSES)
       .gte("open_date", start)
       .lte("open_date", end)
       .order("open_date", { ascending: false })
