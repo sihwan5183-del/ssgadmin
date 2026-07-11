@@ -30,7 +30,7 @@ const CHANNEL_CONFIG: Record<string, { label: string; color: string; bg: string;
   meta:        { label: '메타광고',   color: '#1d4ed8', bg: '#dbeafe', path: '/leads?tab=meta' },
   dogmaru:     { label: '도그마루',   color: '#92400e', bg: '#fef3c7', path: '/leads?tab=dogmaru' },
   reservation: { label: '사전예약',   color: '#be185d', bg: '#fce7f3', path: '/reservations' },
-  other:       { label: '기타인입',   color: '#374151', bg: '#f3f4f6', path: '/leads' },
+  other:       { label: '기타인입',   color: '#374151', bg: '#f3f4f6', path: '/leads?tab=other' },
 };
 
 function getChannelKey(source: string | null, channel: string | null, tableSource: 'leads' | 'reservations'): string {
@@ -193,7 +193,7 @@ export function ReservationAlertSystem() {
                       </div>
                       <div className="flex flex-col gap-1 shrink-0">
                         <button
-                          onClick={() => { addDismissed(item.id); navigate(`${cfg.path}&highlight=${item.leadsId}`); }}
+                          onClick={() => { addDismissed(item.id); navigate(`${cfg.path}${cfg.path.includes('?') ? '&' : '?'}highlight=${item.leadsId}`); }}
                           className="flex items-center gap-1 text-xs text-white px-2.5 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap"
                           style={{ backgroundColor: cfg.color }}
                         >
