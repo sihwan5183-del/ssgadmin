@@ -90,6 +90,7 @@ export default function ReservationsPage() {
       toast.success(`${selectedIds.size}건 삭제 완료`);
       setSelectedIds(new Set());
       setPage(1);
+      await load();
     } catch (e: any) {
       toast.error('삭제 실패: ' + e.message);
     }
