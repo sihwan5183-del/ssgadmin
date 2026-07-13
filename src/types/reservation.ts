@@ -44,6 +44,7 @@ export interface Reservation {
   channel: string | null;
   device_interest: string | null;
   capacity: string | null;
+  capacity: string | null;
   status: ReservationStatus;
   assigned_to: string | null;
   birth_date: string | null;
@@ -76,6 +77,7 @@ export interface ReservationInsert {
   channel?: string;
   device_interest?: string;
   status?: ReservationStatus;
+  capacity?: string;
   assigned_to?: string;
   birth_date?: string;
   memo?: string;
