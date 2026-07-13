@@ -52,6 +52,13 @@ export default function ReservationsPage() {
   const [allRows, setAllRows] = useState<Reservation[]>([]);
   // 필터된 표시 데이터
   const [rows, setRows] = useState<Reservation[]>([]);
+
+  // 중복 전화번호 Set (빨간 표시용)
+  const duplicatePhones = useMemo(() => {
+    const cnt: Record<string, number> = {};
+    rows.forEach(r => { if (r.phone) cnt[r.phone] = (cnt[r.phone] || 0) + 1; });
+    return new Set(Object.keys(cnt).filter(p => cnt[p] > 1));
+  }, [rows]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -372,10 +379,10 @@ export default function ReservationsPage() {
                     </TableCell>
                     <TableCell className="text-sm font-medium">{r.name}</TableCell>
                     <TableCell className="text-sm text-gray-600">
-                      <span className={getDuplicatePhones(rows).has(r.phone) ? "text-red-500 font-bold" : ""}>
+                      <span className={duplicatePhones.has(r.phone) ? "text-red-500 font-bold" : ""}>
                         {formatPhone(r.phone)}
                       </span>
-                      {getDuplicatePhones(rows).has(r.phone) && (
+                      {duplicatePhones.has(r.phone) && (
                         <span className="ml-1 text-[10px] bg-red-100 text-red-600 px-1 py-0.5 rounded font-bold">중복</span>
                       )}
                     </TableCell>
