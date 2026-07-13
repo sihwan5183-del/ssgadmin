@@ -384,9 +384,20 @@ const RankingPage = () => {
     (profs ?? []).forEach((p) => {
       if (p.display_name) nameToUid.set(p.display_name.trim().toLowerCase(), p.user_id);
     });
+    // UUID → user_id 직접 매핑 (manager 컬럼에 UUID가 들어온 경우)
+    const MANAGER_UUID_MAP: Record<string, string> = {
+      "b9bac256-5ed2-4941-8c09-d71084eeb7d5": "b9bac256-5ed2-4941-8c09-d71084eeb7d5",
+      "c67a5b4e-ad8a-4085-8d1d-cdda7267090c": "c67a5b4e-ad8a-4085-8d1d-cdda7267090c",
+      "dfa3319a-5b5a-4cb7-8fd4-5b881559d4f6": "dfa3319a-5b5a-4cb7-8fd4-5b881559d4f6",
+      "6cca2f19-ef09-4894-bd08-b7cfc140215d": "6cca2f19-ef09-4894-bd08-b7cfc140215d",
+    };
     const ownerOf = (s: { manager?: string | null; created_by: string }) => {
-      const m = (s.manager ?? "").trim().toLowerCase();
-      if (m && nameToUid.has(m)) return nameToUid.get(m)!;
+      const m = (s.manager ?? "").trim();
+      // 1순위: manager가 UUID인 경우 직접 반환
+      if (m && MANAGER_UUID_MAP[m]) return MANAGER_UUID_MAP[m];
+      // 2순위: manager가 이름인 경우 → user_id 변환
+      if (m && nameToUid.has(m.toLowerCase())) return nameToUid.get(m.toLowerCase())!;
+      // 3순위: created_by fallback
       return s.created_by;
     };
 
