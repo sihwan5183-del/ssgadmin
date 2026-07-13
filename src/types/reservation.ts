@@ -53,6 +53,8 @@ export interface Reservation {
   contact_date: string | null;
   reservation_confirmed_at: string | null;
   activated_at: string | null;
+  sms_sent: boolean;
+  sms_sent_at: string | null;
   created_at: string;
   updated_at: string;
   // join
@@ -86,6 +88,8 @@ export interface ReservationUpdate {
   fail_memo?: string | null;
   reservation_confirmed_at?: string | null;
   activated_at?: string | null;
+  sms_sent?: boolean;
+  sms_sent_at?: string | null;
 }
 
 export const CARRIER_OPTIONS = ['LG U+', 'SKT', 'KT', '알뜰폰'];
