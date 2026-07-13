@@ -43,6 +43,7 @@ export interface Reservation {
   carrier: string | null;
   channel: string | null;
   device_interest: string | null;
+  capacity: string | null;
   status: ReservationStatus;
   assigned_to: string | null;
   birth_date: string | null;
