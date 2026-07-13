@@ -99,7 +99,7 @@ export default function ReservationsPage() {
   const handleCSV = () => {
     const selected = rows.filter(r => selectedIds.has(r.id));
     const target = selected.length > 0 ? selected : rows;
-    const header = ['#', '접수일', '고객명', '연락처', '생년월일', '통신사', '채널', '상태', '담당자', '메모'];
+    const header = ['#', '접수일', '고객명', '연락처', '생년월일', '통신사', '채널', '상태', '담당자', '관심기기', '메모'];
     const csvRows = target.map((r, i) => [
       i + 1,
       r.created_at ? new Date(r.created_at).toLocaleDateString('ko-KR') : '',
@@ -110,6 +110,7 @@ export default function ReservationsPage() {
       r.channel ?? '',
       r.status,
       (r as any).assignee?.full_name ?? '',
+      (r as any).device_interest ?? '',
       r.memo ?? ''
     ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
     const csv = [header.join(','), ...csvRows].join('\n');
