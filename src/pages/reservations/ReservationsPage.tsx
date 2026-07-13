@@ -122,6 +122,13 @@ export default function ReservationsPage() {
   };
 
   // 전체 데이터 로드 (채널별 카운트용)
+  // 중복 전화번호 계산
+  const getDuplicatePhones = (list: typeof rows) => {
+    const phoneCnt: Record<string, number> = {};
+    list.forEach(r => { if (r.phone) phoneCnt[r.phone] = (phoneCnt[r.phone] || 0) + 1; });
+    return new Set(Object.entries(phoneCnt).filter(([,cnt]) => cnt > 1).map(([p]) => p));
+  };
+
   const loadAll = useCallback(async () => {
     const { data } = await supabase
       .from('reservations')
@@ -364,7 +371,14 @@ export default function ReservationsPage() {
                         ) : '-'}
                     </TableCell>
                     <TableCell className="text-sm font-medium">{r.name}</TableCell>
-                    <TableCell className="text-sm text-gray-600">{formatPhone(r.phone)}</TableCell>
+                    <TableCell className="text-sm text-gray-600">
+                      <span className={getDuplicatePhones(rows).has(r.phone) ? "text-red-500 font-bold" : ""}>
+                        {formatPhone(r.phone)}
+                      </span>
+                      {getDuplicatePhones(rows).has(r.phone) && (
+                        <span className="ml-1 text-[10px] bg-red-100 text-red-600 px-1 py-0.5 rounded font-bold">중복</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-xs text-gray-500">{(r as any).birth_date ?? '-'}</TableCell>
                     <TableCell className="text-sm text-gray-600">{r.carrier ?? '-'}</TableCell>
                     <TableCell className="text-sm text-gray-600">
