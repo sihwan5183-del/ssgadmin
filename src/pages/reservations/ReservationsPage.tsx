@@ -97,6 +97,25 @@ export default function ReservationsPage() {
     else setSelectedIds(new Set(rows.map(r => r.id)));
   };
 
+  // 일괄 문자발송 처리
+  const handleBulkSms = async (sent: boolean) => {
+    if (selectedIds.size === 0) return;
+    const label = sent ? '발송완료' : '미발송';
+    if (!window.confirm(`선택한 ${selectedIds.size}건을 문자 ${label}으로 처리할까요?`)) return;
+    try {
+      const { error } = await supabase
+        .from('reservations')
+        .update({ sms_sent: sent, sms_sent_at: sent ? new Date().toISOString() : null })
+        .in('id', [...selectedIds]);
+      if (error) throw error;
+      toast.success(`${selectedIds.size}건 문자 ${label} 처리 완료`);
+      setSelectedIds(new Set());
+      await load();
+    } catch (e: any) {
+      toast.error('처리 실패: ' + e.message);
+    }
+  };
+
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
     if (!window.confirm(`선택한 ${selectedIds.size}건을 삭제하시겠어요?`)) return;
@@ -221,7 +240,13 @@ export default function ReservationsPage() {
             </Button>
             {selectedIds.size > 0 && (
               <>
-                <Button size="sm" variant="outline" onClick={handleCSV} className="gap-1.5 text-green-600 border-green-200 hover:bg-green-50">
+                <Button size="sm" variant="outline" onClick={() => handleBulkSms(true)} className="gap-1.5 text-green-600 border-green-200 hover:bg-green-50">
+                  📨 문자발송 O ({selectedIds.size})
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleBulkSms(false)} className="gap-1.5 text-gray-500 border-gray-200 hover:bg-gray-50">
+                  문자발송 X ({selectedIds.size})
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleCSV} className="gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50">
                   CSV ({selectedIds.size})
                 </Button>
                 <Button size="sm" variant="outline" onClick={handleBulkDelete} className="gap-1.5 text-red-500 border-red-200 hover:bg-red-50">
