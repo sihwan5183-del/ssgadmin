@@ -61,6 +61,7 @@ export default function ReservationsPage() {
     return new Set(Object.keys(cnt).filter(p => cnt[p] > 1));
   }, [rows]);
 
+  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
 
