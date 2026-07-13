@@ -48,7 +48,7 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
         carrier: carrier || undefined,
         channel: channel || undefined,
         device_interest: device || undefined,
-        desired_device: capacity || undefined,
+        // desired_device 컬럼 없음 - capacity는 memo에 포함됨
         product_color: color || undefined,
         memo: memo.trim() || undefined,
         birth_date: birthDate || undefined,
