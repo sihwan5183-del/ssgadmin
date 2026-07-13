@@ -64,6 +64,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
   const [capacity, setCapacity] = useState('');
   const [color, setColor] = useState('');
   const [memo, setMemo] = useState('');
+  const [assignedTo, setAssignedTo] = useState<string>('');
 
   // 실패 사유 모달 (상담실패 선택 시 인터셉트)
   const [failModalOpen, setFailModalOpen] = useState(false);
@@ -88,6 +89,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
         setCapacity((r as any).desired_device ?? '');
         setColor((r as any).product_color ?? '');
         setMemo(r.memo ?? '');
+        setAssignedTo(r.assigned_to ?? '');
         if (r.fail_reason_id) setSelectedFailReason(r.fail_reason_id);
         if (r.fail_memo) setFailMemo(r.fail_memo);
       } catch (e: any) {
@@ -142,6 +144,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
         desired_device: capacity || undefined,
         product_color: color || undefined,
         memo: memo.trim() || undefined,
+        assigned_to: assignedTo || null,
         fail_reason_id: status === '상담실패' ? selectedFailReason || null : null,
         fail_stage: status === '상담실패' ? '상담' as FailStage : null,
         fail_memo: status === '상담실패' ? failMemo.trim() || null : null,
@@ -203,9 +206,21 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                     <span className="text-xs text-gray-400">생년월일</span>
                     <div>{(row as any).birth_date ?? '-'}</div>
                   </div>
-                  <div>
+                  <div className="col-span-2">
                     <span className="text-xs text-gray-400">담당자</span>
-                    <div>{row.assigned_to ? (staff.find(s => s.user_id === row.assigned_to)?.display_name ?? '-') : '-'}</div>
+                    <div className="mt-1">
+                      <Select value={assignedTo || '_none_'} onValueChange={v => setAssignedTo(v === '_none_' ? '' : v)}>
+                        <SelectTrigger className="text-sm h-8">
+                          <SelectValue placeholder="담당자 선택" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="_none_">미배정</SelectItem>
+                          {staff.map(s => (
+                            <SelectItem key={s.user_id} value={s.user_id}>{s.display_name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
               </div>
