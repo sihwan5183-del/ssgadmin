@@ -331,6 +331,7 @@ export default function ReservationsPage() {
                 <TableHead className="text-xs">채널</TableHead>
                 <TableHead className="text-xs">상태</TableHead>
                 <TableHead className="text-xs">담당자</TableHead>
+                <TableHead className="text-xs">관심기기</TableHead>
                 <TableHead className="text-xs">메모</TableHead>
               </TableRow>
             </TableHeader>
@@ -383,6 +384,7 @@ export default function ReservationsPage() {
                     <TableCell className="text-sm text-gray-600">
                       {r.assigned_to ? (staff.find(s => s.user_id === r.assigned_to)?.display_name ?? '-') : '-'}
                     </TableCell>
+                    <TableCell className="text-xs text-blue-600 font-medium whitespace-nowrap">{(r as any).device_interest ?? '-'}</TableCell>
                     <TableCell className="text-xs text-gray-500 max-w-[140px] truncate">{r.memo ?? '-'}</TableCell>
                   </TableRow>
                 ))
