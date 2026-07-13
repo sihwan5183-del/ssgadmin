@@ -57,6 +57,8 @@ export interface Reservation {
   sms_sent_at: string | null;
   created_at: string;
   updated_at: string;
+  sms_sent: boolean;
+  sms_sent_at: string | null;
   // join
   fail_reason?: ReservationFailReason;
   assignee?: {
