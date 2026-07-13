@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useDashboardStaff } from '@/hooks/useDashboardStaff';
 import { WorkReportHeader, SectionCard } from '@/pages/work-report/_shared';
 import { fetchReservations, deleteReservation } from '@/services/reservationService';
+import { supabase } from '@/lib/supabase';
 import type { Reservation, ReservationStatus } from '@/types/reservation';
 import { RESERVATION_STATUS_LIST } from '@/types/reservation';
 import { ReservationAddModal } from './ReservationAddModal';
@@ -355,6 +356,7 @@ export default function ReservationsPage() {
                 <TableHead className="text-xs">담당자</TableHead>
                 <TableHead className="text-xs">관심기기</TableHead>
                 <TableHead className="text-xs">메모</TableHead>
+                <TableHead className="text-xs w-[80px] text-center">문자발송</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -415,6 +417,31 @@ export default function ReservationsPage() {
                     </TableCell>
                     <TableCell className="text-xs text-blue-600 font-medium whitespace-nowrap">{(r as any).device_interest ?? '-'}</TableCell>
                     <TableCell className="text-xs text-gray-500 max-w-[140px] truncate">{r.memo ?? '-'}</TableCell>
+                    <TableCell className="text-center">
+                      <button
+                        onClick={async () => {
+                          const newVal = !(r as any).sms_sent;
+                          const { error } = await supabase
+                            .from('reservations')
+                            .update({ sms_sent: newVal, sms_sent_at: newVal ? new Date().toISOString() : null })
+                            .eq('id', r.id);
+                          if (!error) {
+                            toast.success(newVal ? '문자 발송 완료 처리' : '발송 취소 처리');
+                            await load();
+                          } else {
+                            toast.error('처리 실패');
+                          }
+                        }}
+                        className={`w-8 h-8 rounded-full text-sm font-bold transition-colors ${
+                          (r as any).sms_sent
+                            ? 'bg-green-100 text-green-600 hover:bg-green-200'
+                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                        }`}
+                        title={(r as any).sms_sent_at ? `발송: ${new Date((r as any).sms_sent_at).toLocaleString('ko-KR')}` : '미발송'}
+                      >
+                        {(r as any).sms_sent ? 'O' : 'X'}
+                      </button>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
