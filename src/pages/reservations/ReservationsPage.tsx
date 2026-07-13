@@ -323,7 +323,7 @@ export default function ReservationsPage() {
                     onChange={toggleAll} />
                 </TableHead>
                 <TableHead className="text-xs w-[36px]">#</TableHead>
-                <TableHead className="text-xs w-[110px]">접수일</TableHead>
+                <TableHead className="text-xs w-[120px]">접수일</TableHead>
                 <TableHead className="text-xs">고객명</TableHead>
                 <TableHead className="text-xs">연락처</TableHead>
                 <TableHead className="text-xs">생년월일</TableHead>
@@ -354,7 +354,12 @@ export default function ReservationsPage() {
                     </TableCell>
                     <TableCell className="text-xs text-gray-400">{(page - 1) * PAGE_SIZE + idx + 1}</TableCell>
                     <TableCell className="text-xs text-gray-500 whitespace-nowrap">
-                      {r.contact_date ? new Date(r.contact_date).toLocaleDateString('ko-KR') : '-'}
+                      {r.contact_date ? (
+                          <span>
+                            <span className="block">{new Date(r.contact_date).toLocaleDateString('ko-KR')}</span>
+                            <span className="text-gray-400 text-[11px]">{new Date(r.contact_date).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
+                          </span>
+                        ) : '-'}
                     </TableCell>
                     <TableCell className="text-sm font-medium">{r.name}</TableCell>
                     <TableCell className="text-sm text-gray-600">{formatPhone(r.phone)}</TableCell>
