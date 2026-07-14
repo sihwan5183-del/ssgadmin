@@ -1524,7 +1524,7 @@ export default function LeadsPage() {
   async function saveHappyCall(lead: Lead, happy_call: string | null, happy_call_result: string | null) {
     setHappyCallSaving(true);
     const changedBy = user?.user_metadata?.display_name ?? user?.email ?? "unknown";
-    const updatePayload: any = { happy_call, happy_call_result };
+    const updatePayload: any = { happy_call, happy_call_result, last_action_at: new Date().toISOString(), last_action_by: changedBy };
     if (happy_call_result === "재케어") {
       updatePayload.sales_recare_date = salesRecareDate || (lead as any).sales_recare_date || null;
     } else {
@@ -2127,6 +2127,7 @@ export default function LeadsPage() {
                 <TableHead className="text-foreground font-bold w-16 text-center whitespace-nowrap">개통방식</TableHead>
                 <TableHead className="text-foreground font-bold">택배개통</TableHead>
                 <TableHead className="text-foreground font-bold">비고</TableHead>
+                <TableHead className="text-foreground font-bold w-32 whitespace-nowrap">담당자</TableHead>
                 <TableHead className="text-foreground font-bold w-28 text-xs whitespace-nowrap">최종액션</TableHead>
                 <TableHead className="text-foreground font-bold w-20 text-center whitespace-nowrap">해피콜</TableHead>
                 <TableHead className="text-foreground font-bold w-20 text-center whitespace-nowrap">영업</TableHead>
@@ -2136,14 +2137,14 @@ export default function LeadsPage() {
             <TableBody>
               {loading && (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center py-10 text-foreground/60">
+                  <TableCell colSpan={16} className="text-center py-10 text-foreground/60">
                     불러오는 중…
                   </TableCell>
                 </TableRow>
               )}
               {!loading && pagedFiltered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-10 text-foreground/60">
+                  <TableCell colSpan={16} className="text-center py-10 text-foreground/60">
                     도그마루 시트에서 인입된 데이터가 없습니다.
                   </TableCell>
                 </TableRow>
@@ -2220,6 +2221,24 @@ export default function LeadsPage() {
                     </TableCell>
                     <TableCell className="text-foreground/80 py-1.5 max-w-[200px] truncate">
                       {item.memo ?? "-"}
+                    </TableCell>
+                    <TableCell className="py-1.5" onClick={(e) => e.stopPropagation()}>
+                      <Select
+                        value={item.assigned_to ?? "none"}
+                        onValueChange={(v) => updateAssignee(item.id, v === "none" ? null : v)}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="담당자 지정" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">담당자 지정</SelectItem>
+                          {staff.map((st) => (
+                            <SelectItem key={st.user_id} value={st.user_id}>
+                              {st.display_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell className="py-1.5 text-xs text-gray-500 whitespace-nowrap">
                       {(item as any).last_action_at ? (
@@ -2575,13 +2594,14 @@ export default function LeadsPage() {
                         const prev = (openLead as any).delivery_type ?? null;
                         const next = prev === v ? null : v;
                         setOpenLead({ ...openLead, delivery_type: next } as any);
-                        const { error } = await supabase.from("leads").update({ delivery_type: next }).eq("id", openLead.id);
+                        const la = { last_action_at: new Date().toISOString(), last_action_by: user?.user_metadata?.display_name ?? user?.email ?? "unknown" };
+                        const { error } = await supabase.from("leads").update({ delivery_type: next, ...la }).eq("id", openLead.id);
                         if (error) {
                           setOpenLead({ ...openLead, delivery_type: prev } as any);
                           toast.error("개통방식 저장 실패: " + error.message);
                           return;
                         }
-                        setRows(p => p.map(r => r.id === openLead.id ? { ...r, delivery_type: next } as any : r));
+                        setRows(p => p.map(r => r.id === openLead.id ? { ...r, delivery_type: next, ...la } as any : r));
                         toast.success(next ? "개통방식 저장 완료" : "개통방식 선택 해제");
                       }}
                       className={`flex-1 py-2.5 rounded-lg border text-sm font-bold transition-colors ${(openLead as any).delivery_type === v ? (v === "즉시" ? "bg-blue-100 text-blue-700 border-blue-400" : "bg-orange-100 text-orange-700 border-orange-400") : "bg-background border-border text-muted-foreground hover:bg-muted/60"}`}
@@ -2645,7 +2665,7 @@ export default function LeadsPage() {
                 <div className="flex justify-end">
                   <button onClick={async () => {
                     setHappyCallSaving(true);
-                    const ud: any = { happy_call: openLead.happy_call, happy_call_result: openLead.happy_call_result, happy_call_2nd: (openLead as any).happy_call_2nd };
+                    const ud: any = { happy_call: openLead.happy_call, happy_call_result: openLead.happy_call_result, happy_call_2nd: (openLead as any).happy_call_2nd, last_action_at: new Date().toISOString(), last_action_by: user?.user_metadata?.display_name ?? user?.email ?? "unknown" };
                     const { error } = await supabase.from("leads").update(ud).eq("id", openLead.id);
                     if (!error) { setRows(p => p.map(r => r.id === openLead.id ? { ...r, ...ud } : r)); setOpenLead({ ...openLead, ...ud }); toast.success("저장 완료"); }
                     else toast.error(error.message);
@@ -2708,6 +2728,8 @@ export default function LeadsPage() {
                         happy_call: openLead.happy_call,
                         happy_call_result: openLead.happy_call_result,
                         sales_recare_date: openLead.happy_call_result === "재케어" ? (salesRecareDate || (openLead as any).sales_recare_date || null) : null,
+                        last_action_at: new Date().toISOString(),
+                        last_action_by: user?.user_metadata?.display_name ?? user?.email ?? "unknown",
                       };
                       const { error } = await supabase.from("leads").update(ud).eq("id", openLead.id);
                       if (!error) {
