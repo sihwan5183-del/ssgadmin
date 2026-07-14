@@ -3218,6 +3218,52 @@ export default function LeadsPage() {
                   </div>
                 </div>
               </div>
+              {/* 2차 해피콜 */}
+              {(openLead.channel !== "유닥" && openLead.channel !== "메타광고") && (
+              <div className="mt-2 p-4 rounded-xl border border-border bg-muted/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-bold text-foreground">📞 2차 해피콜</div>
+                  <div className="text-[10px] text-muted-foreground">해피콜 팀 작성</div>
+                </div>
+                <div className="flex gap-2">
+                  {(["O", "X"] as const).map((v) => (
+                    <button key={v}
+                      onClick={() => setOpenLead({ ...openLead, happy_call_2nd: (openLead as any).happy_call_2nd === v ? null : v } as any)}
+                      className={`flex-1 py-2.5 rounded-lg border text-sm font-bold transition-colors ${(openLead as any).happy_call_2nd === v ? (v === "O" ? "bg-emerald-100 text-emerald-700 border-emerald-400" : "bg-rose-100 text-rose-700 border-rose-400") : "bg-background border-border text-muted-foreground"}`}
+                    >
+                      {v === "O" ? "✅ 2차 O" : "❌ 2차 X"}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex justify-end">
+                  <button onClick={() => saveHappyCall({ ...openLead, happy_call_2nd: (openLead as any).happy_call_2nd } as any, (openLead as any).happy_call, (openLead as any).happy_call_result)} disabled={happyCallSaving} className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50">
+                    {happyCallSaving ? "저장 중..." : "저장"}
+                  </button>
+                </div>
+              </div>
+              )}
+              {/* 개통방식 */}
+              {(openLead.channel !== "유닥" && openLead.channel !== "메타광고") && (
+              <div className="mt-2 p-4 rounded-xl border border-border bg-muted/30 space-y-2">
+                <div className="text-sm font-bold text-foreground">📦 개통방식</div>
+                <div className="flex gap-2">
+                  {(["즉시", "택배"] as const).map((v) => (
+                    <button key={v}
+                      onClick={async () => {
+                        const next = (openLead as any).delivery_type === v ? null : v;
+                        setOpenLead({ ...openLead, delivery_type: next } as any);
+                        await supabase.from("leads").update({ delivery_type: next }).eq("id", openLead.id);
+                        setRows(p => p.map(r => r.id === openLead.id ? { ...r, delivery_type: next } as any : r));
+                        toast.success("개통방식 저장 완료");
+                      }}
+                      className={`flex-1 py-2.5 rounded-lg border text-sm font-bold transition-colors ${(openLead as any).delivery_type === v ? (v === "즉시" ? "bg-blue-100 text-blue-700 border-blue-400" : "bg-orange-100 text-orange-700 border-orange-400") : "bg-background border-border text-muted-foreground"}`}
+                    >
+                      {v === "즉시" ? "⚡ 즉시개통" : "📦 택배발송"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              )}
               )}
               {/* 영업 결과 - 도그마루 + 해피콜 O인 경우 */}
               {(openLead.channel !== "유닥" && openLead.channel !== "메타광고") && (
