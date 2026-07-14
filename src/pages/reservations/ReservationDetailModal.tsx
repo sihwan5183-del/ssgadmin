@@ -89,7 +89,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
         setCarrier(r.carrier ?? '');
         setChannel(r.channel ?? '');
         setDevice(r.device_interest ?? '');
-        setCapacity((r as any).desired_device ?? '');
+        setCapacity(r.capacity ?? '');
         setColor((r as any).product_color ?? '');
         setMemo(r.memo ?? '');
         setAssignedTo(r.assigned_to ?? '');
@@ -144,7 +144,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
         carrier: carrier || undefined,
         channel: channel || undefined,
         device_interest: device || undefined,
-        desired_device: capacity || undefined,
+        capacity: capacity || undefined,
         product_color: color || undefined,
         memo: memo.trim() || undefined,
         assigned_to: assignedTo || null,
