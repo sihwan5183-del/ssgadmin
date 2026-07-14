@@ -389,7 +389,6 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
       {failModalOpen && (
         <AlertDialog open={failModalOpen} onOpenChange={(v) => { if (!v) { setFailModalOpen(false); setPendingStatus(null); } }}>
           <AlertDialogContent className="max-w-sm rounded-2xl">
-            <div>
             <div className="font-bold text-sm mb-1 text-red-600">상담실패 처리</div>
             <div className="text-xs text-gray-500 mb-4">실패 사유를 선택해야 저장할 수 있습니다</div>
             <div className="space-y-3">
@@ -397,7 +396,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                 <SelectTrigger className="text-sm">
                   <SelectValue placeholder="실패 사유 선택 *" />
                 </SelectTrigger>
-                <SelectContent position="item-aligned">
+                <SelectContent>
                   {failReasons.map((fr) => (
                     <SelectItem key={fr.id} value={fr.id}>{fr.reason}</SelectItem>
                   ))}
@@ -427,8 +426,8 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                 확인
               </Button>
             </div>
-          </div>
-        </div>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
 
       {/* 삭제 확인 모달 */}
@@ -451,9 +450,8 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                 {deleting ? '삭제 중...' : '삭제'}
               </Button>
             </div>
-            </div>
-          </AlertDialogContent>
-        </AlertDialog>
+          </div>
+        </div>
       )}
     </>
   );
