@@ -68,6 +68,7 @@ export default function ReservationsPage() {
   // 필터 상태
   const [channelTab, setChannelTab] = useState('');
   const [statusFilter, setStatusFilter] = useState<ReservationStatus | ''>('');
+  const [assigneeFilter, setAssigneeFilter] = useState('');
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [dateStart, setDateStart] = useState('');
@@ -170,6 +171,7 @@ export default function ReservationsPage() {
     try {
       const res = await fetchReservations({
         status: statusFilter || undefined,
+        assigned_to: assigneeFilter || undefined,
         search,
         page,
         pageSize: PAGE_SIZE,
@@ -184,7 +186,7 @@ export default function ReservationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, search, page, channelTab, dateStart, dateEnd]);
+  }, [statusFilter, assigneeFilter, search, page, channelTab, dateStart, dateEnd]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
   useEffect(() => { load(); }, [load]);
@@ -212,7 +214,7 @@ export default function ReservationsPage() {
 
   const handleSearch = () => { setSearch(searchInput); setPage(1); };
   const handleReset = () => {
-    setSearch(''); setSearchInput(''); setStatusFilter('');
+    setSearch(''); setSearchInput(''); setStatusFilter(''); setAssigneeFilter('');
     setDateStart(''); setDateEnd(''); setPage(1);
   };
   const handleTabChange = (val: string) => {
@@ -329,6 +331,19 @@ export default function ReservationsPage() {
               className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700"
             />
           </div>
+
+          {/* 담당자 필터 */}
+          <Select value={assigneeFilter || '_all_'} onValueChange={(v) => { setAssigneeFilter(v === '_all_' ? '' : v); setPage(1); }}>
+            <SelectTrigger className="w-[130px] text-sm">
+              <SelectValue placeholder="전체 담당자" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_all_">전체 담당자</SelectItem>
+              {staff.map((s) => (
+                <SelectItem key={s.user_id} value={s.user_id}>{s.display_name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           {/* 상태 필터 */}
           <Select value={statusFilter || '_all_'} onValueChange={(v) => { setStatusFilter((v === '_all_' ? '' : v) as ReservationStatus | ''); setPage(1); }}>
