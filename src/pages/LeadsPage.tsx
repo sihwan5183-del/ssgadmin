@@ -2692,10 +2692,11 @@ export default function LeadsPage() {
                       ) : (item as any).happy_call_result === "실패" ? (
                         <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-bold text-[10px] border border-rose-300">❌ 실패</span>
                       ) : (item as any).happy_call_result === "재케어" ? (
-                        <div className="flex flex-col items-center gap-0.5">
-                          <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-bold text-[10px] border border-purple-300">🔄 재케어</span>
-                          {(item as any).sales_recare_date && <span className="text-[9px] text-purple-600">{(item as any).sales_recare_date.slice(5).replace("-","/")}일</span>}
-                        </div>
+                        (item as any).sales_recare_date ? (
+                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-bold text-[10px] border border-purple-300">📅 {(item as any).sales_recare_date.slice(5).replace("-","/")}</span>
+                      ) : (
+                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-bold text-[10px] border border-purple-300">🔄 재케어</span>
+                      )
                       ) : (item as any).happy_call_result === "부재" ? (
                         <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold text-[10px] border border-orange-300">📵 부재</span>
                       ) : <span className="text-muted-foreground text-[11px]">-</span>}
