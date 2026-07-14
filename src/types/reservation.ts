@@ -44,7 +44,7 @@ export interface Reservation {
   channel: string | null;
   device_interest: string | null;
   capacity: string | null;
-  capacity: string | null;
+  product_color: string | null;
   status: ReservationStatus;
   assigned_to: string | null;
   birth_date: string | null;
@@ -59,8 +59,6 @@ export interface Reservation {
   sms_sent_at: string | null;
   created_at: string;
   updated_at: string;
-  sms_sent: boolean;
-  sms_sent_at: string | null;
   // join
   fail_reason?: ReservationFailReason;
   assignee?: {
@@ -78,6 +76,7 @@ export interface ReservationInsert {
   device_interest?: string;
   status?: ReservationStatus;
   capacity?: string;
+  product_color?: string;
   assigned_to?: string;
   birth_date?: string;
   memo?: string;
@@ -86,6 +85,11 @@ export interface ReservationInsert {
 
 export interface ReservationUpdate {
   status?: ReservationStatus;
+  carrier?: string;
+  channel?: string;
+  device_interest?: string;
+  capacity?: string;
+  product_color?: string;
   assigned_to?: string;
   memo?: string;
   fail_reason_id?: string | null;
