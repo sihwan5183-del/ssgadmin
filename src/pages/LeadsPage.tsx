@@ -2534,25 +2534,19 @@ export default function LeadsPage() {
                     aria-label="전체 선택"
                   />
                 </TableHead>
-                <TableHead className="text-foreground font-bold">접수 일자</TableHead>
-                <TableHead className="text-foreground font-bold">고객 성명</TableHead>
+                <TableHead className="text-foreground font-bold whitespace-nowrap">접수일자</TableHead>
+                <TableHead className="text-foreground font-bold whitespace-nowrap">고객성명</TableHead>
                 <TableHead className="text-foreground font-bold w-[110px] whitespace-nowrap">연락처</TableHead>
-                <TableHead className="text-foreground font-bold">
-                  <ColumnFilter label="접수 지점명" values={valBranch} selected={fBranch} onChange={setFBranch} />
-                </TableHead>
-                <TableHead className="text-foreground font-bold">
+                <TableHead className="text-foreground font-bold whitespace-nowrap">
                   <ColumnFilter label="개통 상태" values={valActivation} selected={fActivation} onChange={setFActivation} />
                 </TableHead>
-                <TableHead className="text-foreground font-bold">
-                  <ColumnFilter label="해지 및 철회" values={valCancellation} selected={fCancellation} onChange={setFCancellation} />
-                </TableHead>
-                <TableHead className="text-foreground font-bold">가입번호</TableHead>
-                <TableHead className="text-foreground font-bold">택배개통</TableHead>
-                <TableHead className="text-foreground font-bold">비고</TableHead>
+                <TableHead className="text-foreground font-bold whitespace-nowrap">가입번호</TableHead>
+                <TableHead className="text-foreground font-bold w-16 text-center whitespace-nowrap">개통방식</TableHead>
+                <TableHead className="text-foreground font-bold whitespace-nowrap">비고</TableHead>
                 <TableHead className="text-foreground font-bold w-28 text-xs whitespace-nowrap">최종액션</TableHead>
-                <TableHead className="text-foreground font-bold w-16 text-center">해피콜</TableHead>
-                <TableHead className="text-foreground font-bold w-16 text-center">영업</TableHead>
-                <TableHead className="text-foreground font-bold w-20 text-center">관리</TableHead>
+                <TableHead className="text-foreground font-bold w-20 text-center whitespace-nowrap">해피콜</TableHead>
+                <TableHead className="text-foreground font-bold w-20 text-center whitespace-nowrap">영업</TableHead>
+                <TableHead className="text-foreground font-bold w-16 text-center whitespace-nowrap">관리</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -2645,11 +2639,19 @@ export default function LeadsPage() {
                       ) : <span className="text-gray-300">-</span>}
                     </TableCell>
                     <TableCell className="text-center py-1.5">
-                      {(item as any).happy_call === "O" ? (
-                        <span className="inline-flex items-center justify-center size-6 rounded-full bg-emerald-100 text-emerald-700 font-bold text-xs border border-emerald-300">O</span>
-                      ) : (item as any).happy_call === "X" ? (
-                        <span className="inline-flex items-center justify-center size-6 rounded-full bg-rose-100 text-rose-700 font-bold text-xs border border-rose-300">X</span>
-                      ) : <span className="text-muted-foreground text-[11px]">-</span>}
+                      <div className="flex flex-col items-center gap-0.5">
+                        {(item as any).happy_call === "O" ? (
+                          <span className="text-[10px] px-1 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold">1차O</span>
+                        ) : (item as any).happy_call === "X" ? (
+                          <span className="text-[10px] px-1 py-0.5 rounded bg-rose-100 text-rose-700 font-bold">1차X</span>
+                        ) : <span className="text-muted-foreground text-[10px]">-</span>}
+                        {(item as any).happy_call_2nd === "O" && (
+                          <span className="text-[10px] px-1 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold">2차O</span>
+                        )}
+                        {(item as any).happy_call_2nd === "X" && (
+                          <span className="text-[10px] px-1 py-0.5 rounded bg-rose-100 text-rose-700 font-bold">2차X</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-center py-1.5">
                       {(item as any).happy_call_result === "성공" ? (
@@ -3195,7 +3197,7 @@ export default function LeadsPage() {
                   {(["O", "X"] as const).map((v) => (
                     <button key={v} onClick={() => setOpenLead({ ...openLead, happy_call: openLead.happy_call === v ? null : v })}
                       className={`flex-1 py-2.5 rounded-lg border text-sm font-bold transition-colors ${openLead.happy_call === v ? (v === "O" ? "bg-emerald-100 text-emerald-700 border-emerald-400" : "bg-rose-100 text-rose-700 border-rose-400") : "bg-background border-border text-muted-foreground hover:bg-muted/60"}`}>
-                      {v === "O" ? "✅ O (상담 원함)" : "❌ X (거절)"}
+                      {v === "O" ? "✅ 1차 O" : "❌ 1차 X"}
                     </button>
                   ))}
                 </div>
@@ -3255,7 +3257,7 @@ export default function LeadsPage() {
                   </span>
                   <div className="flex gap-2">
                     {(openLead as any).happy_call_result && <button onClick={() => saveHappyCall(openLead, (openLead as any).happy_call, null)} className="px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:bg-muted/60">초기화</button>}
-                    <button onClick={() => saveHappyCall(openLead, (openLead as any).happy_call, (openLead as any).happy_call_result)} disabled={happyCallSaving} className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50">
+                    <button onClick={() => saveHappyCall({ ...openLead, happy_call_2nd: (openLead as any).happy_call_2nd } as any, (openLead as any).happy_call, (openLead as any).happy_call_result)} disabled={happyCallSaving} className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50">
                       {happyCallSaving ? "저장 중..." : "저장"}
                     </button>
                   </div>
