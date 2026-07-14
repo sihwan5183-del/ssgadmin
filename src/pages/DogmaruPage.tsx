@@ -2093,12 +2093,12 @@ export default function LeadsPage() {
                 <TableHead className="text-foreground font-bold">가입번호</TableHead>
                 <TableHead className="text-foreground font-bold w-16 text-center whitespace-nowrap">개통방식</TableHead>
                 <TableHead className="text-foreground font-bold">비고</TableHead>
-                <TableHead className="text-foreground font-bold">비고</TableHead>
                 <TableHead className="text-foreground font-bold w-28 text-xs whitespace-nowrap">최종액션</TableHead>
                 <TableHead className="text-foreground font-bold w-20 text-center whitespace-nowrap">해피콜</TableHead>
                 <TableHead className="text-foreground font-bold w-20 text-center whitespace-nowrap">영업</TableHead>
                 <TableHead className="text-foreground font-bold w-16 text-center whitespace-nowrap">관리</TableHead>
             </TableHeader>
+              </TableRow>
             <TableBody>
               {loading && (
                 <TableRow>
