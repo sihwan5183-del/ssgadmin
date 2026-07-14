@@ -3218,6 +3218,7 @@ export default function LeadsPage() {
                   </div>
                 </div>
               </div>
+              )}
               {/* 2차 해피콜 */}
               {(openLead.channel !== "유닥" && openLead.channel !== "메타광고") && (
               <div className="mt-2 p-4 rounded-xl border border-border bg-muted/30 space-y-2">
