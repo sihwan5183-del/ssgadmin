@@ -337,7 +337,7 @@ const RankingPage = () => {
     const { data } = await supabase
       .from("sales")
       .select("id, open_date, device_model, product, sale_type, open_method, status, manager, channel, rate_plan, custom_fields")
-      .or(\`manager.eq."${u.name}",manager.eq."${MANAGER_NAME_TO_UUID[u.name] ?? "__NO_UUID__"}"\`)
+      .or("manager.eq." + u.name + ",manager.eq." + (MANAGER_NAME_TO_UUID[u.name] ?? "__NO_UUID__"))
       .in("status", COUNTED_STATUSES)
       .gte("open_date", start)
       .lte("open_date", end)
