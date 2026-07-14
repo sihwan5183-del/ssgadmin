@@ -2532,8 +2532,29 @@ export default function LeadsPage() {
                 </div>
               </div>
 
-              {/* 해피콜 */}
+              {/* 개통방식 */}
               <div className="mt-4 p-4 rounded-xl border border-border bg-muted/30 space-y-2">
+                <div className="text-sm font-bold text-foreground">📦 개통방식</div>
+                <div className="flex gap-2">
+                  {(["즉시", "택배"] as const).map((v) => (
+                    <button key={v}
+                      onClick={async () => {
+                        const next = (openLead as any).delivery_type === v ? null : v;
+                        setOpenLead({ ...openLead, delivery_type: next } as any);
+                        await supabase.from("leads").update({ delivery_type: next }).eq("id", openLead.id);
+                        setRows(p => p.map(r => r.id === openLead.id ? { ...r, delivery_type: next } as any : r));
+                        toast.success("개통방식 저장 완료");
+                      }}
+                      className={`flex-1 py-2.5 rounded-lg border text-sm font-bold transition-colors ${(openLead as any).delivery_type === v ? (v === "즉시" ? "bg-blue-100 text-blue-700 border-blue-400" : "bg-orange-100 text-orange-700 border-orange-400") : "bg-background border-border text-muted-foreground hover:bg-muted/60"}`}
+                    >
+                      {v === "즉시" ? "⚡ 즉시개통" : "📦 택배발송"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 해피콜 */}
+              <div className="mt-2 p-4 rounded-xl border border-border bg-muted/30 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-bold text-foreground">📞 해피콜</div>
                   <div className="text-[10px] text-muted-foreground">해피콜 팀 작성</div>
@@ -2593,27 +2614,6 @@ export default function LeadsPage() {
                   }} disabled={happyCallSaving} className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50">
                     {happyCallSaving ? "저장 중..." : "저장"}
                   </button>
-                </div>
-              </div>
-
-              {/* 개통방식 */}
-              <div className="mt-2 p-4 rounded-xl border border-border bg-muted/30 space-y-2">
-                <div className="text-sm font-bold text-foreground">📦 개통방식</div>
-                <div className="flex gap-2">
-                  {(["즉시", "택배"] as const).map((v) => (
-                    <button key={v}
-                      onClick={async () => {
-                        const next = (openLead as any).delivery_type === v ? null : v;
-                        setOpenLead({ ...openLead, delivery_type: next } as any);
-                        await supabase.from("leads").update({ delivery_type: next }).eq("id", openLead.id);
-                        setRows(p => p.map(r => r.id === openLead.id ? { ...r, delivery_type: next } as any : r));
-                        toast.success("개통방식 저장 완료");
-                      }}
-                      className={`flex-1 py-2.5 rounded-lg border text-sm font-bold transition-colors ${(openLead as any).delivery_type === v ? (v === "즉시" ? "bg-blue-100 text-blue-700 border-blue-400" : "bg-orange-100 text-orange-700 border-orange-400") : "bg-background border-border text-muted-foreground hover:bg-muted/60"}`}
-                    >
-                      {v === "즉시" ? "⚡ 즉시개통" : "📦 택배발송"}
-                    </button>
-                  ))}
                 </div>
               </div>
 
