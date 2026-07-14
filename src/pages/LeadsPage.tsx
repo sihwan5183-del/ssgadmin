@@ -3265,7 +3265,6 @@ export default function LeadsPage() {
                 </div>
               </div>
               )}
-              )}
               {/* 영업 결과 - 도그마루 + 해피콜 O인 경우 */}
               {(openLead.channel !== "유닥" && openLead.channel !== "메타광고") && (
               <div className={`mt-2 p-4 rounded-xl border space-y-2 transition-opacity ${(openLead as any).happy_call === "O" ? "border-border bg-muted/30 opacity-100" : "border-dashed border-border/50 bg-muted/10 opacity-40 pointer-events-none"}`}>
