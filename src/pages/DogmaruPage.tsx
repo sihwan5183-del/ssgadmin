@@ -2197,11 +2197,18 @@ export default function LeadsPage() {
                       ) : <span className="text-muted-foreground text-[11px]">-</span>}
                     </TableCell>
                     <TableCell className="text-center py-1.5">
-                      {(item as any).happy_call_result === "성공" ? (
-                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold text-[10px] border border-emerald-300">성공</span>
-                      ) : (item as any).happy_call_result === "실패" ? (
-                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-bold text-[10px] border border-rose-300">실패</span>
-                      ) : <span className="text-muted-foreground text-[11px]">-</span>}
+                  {(r as any).happy_call_result === "성공" ? (
+                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold text-[10px] border border-emerald-300">✅ 성공</span>
+                  ) : (r as any).happy_call_result === "실패" ? (
+                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-bold text-[10px] border border-rose-300">❌ 실패</span>
+                  ) : (r as any).happy_call_result === "재케어" ? (
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-bold text-[10px] border border-purple-300">🔄 재케어</span>
+                      {(r as any).sales_recare_date && <span className="text-[9px] text-purple-600">{(r as any).sales_recare_date.slice(5).replace("-","/")}일</span>}
+                    </div>
+                  ) : (r as any).happy_call_result === "부재" ? (
+                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold text-[10px] border border-orange-300">📵 부재</span>
+                  ) : <span className="text-muted-foreground text-[11px]">-</span>}
                     </TableCell>
                     <TableCell className="text-center py-1.5" onClick={(e) => e.stopPropagation()}>
                       <Button size="sm" variant="ghost" onClick={() => setOpenLead(item)}>
@@ -2551,27 +2558,60 @@ export default function LeadsPage() {
                   <div className="text-sm font-bold text-foreground">💼 영업 결과</div>
                   <div className="text-[10px] text-muted-foreground">해피콜 O인 경우만 활성</div>
                 </div>
-                <div className="flex gap-2">
-                  {[["성공", "bg-emerald-100 text-emerald-700 border-emerald-400", "bg-background border-border text-muted-foreground"],
-                    ["실패", "bg-rose-100 text-rose-700 border-rose-400", "bg-background border-border text-muted-foreground"],
-                    ["부재", "bg-orange-100 text-orange-700 border-orange-400", "bg-background border-border text-muted-foreground"]
-                  ].map(([v, activeClass, inactiveClass]) => (
+                <div className="flex gap-2 flex-wrap">
+                  {[
+                    ["성공",   "bg-emerald-100 text-emerald-700 border-emerald-400",  "bg-background border-border text-muted-foreground", "✅"],
+                    ["재케어", "bg-purple-100 text-purple-700 border-purple-400",     "bg-background border-border text-muted-foreground", "🔄"],
+                    ["부재",   "bg-orange-100 text-orange-700 border-orange-400",     "bg-background border-border text-muted-foreground", "📵"],
+                    ["실패",   "bg-rose-100 text-rose-700 border-rose-400",           "bg-background border-border text-muted-foreground", "❌"],
+                  ].map(([v, activeClass, inactiveClass, emoji]) => (
                     <button
                       key={v}
-                      onClick={() => setOpenLead({ ...openLead, happy_call_result: openLead.happy_call_result === v ? null : v })}
+                      onClick={() => {
+                        const next = openLead.happy_call_result === v ? null : v;
+                        setOpenLead({ ...openLead, happy_call_result: next });
+                        if (next !== "재케어") setSalesRecareDate("");
+                      }}
                       className={`flex-1 py-2.5 rounded-lg border text-sm font-bold transition-colors ${openLead.happy_call_result === v ? activeClass : inactiveClass}`}
                     >
-                      {v === "성공" ? "✅ 성공" : v === "실패" ? "❌ 실패" : "📵 부재"}
+                      {emoji} {v}
                     </button>
                   ))}
                 </div>
+                {/* 재케어 날짜 선택 */}
+                {openLead.happy_call_result === "재케어" && (
+                  <div className="flex items-center gap-2 p-2 bg-purple-50 rounded-lg border border-purple-200">
+                    <span className="text-xs font-semibold text-purple-700 flex-shrink-0">📅 재케어 날짜</span>
+                    <input
+                      type="date"
+                      value={salesRecareDate || (openLead as any).sales_recare_date || ""}
+                      min={new Date().toISOString().slice(0,10)}
+                      onChange={(e) => setSalesRecareDate(e.target.value)}
+                      className="flex-1 text-xs border border-purple-300 rounded px-2 py-1 text-purple-700 bg-white"
+                    />
+                  </div>
+                )}
                 <div className="flex justify-between items-center">
                   <span className="text-[10px] text-muted-foreground">
-                    {openLead.happy_call_result ? `현재: ${openLead.happy_call_result}` : "⚠️ 미설정 — 재케어 대상"}
+                    {openLead.happy_call_result ? `현재: ${openLead.happy_call_result}` : "⚠️ 미설정"}
                   </span>
                   <div className="flex gap-2">
                     {openLead.happy_call_result && <button onClick={() => saveHappyCall(openLead, openLead.happy_call, null)} className="px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:bg-muted/60">초기화</button>}
-                    <button onClick={() => saveHappyCall(openLead, openLead.happy_call, openLead.happy_call_result)} disabled={happyCallSaving} className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50">
+                    <button onClick={async () => {
+                      setHappyCallSaving(true);
+                      const ud: any = {
+                        happy_call: openLead.happy_call,
+                        happy_call_result: openLead.happy_call_result,
+                        sales_recare_date: openLead.happy_call_result === "재케어" ? (salesRecareDate || (openLead as any).sales_recare_date || null) : null,
+                      };
+                      const { error } = await supabase.from("leads").update(ud).eq("id", openLead.id);
+                      if (!error) {
+                        setRows(p => p.map(r => r.id === openLead.id ? { ...r, ...ud } : r));
+                        setOpenLead({ ...openLead, ...ud });
+                        toast.success("저장 완료");
+                      } else toast.error(error.message);
+                      setHappyCallSaving(false);
+                    }} disabled={happyCallSaving} className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50">
                       {happyCallSaving ? "저장 중..." : "저장"}
                     </button>
                   </div>
