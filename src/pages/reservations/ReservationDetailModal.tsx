@@ -25,6 +25,7 @@ import {
 } from '@/types/reservation';
 import type { ReservationFailReason } from '@/types/reservation';
 import { useRole } from '@/hooks/useRole';
+import { useAuth } from '@/contexts/AuthContext';
 import { useFieldOptions } from '@/hooks/useFieldOptions';
 import { saveStatusLog } from '@/services/responseTimeService';
 import { useDashboardStaff } from '@/hooks/useDashboardStaff';
@@ -47,6 +48,7 @@ function StatusBadge({ status }: { status: ReservationStatus }) {
 
 export function ReservationDetailModal({ reservationId, onClose, onDone }: Props) {
   const { isAdmin } = useRole();
+  const { user } = useAuth();
   const { staff } = useDashboardStaff();
   const { options: colorOptions } = useFieldOptions('reservation_color' as any);
 
