@@ -19,6 +19,17 @@ import {
 import confetti from "canvas-confetti";
 
 /* ─── 상세 판매 타입 ─── */
+// UUID ↔ 이름 매핑
+const MANAGER_UUID_TO_NAME: Record<string, string> = {
+  "b9bac256-5ed2-4941-8c09-d71084eeb7d5": "김경환",
+  "c67a5b4e-ad8a-4085-8d1d-cdda7267090c": "최윤정",
+  "dfa3319a-5b5a-4cb7-8fd4-5b881559d4f6": "박성경",
+  "6cca2f19-ef09-4894-bd08-b7cfc140215d": "박태진",
+  "d99d8025-0f56-4f6b-a970-a4e4b54ec5be": "김시환",
+};
+const MANAGER_NAME_TO_UUID: Record<string, string> = Object.fromEntries(
+  Object.entries(MANAGER_UUID_TO_NAME).map(([k, v]) => [v, k])
+);
 type SaleDetail = {
   id: string;
   open_date: string | null;
@@ -326,7 +337,7 @@ const RankingPage = () => {
     const { data } = await supabase
       .from("sales")
       .select("id, open_date, device_model, product, sale_type, open_method, status, manager, channel, rate_plan, custom_fields")
-      .eq("manager", u.name)
+      .or(\`manager.eq."${u.name}",manager.eq."${MANAGER_NAME_TO_UUID[u.name] ?? "__NO_UUID__"}"\`)
       .in("status", COUNTED_STATUSES)
       .gte("open_date", start)
       .lte("open_date", end)
