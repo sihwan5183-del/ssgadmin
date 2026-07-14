@@ -2695,7 +2695,7 @@ export default function LeadsPage() {
                         (item as any).sales_recare_date ? (
                         <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-bold text-[10px] border border-purple-300">📅 {(item as any).sales_recare_date.slice(5).replace("-","/")}</span>
                       ) : (
-                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-bold text-[10px] border border-purple-300">🔄 재케어</span>
+                        <span className="text-muted-foreground text-[11px]">-</span>
                       )
                       ) : (item as any).happy_call_result === "부재" ? (
                         <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold text-[10px] border border-orange-300">📵 부재</span>
