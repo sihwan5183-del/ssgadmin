@@ -102,7 +102,7 @@ function getDogmaruTab(r: any): string {
 }
 
 function MobileLeadsView({
-  rows, loading, sourceTab, setSourceTab, search, setSearch, updateStatus, updateAssignee, adjustAbsenceCount, staff, onSwitchToFull
+  rows, loading, sourceTab, setSourceTab, search, setSearch, updateStatus, updateAssignee, adjustAbsenceCount, saveHappyCall, staff, onSwitchToFull
 }: {
   rows: Lead[];
   loading: boolean;
@@ -113,6 +113,7 @@ function MobileLeadsView({
   updateStatus: (id: string, status: string) => Promise<void>;
   updateAssignee: (id: string, assigned_to: string | null) => Promise<void>;
   adjustAbsenceCount: (lead: Lead, delta: number) => Promise<void>;
+  saveHappyCall: (lead: Lead, happy_call: string | null, happy_call_result: string | null) => Promise<void>;
   staff: { user_id: string; display_name: string }[];
   onSwitchToFull: () => void;
 }) {
@@ -1519,6 +1520,37 @@ export default function LeadsPage() {
     }).catch((e) => console.warn('[activity_logs] 실패:', e));
   }
 
+  // 해피콜/영업 결과 저장 (초기화 포함)
+  async function saveHappyCall(lead: Lead, happy_call: string | null, happy_call_result: string | null) {
+    setHappyCallSaving(true);
+    const changedBy = user?.user_metadata?.display_name ?? user?.email ?? "unknown";
+    const updatePayload: any = { happy_call, happy_call_result };
+    if (happy_call_result === "재케어") {
+      updatePayload.sales_recare_date = salesRecareDate || (lead as any).sales_recare_date || null;
+    } else {
+      updatePayload.sales_recare_date = null;
+    }
+    const { error } = await supabase.from("leads")
+      .update(updatePayload)
+      .eq("id", lead.id);
+    if (!error) {
+      const logStatus = happy_call_result
+        ? `영업:${happy_call_result}`
+        : happy_call ? `해피콜:${happy_call}` : "해피콜/영업 초기화";
+      await supabase.from("lead_status_logs").insert({
+        lead_id: lead.id,
+        status: logStatus,
+        changed_by: changedBy,
+      });
+      toast.success("저장되었습니다 ✅");
+      setRows((p) => p.map((r) => r.id === lead.id ? { ...r, ...updatePayload } : r));
+      if (openLead?.id === lead.id) setOpenLead({ ...lead, ...updatePayload });
+    } else {
+      toast.error(error.message);
+    }
+    setHappyCallSaving(false);
+  }
+
   // 부재케어 카운트 수동 조정
   async function adjustAbsenceCount(lead: Lead, delta: number) {
     const changedBy = user?.user_metadata?.display_name ?? user?.email ?? "unknown";
@@ -1624,6 +1656,7 @@ export default function LeadsPage() {
       updateStatus={updateStatus}
       updateAssignee={updateAssignee}
       adjustAbsenceCount={adjustAbsenceCount}
+      saveHappyCall={saveHappyCall}
       staff={staff}
       onSwitchToFull={() => setMobileFullView(true)}
     />;
@@ -2539,11 +2572,17 @@ export default function LeadsPage() {
                   {(["즉시", "택배"] as const).map((v) => (
                     <button key={v}
                       onClick={async () => {
-                        const next = (openLead as any).delivery_type === v ? null : v;
+                        const prev = (openLead as any).delivery_type ?? null;
+                        const next = prev === v ? null : v;
                         setOpenLead({ ...openLead, delivery_type: next } as any);
-                        await supabase.from("leads").update({ delivery_type: next }).eq("id", openLead.id);
+                        const { error } = await supabase.from("leads").update({ delivery_type: next }).eq("id", openLead.id);
+                        if (error) {
+                          setOpenLead({ ...openLead, delivery_type: prev } as any);
+                          toast.error("개통방식 저장 실패: " + error.message);
+                          return;
+                        }
                         setRows(p => p.map(r => r.id === openLead.id ? { ...r, delivery_type: next } as any : r));
-                        toast.success("개통방식 저장 완료");
+                        toast.success(next ? "개통방식 저장 완료" : "개통방식 선택 해제");
                       }}
                       className={`flex-1 py-2.5 rounded-lg border text-sm font-bold transition-colors ${(openLead as any).delivery_type === v ? (v === "즉시" ? "bg-blue-100 text-blue-700 border-blue-400" : "bg-orange-100 text-orange-700 border-orange-400") : "bg-background border-border text-muted-foreground hover:bg-muted/60"}`}
                     >

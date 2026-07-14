@@ -3208,11 +3208,17 @@ export default function LeadsPage() {
                   {(["즉시", "택배"] as const).map((v) => (
                     <button key={v}
                       onClick={async () => {
-                        const next = (openLead as any).delivery_type === v ? null : v;
+                        const prev = (openLead as any).delivery_type ?? null;
+                        const next = prev === v ? null : v;
                         setOpenLead({ ...openLead, delivery_type: next } as any);
-                        await supabase.from("leads").update({ delivery_type: next }).eq("id", openLead.id);
+                        const { error } = await supabase.from("leads").update({ delivery_type: next }).eq("id", openLead.id);
+                        if (error) {
+                          setOpenLead({ ...openLead, delivery_type: prev } as any);
+                          toast.error("개통방식 저장 실패: " + error.message);
+                          return;
+                        }
                         setRows(p => p.map(r => r.id === openLead.id ? { ...r, delivery_type: next } as any : r));
-                        toast.success("개통방식 저장 완료");
+                        toast.success(next ? "개통방식 저장 완료" : "개통방식 선택 해제");
                       }}
                       className={`flex-1 py-2.5 rounded-lg border text-sm font-bold transition-colors ${(openLead as any).delivery_type === v ? (v === "즉시" ? "bg-blue-100 text-blue-700 border-blue-400" : "bg-orange-100 text-orange-700 border-orange-400") : "bg-background border-border text-muted-foreground"}`}
                     >
