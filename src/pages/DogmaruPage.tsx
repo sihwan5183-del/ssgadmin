@@ -2092,13 +2092,13 @@ export default function LeadsPage() {
                   <ColumnFilter label="해지 및 철회" values={valCancellation} selected={fCancellation} onChange={setFCancellation} />
                 </TableHead>
                 <TableHead className="text-foreground font-bold">가입번호</TableHead>
-                <TableHead className="text-foreground font-bold">택배개통</TableHead>
+                <TableHead className="text-foreground font-bold w-16 text-center whitespace-nowrap">개통방식</TableHead>
+                <TableHead className="text-foreground font-bold">비고</TableHead>
                 <TableHead className="text-foreground font-bold">비고</TableHead>
                 <TableHead className="text-foreground font-bold w-28 text-xs whitespace-nowrap">최종액션</TableHead>
-                <TableHead className="text-foreground font-bold w-16 text-center">해피콜</TableHead>
-                <TableHead className="text-foreground font-bold w-16 text-center">영업</TableHead>
-                <TableHead className="text-foreground font-bold w-20 text-center">관리</TableHead>
-              </TableRow>
+                <TableHead className="text-foreground font-bold w-20 text-center whitespace-nowrap">해피콜</TableHead>
+                <TableHead className="text-foreground font-bold w-20 text-center whitespace-nowrap">영업</TableHead>
+                <TableHead className="text-foreground font-bold w-16 text-center whitespace-nowrap">관리</TableHead>
             </TableHeader>
             <TableBody>
               {loading && (
@@ -2175,6 +2175,13 @@ export default function LeadsPage() {
                     <TableCell className="tabular-nums text-foreground/80 py-1.5">
                       {item.activation_number ?? "-"}
                     </TableCell>
+                    <TableCell className="text-center py-1.5">
+                      {(item as any).delivery_type === "즉시" ? (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold border border-blue-300">⚡즉시</span>
+                      ) : (item as any).delivery_type === "택배" ? (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold border border-orange-300">📦택배</span>
+                      ) : <span className="text-muted-foreground text-[10px]">-</span>}
+                    </TableCell>
                     <TableCell className="text-foreground/80 py-1.5">
                       {item.pkg_number ?? "-"}
                     </TableCell>
@@ -2190,11 +2197,19 @@ export default function LeadsPage() {
                       ) : <span className="text-gray-300">-</span>}
                     </TableCell>
                     <TableCell className="text-center py-1.5">
-                      {(item as any).happy_call === "O" ? (
-                        <span className="inline-flex items-center justify-center size-6 rounded-full bg-emerald-100 text-emerald-700 font-bold text-xs border border-emerald-300">O</span>
-                      ) : (item as any).happy_call === "X" ? (
-                        <span className="inline-flex items-center justify-center size-6 rounded-full bg-rose-100 text-rose-700 font-bold text-xs border border-rose-300">X</span>
-                      ) : <span className="text-muted-foreground text-[11px]">-</span>}
+                      <div className="flex flex-col items-center gap-0.5">
+                        {(item as any).happy_call === "O" ? (
+                          <span className="text-[10px] px-1 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold">1차O</span>
+                        ) : (item as any).happy_call === "X" ? (
+                          <span className="text-[10px] px-1 py-0.5 rounded bg-rose-100 text-rose-700 font-bold">1차X</span>
+                        ) : <span className="text-muted-foreground text-[10px]">-</span>}
+                        {(item as any).happy_call_2nd === "O" && (
+                          <span className="text-[10px] px-1 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold">2차O</span>
+                        )}
+                        {(item as any).happy_call_2nd === "X" && (
+                          <span className="text-[10px] px-1 py-0.5 rounded bg-rose-100 text-rose-700 font-bold">2차X</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-center py-1.5">
                   {(r as any).happy_call_result === "성공" ? (
