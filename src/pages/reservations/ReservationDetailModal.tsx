@@ -214,7 +214,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                         <SelectTrigger className="text-sm h-8">
                           <SelectValue placeholder="담당자 선택" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent position="item-aligned">
                           <SelectItem value="_none_">미배정</SelectItem>
                           {staff.map(s => (
                             <SelectItem key={s.user_id} value={s.user_id}>{s.display_name}</SelectItem>
@@ -233,7 +233,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                   <SelectTrigger className="text-sm">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="item-aligned">
                     {RESERVATION_STATUS_LIST.map((s) => (
                       <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                     ))}
@@ -249,7 +249,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                     <SelectTrigger className="text-sm bg-white">
                       <SelectValue placeholder="실패 사유 선택" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent position="item-aligned">
                       {failReasons.map((fr) => (
                         <SelectItem key={fr.id} value={fr.id}>{fr.reason}</SelectItem>
                       ))}
@@ -272,7 +272,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                     <SelectTrigger className="text-sm">
                       <SelectValue placeholder="선택" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent position="item-aligned">
                       <SelectItem value="_none_">선택 안함</SelectItem>
                       {CARRIER_OPTIONS.map((c) => (
                         <SelectItem key={c} value={c}>{c}</SelectItem>
@@ -286,7 +286,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                     <SelectTrigger className="text-sm">
                       <SelectValue placeholder="선택" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent position="item-aligned">
                       <SelectItem value="_none_">선택 안함</SelectItem>
                       {CHANNEL_OPTIONS.map((c) => (
                         <SelectItem key={c} value={c}>{c}</SelectItem>
@@ -300,7 +300,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                 <label className="text-xs text-gray-500 mb-1 block">관심 기기</label>
                 <Select value={device || '_none_'} onValueChange={v => setDevice(v === '_none_' ? '' : v)}>
                   <SelectTrigger className="text-sm"><SelectValue placeholder="기기 선택" /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="item-aligned">
                     <SelectItem value="_none_">선택 안함</SelectItem>
                     <SelectItem value="갤럭시 Z 플립8">갤럭시 Z 플립8</SelectItem>
                     <SelectItem value="갤럭시 Z 폴드8">갤럭시 Z 폴드8</SelectItem>
@@ -312,7 +312,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                 <label className="text-xs text-gray-500 mb-1 block">용량</label>
                 <Select value={capacity || '_none_'} onValueChange={v => setCapacity(v === '_none_' ? '' : v)}>
                   <SelectTrigger className="text-sm"><SelectValue placeholder="선택" /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="item-aligned">
                     <SelectItem value="_none_">선택 안함</SelectItem>
                     <SelectItem value="256GB">256GB</SelectItem>
                     <SelectItem value="512GB">512GB</SelectItem>
@@ -323,7 +323,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                 <label className="text-xs text-gray-500 mb-1 block">컬러 <span className="text-gray-400 text-[10px]">(재고/설정 → 필드 옵션)</span></label>
                 <Select value={color || '_none_'} onValueChange={v => setColor(v === '_none_' ? '' : v)}>
                   <SelectTrigger className="text-sm"><SelectValue placeholder="미정" /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="item-aligned">
                     <SelectItem value="_none_">미정</SelectItem>
                     {colorOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
@@ -385,9 +385,9 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
         </DialogContent>
       </Dialog>
 
-      {/* 실패 사유 인터셉트 모달 - createPortal로 body에 마운트 */}
+      {/* 실패 사유 인터셉트 모달 */}
       {failModalOpen && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50"
+        <div style={{position:'fixed',inset:0,zIndex:99999,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.5)'}}
           onClick={() => { setFailModalOpen(false); setPendingStatus(null); }}>
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6"
             onClick={(e) => e.stopPropagation()}>
@@ -398,7 +398,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                 <SelectTrigger className="text-sm">
                   <SelectValue placeholder="실패 사유 선택 *" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="item-aligned">
                   {failReasons.map((fr) => (
                     <SelectItem key={fr.id} value={fr.id}>{fr.reason}</SelectItem>
                   ))}
