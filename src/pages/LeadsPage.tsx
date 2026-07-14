@@ -268,7 +268,7 @@ function MobileLeadsView({
   const absMetaCount = tabRows.filter(r => r.status === "부재").length;
   const recareMetaCount = tabRows.filter(r => r.status === "재케어").length;
   const cancelCount = tabRows.filter(r => r.status === "취소").length;
-  const completeMetaCount = tabRows.filter(r => r.status === "개통 완료").length;
+  const completeMetaCount = tabRows.filter(r => r.status === "개통완료").length;
 
   async function handleStatus(lead: Lead, status: string) {
     console.log("[Mobile handleStatus START]", {
@@ -1310,7 +1310,7 @@ export default function LeadsPage() {
         if (pcCareTab === "complete" && r.status !== "개통완료") return false;
         if (pcCareTab === "care" && r.status !== "케어중") return false;
         if (pcCareTab === "cancel" && r.status !== "취소") return false;
-        if (pcCareTab === "complete_meta" && r.status !== "개통 완료") return false;
+        if (pcCareTab === "complete_meta" && r.status !== "개통완료") return false;
         if (pcCareTab === "udak_success" && r.status !== "성공") return false;
         if (pcCareTab === "udak_fail" && r.status !== "실패") return false;
         if (pcCareTab === "udak_delivery" && r.status !== "택배발송") return false;
@@ -1486,7 +1486,7 @@ export default function LeadsPage() {
     return {
       total: rows.length,
       todayNew: rows.filter((r) => r.created_at.slice(0, 10) === today).length,
-      completed: rows.filter((r) => r.status === "개통 완료").length,
+      completed: rows.filter((r) => r.status === "개통완료").length,
       newCount: rows.filter((r) => r.status === "신규 접수").length,
     };
   }, [rows]);
@@ -1570,7 +1570,7 @@ export default function LeadsPage() {
         else if (tab === "부재케어") bucket.absent += 1;
         else if (tab === "실패") bucket.fail += 1;
       } else {
-        if (r.status === "개통 완료") bucket.done += 1;
+        if (r.status === "개통완료") bucket.done += 1;
         if (r.status === "재케어") bucket.recare += 1;
         if (r.status === "부재 중") bucket.absent += 1;
         if (r.status === "실패" || r.status === "취소") bucket.fail += 1;
@@ -1640,7 +1640,7 @@ export default function LeadsPage() {
       const b = bump(name);
       b.total += 1;
       if (r.created_at.slice(0, 10) === today) b.today += 1;
-      if (r.status === "개통 완료") b.done += 1;
+      if (r.status === "개통완료") b.done += 1;
       if (r.status === "재케어") b.recare += 1;
       if (r.status === "부재 중") b.absent += 1;
       if (r.status === "실패" || r.status === "취소") b.fail += 1;
