@@ -2538,10 +2538,17 @@ export default function LeadsPage() {
                 <TableHead className="text-foreground font-bold whitespace-nowrap">고객성명</TableHead>
                 <TableHead className="text-foreground font-bold w-[110px] whitespace-nowrap">연락처</TableHead>
                 <TableHead className="text-foreground font-bold whitespace-nowrap">
+                  <ColumnFilter label="접수 지점명" values={valBranch} selected={fBranch} onChange={setFBranch} />
+                </TableHead>
+                <TableHead className="text-foreground font-bold whitespace-nowrap">
                   <ColumnFilter label="개통 상태" values={valActivation} selected={fActivation} onChange={setFActivation} />
+                </TableHead>
+                <TableHead className="text-foreground font-bold whitespace-nowrap">
+                  <ColumnFilter label="해지 및 철회" values={valCancellation} selected={fCancellation} onChange={setFCancellation} />
                 </TableHead>
                 <TableHead className="text-foreground font-bold whitespace-nowrap">가입번호</TableHead>
                 <TableHead className="text-foreground font-bold w-16 text-center whitespace-nowrap">개통방식</TableHead>
+                <TableHead className="text-foreground font-bold whitespace-nowrap">택배개통</TableHead>
                 <TableHead className="text-foreground font-bold whitespace-nowrap">비고</TableHead>
                 <TableHead className="text-foreground font-bold w-28 text-xs whitespace-nowrap">최종액션</TableHead>
                 <TableHead className="text-foreground font-bold w-20 text-center whitespace-nowrap">해피콜</TableHead>
@@ -2552,14 +2559,14 @@ export default function LeadsPage() {
             <TableBody>
               {loading && (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center py-10 text-foreground/60">
+                  <TableCell colSpan={15} className="text-center py-10 text-foreground/60">
                     불러오는 중…
                   </TableCell>
                 </TableRow>
               )}
               {!loading && pagedFiltered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-10 text-foreground/60">
+                  <TableCell colSpan={15} className="text-center py-10 text-foreground/60">
                     도그마루 시트에서 인입된 데이터가 없습니다.
                   </TableCell>
                 </TableRow>
