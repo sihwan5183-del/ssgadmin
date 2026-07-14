@@ -1045,6 +1045,7 @@ export default function LeadsPage() {
   const [savingLeadInfo, setSavingLeadInfo] = useState(false);
   const [happyCallSaving, setHappyCallSaving] = useState(false);
   const [notes, setNotes] = useState<LeadNote[]>([]);
+  const [salesRecareDate, setSalesRecareDate] = useState<string>('');
   const [failReasons, setFailReasons] = useState<{id:string;label:string;sort_order:number}[]>([]);
   const [failModal, setFailModal] = useState<Lead | null>(null);
   const [detailStatusSelectOpen, setDetailStatusSelectOpen] = useState(false);
@@ -1862,8 +1863,14 @@ export default function LeadsPage() {
   async function saveHappyCall(lead: Lead, happy_call: string | null, happy_call_result: string | null) {
     setHappyCallSaving(true);
     const changedBy = user?.user_metadata?.display_name ?? user?.email ?? "unknown";
+    const updatePayload: any = { happy_call, happy_call_result };
+    if (happy_call_result === "재케어") {
+      updatePayload.sales_recare_date = salesRecareDate || null;
+    } else {
+      updatePayload.sales_recare_date = null;
+    }
     const { error } = await supabase.from("leads")
-      .update({ happy_call, happy_call_result })
+      .update(updatePayload)
       .eq("id", lead.id);
     if (!error) {
       const logStatus = happy_call_result
@@ -1875,8 +1882,8 @@ export default function LeadsPage() {
         changed_by: changedBy,
       });
       toast.success("저장되었습니다 ✅");
-      setRows((p) => p.map((r) => r.id === lead.id ? { ...r, happy_call, happy_call_result } : r));
-      if (openLead?.id === lead.id) setOpenLead({ ...lead, happy_call, happy_call_result });
+      setRows((p) => p.map((r) => r.id === lead.id ? { ...r, ...updatePayload } : r));
+      if (openLead?.id === lead.id) setOpenLead({ ...lead, ...updatePayload });
     }
     setHappyCallSaving(false);
   }
@@ -3196,6 +3203,59 @@ export default function LeadsPage() {
                 </div>
               </div>
               )}
+              {/* 영업 결과 - 도그마루 + 해피콜 O인 경우 */}
+              {(openLead.channel !== "유닥" && openLead.channel !== "메타광고") && (
+              <div className={`mt-2 p-4 rounded-xl border space-y-2 transition-opacity ${(openLead as any).happy_call === "O" ? "border-border bg-muted/30 opacity-100" : "border-dashed border-border/50 bg-muted/10 opacity-40 pointer-events-none"}`}>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-bold text-foreground">💼 영업 결과</div>
+                  <div className="text-[10px] text-muted-foreground">해피콜 O인 경우만 활성</div>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {[
+                    ["성공",   "bg-emerald-100 text-emerald-700 border-emerald-400",  "bg-background border-border text-muted-foreground", "✅"],
+                    ["재케어", "bg-purple-100 text-purple-700 border-purple-400",     "bg-background border-border text-muted-foreground", "🔄"],
+                    ["부재",   "bg-orange-100 text-orange-700 border-orange-400",     "bg-background border-border text-muted-foreground", "📵"],
+                    ["실패",   "bg-rose-100 text-rose-700 border-rose-400",           "bg-background border-border text-muted-foreground", "❌"],
+                  ].map(([v, activeClass, inactiveClass, emoji]) => (
+                    <button
+                      key={v}
+                      onClick={() => {
+                        const next = (openLead as any).happy_call_result === v ? null : v;
+                        setOpenLead({ ...openLead, happy_call_result: next } as any);
+                        if (next !== "재케어") setSalesRecareDate("");
+                      }}
+                      className={`flex-1 py-2.5 rounded-lg border text-sm font-bold transition-colors ${(openLead as any).happy_call_result === v ? activeClass : inactiveClass}`}
+                    >
+                      {emoji} {v}
+                    </button>
+                  ))}
+                </div>
+                {(openLead as any).happy_call_result === "재케어" && (
+                  <div className="flex items-center gap-2 p-2 bg-purple-50 rounded-lg border border-purple-200">
+                    <span className="text-xs font-semibold text-purple-700 flex-shrink-0">📅 재케어 날짜</span>
+                    <input
+                      type="date"
+                      value={salesRecareDate || (openLead as any).sales_recare_date || ""}
+                      min={new Date().toISOString().slice(0,10)}
+                      onChange={(e) => setSalesRecareDate(e.target.value)}
+                      className="flex-1 text-xs border border-purple-300 rounded px-2 py-1 text-purple-700 bg-white"
+                    />
+                  </div>
+                )}
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-muted-foreground">
+                    {(openLead as any).happy_call_result ? `현재: ${(openLead as any).happy_call_result}` : "⚠️ 미설정"}
+                  </span>
+                  <div className="flex gap-2">
+                    {(openLead as any).happy_call_result && <button onClick={() => saveHappyCall(openLead, (openLead as any).happy_call, null)} className="px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:bg-muted/60">초기화</button>}
+                    <button onClick={() => saveHappyCall(openLead, (openLead as any).happy_call, (openLead as any).happy_call_result)} disabled={happyCallSaving} className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50">
+                      {happyCallSaving ? "저장 중..." : "저장"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              )}
+
               {/* Consultation memo feed */}
               <div className="mt-6">
                 {/* 헤더 - 상태에 따라 텍스트 변경 */}
