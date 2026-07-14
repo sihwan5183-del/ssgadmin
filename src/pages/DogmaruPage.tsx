@@ -129,7 +129,6 @@ function MobileLeadsView({
   const [memoDraft, setMemoDraft] = useState("");
   const [memoSaving, setMemoSaving] = useState(false);
   const [happyCallSaving, setHappyCallSaving] = useState(false);
-  const [salesRecareDate, setSalesRecareDate] = useState<string>('');
   const [failModal, setFailModal] = useState<Lead | null>(null);
   const [failReason, setFailReason] = useState("");
   const [failMemo, setFailMemo] = useState("");
