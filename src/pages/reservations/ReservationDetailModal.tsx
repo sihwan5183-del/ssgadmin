@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -384,9 +385,9 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
         </DialogContent>
       </Dialog>
 
-      {/* 실패 사유 인터셉트 모달 */}
-      {failModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50"
+      {/* 실패 사유 인터셉트 모달 - createPortal로 body에 마운트 */}
+      {failModalOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50"
           onClick={() => { setFailModalOpen(false); setPendingStatus(null); }}>
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6"
             onClick={(e) => e.stopPropagation()}>
@@ -452,7 +453,8 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
