@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { createPortal } from 'react-dom';
+import { AlertDialog, AlertDialogContent } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -386,11 +386,10 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
       </Dialog>
 
       {/* 실패 사유 인터셉트 모달 */}
-      {failModalOpen && createPortal(
-        <div style={{position:'fixed',inset:0,zIndex:99999,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.5)'}}
-          onClick={() => { setFailModalOpen(false); setPendingStatus(null); }}>
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6"
-            onClick={(e) => e.stopPropagation()}>
+      {failModalOpen && (
+        <AlertDialog open={failModalOpen} onOpenChange={(v) => { if (!v) { setFailModalOpen(false); setPendingStatus(null); } }}>
+          <AlertDialogContent className="max-w-sm rounded-2xl">
+            <div>
             <div className="font-bold text-sm mb-1 text-red-600">상담실패 처리</div>
             <div className="text-xs text-gray-500 mb-4">실패 사유를 선택해야 저장할 수 있습니다</div>
             <div className="space-y-3">
@@ -452,9 +451,9 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                 {deleting ? '삭제 중...' : '삭제'}
               </Button>
             </div>
-          </div>
-        </div>,
-        document.body
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </>
   );
