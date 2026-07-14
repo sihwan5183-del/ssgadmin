@@ -2624,6 +2624,13 @@ export default function LeadsPage() {
                     <TableCell className="tabular-nums text-foreground/80 py-1.5">
                       {item.activation_number ?? "-"}
                     </TableCell>
+                    <TableCell className="text-center py-1.5">
+                      {(item as any).delivery_type === "즉시" ? (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold border border-blue-300">⚡즉시</span>
+                      ) : (item as any).delivery_type === "택배" ? (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold border border-orange-300">📦택배</span>
+                      ) : <span className="text-muted-foreground text-[10px]">-</span>}
+                    </TableCell>
                     <TableCell className="text-foreground/80 py-1.5">
                       {item.pkg_number ?? "-"}
                     </TableCell>
