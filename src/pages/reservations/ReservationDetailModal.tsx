@@ -37,6 +37,9 @@ interface Props {
   onDone: () => void;
 }
 
+// 관심기기 표준 옵션 (신규 저장 시 이 값들만 선택 가능)
+const DEVICE_OPTIONS = ['갤럭시 Z 플립8', '갤럭시 Z 폴드8', '갤럭시 Z 폴드8 와이드'];
+
 function StatusBadge({ status }: { status: ReservationStatus }) {
   const found = RESERVATION_STATUS_LIST.find((s) => s.value === status);
   return (
@@ -74,6 +77,12 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
   const [selectedFailReason, setSelectedFailReason] = useState<string>('');
   const [failMemo, setFailMemo] = useState('');
   const [pendingStatus, setPendingStatus] = useState<ReservationStatus | null>(null);
+
+  // 저장된 값이 표준 옵션에 없을 경우, 목록에 그 값을 추가해서
+  // 드롭다운이 비어 보이거나 저장 시 값이 유실되는 것을 방지
+  const deviceSelectOptions = device && !DEVICE_OPTIONS.includes(device)
+    ? [...DEVICE_OPTIONS, device]
+    : DEVICE_OPTIONS;
 
   useEffect(() => {
     const load = async () => {
@@ -299,14 +308,21 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
               </div>
 
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">관심 기기</label>
+                <label className="text-xs text-gray-500 mb-1 block">
+                  관심 기기
+                  {device && !DEVICE_OPTIONS.includes(device) && (
+                    <span className="ml-1.5 text-[10px] text-orange-500 font-medium">
+                      ⚠ 표준값 아님 (원본 그대로 표시 중)
+                    </span>
+                  )}
+                </label>
                 <Select value={device || '_none_'} onValueChange={v => setDevice(v === '_none_' ? '' : v)}>
                   <SelectTrigger className="text-sm"><SelectValue placeholder="기기 선택" /></SelectTrigger>
                   <SelectContent position="item-aligned">
                     <SelectItem value="_none_">선택 안함</SelectItem>
-                    <SelectItem value="갤럭시 Z 플립8">갤럭시 Z 플립8</SelectItem>
-                    <SelectItem value="갤럭시 Z 폴드8">갤럭시 Z 폴드8</SelectItem>
-                    <SelectItem value="갤럭시 Z 폴드8 와이드">갤럭시 Z 폴드8 와이드</SelectItem>
+                    {deviceSelectOptions.map(d => (
+                      <SelectItem key={d} value={d}>{d}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -458,7 +474,3 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
     </>
   );
 }
-
-
-
-
