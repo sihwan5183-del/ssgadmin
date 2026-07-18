@@ -101,9 +101,20 @@ export interface ReservationUpdate {
   sms_sent_at?: string | null;
 }
 
+// 메모 히스토리 로그 (reservation_memo_logs 테이블)
+export interface ReservationMemoLog {
+  id: string;
+  reservation_id: string;
+  content: string;
+  created_by: string | null;
+  created_at: string;
+  // join
+  author?: { display_name: string | null } | null;
+}
+
 export const CARRIER_OPTIONS = ['LG U+', 'SKT', 'KT', '알뜰폰'];
 export const CHANNEL_OPTIONS = ['메타광고', '네이버 검색광고', '기타'];
-export const DEVICE_OPTIONS = ['갤럭시 Z 폴더블8'];
+export const DEVICE_OPTIONS = ['갤럭시 Z 플립8', '갤럭시 Z 폴드8', '갤럭시 Z 폴드8 와이드'];
 
 // 실패 상태 판별
 export const isFailStatus = (status: ReservationStatus) =>
@@ -112,5 +123,4 @@ export const isFailStatus = (status: ReservationStatus) =>
 // 완료 상태 판별
 export const isCompleteStatus = (status: ReservationStatus) =>
   status === '예약완료' || status === '개통완료';
-
 
