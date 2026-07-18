@@ -8,6 +8,7 @@ import type {
   ReservationUpdate,
   ReservationFailReason,
   ReservationStatus,
+  ReservationMemoLog,
 } from '@/types/reservation';
 
 // ── 실패 사유 목록 ─────────────────────────────────────────
@@ -123,6 +124,50 @@ export async function deleteReservation(id: string): Promise<void> {
   if (error) throw error;
 }
 
+// ── 메모 히스토리 ──────────────────────────────────────────
+// 메모는 덮어쓰기가 아닌 누적 로그로 관리합니다 (reservation_memo_logs 테이블).
+// reservations.memo 컬럼은 목록/CSV 호환을 위해 "최신 메모" 요약만 계속 미러링합니다.
+export async function fetchMemoLogs(reservationId: string): Promise<ReservationMemoLog[]> {
+  const { data, error } = await supabase
+    .from('reservation_memo_logs')
+    .select('*, author:profiles!reservation_memo_logs_created_by_fkey(display_name)')
+    .eq('reservation_id', reservationId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as unknown as ReservationMemoLog[];
+}
+
+export async function addMemoLog(
+  reservationId: string,
+  content: string,
+  userId?: string | null
+): Promise<ReservationMemoLog> {
+  const trimmed = content.trim();
+  if (!trimmed) throw new Error('메모 내용을 입력해주세요');
+
+  const { data, error } = await supabase
+    .from('reservation_memo_logs')
+    .insert({ reservation_id: reservationId, content: trimmed, created_by: userId || null })
+    .select('*, author:profiles!reservation_memo_logs_created_by_fkey(display_name)')
+    .single();
+  if (error) throw error;
+
+  // 목록/CSV 호환용 memo 컬럼에 최신 요약 미러링 (실패해도 로그 저장 자체는 이미 성공)
+  try {
+    const stamp = new Date().toLocaleString('ko-KR', {
+      month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+    });
+    await supabase
+      .from('reservations')
+      .update({ memo: `[${stamp}] ${trimmed}` })
+      .eq('id', reservationId);
+  } catch {
+    /* noop */
+  }
+
+  return data as unknown as ReservationMemoLog;
+}
+
 // ── 통계 ───────────────────────────────────────────────────
 export interface ReservationStats {
   total: number;
@@ -155,5 +200,4 @@ export async function fetchReservationStats(): Promise<ReservationStats> {
     activationRate: successCount > 0 ? Math.round((activationCount / successCount) * 100) : 0,
   };
 }
-
 
