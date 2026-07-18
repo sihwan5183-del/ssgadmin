@@ -1,6 +1,7 @@
 // ============================================================
 // 사전예약 관리 — 상세 / 수정 모달
 // 상담실패 선택 시 실패사유 필수 인터셉트
+// 메모는 덮어쓰기가 아닌 히스토리 로그로 관리 (reservation_memo_logs)
 // ============================================================
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
@@ -16,8 +17,10 @@ import {
   updateReservation,
   fetchFailReasons,
   deleteReservation,
+  fetchMemoLogs,
+  addMemoLog,
 } from '@/services/reservationService';
-import type { Reservation, ReservationStatus, FailStage } from '@/types/reservation';
+import type { Reservation, ReservationStatus, FailStage, ReservationMemoLog } from '@/types/reservation';
 import {
   RESERVATION_STATUS_LIST,
   CARRIER_OPTIONS,
@@ -49,6 +52,14 @@ function StatusBadge({ status }: { status: ReservationStatus }) {
   );
 }
 
+function formatLogTime(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleString('ko-KR', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
 export function ReservationDetailModal({ reservationId, onClose, onDone }: Props) {
   const { isAdmin } = useRole();
   const { user } = useAuth();
@@ -69,8 +80,13 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
   const [device, setDevice] = useState('');
   const [capacity, setCapacity] = useState('');
   const [color, setColor] = useState('');
-  const [memo, setMemo] = useState('');
   const [assignedTo, setAssignedTo] = useState<string>('');
+
+  // 메모 히스토리
+  const [memoLogs, setMemoLogs] = useState<ReservationMemoLog[]>([]);
+  const [memoLogsLoading, setMemoLogsLoading] = useState(true);
+  const [newMemo, setNewMemo] = useState('');
+  const [memoSaving, setMemoSaving] = useState(false);
 
   // 실패 사유 모달 (상담실패 선택 시 인터셉트)
   const [failModalOpen, setFailModalOpen] = useState(false);
@@ -83,6 +99,18 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
   const deviceSelectOptions = device && !DEVICE_OPTIONS.includes(device)
     ? [...DEVICE_OPTIONS, device]
     : DEVICE_OPTIONS;
+
+  const loadMemoLogs = async () => {
+    setMemoLogsLoading(true);
+    try {
+      const logs = await fetchMemoLogs(reservationId);
+      setMemoLogs(logs);
+    } catch (e: any) {
+      toast.error('메모 히스토리 로드 실패: ' + e.message);
+    } finally {
+      setMemoLogsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -100,7 +128,6 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
         setDevice(r.device_interest ?? '');
         setCapacity(r.capacity ?? '');
         setColor((r as any).product_color ?? '');
-        setMemo(r.memo ?? '');
         setAssignedTo(r.assigned_to ?? '');
         if (r.fail_reason_id) setSelectedFailReason(r.fail_reason_id);
         if (r.fail_memo) setFailMemo(r.fail_memo);
@@ -111,6 +138,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
       }
     };
     load();
+    loadMemoLogs();
   }, [reservationId]);
 
   // 상태 변경 시 실패 인터셉트
@@ -128,6 +156,22 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
     if (!selectedFailReason) return toast.error('실패 사유를 선택해주세요');
     if (pendingStatus) setStatus(pendingStatus);
     setFailModalOpen(false);
+  };
+
+  // 메모 추가 (즉시 저장, 누적 로그)
+  const handleAddMemo = async () => {
+    if (!newMemo.trim()) return;
+    setMemoSaving(true);
+    try {
+      await addMemoLog(reservationId, newMemo, user?.id);
+      setNewMemo('');
+      await loadMemoLogs();
+      toast.success('메모가 추가되었습니다');
+    } catch (e: any) {
+      toast.error('메모 추가 실패: ' + e.message);
+    } finally {
+      setMemoSaving(false);
+    }
   };
 
   const handleSave = async () => {
@@ -155,7 +199,6 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
         device_interest: device || undefined,
         capacity: capacity || undefined,
         product_color: color || undefined,
-        memo: memo.trim() || undefined,
         assigned_to: assignedTo || null,
         fail_reason_id: status === '상담실패' ? selectedFailReason || null : null,
         fail_stage: status === '상담실패' ? '상담' as FailStage : null,
@@ -348,15 +391,55 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                 </Select>
               </div>
 
+              {/* 메모 히스토리 */}
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">메모</label>
-                <Textarea
-                  value={memo}
-                  onChange={(e) => setMemo(e.target.value)}
-                  placeholder="특이사항"
-                  className="text-sm resize-none"
-                  rows={3}
-                />
+                <label className="text-xs text-gray-500 mb-1 block">
+                  메모 히스토리 {memoLogs.length > 0 && <span className="text-gray-400">({memoLogs.length}건)</span>}
+                </label>
+
+                {/* 새 메모 입력 — 저장 버튼과 별개로 즉시 기록됨 */}
+                <div className="flex gap-1.5 mb-2">
+                  <Textarea
+                    value={newMemo}
+                    onChange={(e) => setNewMemo(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                        e.preventDefault();
+                        handleAddMemo();
+                      }
+                    }}
+                    placeholder="새 메모 입력 후 추가 (Cmd/Ctrl+Enter로도 등록)"
+                    className="text-sm resize-none flex-1"
+                    rows={2}
+                  />
+                  <Button
+                    size="sm"
+                    className="bg-pink-500 hover:bg-pink-600 text-white shrink-0 self-end"
+                    onClick={handleAddMemo}
+                    disabled={memoSaving || !newMemo.trim()}
+                  >
+                    {memoSaving ? '추가 중...' : '추가'}
+                  </Button>
+                </div>
+
+                {/* 히스토리 목록 (최신순) */}
+                <div className="bg-gray-50 rounded-xl border border-gray-100 max-h-52 overflow-y-auto divide-y divide-gray-100">
+                  {memoLogsLoading ? (
+                    <div className="py-6 text-center text-xs text-gray-400">불러오는 중...</div>
+                  ) : memoLogs.length === 0 ? (
+                    <div className="py-6 text-center text-xs text-gray-400">작성된 메모가 없습니다</div>
+                  ) : (
+                    memoLogs.map((log) => (
+                      <div key={log.id} className="px-3 py-2 text-sm">
+                        <div className="flex items-center justify-between text-[11px] text-gray-400 mb-0.5">
+                          <span>{log.author?.display_name ?? '알 수 없음'}</span>
+                          <span>{formatLogTime(log.created_at)}</span>
+                        </div>
+                        <div className="text-gray-700 whitespace-pre-wrap break-words">{log.content}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
 
               {/* 타임라인 */}
