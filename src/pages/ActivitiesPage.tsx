@@ -18,6 +18,7 @@ import {
   ClipboardList, CheckCircle2, Pencil, Building2, Clock, ShieldCheck, AlarmClock,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { PendingItemsEditor } from "@/components/sales/PendingItemsEditor";
 import { PlannerSuperView } from "@/components/sales/PlannerSuperView";
@@ -51,14 +52,18 @@ function MissingDocsSection() {
 
   const load = async () => {
     setLoading(true);
-    const { data: sales, error } = await supabase
-      .from("sales")
-      .select(
-        "id, customer_name, phone, device_serial, device_model, channel, open_date, manager, approval_status",
-      )
-      .order("open_date", { ascending: false, nullsFirst: false })
-      .limit(500);
-    if (error) {
+    let sales: any[];
+    try {
+      sales = await fetchAllRows(({ from, to }) =>
+        supabase
+          .from("sales")
+          .select(
+            "id, customer_name, phone, device_serial, device_model, channel, open_date, manager, approval_status",
+          )
+          .order("open_date", { ascending: false, nullsFirst: false })
+          .range(from, to),
+      );
+    } catch (error: any) {
       toast.error(error.message);
       setLoading(false);
       return;
@@ -241,15 +246,19 @@ function PendingItemsSection() {
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("sales")
-      .select(
-        "id, customer_name, phone, device_model, device_serial, channel, open_date, manager, approval_status, pending_items, pending_note, pending_resolved",
-      )
-      .eq("pending_resolved", false)
-      .order("open_date", { ascending: false, nullsFirst: false })
-      .limit(500);
-    if (error) {
+    let data: any[];
+    try {
+      data = await fetchAllRows(({ from, to }) =>
+        supabase
+          .from("sales")
+          .select(
+            "id, customer_name, phone, device_model, device_serial, channel, open_date, manager, approval_status, pending_items, pending_note, pending_resolved",
+          )
+          .eq("pending_resolved", false)
+          .order("open_date", { ascending: false, nullsFirst: false })
+          .range(from, to),
+      );
+    } catch (error: any) {
       toast.error(error.message);
       setLoading(false);
       return;
