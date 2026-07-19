@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useAppSettings } from "./useAppSettings";
 
 export interface StrategyProduct {
@@ -50,11 +51,13 @@ export const useStrategyConfig = () => {
       const monthStart = new Date();
       monthStart.setDate(1);
       const fromISO = monthStart.toISOString().slice(0, 10);
-      const { data } = await supabase
-        .from("sales")
-        .select("device_model, product, bundle, sale_type")
-        .gte("open_date", fromISO)
-        .limit(5000);
+      const data = await fetchAllRows(({ from, to }) =>
+        supabase
+          .from("sales")
+          .select("device_model, product, bundle, sale_type")
+          .gte("open_date", fromISO)
+          .range(from, to)
+      );
       const pc: Record<string, number> = {};
       const mc: Record<string, number> = {};
       (data ?? []).forEach((r: any) => {
