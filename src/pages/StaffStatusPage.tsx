@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
 import { usePeriod } from "@/contexts/PeriodContext";
@@ -263,42 +264,52 @@ export default function StaffStatusPage() {
     const names = profiles.map((p) => p.display_name);
     // Sales: rows where created_by in ids OR manager in names — fetch via two queries to avoid OR complexity
     const [{ data: byCreator }, { data: byManager }, { data: inq }, { data: goalRows }, { data: prevByCreator }, { data: prevByManager }, { data: inquiryRows }] = await Promise.all([
-      supabase.from("sales")
-        .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, status, approval_status, pending_resolved, pending_items, distributor_amount, net_fee, vas1, vas2")
-        .in("created_by", ids)
-        .gte("open_date", startDate)
-        .lte("open_date", endDate)
-        .order("open_date", { ascending: false })
-        .limit(5000),
-      supabase.from("sales")
-        .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, status, approval_status, pending_resolved, pending_items, distributor_amount, net_fee, vas1, vas2")
-        .in("manager", names)
-        .gte("open_date", startDate)
-        .lte("open_date", endDate)
-        .order("open_date", { ascending: false })
-        .limit(5000),
-      supabase.from("inquiries")
-        .select("id, manager, status, converted_sale_id, inquiry_date, channel")
-        .in("manager", names)
-        .gte("inquiry_date", startDate)
-        .lte("inquiry_date", endDate)
-        .limit(5000),
+      fetchAllRows(({ from, to }) =>
+        supabase.from("sales")
+          .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, status, approval_status, pending_resolved, pending_items, distributor_amount, net_fee, vas1, vas2")
+          .in("created_by", ids)
+          .gte("open_date", startDate)
+          .lte("open_date", endDate)
+          .order("open_date", { ascending: false })
+          .range(from, to)
+      ).then((data) => ({ data })),
+      fetchAllRows(({ from, to }) =>
+        supabase.from("sales")
+          .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, status, approval_status, pending_resolved, pending_items, distributor_amount, net_fee, vas1, vas2")
+          .in("manager", names)
+          .gte("open_date", startDate)
+          .lte("open_date", endDate)
+          .order("open_date", { ascending: false })
+          .range(from, to)
+      ).then((data) => ({ data })),
+      fetchAllRows(({ from, to }) =>
+        supabase.from("inquiries")
+          .select("id, manager, status, converted_sale_id, inquiry_date, channel")
+          .in("manager", names)
+          .gte("inquiry_date", startDate)
+          .lte("inquiry_date", endDate)
+          .range(from, to)
+      ).then((data) => ({ data })),
       supabase.from("staff_product_goals")
         .select("id, user_id, product, year_month, goal_count, sale_type, goal_type, goal_value")
         .in("user_id", ids)
         .eq("year_month", yearMonth),
-      supabase.from("sales")
-        .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, status, approval_status, pending_resolved, pending_items, distributor_amount, net_fee, vas1, vas2")
-        .in("created_by", ids)
-        .gte("open_date", prevRange.start)
-        .lte("open_date", prevRange.end)
-        .limit(5000),
-      supabase.from("sales")
-        .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, status, approval_status, pending_resolved, pending_items, distributor_amount, net_fee, vas1, vas2")
-        .in("manager", names)
-        .gte("open_date", prevRange.start)
-        .lte("open_date", prevRange.end)
-        .limit(5000),
+      fetchAllRows(({ from, to }) =>
+        supabase.from("sales")
+          .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, status, approval_status, pending_resolved, pending_items, distributor_amount, net_fee, vas1, vas2")
+          .in("created_by", ids)
+          .gte("open_date", prevRange.start)
+          .lte("open_date", prevRange.end)
+          .range(from, to)
+      ).then((data) => ({ data })),
+      fetchAllRows(({ from, to }) =>
+        supabase.from("sales")
+          .select("id, created_by, customer_name, device_model, product, channel, sale_type, open_date, manager, status, approval_status, pending_resolved, pending_items, distributor_amount, net_fee, vas1, vas2")
+          .in("manager", names)
+          .gte("open_date", prevRange.start)
+          .lte("open_date", prevRange.end)
+          .range(from, to)
+      ).then((data) => ({ data })),
       supabase.from("staff_monthly_inquiries")
         .select("user_id, year_month, inflow_count")
         .in("user_id", ids)
