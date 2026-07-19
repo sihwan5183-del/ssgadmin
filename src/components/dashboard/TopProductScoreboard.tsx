@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Smartphone, Wifi, Tv, Home, Star, Lightbulb, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { usePeriod } from "@/contexts/PeriodContext";
 import {
   PRODUCT_SCOPE_ITEMS,
@@ -44,21 +45,27 @@ export const TopProductScoreboard = () => {
     yDate.setDate(yDate.getDate() - 1);
     const ydayISO = yDate.toISOString().slice(0, 10);
     const [a, b, c] = await Promise.all([
-      applyActivationFilter(
-        supabase.from("sales").select("product, sale_type, open_date"),
-        startDate,
-        endDate,
-      ).limit(10000),
-      applyActivationFilter(
-        supabase.from("sales").select("product, sale_type, open_date"),
-        todayISO,
-        todayISO,
-      ).limit(5000),
-      applyActivationFilter(
-        supabase.from("sales").select("product, sale_type, open_date"),
-        ydayISO,
-        ydayISO,
-      ).limit(5000),
+      fetchAllRows(({ from, to }) =>
+        applyActivationFilter(
+          supabase.from("sales").select("product, sale_type, open_date"),
+          startDate,
+          endDate,
+        ).range(from, to)
+      ).then((data) => ({ data, error: null })),
+      fetchAllRows(({ from, to }) =>
+        applyActivationFilter(
+          supabase.from("sales").select("product, sale_type, open_date"),
+          todayISO,
+          todayISO,
+        ).range(from, to)
+      ).then((data) => ({ data, error: null })),
+      fetchAllRows(({ from, to }) =>
+        applyActivationFilter(
+          supabase.from("sales").select("product, sale_type, open_date"),
+          ydayISO,
+          ydayISO,
+        ).range(from, to)
+      ).then((data) => ({ data, error: null })),
     ]);
     setRows((a.data ?? []) as Row[]);
     setTodayRows((b.data ?? []) as Row[]);
