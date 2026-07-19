@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -76,11 +77,13 @@ export default function AccountStaffPage() {
         .select("user_id, display_name, phone, team, store, position, status, hire_date, created_at, show_in_dashboard, push_enabled")
         .order("created_at", { ascending: false }),
       supabase.from("user_roles").select("user_id, role"),
-      supabase.from("sales")
-        .select("created_by, approval_status")
-        .gte("open_date", monthStart)
-        .lte("open_date", monthEnd)
-        .limit(20000),
+      fetchAllRows(({ from, to }) =>
+        supabase.from("sales")
+          .select("created_by, approval_status")
+          .gte("open_date", monthStart)
+          .lte("open_date", monthEnd)
+          .range(from, to)
+      ).then((data) => ({ data })),
       supabase.from("user_push_tokens").select("user_id"),
     ]);
     setRows((profs ?? []) as Row[]);
