@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Smartphone, Sparkles, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { useStrategyConfig } from "@/hooks/useStrategyConfig";
 import { useProductScope, matchProductScope } from "@/contexts/ProductScopeContext";
@@ -17,14 +18,16 @@ export const ActivationBreakdown = () => {
     let alive = true;
     (async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from("sales")
-        .select("channel, sale_type, product, bundle, custom_fields")
-        .gte("open_date", startDate)
-        .lte("open_date", endDate)
-        .limit(10000);
+      const data = await fetchAllRows(({ from, to }) =>
+        supabase
+          .from("sales")
+          .select("channel, sale_type, product, bundle, custom_fields")
+          .gte("open_date", startDate)
+          .lte("open_date", endDate)
+          .range(from, to)
+      );
       if (!alive) return;
-      setAllRows(data ?? []);
+      setAllRows(data);
       setLoading(false);
     })();
     return () => { alive = false; };
