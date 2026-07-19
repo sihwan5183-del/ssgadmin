@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -163,12 +164,14 @@ export default function StaffGoalsPage() {
         .select("team, product, goal_count, goal_input_mode, goal_percent")
         .eq("year_month", yearMonth)
         .eq("goal_type", "count"),
-      supabase
-        .from("sales")
-        .select("created_by, product, approval_status")
-        .gte("open_date", monthStart)
-        .lte("open_date", monthEnd)
-        .limit(20000),
+      fetchAllRows(({ from, to }) =>
+        supabase
+          .from("sales")
+          .select("created_by, product, approval_status")
+          .gte("open_date", monthStart)
+          .lte("open_date", monthEnd)
+          .range(from, to)
+      ).then((data) => ({ data })),
     ]);
     setStaff((profs ?? []) as StaffRow[]);
     const gm: Record<string, GoalEntry> = {};
