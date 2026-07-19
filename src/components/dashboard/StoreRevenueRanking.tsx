@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { Trophy, ArrowRight, Crown, Medal } from "lucide-react";
 import { formatShortKRW } from "@/data/mockData";
@@ -30,20 +31,23 @@ export const StoreRevenueRanking = () => {
     let alive = true;
     (async () => {
       setLoading(true);
-      const [salesRes, profilesRes] = await Promise.all([
-        supabase
-          .from("sales")
-          .select("created_by, manager, channel, unit_price, vas_fee, receivable_amount, receivable_paid, voucher, voucher_returned, trade_in_enabled, trade_in_confirmed, distributor_amount, cash_support_amount, cash_open, extra_subsidy, customer_support_amount, corp_card_amount, custom_fields, moyo_excluded")
-          .gte("open_date", startDate)
-          .lte("open_date", endDate)
-          .neq("status", "취소")
-          .limit(10000),
+      const [salesRows, profilesRes] = await Promise.all([
+        fetchAllRows(({ from, to }) =>
+          supabase
+            .from("sales")
+            .select("created_by, manager, channel, unit_price, vas_fee, receivable_amount, receivable_paid, voucher, voucher_returned, trade_in_enabled, trade_in_confirmed, distributor_amount, cash_support_amount, cash_open, extra_subsidy, customer_support_amount, corp_card_amount, custom_fields, moyo_excluded")
+            .gte("open_date", startDate)
+            .lte("open_date", endDate)
+            .neq("status", "취소")
+            .range(from, to)
+        ),
         supabase
           .from("profiles")
           .select("user_id, display_name, store, show_in_dashboard")
           .neq("status", "deleted")
           .eq("show_in_dashboard", true),
       ]);
+      const salesRes = { data: salesRows };
       if (!alive) return;
 
       const profiles = profilesRes.data ?? [];
