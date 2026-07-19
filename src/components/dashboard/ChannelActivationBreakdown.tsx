@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Radio, Flame, Filter, Settings2, Plus, Eye, EyeOff, X, Check, Package } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -137,9 +138,9 @@ export const ChannelActivationBreakdown = () => {
         .gte("open_date", startDate)
         .lte("open_date", endDate);
       for (const s of EXCLUDED_ACTIVATION_STATUSES) q = q.neq("status", s);
-      const { data } = await q.limit(10000);
+      const data = await fetchAllRows(({ from, to }) => q.range(from, to));
       if (!alive) return;
-      setRaw((data ?? []) as any);
+      setRaw(data as any);
       setLoading(false);
     };
     fetchData();
