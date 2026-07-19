@@ -1104,7 +1104,7 @@ export default function LeadsPage() {
       .is("deleted_at", null)
       .or("source.is.null,source.neq.crm")
       .order("created_at", { ascending: false })
-      .limit(1000);
+      .limit(5000);
     if (error) toast.error(error.message);
     setRows((data ?? []) as Lead[]);
     setLoading(false);
