@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Header } from "@/components/layout/Header";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import {
@@ -334,17 +335,22 @@ const RankingPage = () => {
     setDetailSales([]);
     setDetailLoading(true);
     const { start, end } = dateRange(period);
-    const { data } = await supabase
-      .from("sales")
-      .select("id, open_date, device_model, product, sale_type, open_method, status, manager, channel, rate_plan, custom_fields")
-      .in("manager", [u.name, MANAGER_NAME_TO_UUID[u.name] ?? "__NO_UUID__"].filter(Boolean))
-      .in("status", COUNTED_STATUSES)
-      .gte("open_date", start)
-      .lte("open_date", end)
-      .order("open_date", { ascending: false })
-      .limit(500);
-    setDetailSales((data ?? []) as SaleDetail[]);
-    setDetailLoading(false);
+    try {
+      const data = await fetchAllRows<SaleDetail>(({ from, to }) =>
+        supabase
+          .from("sales")
+          .select("id, open_date, device_model, product, sale_type, open_method, status, manager, channel, rate_plan, custom_fields")
+          .in("manager", [u.name, MANAGER_NAME_TO_UUID[u.name] ?? "__NO_UUID__"].filter(Boolean))
+          .in("status", COUNTED_STATUSES)
+          .gte("open_date", start)
+          .lte("open_date", end)
+          .order("open_date", { ascending: false })
+          .range(from, to)
+      );
+      setDetailSales(data);
+    } finally {
+      setDetailLoading(false);
+    }
   }
   const [hideExcluded, setHideExcluded] = useState(true);
   const [configLoaded, setConfigLoaded] = useState(false);
