@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { useBudgetCategories, type BudgetCategory } from "./useBudgetCategories";
 import { calcDashboardProfit } from "@/lib/profit";
@@ -146,42 +147,50 @@ export function useFinanceData(): FinanceData {
     (async () => {
       setLoading(true);
       const [salesRes, spendRes, prevSalesRes, prevSpendRes] = await Promise.all([
-        supabase
-          .from("sales")
-          .select(
-            "created_by, manager, channel, product, open_date, unit_price, distributor_amount, cash_support_amount, cash_open, extra_subsidy, customer_support_amount, corp_card_amount, receivable_amount, receivable_paid, moyo_excluded, vas_fee, net_fee, voucher, voucher_returned, trade_in_enabled, trade_in_confirmed, custom_fields",
-          )
-          .gte("open_date", startDate)
-          .lte("open_date", endDate)
-          .neq("status", "취소")
-          .limit(10000),
-        supabase
-          .from("ad_spend")
-          .select("media, channel, category, amount, spend_date")
-          .gte("spend_date", startDate)
-          .lte("spend_date", endDate)
-          .limit(10000),
-        supabase
-          .from("sales")
-          .select(
-            "channel, product, open_date, unit_price, distributor_amount, cash_support_amount, extra_subsidy, customer_support_amount, corp_card_amount, receivable_amount, vas_fee, net_fee, voucher, voucher_returned, trade_in_enabled, trade_in_confirmed, moyo_excluded, custom_fields",
-          )
-          .gte("open_date", prevStartDate)
-          .lte("open_date", prevEndDate)
-          .neq("status", "취소")
-          .limit(10000),
-        supabase
-          .from("ad_spend")
-          .select("category, amount, spend_date")
-          .gte("spend_date", prevStartDate)
-          .lte("spend_date", prevEndDate)
-          .limit(10000),
+        fetchAllRows(({ from, to }) =>
+          supabase
+            .from("sales")
+            .select(
+              "created_by, manager, channel, product, open_date, unit_price, distributor_amount, cash_support_amount, cash_open, extra_subsidy, customer_support_amount, corp_card_amount, receivable_amount, receivable_paid, moyo_excluded, vas_fee, net_fee, voucher, voucher_returned, trade_in_enabled, trade_in_confirmed, custom_fields",
+            )
+            .gte("open_date", startDate)
+            .lte("open_date", endDate)
+            .neq("status", "취소")
+            .range(from, to)
+        ),
+        fetchAllRows(({ from, to }) =>
+          supabase
+            .from("ad_spend")
+            .select("media, channel, category, amount, spend_date")
+            .gte("spend_date", startDate)
+            .lte("spend_date", endDate)
+            .range(from, to)
+        ),
+        fetchAllRows(({ from, to }) =>
+          supabase
+            .from("sales")
+            .select(
+              "channel, product, open_date, unit_price, distributor_amount, cash_support_amount, extra_subsidy, customer_support_amount, corp_card_amount, receivable_amount, vas_fee, net_fee, voucher, voucher_returned, trade_in_enabled, trade_in_confirmed, moyo_excluded, custom_fields",
+            )
+            .gte("open_date", prevStartDate)
+            .lte("open_date", prevEndDate)
+            .neq("status", "취소")
+            .range(from, to)
+        ),
+        fetchAllRows(({ from, to }) =>
+          supabase
+            .from("ad_spend")
+            .select("category, amount, spend_date")
+            .gte("spend_date", prevStartDate)
+            .lte("spend_date", prevEndDate)
+            .range(from, to)
+        ),
       ]);
       if (cancelled) return;
-      setSalesRows(salesRes.data ?? []);
-      setSpendRows(spendRes.data ?? []);
-      setPrevSalesRows(prevSalesRes.data ?? []);
-      setPrevSpendRows(prevSpendRes.data ?? []);
+      setSalesRows(salesRes);
+      setSpendRows(spendRes);
+      setPrevSalesRows(prevSalesRes);
+      setPrevSpendRows(prevSpendRes);
       setLoading(false);
     })();
     return () => {
