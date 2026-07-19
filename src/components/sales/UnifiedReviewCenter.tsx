@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
 import { usePeriod } from "@/contexts/PeriodContext";
@@ -107,8 +108,7 @@ export function UnifiedReviewCenter() {
       .from("sales")
       .select(SELECT_COLS)
       .order("open_date", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false })
-      .limit(10000);
+      .order("created_at", { ascending: false });
     if (showAll) {
       // 개통일이 기간 내이거나, 개통일 미정이지만 등록일이 기간 내인 모든 건
       query = query.or(
@@ -117,13 +117,16 @@ export function UnifiedReviewCenter() {
     } else {
       query = query.gte("open_date", startDate).lte("open_date", endDate);
     }
-    const { data, error } = await query;
-    setLoading(false);
-    if (error) {
+    let data: Row[];
+    try {
+      data = await fetchAllRows<Row>(({ from, to }) => query.range(from, to));
+    } catch (error: any) {
+      setLoading(false);
       toast.error(error.message);
       return;
     }
-    const list = ((data ?? []) as Row[]);
+    setLoading(false);
+    const list = data;
     const filtered = showAll
       ? list.filter((r) => (r.status ?? "").trim() !== "취소") // 취소만 제외
       : list.filter((r) => {
