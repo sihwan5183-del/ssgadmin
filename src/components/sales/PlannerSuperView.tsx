@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useRole } from "@/hooks/useRole";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -102,22 +103,24 @@ export const PlannerSuperView = () => {
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("sales")
-      .select(
-        "id, customer_name, device_model, manager, channel, open_date, net_fee, distributor_amount, extra_subsidy, cash_support_amount, customer_support_amount, corp_card_amount, unit_price, vas_fee, receivable_amount, trade_in_enabled, trade_in_confirmed, custom_fields, approval_status, locked, pending_resolved, created_by, updated_at"
-      )
-      .in("approval_status", TAB_FILTER[tab])
-      .order("updated_at", { ascending: false })
-      .limit(500);
-    if (error) {
+    try {
+      const data = await fetchAllRows<Row>(({ from, to }) =>
+        supabase
+          .from("sales")
+          .select(
+            "id, customer_name, device_model, manager, channel, open_date, net_fee, distributor_amount, extra_subsidy, cash_support_amount, customer_support_amount, corp_card_amount, unit_price, vas_fee, receivable_amount, trade_in_enabled, trade_in_confirmed, custom_fields, approval_status, locked, pending_resolved, created_by, updated_at"
+          )
+          .in("approval_status", TAB_FILTER[tab])
+          .order("updated_at", { ascending: false })
+          .range(from, to)
+      );
+      setRows(data);
+      setSelected(new Set());
+    } catch (error: any) {
       toast.error(error.message);
+    } finally {
       setLoading(false);
-      return;
     }
-    setRows((data ?? []) as Row[]);
-    setSelected(new Set());
-    setLoading(false);
   };
 
   useEffect(() => {
