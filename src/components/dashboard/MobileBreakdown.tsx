@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { usePeriod } from "@/contexts/PeriodContext";
 
 const TYPE_COLORS: Record<string, string> = {
@@ -20,14 +21,16 @@ export const MobileBreakdown = () => {
     let alive = true;
     (async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from("sales")
-        .select("sale_type, device_model, product")
-        .gte("open_date", startDate)
-        .lte("open_date", endDate)
-        .limit(10000);
+      const data = await fetchAllRows(({ from, to }) =>
+        supabase
+          .from("sales")
+          .select("sale_type, device_model, product")
+          .gte("open_date", startDate)
+          .lte("open_date", endDate)
+          .range(from, to)
+      );
       if (!alive) return;
-      setRows(data ?? []);
+      setRows(data);
       setLoading(false);
     })();
     return () => { alive = false; };
