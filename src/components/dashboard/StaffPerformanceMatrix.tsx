@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { applyActivationFilter } from "@/lib/salesFilter";
 import { Crown, Medal, Users, ArrowUpDown } from "lucide-react";
@@ -76,14 +77,16 @@ export const StaffPerformanceMatrix = () => {
 
   const load = async () => {
     setLoading(true);
-    const [salesRes, profilesRes, proposalsRes] = await Promise.all([
-      applyActivationFilter(
-        supabase
-          .from("sales")
-          .select("created_by, manager, product, sale_type, custom_fields"),
-        startDate,
-        endDate,
-      ).limit(20000),
+    const [salesRows, profilesRes, proposalsRes] = await Promise.all([
+      fetchAllRows(({ from, to }) =>
+        applyActivationFilter(
+          supabase
+            .from("sales")
+            .select("created_by, manager, product, sale_type, custom_fields"),
+          startDate,
+          endDate,
+        ).range(from, to)
+      ),
       supabase
         .from("profiles")
         .select("user_id, display_name, store, status, show_in_dashboard")
@@ -119,7 +122,7 @@ export const StaffPerformanceMatrix = () => {
 
     const map = new Map<string, Row>();
     // 실적이 있는 직원만 추가 (0건 직원 제외)
-    (salesRes.data ?? []).forEach((s: any) => {
+    (salesRows ?? []).forEach((s: any) => {
       const uid = ownerOf(s);
       if (!uid) return;
       // 대시보드 노출 토글 OFF 직원 제외
