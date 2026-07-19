@@ -1098,15 +1098,31 @@ export default function LeadsPage() {
 
   async function load() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("leads")
-      .select(LEADS_SELECT)
-      .is("deleted_at", null)
-      .or("source.is.null,source.neq.crm")
-      .order("created_at", { ascending: false })
-      .limit(5000);
-    if (error) toast.error(error.message);
-    setRows((data ?? []) as Lead[]);
+    // 한 번의 요청으로 아무리 큰 limit을 걸어도 Supabase 프로젝트 API 설정(Max Rows)이
+    // 더 작은 값으로 서버단에서 잘라버릴 수 있어, 페이지 단위로 끝까지 순회해서
+    // 데이터가 아무리 늘어나도 절대 누락되지 않도록 함.
+    const PAGE_SIZE = 1000;
+    let all: Lead[] = [];
+    let from = 0;
+    try {
+      while (true) {
+        const { data, error } = await supabase
+          .from("leads")
+          .select(LEADS_SELECT)
+          .is("deleted_at", null)
+          .or("source.is.null,source.neq.crm")
+          .order("created_at", { ascending: false })
+          .range(from, from + PAGE_SIZE - 1);
+        if (error) { toast.error(error.message); break; }
+        const chunk = (data ?? []) as Lead[];
+        all = all.concat(chunk);
+        if (chunk.length < PAGE_SIZE) break; // 더 가져올 데이터 없음
+        from += PAGE_SIZE;
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "리드 로드 실패");
+    }
+    setRows(all);
     setLoading(false);
   }
 
