@@ -423,13 +423,15 @@ const RankingPage = () => {
     const stratSet = new Set((stratModels ?? []).map((m) => m.model_name));
 
     // 개통완료/반납완료 실적 (취소·반려 제외) — 판매원장 실시간 반영
-    const { data: sales } = await supabase
-      .from("sales")
-      .select("id, created_by, manager, device_model, product, sale_type, status, approval_status, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned, vas1, vas2, open_date, custom_fields")
-      .in("status", COUNTED_STATUSES)
-      .gte("open_date", start)
-      .lte("open_date", end)
-      .limit(20000);
+    const sales = await fetchAllRows(({ from, to }) =>
+      supabase
+        .from("sales")
+        .select("id, created_by, manager, device_model, product, sale_type, status, approval_status, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned, vas1, vas2, open_date, custom_fields")
+        .in("status", COUNTED_STATUSES)
+        .gte("open_date", start)
+        .lte("open_date", end)
+        .range(from, to)
+    );
 
     // Yesterday daily delta (count change)
     const { data: ySales } = await supabase
@@ -442,14 +444,16 @@ const RankingPage = () => {
     // Period-up-to-yesterday sales for rank-delta snapshot
     let yPeriodSales: any[] = [];
     if (yPeriod) {
-      const { data: yps } = await supabase
-        .from("sales")
-        .select("created_by, manager, device_model, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned")
-        .in("status", COUNTED_STATUSES)
-        .gte("open_date", yPeriod.start)
-        .lte("open_date", yPeriod.end)
-        .limit(20000);
-      yPeriodSales = yps ?? [];
+      const yps = await fetchAllRows(({ from, to }) =>
+        supabase
+          .from("sales")
+          .select("created_by, manager, device_model, unit_price, distributor_amount, extra_subsidy, cash_support_amount, voucher, voucher_returned")
+          .in("status", COUNTED_STATUSES)
+          .gte("open_date", yPeriod.start)
+          .lte("open_date", yPeriod.end)
+          .range(from, to)
+      );
+      yPeriodSales = yps;
     }
 
     // Build per-user aggregates
