@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertTriangle, Sparkles, Wand2, RefreshCcw, Plus, Link2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useDeviceModels } from "@/hooks/useDeviceModels";
 import { toast } from "sonner";
 
@@ -37,18 +38,21 @@ export const UnmappedModelsResolver = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const [salesRes, invRes] = await Promise.all([
-        supabase
-          .from("sales")
-          .select("id, custom_fields")
-          .not("custom_fields->>unmapped_model", "is", null)
-          .limit(2000),
+      const [salesRows, invRes] = await Promise.all([
+        fetchAllRows(({ from, to }) =>
+          supabase
+            .from("sales")
+            .select("id, custom_fields")
+            .not("custom_fields->>unmapped_model", "is", null)
+            .range(from, to)
+        ),
         supabase
           .from("device_inventory")
           .select("id, custom_fields")
           .not("custom_fields->>unmapped_model", "is", null)
           .limit(2000),
       ]);
+      const salesRes = { data: salesRows };
 
       const map = new Map<string, UnmappedRow>();
       (salesRes.data ?? []).forEach((r: any) => {
