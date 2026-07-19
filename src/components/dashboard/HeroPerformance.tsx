@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Sun, TrendingUp, ArrowUpRight, ArrowDownRight, Clock, AlertTriangle, Smartphone, Monitor, Package, Wifi, Tv, Home, Star, CreditCard, Lightbulb } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useNavigate } from "react-router-dom";
@@ -131,7 +132,9 @@ export const HeroPerformance = () => {
     const ydayISO = ydate.toISOString().slice(0, 10);
     // 개통 집계 (Source of Truth): open_date 기준 + 취소/개통취소/반려 제외
     const activated = (s: string, e: string) =>
-      applyActivationFilter(supabase.from("sales").select("product"), s, e).limit(10000);
+      fetchAllRows(({ from, to }) =>
+        applyActivationFilter(supabase.from("sales").select("product"), s, e).range(from, to)
+      ).then((data) => ({ data }));
     // 개통 대기는 open_date가 없을 수 있으므로 별도 (이번 기간 내 created_at 기준)
     let pendingQuery: any = supabase
       .from("sales")
@@ -152,7 +155,7 @@ export const HeroPerformance = () => {
       activated(prevStartDate, prevEndDate),
       activated(todayISO, todayISO),
       activated(ydayISO, ydayISO),
-      pendingQuery.limit(10000),
+      fetchAllRows(({ from, to }) => pendingQuery.range(from, to)).then((data) => ({ data })),
       proposals(startDate, endDate),
       proposals(prevStartDate, prevEndDate),
       proposals(todayISO, todayISO),
