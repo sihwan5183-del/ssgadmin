@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { FileWarning, Search, Upload, Phone, User, Smartphone, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { SaleDocuments } from "@/components/sales/SaleDocuments";
 import { toast } from "sonner";
 import { useStaffNames } from "@/hooks/useStaffNames";
@@ -37,15 +38,19 @@ export default function MissingDocsPage() {
 
   const load = async () => {
     setLoading(true);
-    // 1) 최근 실적 가져오기
-    const { data: sales, error } = await supabase
-      .from("sales")
-      .select(
-        "id, customer_name, phone, device_serial, device_model, channel, open_date, manager, approval_status",
-      )
-      .order("open_date", { ascending: false, nullsFirst: false })
-      .limit(500);
-    if (error) {
+    // 1) 최근 실적 가져오기 (전체 페이지 순회 — Max Rows 제한과 무관하게 전부 로드)
+    let sales: SaleLite[];
+    try {
+      sales = await fetchAllRows<SaleLite>(({ from, to }) =>
+        supabase
+          .from("sales")
+          .select(
+            "id, customer_name, phone, device_serial, device_model, channel, open_date, manager, approval_status",
+          )
+          .order("open_date", { ascending: false, nullsFirst: false })
+          .range(from, to),
+      );
+    } catch (error: any) {
       toast.error(error.message);
       setLoading(false);
       return;
