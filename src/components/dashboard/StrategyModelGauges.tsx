@@ -2,6 +2,7 @@ import { Sparkles } from "lucide-react";
 import { useDeviceModels } from "@/hooks/useDeviceModels";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { Link } from "react-router-dom";
 
@@ -23,14 +24,16 @@ export const StrategyModelGauges = () => {
     if (modelsLoading || strategyModels.length === 0) { setLoading(false); return; }
     setLoading(true);
     const names = strategyModels.map((m) => m.model_name);
-    supabase
-      .from("sales")
-      .select("device_model")
-      .in("device_model", names)
-      .gte("open_date", startDate)
-      .lte("open_date", endDate)
-      .limit(10000)
-      .then(({ data }) => {
+    fetchAllRows(({ from, to }) =>
+      supabase
+        .from("sales")
+        .select("device_model")
+        .in("device_model", names)
+        .gte("open_date", startDate)
+        .lte("open_date", endDate)
+        .range(from, to)
+    )
+      .then((data) => {
         const c: Record<string, number> = {};
         (data ?? []).forEach((r: any) => {
           const m = r.device_model ?? "";
