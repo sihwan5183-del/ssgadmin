@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Smartphone, Wifi, Tv, Home, Star, Lightbulb, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { usePeriod } from "@/contexts/PeriodContext";
 import {
   PRODUCT_SCOPE_ITEMS,
@@ -50,12 +51,14 @@ export const PendingProductScoreboard = () => {
   };
 
   const load = useCallback(async () => {
-    const res = await applyPendingActivationFilter(
-      supabase.from("sales").select("product, sale_type, status"),
-      startDate,
-      endDate,
-    ).limit(10000);
-    setRows((res.data ?? []) as Row[]);
+    const data = await fetchAllRows<Row>(({ from, to }) =>
+      applyPendingActivationFilter(
+        supabase.from("sales").select("product, sale_type, status"),
+        startDate,
+        endDate,
+      ).range(from, to)
+    );
+    setRows(data);
   }, [startDate, endDate]);
 
   useEffect(() => {
