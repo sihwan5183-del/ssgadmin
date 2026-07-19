@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { Sparkles, TrendingUp, TrendingDown } from "lucide-react";
 import { formatShortKRW } from "@/data/mockData";
@@ -41,21 +42,27 @@ export const StoreEfficiencyBubble = () => {
     let alive = true;
     (async () => {
       setLoading(true);
-      const [salesRes, inquiriesRes] = await Promise.all([
-        supabase
-          .from("sales")
-          .select("channel, unit_price, vas_fee, receivable_amount, receivable_paid, voucher, voucher_returned, trade_in_enabled, trade_in_confirmed, distributor_amount, cash_support_amount, cash_open, extra_subsidy, customer_support_amount, corp_card_amount, custom_fields, moyo_excluded")
-          .gte("open_date", startDate)
-          .lte("open_date", endDate)
-          .neq("status", "취소")
-          .limit(10000),
-        supabase
-          .from("inquiries")
-          .select("channel")
-          .gte("inquiry_date", startDate)
-          .lte("inquiry_date", endDate)
-          .limit(10000),
+      const [salesRows, inquiriesRows] = await Promise.all([
+        fetchAllRows(({ from, to }) =>
+          supabase
+            .from("sales")
+            .select("channel, unit_price, vas_fee, receivable_amount, receivable_paid, voucher, voucher_returned, trade_in_enabled, trade_in_confirmed, distributor_amount, cash_support_amount, cash_open, extra_subsidy, customer_support_amount, corp_card_amount, custom_fields, moyo_excluded")
+            .gte("open_date", startDate)
+            .lte("open_date", endDate)
+            .neq("status", "취소")
+            .range(from, to)
+        ),
+        fetchAllRows(({ from, to }) =>
+          supabase
+            .from("inquiries")
+            .select("channel")
+            .gte("inquiry_date", startDate)
+            .lte("inquiry_date", endDate)
+            .range(from, to)
+        ),
       ]);
+      const salesRes = { data: salesRows };
+      const inquiriesRes = { data: inquiriesRows };
       if (!alive) return;
 
       const inquiryMap = new Map<string, number>();
