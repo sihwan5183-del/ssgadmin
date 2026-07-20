@@ -27,6 +27,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 const PAGE_SIZE = 50;
 
+// deploy trigger v2
 const CHANNEL_TABS = [
   { value: '',           label: '전체' },
   { value: '메타광고',   label: '메타광고' },
