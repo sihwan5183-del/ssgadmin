@@ -2,6 +2,7 @@ import { Header } from "@/components/layout/Header";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { HeroPerformance } from "@/components/dashboard/HeroPerformance";
 import { RadialGoalGauge } from "@/components/dashboard/RadialGoalGauge";
+import { GoalOverviewWidget } from "@/components/dashboard/GoalOverviewWidget";
 import { StoreRevenueRanking } from "@/components/dashboard/StoreRevenueRanking";
 import { StoreEfficiencyBubble } from "@/components/dashboard/StoreEfficiencyBubble";
 import { StaffPerformanceMatrix } from "@/components/dashboard/StaffPerformanceMatrix";
@@ -238,26 +239,30 @@ const IndexInner = () => {
     { id: "pending_product",      node: <PendingProductScoreboard />,      lg: { x: 8,  y: 4,   w: 4,  h: 5 } },
     { id: "unified_calendar",     node: <UnifiedCalendarWidget />,         lg: { x: 0,  y: 10,  w: 8,  h: 12 } },
     { id: "goal_gauge",           node: <RadialGoalGauge />,               lg: { x: 8,  y: 10,  w: 4,  h: 9 } },
+    // 모바일 단일 게이지(goal_gauge)와 별개로, 목표 셋팅에 등록된 전 항목
+    // (모바일/2ND/인터넷/TV프리/맞춤제안) 전사 합계를 한번에 보여주는 위젯
+    // (2026-07 추가). 게이지 바로 아래에 배치.
+    { id: "goal_overview",        node: <GoalOverviewWidget />,            lg: { x: 8,  y: 22,  w: 4,  h: 9 } },
     { id: "hero_performance",     node: <HeroPerformance />,               lg: { x: 0,  y: 22,  w: 8,  h: 9 } },
-    { id: "channel_donut",        node: <ChannelDonut />,                  lg: { x: 8,  y: 19,  w: 4,  h: 10 } },
+    { id: "channel_donut",        node: <ChannelDonut />,                  lg: { x: 8,  y: 31,  w: 4,  h: 10 } },
     { id: "stat_cards",           node: StatCardsBlock,                    lg: { x: 0,  y: 31,  w: 12, h: 8 } },
-    { id: "channel_activation",   node: <ChannelActivationBreakdown />,    lg: { x: 0,  y: 39,  w: 6,  h: 9 }, adminOnly: true },
-    { id: "activation_breakdown", node: <ActivationBreakdown />,           lg: { x: 6,  y: 39,  w: 6,  h: 9 } },
-    { id: "performance_chart",    node: <PerformanceChart />,              lg: { x: 0,  y: 48,  w: 8,  h: 10 } },
-    { id: "my_incentive",         node: <MyIncentiveWidget />,             lg: { x: 8,  y: 48,  w: 4,  h: 6 } },
-    { id: "settlement_charts",    node: SettlementChartsBlock,             lg: { x: 0,  y: 58,  w: 12, h: 10 } },
-    { id: "store_ranking",        node: <StoreRevenueRanking />,           lg: { x: 0,  y: 68,  w: 6,  h: 12 } },
-    { id: "store_efficiency",     node: <StoreEfficiencyBubble />,         lg: { x: 6,  y: 68,  w: 6,  h: 12 } },
-    { id: "staff_matrix",         node: <StaffPerformanceMatrix />,        lg: { x: 0,  y: 80,  w: 12, h: 14 } },
-    { id: "performance_ledger",   node: <PerformanceLedger />,             lg: { x: 0,  y: 94,  w: 12, h: 14 } },
-    { id: "overall_model",        node: <OverallModelAnalysis />,          lg: { x: 0,  y: 108, w: 6,  h: 12 } },
-    { id: "channel_model",        node: <ChannelModelAnalysis />,          lg: { x: 6,  y: 108, w: 6,  h: 12 } },
-    { id: "live_feed",            node: <LiveActivityFeed />,              lg: { x: 0,  y: 120, w: 6,  h: 12 } },
-    { id: "planner_feed",         node: <PlannerFeed />,                   lg: { x: 6,  y: 120, w: 6,  h: 12 } },
-    { id: "inventory_widget",     node: <InventoryWidget />,               lg: { x: 0,  y: 132, w: 6,  h: 10 } },
-    { id: "strategy_gauges",      node: <StrategyModelGauges />,           lg: { x: 6,  y: 132, w: 6,  h: 10 } },
-    { id: "ad_schedule",          node: <AdScheduleWidget />,              lg: { x: 0,  y: 142, w: 6,  h: 10 } },
-    { id: "ranking_panel",        node: <RankingPanel />,                  lg: { x: 6,  y: 142, w: 6,  h: 10 } },
+    { id: "channel_activation",   node: <ChannelActivationBreakdown />,    lg: { x: 0,  y: 41,  w: 6,  h: 9 }, adminOnly: true },
+    { id: "activation_breakdown", node: <ActivationBreakdown />,           lg: { x: 6,  y: 41,  w: 6,  h: 9 } },
+    { id: "performance_chart",    node: <PerformanceChart />,              lg: { x: 0,  y: 50,  w: 8,  h: 10 } },
+    { id: "my_incentive",         node: <MyIncentiveWidget />,             lg: { x: 8,  y: 50,  w: 4,  h: 6 } },
+    { id: "settlement_charts",    node: SettlementChartsBlock,             lg: { x: 0,  y: 60,  w: 12, h: 10 } },
+    { id: "store_ranking",        node: <StoreRevenueRanking />,           lg: { x: 0,  y: 70,  w: 6,  h: 12 } },
+    { id: "store_efficiency",     node: <StoreEfficiencyBubble />,         lg: { x: 6,  y: 70,  w: 6,  h: 12 } },
+    { id: "staff_matrix",         node: <StaffPerformanceMatrix />,        lg: { x: 0,  y: 82,  w: 12, h: 14 } },
+    { id: "performance_ledger",   node: <PerformanceLedger />,             lg: { x: 0,  y: 96,  w: 12, h: 14 } },
+    { id: "overall_model",        node: <OverallModelAnalysis />,          lg: { x: 0,  y: 110, w: 6,  h: 12 } },
+    { id: "channel_model",        node: <ChannelModelAnalysis />,          lg: { x: 6,  y: 110, w: 6,  h: 12 } },
+    { id: "live_feed",            node: <LiveActivityFeed />,              lg: { x: 0,  y: 122, w: 6,  h: 12 } },
+    { id: "planner_feed",         node: <PlannerFeed />,                   lg: { x: 6,  y: 122, w: 6,  h: 12 } },
+    { id: "inventory_widget",     node: <InventoryWidget />,               lg: { x: 0,  y: 134, w: 6,  h: 10 } },
+    { id: "strategy_gauges",      node: <StrategyModelGauges />,           lg: { x: 6,  y: 134, w: 6,  h: 10 } },
+    { id: "ad_schedule",          node: <AdScheduleWidget />,              lg: { x: 0,  y: 144, w: 6,  h: 10 } },
+    { id: "ranking_panel",        node: <RankingPanel />,                  lg: { x: 6,  y: 144, w: 6,  h: 10 } },
   ];
 
   const gridItems: GridWidget[] = widgetDefs
