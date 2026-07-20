@@ -113,7 +113,7 @@ export interface ReservationMemoLog {
 }
 
 export const CARRIER_OPTIONS = ['LG U+', 'SKT', 'KT', '알뜰폰'];
-export const CHANNEL_OPTIONS = ['메타광고', '네이버 검색광고', '기타', '기존고객'];
+export const CHANNEL_OPTIONS = ['메타광고', '네이버 검색광고', '기타', '기존고객']; // v20260720
 export const DEVICE_OPTIONS = ['갤럭시 Z 플립8', '갤럭시 Z 폴드8', '갤럭시 Z 폴드8 와이드'];
 
 // 실패 상태 판별
