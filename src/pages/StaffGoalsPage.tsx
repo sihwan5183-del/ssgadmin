@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 import { Card } from "@/components/ui/card";
@@ -62,6 +63,12 @@ const yearOptions = (() => {
 })();
 const monthOptions = Array.from({ length: 12 }, (_, i) => i + 1);
 const MOBILE_KEY = "mobile";
+// 맞춤제안은 sales 테이블이 아니라 custom_proposals 테이블에서 집계되는
+// 특수 항목 (2026-07 추가). 이 키를 가진 항목은 bucketProduct 매칭
+// 대상에서 항상 제외되고(products가 항상 빈 배열), reload()에서 별도
+// 쿼리로 채워짐. custom_proposals 테이블엔 채널 개념이 없어서(상담/업셀
+// 기록이라 인입경로가 없음) 채널별 드릴다운 대상에서도 제외됨.
+const CUSTOM_PROPOSAL_KEY = "custom_proposal";
 
 const goalKey = (uid: string, itemKey: string) => `${uid}::${itemKey}`;
 
@@ -69,6 +76,7 @@ function bucketProduct(prodValue: string | null | undefined, mapping: MappingIte
   const v = (prodValue ?? "").toString().trim();
   if (!v) return null;
   for (const m of mapping) {
+    if (m.key === CUSTOM_PROPOSAL_KEY) continue;
     for (const p of m.products) {
       if (v.includes(p) || p.includes(v)) return m.key;
     }
@@ -86,6 +94,107 @@ const computeCountFromPercent = (mobileBase: number, percent: number) =>
 const effectiveCount = (entry: GoalEntry, mobileBase: number) =>
   entry.mode === "percent" ? computeCountFromPercent(mobileBase, entry.percent) : entry.count;
 
+/* -------------------- Channel breakdown popover -------------------- */
+// "실적" 숫자를 클릭하면 채널별(모요/유닥/도그마루 등) 세부 내역을 보여주는
+// 작은 팝오버 (2026-07 추가). 예약목록의 상태변경/더보기 메뉴에서 이미 쓴
+// 것과 동일한 이유로 createPortal + fixed 좌표 방식을 쓴다 -- 이 표도
+// overflow-x-auto로 감싸져 있어서 절대위치로 띄우면 표 안에서 잘리기 때문.
+function ChannelBreakdownButton({
+  channelCounts,
+  achieved,
+  pct,
+  over,
+}: {
+  channelCounts: Record<string, number>;
+  achieved: number;
+  pct: number;
+  over: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onClickOutside(e: MouseEvent) {
+      const t = e.target as Node;
+      if (
+        btnRef.current && !btnRef.current.contains(t) &&
+        panelRef.current && !panelRef.current.contains(t)
+      ) {
+        setOpen(false);
+      }
+    }
+    function close() { setOpen(false); }
+    document.addEventListener("mousedown", onClickOutside);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [open]);
+
+  const entries = Object.entries(channelCounts).sort((a, b) => b[1] - a[1]);
+  const hasBreakdown = entries.length > 0;
+
+  return (
+    <>
+      <button
+        type="button"
+        ref={btnRef}
+        disabled={!hasBreakdown}
+        onClick={() => {
+          if (!hasBreakdown) return;
+          if (!open && btnRef.current) {
+            const r = btnRef.current.getBoundingClientRect();
+            setPos({ top: r.bottom + 4, left: r.left });
+          }
+          setOpen((v) => !v);
+        }}
+        className={cn(
+          "flex items-center justify-center gap-1 text-[10px] tabular-nums mx-auto",
+          hasBreakdown && "cursor-pointer hover:underline",
+        )}
+        title={hasBreakdown ? "채널별 내역 보기" : undefined}
+      >
+        <span className="text-muted-foreground">실적</span>
+        <span className={cn(
+          "font-semibold",
+          pct >= 120 ? "text-amber-500" :
+          pct >= 100 ? "text-amber-600" :
+          pct >= 70 ? "text-emerald-600" : "text-foreground",
+        )}>{achieved}</span>
+        <span className="text-muted-foreground">·</span>
+        <span className={cn(
+          "font-bold",
+          pct >= 120 ? "text-amber-500" :
+          pct >= 100 ? "text-amber-600" :
+          pct >= 70 ? "text-emerald-600" : "text-muted-foreground",
+        )}>{pct}%{over && "⭐"}</span>
+      </button>
+      {open && pos && hasBreakdown && createPortal(
+        <div
+          ref={panelRef}
+          style={{ position: "fixed", top: pos.top, left: pos.left }}
+          className="z-[9999] w-40 rounded-md border border-border bg-popover p-2 shadow-lg text-xs"
+        >
+          <div className="font-medium mb-1 text-muted-foreground">채널별 실적</div>
+          {entries.map(([ch, cnt]) => (
+            <div key={ch} className="flex items-center justify-between py-0.5">
+              <span>{ch}</span>
+              <span className="font-semibold tabular-nums">{cnt}건</span>
+            </div>
+          ))}
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
 /* -------------------- Page -------------------- */
 export default function StaffGoalsPage() {
   const { isAdmin, isManager, loading: roleLoading } = useRole();
@@ -100,6 +209,8 @@ export default function StaffGoalsPage() {
   const [mapping, setMapping] = useState<MappingItem[]>([]);
   const [goals, setGoals] = useState<Record<string, GoalEntry>>({});
   const [achievedMap, setAchievedMap] = useState<Record<string, number>>({});
+  // uid::itemKey -> { 채널명: 건수 } (2026-07 추가, sales 기반 항목만 채워짐)
+  const [achievedByChannelMap, setAchievedByChannelMap] = useState<Record<string, Record<string, number>>>({});
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -147,7 +258,7 @@ export default function StaffGoalsPage() {
     setLoading(true);
     const monthStart = `${yearMonth}-01`;
     const monthEnd = new Date(year, month, 0).toISOString().slice(0, 10);
-    const [{ data: profs }, { data: staffGoalRows }, { data: teamGoalRows }, { data: salesRows }] = await Promise.all([
+    const [{ data: profs }, { data: staffGoalRows }, { data: teamGoalRows }, { data: salesRows }, { data: proposalRows }] = await Promise.all([
       supabase
         .from("profiles")
         .select("user_id, display_name, team, store, position, status")
@@ -167,9 +278,19 @@ export default function StaffGoalsPage() {
       fetchAllRows(({ from, to }) =>
         supabase
           .from("sales")
-          .select("created_by, product, approval_status")
+          .select("created_by, product, channel, approval_status")
           .gte("open_date", monthStart)
           .lte("open_date", monthEnd)
+          .range(from, to)
+      ).then((data) => ({ data })),
+      // 맞춤제안 실적: custom_proposals 테이블 기준 (sales 테이블의
+      // '업셀(맞춤제안)'과는 별개 -- 실제 등록/제안 활동 자체를 카운트).
+      fetchAllRows(({ from, to }) =>
+        supabase
+          .from("custom_proposals")
+          .select("created_by, change_date")
+          .gte("change_date", monthStart)
+          .lte("change_date", monthEnd)
           .range(from, to)
       ).then((data) => ({ data })),
     ]);
@@ -194,15 +315,27 @@ export default function StaffGoalsPage() {
     setTeamGoals(tm);
     setDirty(new Set());
     setTeamDirty(new Set());
-    // 실적 집계
+    // 실적 집계 (sales 기반 항목) + 채널별 세부 집계
     const am: Record<string, number> = {};
+    const chBreak: Record<string, Record<string, number>> = {};
     (salesRows ?? []).forEach((s: any) => {
       // 정책: [저장]된 모든 실적은 검수 상태와 무관하게 달성 카운트에 즉시 반영
       const key = bucketProduct(s.product, mapping);
       if (!key || !s.created_by) return;
-      am[goalKey(s.created_by, key)] = (am[goalKey(s.created_by, key)] ?? 0) + 1;
+      const k = goalKey(s.created_by, key);
+      am[k] = (am[k] ?? 0) + 1;
+      const ch = (s.channel && String(s.channel).trim()) || "미지정";
+      chBreak[k] = chBreak[k] ?? {};
+      chBreak[k][ch] = (chBreak[k][ch] ?? 0) + 1;
+    });
+    // 맞춤제안 실적 (custom_proposals 기반, 채널 개념 없음)
+    (proposalRows ?? []).forEach((p: any) => {
+      if (!p.created_by) return;
+      const k = goalKey(p.created_by, CUSTOM_PROPOSAL_KEY);
+      am[k] = (am[k] ?? 0) + 1;
     });
     setAchievedMap(am);
+    setAchievedByChannelMap(chBreak);
     setLoading(false);
   }, [yearMonth, year, month, mapping]);
 
@@ -693,25 +826,15 @@ export default function StaffGoalsPage() {
                                     </div>
                                   </div>
                                 )}
-                                {/* 항목별 개별 실적 / 달성률 */}
+                                {/* 항목별 개별 실적 / 달성률 (클릭 시 채널별 세부내역) */}
                                 {computed > 0 && (
                                   <div className="mt-1 space-y-0.5">
-                                    <div className="flex items-center justify-center gap-1 text-[10px] tabular-nums">
-                                      <span className="text-muted-foreground">실적</span>
-                                      <span className={cn(
-                                        "font-semibold",
-                                        cellPct >= 120 ? "text-amber-500" :
-                                        cellPct >= 100 ? "text-amber-600" :
-                                        cellPct >= 70 ? "text-emerald-600" : "text-foreground",
-                                      )}>{cellAch}</span>
-                                      <span className="text-muted-foreground">·</span>
-                                      <span className={cn(
-                                        "font-bold",
-                                        cellPct >= 120 ? "text-amber-500" :
-                                        cellPct >= 100 ? "text-amber-600" :
-                                        cellPct >= 70 ? "text-emerald-600" : "text-muted-foreground",
-                                      )}>{cellPct}%{cellOver && "⭐"}</span>
-                                    </div>
+                                    <ChannelBreakdownButton
+                                      channelCounts={achievedByChannelMap[k] ?? {}}
+                                      achieved={cellAch}
+                                      pct={cellPct}
+                                      over={cellOver}
+                                    />
                                     <div className="h-1 rounded-full bg-muted overflow-hidden mx-auto w-20">
                                       <div
                                         className={cn(
@@ -1007,9 +1130,11 @@ export default function StaffGoalsPage() {
           <div className="space-y-2 max-h-[60vh] overflow-y-auto">
             <div className="text-xs text-muted-foreground">
               항목명과 매칭할 상품 키워드(쉼표 구분)를 입력하세요. <b>모바일</b>은 비중 계산의 기준이므로 삭제할 수 없습니다.
+              <b>맞춤제안</b> 항목은 매칭 키워드가 아니라 맞춤제안실적관리(custom_proposals) 등록 건수를 그대로 집계합니다 — 키워드 칸은 비워두세요.
             </div>
             {draftItems.map((it, idx) => {
               const isMobile = it.key === MOBILE_KEY;
+              const isCustomProposal = it.key === CUSTOM_PROPOSAL_KEY;
               return (
                 <div key={idx} className="border rounded-lg p-2 grid grid-cols-12 gap-2 items-center">
                   <Input
@@ -1018,20 +1143,26 @@ export default function StaffGoalsPage() {
                     value={it.label}
                     onChange={(e) => setDraftItems((arr) => {
                       const n = [...arr];
-                      n[idx] = { ...n[idx], label: e.target.value, key: isMobile ? MOBILE_KEY : (n[idx].key || slugify(e.target.value)) };
+                      n[idx] = { ...n[idx], label: e.target.value, key: isMobile ? MOBILE_KEY : isCustomProposal ? CUSTOM_PROPOSAL_KEY : (n[idx].key || slugify(e.target.value)) };
                       return n;
                     })}
                   />
-                  <Input
-                    className="col-span-7 h-8"
-                    placeholder="매칭 키워드 (쉼표 구분, 예: 갤럭시 S26, S26)"
-                    value={it.products.join(", ")}
-                    onChange={(e) => setDraftItems((arr) => {
-                      const n = [...arr];
-                      n[idx] = { ...n[idx], products: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) };
-                      return n;
-                    })}
-                  />
+                  {isCustomProposal ? (
+                    <div className="col-span-7 h-8 flex items-center text-xs text-muted-foreground">
+                      맞춤제안실적관리 등록 건수 자동 집계 (키워드 매칭 아님)
+                    </div>
+                  ) : (
+                    <Input
+                      className="col-span-7 h-8"
+                      placeholder="매칭 키워드 (쉼표 구분, 예: 갤럭시 S26, S26)"
+                      value={it.products.join(", ")}
+                      onChange={(e) => setDraftItems((arr) => {
+                        const n = [...arr];
+                        n[idx] = { ...n[idx], products: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) };
+                        return n;
+                      })}
+                    />
+                  )}
                   <div className="col-span-2 flex justify-end">
                     {isMobile ? (
                       <Badge variant="secondary" className="text-[10px]">기준 항목</Badge>
