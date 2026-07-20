@@ -13,6 +13,7 @@ export const WIDGET_REGISTRY: { id: string; label: string }[] = [
   { id: "today_care", label: "오늘의 관리 고객 (요금제·부가서비스)" },
   { id: "quick_links", label: "업무 바로가기" },
   { id: "goal_gauge", label: "목표 달성률 게이지" },
+  { id: "goal_overview", label: "전체 목표 현황 (모바일/2ND/인터넷/TV프리/맞춤제안)" },
   { id: "hero_performance", label: "핵심 실적 지표" },
   { id: "channel_activation", label: "채널별 개통 현황" },
   { id: "activation_breakdown", label: "모바일 유형별 건수" },
