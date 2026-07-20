@@ -32,6 +32,7 @@ const CHANNEL_TABS = [
   { value: '메타광고',   label: '메타광고' },
   { value: '네이버 검색광고', label: '네이버 검색광고' },
   { value: '기타',       label: '기타' },
+  { value: '기존고객',    label: '기존고객' },
 ];
 
 function StatusBadge({ status }: { status: ReservationStatus }) {
