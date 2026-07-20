@@ -435,12 +435,9 @@ export default function ReservationsPage() {
                     <TableCell className="text-sm text-gray-600">{r.carrier ?? '-'}</TableCell>
                     <TableCell className="text-sm text-gray-600">
                       {r.channel ? (
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                          r.channel === '메타광고' ? 'bg-blue-100 text-blue-700' :
-                          r.channel === '네이버 검색광고' ? 'bg-green-100 text-green-700' :
-                          r.channel === '기존고객' ? 'bg-purple-100 text-purple-700' :
-                          'bg-gray-100 text-gray-600'
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${ r.channel === '메타광고' ? 'bg-blue-100 text-blue-700' : r.channel === '네이버 검색광고' ? 'bg-green-100 text-green-700' : r.channel === '기존고객' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>{r.channel}</span>
                       ) : '-'}
+                    </TableCell>
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={r.status} />
