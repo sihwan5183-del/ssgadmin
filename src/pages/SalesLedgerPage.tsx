@@ -1228,13 +1228,13 @@ const SalesLedgerPage = () => {
                 </div>
                 <div className="mt-3">
                   <div className="text-base font-bold text-slate-900 dark:text-foreground truncate">
-                    {isAdmin ? (r.customer_name ?? "이름 미입력") : (maskName(r.customer_name) || "이름 미입력")}
+                    {maskName(r.customer_name) || "이름 미입력"}
                   </div>
                   <div className="mt-0.5 text-sm text-slate-500 tabular-nums font-mono tracking-tight truncate">
                     {(() => {
-                      const raw = isAdmin ? (r.phone ?? "") : (maskPhone(r.phone) || "");
+                      const raw = maskPhone(r.phone) || "";
                       if (!raw) return "연락처 -";
-                      return isAdmin ? formatPhone(raw) : raw;
+                      return raw;
                     })()}
                   </div>
                 </div>
@@ -1396,7 +1396,7 @@ const SalesLedgerPage = () => {
                     <td className="text-center">{r.product ?? "-"}</td>
                     <td className="text-left">
                       <div className="flex items-center gap-1">
-                        <span className="font-medium truncate block max-w-[88px]">{isAdmin ? (r.customer_name ?? "-") : maskName(r.customer_name) || "-"}</span>
+                        <span className="font-medium truncate block max-w-[88px]">{maskName(r.customer_name) || "-"}</span>
                         {r.plan_change_planned && !r.plan_change_completed_at && (
                           <span
                             title={r.plan_change_target_plan ? `요금제 변경 예정: ${r.plan_change_target_plan}` : "요금제 변경 예정"}
@@ -1441,9 +1441,9 @@ const SalesLedgerPage = () => {
                     </td>
                     <td className="text-foreground/90 tabular-nums text-center text-[11px] font-mono tracking-tight border-r border-border/30">
                       {(() => {
-                        const raw = isAdmin ? (r.phone ?? "") : (maskPhone(r.phone) || "");
+                        const raw = maskPhone(r.phone) || "";
                         if (!raw) return <span className="text-muted-foreground/50">-</span>;
-                        const formatted = isAdmin ? formatPhone(raw) : raw;
+                        const formatted = raw;
                         return <span>{formatted}</span>;
                       })()}
                     </td>
