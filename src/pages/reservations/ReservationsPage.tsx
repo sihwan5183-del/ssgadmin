@@ -15,6 +15,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRole } from '@/hooks/useRole';
 import { useDashboardStaff } from '@/hooks/useDashboardStaff';
 import { WorkReportHeader, SectionCard } from '@/pages/work-report/_shared';
 import { fetchReservations, deleteReservation } from '@/services/reservationService';
@@ -47,6 +48,7 @@ function StatusBadge({ status }: { status: ReservationStatus }) {
 
 export default function ReservationsPage() {
   const { user } = useAuth();
+  const { isAdmin } = useRole();
   const { staff } = useDashboardStaff();
   const navigate = useNavigate();
 
@@ -244,17 +246,21 @@ export default function ReservationsPage() {
                 <Button size="sm" variant="outline" onClick={() => handleBulkSms(false)} className="gap-1.5 text-gray-500 border-gray-200 hover:bg-gray-50">
                   문자발송 X ({selectedIds.size})
                 </Button>
+                {isAdmin && (
                 <Button size="sm" variant="outline" onClick={handleCSV} className="gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50">
                   CSV ({selectedIds.size})
                 </Button>
+                )}
                 <Button size="sm" variant="outline" onClick={handleBulkDelete} className="gap-1.5 text-red-500 border-red-200 hover:bg-red-50">
                   삭제 ({selectedIds.size})
                 </Button>
               </>
             )}
+            {isAdmin && (
             <Button size="sm" onClick={handleCSV} variant="outline" className="gap-1.5 text-green-600 border-green-200 hover:bg-green-50">
               CSV 전체
             </Button>
+            )}
             <Button size="sm" onClick={() => setAddOpen(true)} className="gap-1.5 bg-pink-500 hover:bg-pink-600 text-white">
               <Plus className="size-4" /> 신규 등록
             </Button>
