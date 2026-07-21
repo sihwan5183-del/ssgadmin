@@ -449,7 +449,9 @@ export default function ReservationsPage() {
                     </TableCell>
                     <TableCell className="text-xs text-blue-600 font-medium whitespace-nowrap">{(r as any).device_interest ?? '-'}</TableCell>
                     <TableCell className="text-xs text-gray-500 text-center">{(r as any).capacity ?? '-'}</TableCell>
-                    <TableCell className="text-xs text-gray-500 max-w-[140px] truncate">{r.memo ?? '-'}</TableCell>
+                    <TableCell className="text-xs text-gray-500 max-w-[220px]" title={r.memo ?? ''}>
+                      <span className="line-clamp-2 whitespace-normal break-all leading-snug">{r.memo ?? '-'}</span>
+                    </TableCell>
                     <TableCell className="text-center">
                       <button
                         onClick={async () => {
