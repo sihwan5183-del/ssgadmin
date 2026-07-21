@@ -29,6 +29,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { formatPhone } from "@/lib/phoneFormat";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/hooks/useRole";
 import { usePeriod } from "@/contexts/PeriodContext";
 import { PeriodFilter } from "@/components/layout/PeriodFilter";
 import { InquiryForm } from "@/components/inquiries/InquiryForm";
@@ -110,6 +111,7 @@ function TimelineDialog({
   onLogAdded: () => void;
 }) {
   const { user } = useAuth();
+  const { isAdmin } = useRole();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [action, setAction] = useState("전화");
   const [content, setContent] = useState("");
@@ -672,6 +674,7 @@ const ChannelIntakePage = ({ embedded = false, formOpen, onFormOpenChange }: Cha
 
   // ── CSV 다운로드 (현재 필터링된 결과만) ──
   const downloadCSV = () => {
+    if (!isAdmin) { toast.error('CSV 다운로드는 관리자만 가능합니다'); return; }
     if (filtered.length === 0) {
       toast.info("다운로드할 데이터가 없습니다");
       return;
