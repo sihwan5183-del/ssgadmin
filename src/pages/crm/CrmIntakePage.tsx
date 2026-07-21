@@ -185,6 +185,7 @@ export default function CrmIntakePage() {
 
   // CSV 다운로드 (선택된 것만 or 전체)
   const handleCSV = () => {
+    if (!isAdmin) { toast.error('CSV 다운로드는 관리자만 가능합니다'); return; }
     const target = selected.size > 0 ? rows.filter(r => selected.has(r.id)) : rows;
     if (target.length === 0) { toast.error('다운로드할 데이터가 없습니다'); return; }
     downloadCSV(target, staff);
