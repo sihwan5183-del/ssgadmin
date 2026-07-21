@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, L
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { useRole } from "@/hooks/useRole";
 import { useDashboardStaff } from "@/hooks/useDashboardStaff";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1015,6 +1016,7 @@ type LeadNote = {
 export default function LeadsPage() {
   const { user } = useAuth();
   const { isSuperAdmin } = useSuperAdmin();
+  const { isAdmin } = useRole();
   const { staff } = useDashboardStaff();
   // [기타인입] 탭 청크를 마운트 시 백그라운드로 미리 로드해
   // 사용자가 처음 클릭했을 때 흰 화면 없이 곧바로 리스트가 보이도록 한다.
@@ -2044,6 +2046,7 @@ export default function LeadsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {isAdmin && (
           <div className="relative">
             <Button variant="outline" className="flex items-center gap-1" onClick={() => setCsvOpen(v => !v)}>
               <Download className="size-4" /> CSV
@@ -2058,6 +2061,7 @@ export default function LeadsPage() {
               </div>
             )}
           </div>
+          )}
           {sourceTab === "other" ? (
             <Button onClick={() => setIntakeFormOpen(true)}>
               <Plus className="size-4 mr-1" /> 인입 등록
