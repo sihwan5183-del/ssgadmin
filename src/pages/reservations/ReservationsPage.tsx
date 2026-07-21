@@ -64,6 +64,7 @@ export default function ReservationsPage() {
 
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [loading, setLoading] = useState(false);
 
   // 필터 상태
@@ -175,7 +176,7 @@ export default function ReservationsPage() {
         assigned_to: assigneeFilter || undefined,
         search,
         page,
-        pageSize: PAGE_SIZE,
+        pageSize,
         channel: channelTab || undefined,
         dateStart: dateStart || undefined,
         dateEnd: dateEnd || undefined,
@@ -187,7 +188,7 @@ export default function ReservationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, assigneeFilter, search, page, channelTab, dateStart, dateEnd]);
+  }, [statusFilter, assigneeFilter, search, page, pageSize, channelTab, dateStart, dateEnd]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
   useEffect(() => { load(); }, [load]);
@@ -211,7 +212,7 @@ export default function ReservationsPage() {
     return counts;
   }, [allRows, channelTab]);
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const handleSearch = () => { setSearch(searchInput); setPage(1); };
   const handleReset = () => {
@@ -365,15 +366,26 @@ export default function ReservationsPage() {
           <Button variant="ghost" size="icon" onClick={() => { loadAll(); load(); }} className="shrink-0">
             <RotateCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
-          <span className="text-xs text-gray-400 ml-auto">총 {total}건</span>
+          <div className="ml-auto flex items-center gap-2">
+            <select
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 bg-white cursor-pointer"
+            >
+              <option value={50}>50건씩</option>
+              <option value={100}>100건씩</option>
+              <option value={200}>200건씩</option>
+            </select>
+            <span className="text-xs text-gray-400">총 {total}건</span>
+          </div>
         </div>
       </SectionCard>
 
       {/* 테이블 */}
       <SectionCard>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
+        <div className="overflow-auto max-h-[calc(100vh-300px)]">
+          <Table className="[&_td]:py-2 [&_th]:py-2">
+            <TableHeader className="sticky top-0 z-10 bg-gray-50 shadow-[0_1px_0_0_#e5e7eb]">
               <TableRow className="bg-gray-50">
                 <TableHead className="text-xs w-[36px] text-center">
                   <input type="checkbox" className="w-3.5 h-3.5 cursor-pointer accent-pink-500"
@@ -413,7 +425,7 @@ export default function ReservationsPage() {
                         onChange={() => {}}
                         onClick={(e) => toggleSelect(r.id, e)} />
                     </TableCell>
-                    <TableCell className="text-xs text-gray-400">{(page - 1) * PAGE_SIZE + idx + 1}</TableCell>
+                    <TableCell className="text-xs text-gray-400">{(page - 1) * pageSize + idx + 1}</TableCell>
                     <TableCell className="text-xs text-gray-500 whitespace-nowrap">
                       {r.contact_date ? (
                           <span>
