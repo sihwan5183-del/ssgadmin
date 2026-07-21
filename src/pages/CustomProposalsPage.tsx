@@ -28,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
+import { maskName } from "@/lib/maskPii";
 import { useDashboardStaff } from "@/hooks/useDashboardStaff";
 import { useStaffNames } from "@/hooks/useStaffNames";
 import { cn } from "@/lib/utils";
@@ -709,7 +710,7 @@ export default function CustomProposalsPage() {
                 <TableRow key={r.id}>
                   <TableCell className="whitespace-nowrap">{r.change_date}</TableCell>
                   <TableCell className="whitespace-nowrap">{resolveName(r.manager, r.manager ?? "-")}</TableCell>
-                  <TableCell className="whitespace-nowrap">{r.customer_name ?? "-"}</TableCell>
+                  <TableCell className="whitespace-nowrap">{maskName(r.customer_name) || "-"}</TableCell>
                   <TableCell className="whitespace-nowrap font-mono text-xs">{r.customer_join_number ?? "-"}</TableCell>
                   <TableCell className="text-center">
                     <Badge variant={r.payment_type === "후납" ? "secondary" : r.payment_type === "입금" ? "default" : "outline"} className="text-[9px]">
