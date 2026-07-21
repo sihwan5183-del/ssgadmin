@@ -272,9 +272,7 @@ function MobileLeadsView({
       {/* 채널 탭 */}
       <div className="sticky top-[53px] z-10 bg-background border-b flex">
         {([
-          { key: "meta", label: "메타광고", count: metaCount },
           { key: "dogmaru", label: "도그마루", count: dogmaruCount },
-          { key: "other", label: "기타인입", count: 0 },
         ] as const).map(t => (
           <button key={t.key} onClick={() => setSourceTab(t.key)}
             className={`flex-1 py-2.5 text-xs font-semibold border-b-2 transition-colors ${sourceTab === t.key ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}>
@@ -890,7 +888,7 @@ export default function LeadsPage() {
   const [rows, setRows] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru" | "udak" | "allinone" | "other">("meta");
+  const [sourceTab, setSourceTab] = useState<"meta" | "dogmaru" | "udak" | "allinone" | "other">("dogmaru");
   const [pcCareTab, setPcCareTab] = useState<"all" | "new" | "absence" | "recare" | "fail" | "complete" | "pending" | "care" | "cancel" | "complete_meta" | "withdraw" | "etc" | "happy_call" | "happy_call_result" | "recare4happy">("all");
   const [openLead, setOpenLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState<LeadNote[]>([]);
@@ -1796,10 +1794,7 @@ export default function LeadsPage() {
             <thead>
               <tr className="text-xs text-muted-foreground border-b border-border">
                 <th className="text-left font-medium py-2 px-2 w-32">지표</th>
-                <th className="text-right font-medium py-2 px-2">메타</th>
-                <th className="text-right font-medium py-2 px-2">도그마루</th>
-                <th className="text-right font-medium py-2 px-2">기타</th>
-                <th className="text-right font-semibold py-2 px-2 text-foreground">총합</th>
+                <th className="text-right font-semibold py-2 px-2 text-foreground">도그마루</th>
               </tr>
             </thead>
             <tbody className="tabular-nums">
@@ -1827,10 +1822,7 @@ export default function LeadsPage() {
                         <span className="font-medium">{row.label}</span>
                       </div>
                     </td>
-                    <td className="text-right py-1.5 px-2">{m.toLocaleString()}</td>
-                    <td className="text-right py-1.5 px-2">{d.toLocaleString()}</td>
-                    <td className="text-right py-1.5 px-2">{o.toLocaleString()}</td>
-                    <td className="text-right py-1.5 px-2 font-bold text-base">{sum.toLocaleString()}</td>
+                    <td className="text-right py-1.5 px-2 font-bold text-base">{d.toLocaleString()}</td>
                   </tr>
                 );
               })}
@@ -1860,19 +1852,7 @@ export default function LeadsPage() {
                     <Icon className={"size-4 " + row.tone} />
                     <span className="text-sm font-semibold">{row.label}</span>
                   </div>
-                  <span className="text-lg font-bold tabular-nums">{sum.toLocaleString()}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  {[
-                    { k: "메타", v: m },
-                    { k: "도그마루", v: d },
-                    { k: "기타", v: o },
-                  ].map((c) => (
-                    <div key={c.k} className="rounded-md bg-muted/50 py-1.5">
-                      <div className="text-[10px] text-muted-foreground whitespace-pre-line leading-tight">{c.k}</div>
-                      <div className="text-sm font-semibold tabular-nums">{c.v.toLocaleString()}</div>
-                    </div>
-                  ))}
+                  <span className="text-lg font-bold tabular-nums">{d.toLocaleString()}</span>
                 </div>
               </div>
             );
@@ -1910,23 +1890,10 @@ export default function LeadsPage() {
           startTransition(() => setSourceTab(v as "meta" | "dogmaru" | "other"))
         }
       >
-        <TabsList className="grid grid-cols-5 w-full max-w-4xl h-12 bg-muted/60 mb-3">
-          <TabsTrigger value="meta" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
-            메타광고
-            <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.meta}</Badge>
-          </TabsTrigger>
+        <TabsList className="grid grid-cols-1 w-full max-w-xs h-12 bg-muted/60 mb-3">
           <TabsTrigger value="dogmaru" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
             도그마루
             <Badge variant="secondary" className="ml-2 tabular-nums">{sourceCounts.dogmaru}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="udak" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
-            유닥
-          </TabsTrigger>
-          <TabsTrigger value="allinone" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
-            올인원
-          </TabsTrigger>
-          <TabsTrigger value="other" className="text-base font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground">
-            기타인입
           </TabsTrigger>
         </TabsList>
       </Tabs>
