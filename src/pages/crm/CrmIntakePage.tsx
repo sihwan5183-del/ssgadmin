@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDashboardStaff } from '@/hooks/useDashboardStaff';
 import { useRole } from '@/hooks/useRole';
+import { maskName, maskPhone } from '@/lib/maskPii';
 import { WorkReportHeader, SectionCard } from '@/pages/work-report/_shared';
 import { formatPhone } from '@/lib/phoneFormat';
 import { CrmAddModal } from './CrmAddModal';
@@ -335,9 +336,9 @@ export default function CrmIntakePage() {
                   <TableCell className="text-xs text-gray-500 whitespace-nowrap" onClick={() => setDetailId(r.id)}>
                     {r.created_at ? new Date(r.created_at).toLocaleString('ko-KR', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) : '-'}
                   </TableCell>
-                  <TableCell className="text-sm font-medium" onClick={() => setDetailId(r.id)}>{r.customer_name ?? r.name ?? '-'}</TableCell>
+                  <TableCell className="text-sm font-medium" onClick={() => setDetailId(r.id)}>{maskName(r.customer_name ?? r.name) || '-'}</TableCell>
                   <TableCell className="text-xs text-gray-500" onClick={() => setDetailId(r.id)}>{(r as any).birth ?? '-'}</TableCell>
-                  <TableCell className="text-sm text-gray-600" onClick={() => setDetailId(r.id)}>{formatPhone(r.customer_phone ?? r.phone ?? '')}</TableCell>
+                  <TableCell className="text-sm text-gray-600" onClick={() => setDetailId(r.id)}>{maskPhone(r.customer_phone ?? r.phone)}</TableCell>
                   <TableCell className="text-sm text-gray-600" onClick={() => setDetailId(r.id)}>{r.current_carrier ?? '-'}</TableCell>
                   <TableCell className="text-sm text-gray-600" onClick={() => setDetailId(r.id)}>{(r as any).crm_group ?? '-'}</TableCell>
                   <TableCell className="text-sm text-gray-600" onClick={() => setDetailId(r.id)}>{(r as any).crm_branch ?? '-'}</TableCell>
