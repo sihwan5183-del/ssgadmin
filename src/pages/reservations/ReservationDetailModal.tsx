@@ -1,3 +1,4 @@
+import PiiWatermark from '@/components/PiiWatermark';
 // ============================================================
 // 사전예약 관리 — 상세 / 수정 모달
 // 상담실패 선택 시 실패사유 필수 인터셉트
@@ -231,6 +232,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
     <>
       <Dialog open onOpenChange={(v) => !v && onClose()}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <PiiWatermark />
           <DialogHeader>
             <DialogTitle className="text-base font-semibold">
               사전예약 상세
