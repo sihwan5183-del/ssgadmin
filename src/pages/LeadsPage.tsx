@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, L
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import PiiWatermark from "@/components/PiiWatermark";
 import { useRole } from "@/hooks/useRole";
 import { useDashboardStaff } from "@/hooks/useDashboardStaff";
 import { Card } from "@/components/ui/card";
@@ -3032,6 +3033,7 @@ export default function LeadsPage() {
         <DialogContent className={`w-full max-w-2xl max-h-[90vh] overflow-y-auto${failModal ? " pointer-events-none" : ""}`}>
           {openLead && (
             <>
+              <PiiWatermark name={user?.id ? staffName(user.id) : undefined} />
               {/* Title block */}
               <DialogHeader className="border-b border-border pb-4">
                 <div className="text-xs font-semibold text-foreground/60">
