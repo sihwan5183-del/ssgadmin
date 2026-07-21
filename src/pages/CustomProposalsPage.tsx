@@ -27,6 +27,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/hooks/useRole";
 import { useDashboardStaff } from "@/hooks/useDashboardStaff";
 import { useStaffNames } from "@/hooks/useStaffNames";
 import { cn } from "@/lib/utils";
@@ -63,6 +64,7 @@ const calcDiscounted = (fee: number, on: boolean) => (on ? fee * 0.75 : fee);
 
 export default function CustomProposalsPage() {
   const { user } = useAuth();
+  const { isAdmin } = useRole();
   const { staff } = useDashboardStaff();
   const { resolve: resolveName } = useStaffNames();
 
@@ -79,6 +81,10 @@ export default function CustomProposalsPage() {
   const CSV_PASSWORD = "a312017!";
 
   const requireCsvPassword = (callback: () => void) => {
+    if (!isAdmin) {
+      toast.error("엑셀 다운로드는 관리자만 가능합니다");
+      return;
+    }
     setCsvPwInput("");
     csvPwCallbackRef.current = callback;
     setCsvPwModal(true);
