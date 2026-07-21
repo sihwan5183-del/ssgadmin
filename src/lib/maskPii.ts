@@ -1,21 +1,21 @@
-/** 전화번호 중간자리 마스킹: 010-1234-5678 → 010-****-5678 */
+/** 전화번호 마스킹: 010-3975-1390 → 010-3***-1*** (각 그룹 첫 자리만 노출) */
 export const maskPhone = (phone: string | null | undefined): string => {
   if (!phone) return "";
   const digits = phone.replace(/[^0-9]/g, "");
-  if (digits.length === 11) return `${digits.slice(0, 3)}-****-${digits.slice(7)}`;
-  if (digits.length === 10) return `${digits.slice(0, 3)}-***-${digits.slice(6)}`;
-  if (phone.length > 4) {
-    const mid = Math.floor(phone.length / 3);
-    return phone.slice(0, mid) + "****" + phone.slice(-mid);
-  }
-  return "****";
+  if (digits.length < 8) return "****";
+  const head = digits.slice(0, 3);
+  const last = digits.slice(-4);
+  const mid = digits.slice(3, -4);
+  return `${head}-${mid[0] ?? ""}${"*".repeat(Math.max(mid.length - 1, 0))}-${last[0]}***`;
 };
 
-/** 이름 끝자리 마스킹: 홍길동 → 홍길*, 김수 → 김* */
+/** 이름 마스킹: 김민석 → 김*석, 김수 → 김* (가운데만 가림) */
 export const maskName = (name: string | null | undefined): string => {
   if (!name) return "";
-  if (name.length <= 1) return "*";
-  return name.slice(0, -1) + "*";
+  const t = name.trim();
+  if (t.length <= 1) return t;
+  if (t.length === 2) return t[0] + "*";
+  return t[0] + "*".repeat(t.length - 2) + t[t.length - 1];
 };
 
 /** 계좌번호 마스킹: 끝 4자리만 노출 → ****-****-1234 */
