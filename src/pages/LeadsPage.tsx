@@ -91,6 +91,24 @@ const DOGMARU_CAMPAIGN = "도그마루_홈캠";
 
 // ── 도그마루 상태 분류 함수 (PC/모바일 공통) ──
 // 구글시트 최신값 기준으로 매번 해석 - status 컬럼 신뢰하지 않음
+// ── PII 마스킹 (목록 표시용 — 전화걸기/상세 모달은 원본 유지) ──
+function maskName(n?: string | null): string {
+  if (!n) return "-";
+  const t = String(n).trim();
+  if (t.length <= 1) return t;
+  if (t.length === 2) return t[0] + "*";
+  return t[0] + "*".repeat(t.length - 2) + t[t.length - 1];
+}
+function maskPhone(p?: string | null): string {
+  if (!p) return "-";
+  const d = String(p).replace(/\D/g, "");
+  if (d.length < 8) return String(p);
+  const head = d.slice(0, 3);
+  const last = d.slice(-4);
+  const mid = d.slice(3, -4);
+  return head + "-" + (mid[0] ?? "") + "*".repeat(Math.max(mid.length - 1, 0)) + "-" + last[0] + "***";
+}
+
 function getDogmaruTab(r: any): string {
   const manualStatus = String(r.status ?? "").trim();
   const activationStatus = String(r.activation_status ?? "").trim();
@@ -424,10 +442,10 @@ function MobileLeadsView({
                   ) : paged.map(lead => (
                     <div key={lead.id} className="px-4 py-3">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="font-semibold text-sm">{lead.customer_name ?? "-"}</span>
+                        <span className="font-semibold text-sm">{maskName(lead.customer_name)}</span>
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">완료</span>
                       </div>
-                      <div className="text-xs text-muted-foreground">{lead.customer_phone ?? "-"} · {lead.branch_name ?? "-"}</div>
+                      <div className="text-xs text-muted-foreground">{maskPhone(lead.customer_phone)} · {lead.branch_name ?? "-"}</div>
                       {(lead as any).activation_status && (
                         <div className="text-xs text-muted-foreground mt-0.5">개통상태: {(lead as any).activation_status}</div>
                       )}
@@ -479,7 +497,7 @@ function MobileLeadsView({
                 onClick={() => setExpandedId(isExpanded ? null : lead.id)}>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                    <span className="font-semibold text-sm truncate">{displayName(lead)}</span>
+                    <span className="font-semibold text-sm truncate">{maskName(displayName(lead))}</span>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${statusInfo.color}`}>
                       {statusInfo.label}
                     </span>
@@ -489,7 +507,7 @@ function MobileLeadsView({
                     {(lead as any).happy_call_result === "실패" && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700 font-bold border border-rose-300 flex-shrink-0">영업❌</span>}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {phone ?? "번호 없음"} · {lead.registration_date ?? lead.created_at?.slice(0,10) ?? "-"}
+                    {phone ? maskPhone(phone) : "번호 없음"} · {lead.registration_date ?? lead.created_at?.slice(0,10) ?? "-"}
                   </div>
                   {lead.branch_name && <div className="text-xs text-muted-foreground mt-0.5">{lead.branch_name}</div>}
                   {lead.memo && (
@@ -2618,10 +2636,10 @@ export default function LeadsPage() {
                       {item.registration_date ?? "-"}
                     </TableCell>
                     <TableCell className="font-bold text-foreground py-1.5">
-                      {item.customer_name ?? "-"}
+                      {maskName(item.customer_name)}
                     </TableCell>
                     <TableCell className="tabular-nums text-foreground font-medium py-1.5">
-                      {item.customer_phone ?? "-"}
+                      {maskPhone(item.customer_phone)}
                     </TableCell>
                     <TableCell className="text-foreground py-1.5">{item.branch_name ?? "-"}</TableCell>
                     <TableCell className="whitespace-nowrap py-1.5">
@@ -2814,10 +2832,10 @@ export default function LeadsPage() {
                 <TableCell className="tabular-nums text-xs text-foreground font-medium whitespace-nowrap py-1.5">
                   {fmtCompactDate(r.created_at)}
                 </TableCell>
-                <TableCell className="font-bold text-foreground py-1.5 whitespace-nowrap">{r.name ?? "-"}</TableCell>
+                <TableCell className="font-bold text-foreground py-1.5 whitespace-nowrap" title="">{maskName(r.name)}</TableCell>
                 <TableCell className="tabular-nums text-foreground font-medium py-1.5 whitespace-nowrap">
                   <div className="flex items-center gap-1.5">
-                    <span>{r.phone ?? "-"}</span>
+                    <span>{maskPhone(r.phone)}</span>
                     {r.phone && (
                       <a
                         href={`tel:${r.phone}`}
