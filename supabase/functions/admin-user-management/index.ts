@@ -25,7 +25,8 @@ interface Body {
     | "verify_trusted_device"
     | "register_trusted_device"
     | "list_trusted_devices"
-    | "revoke_trusted_device";
+    | "revoke_trusted_device"
+    | "resolve_login_id";
   user_id?: string;
   email?: string;
   password?: string; // for request_magic_link (re-verify)
@@ -44,6 +45,7 @@ interface Body {
     hire_date?: string | null;
   };
   redirect_to?: string;
+  login_id?: string; // for resolve_login_id (한글 아이디 로그인)
 }
 
 // Web Crypto SHA-256 -> hex
@@ -77,6 +79,32 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
 
     // ---------- PUBLIC actions (no JWT required) ----------
+
+    // 0) 로그인 아이디(한글 등) -> 이메일 변환 (로그인 폼에서 이메일 형식이 아닌 입력을 받았을 때 사용)
+    if (body.action === "resolve_login_id") {
+      const loginId = (body.login_id ?? "").trim();
+      if (!loginId) return json({ error: "아이디를 입력해주세요" }, 400);
+      const { data: prof } = await admin
+        .from("profiles")
+        .select("user_id")
+        .eq("login_id", loginId)
+        .maybeSingle();
+      if (!prof) {
+        await admin.from("auth_attempts").insert({
+          kind: "login_id_resolve",
+          success: false,
+          ip,
+          user_agent: ua,
+          detail: `login_id not found: ${loginId}`,
+        });
+        return json({ error: "존재하지 않는 아이디입니다" }, 404);
+      }
+      const { data: u } = await admin.auth.admin.getUserById(prof.user_id);
+      if (!u?.user?.email) {
+        return json({ error: "계정 정보를 찾을 수 없습니다" }, 404);
+      }
+      return json({ ok: true, email: u.user.email });
+    }
 
     // 1) 비밀번호 1차 검증 + 매직링크 발급 (시뮬레이션)
     if (body.action === "request_magic_link") {
