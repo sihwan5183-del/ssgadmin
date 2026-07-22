@@ -11,7 +11,8 @@ import udakLogo from "@/assets/udak-logo.png";
 
 const AuthPage = () => {
   const [mode, setMode] = useState<"login" | "signup">("login");
-  const [email, setEmail] = useState("");
+  const [loginInput, setLoginInput] = useState(""); // 로그인: 이메일 또는 한글 아이디 모두 허용
+  const [email, setEmail] = useState(""); // 회원가입: 이메일만
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [team, setTeam] = useState("");
@@ -27,6 +28,23 @@ const AuthPage = () => {
       nav(from, { replace: true });
     }
   }, [session, nav, loc.state]);
+
+  // 로그인 입력값이 이메일 형식이 아니면(=한글/영문 아이디로 간주) 실제 이메일로 변환
+  const resolveLoginEmail = async (input: string): Promise<string> => {
+    const trimmed = input.trim();
+    const looksLikeEmail = /\S+@\S+\.\S+/.test(trimmed);
+    if (looksLikeEmail) return trimmed;
+
+    const { data, error } = await supabase.functions.invoke("admin-user-management", {
+      body: { action: "resolve_login_id", login_id: trimmed },
+    });
+    if (error || (data as any)?.error) {
+      throw new Error((data as any)?.error ?? "존재하지 않는 아이디입니다.");
+    }
+    const resolved = (data as any)?.email as string | undefined;
+    if (!resolved) throw new Error("존재하지 않는 아이디입니다.");
+    return resolved;
+  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,7 +77,11 @@ const AuthPage = () => {
         });
         setMode("login");
       } else {
-        const { error, data } = await supabase.auth.signInWithPassword({ email, password });
+        const resolvedEmail = await resolveLoginEmail(loginInput);
+        const { error, data } = await supabase.auth.signInWithPassword({
+          email: resolvedEmail,
+          password,
+        });
         if (error) throw error;
         if (data.user) {
           const { data: profile } = await supabase
@@ -87,9 +109,9 @@ const AuthPage = () => {
       if (lower.includes("email not confirmed") || lower.includes("email_not_confirmed")) {
         desc = "이메일 인증이 완료되지 않았습니다. 받은 편지함의 인증 메일을 확인해주세요.";
       } else if (lower.includes("invalid login credentials") || lower.includes("invalid_credentials")) {
-        desc = "이메일 또는 비밀번호가 올바르지 않습니다.";
-      } else if (lower.includes("user not found")) {
-        desc = "등록되지 않은 계정입니다. 먼저 회원가입을 진행해주세요.";
+        desc = "아이디(이메일) 또는 비밀번호가 올바르지 않습니다.";
+      } else if (lower.includes("user not found") || raw.includes("존재하지 않는 아이디")) {
+        desc = mode === "signup" ? "등록되지 않은 계정입니다. 먼저 회원가입을 진행해주세요." : "존재하지 않는 아이디입니다.";
       } else if (lower.includes("over_email_send_rate_limit") || lower.includes("rate limit")) {
         desc = "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.";
       } else if (lower.includes("user already registered") || lower.includes("already registered")) {
@@ -170,17 +192,32 @@ const AuthPage = () => {
               </div>
             </>
           )}
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">이메일</Label>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@team.com"
-              className="h-11 bg-input/60"
-              required
-            />
-          </div>
+          {mode === "login" ? (
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">아이디</Label>
+              <Input
+                type="text"
+                value={loginInput}
+                onChange={(e) => setLoginInput(e.target.value)}
+                placeholder="이름 또는 이메일"
+                className="h-11 bg-input/60"
+                required
+                autoComplete="username"
+              />
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">이메일</Label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@team.com"
+                className="h-11 bg-input/60"
+                required
+              />
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">비밀번호</Label>
             <Input
