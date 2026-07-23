@@ -24,6 +24,7 @@ export async function fetchFailReasons(): Promise<ReservationFailReason[]> {
 // ── 목록 조회 ──────────────────────────────────────────────
 export interface FetchReservationsParams {
   status?: ReservationStatus | '';
+  prospect_grade?: string;
   assigned_to?: string;
   search?: string;
   channel?: string;
@@ -37,7 +38,7 @@ export async function fetchReservations(params: FetchReservationsParams = {}): P
   data: Reservation[];
   count: number;
 }> {
-  const { status, assigned_to, search, channel, dateStart, dateEnd, page = 1, pageSize = 50 } = params;
+  const { status, prospect_grade, assigned_to, search, channel, dateStart, dateEnd, page = 1, pageSize = 50 } = params;
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
@@ -52,6 +53,7 @@ export async function fetchReservations(params: FetchReservationsParams = {}): P
     .range(from, to);
 
   if (status) query = query.eq('status', status);
+  if (prospect_grade) query = query.eq('prospect_grade', prospect_grade);
   if (assigned_to) query = query.eq('assigned_to', assigned_to);
   if (channel) query = query.eq('channel', channel);
   if (dateStart) query = query.gte('contact_date', dateStart);

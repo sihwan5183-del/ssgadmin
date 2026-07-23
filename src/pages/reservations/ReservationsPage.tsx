@@ -20,8 +20,8 @@ import { maskName, maskPhone } from '@/lib/maskPii';
 import { useDashboardStaff } from '@/hooks/useDashboardStaff';
 import { WorkReportHeader, SectionCard } from '@/pages/work-report/_shared';
 import { fetchReservations, deleteReservation } from '@/services/reservationService';
-import type { Reservation, ReservationStatus } from '@/types/reservation';
-import { RESERVATION_STATUS_LIST } from '@/types/reservation';
+import type { Reservation, ReservationStatus, ProspectGrade } from '@/types/reservation';
+import { RESERVATION_STATUS_LIST, PROSPECT_GRADE_OPTIONS } from '@/types/reservation';
 import { ReservationAddModal } from './ReservationAddModal';
 import { ReservationDetailModal } from './ReservationDetailModal';
 import { formatPhone } from '@/lib/phoneFormat';
@@ -74,6 +74,7 @@ export default function ReservationsPage() {
   // 필터 상태
   const [channelTab, setChannelTab] = useState('');
   const [statusFilter, setStatusFilter] = useState<ReservationStatus | ''>('');
+  const [gradeFilter, setGradeFilter] = useState<ProspectGrade | ''>('');
   const [assigneeFilter, setAssigneeFilter] = useState('');
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -168,7 +169,7 @@ export default function ReservationsPage() {
   const loadAll = useCallback(async () => {
     const { data } = await supabase
       .from('reservations')
-      .select('id, status, channel, contact_date');
+      .select('id, status, channel, contact_date, prospect_grade');
     setAllRows((data ?? []) as any[]);
   }, []);
 
@@ -178,6 +179,7 @@ export default function ReservationsPage() {
     try {
       const res = await fetchReservations({
         status: statusFilter || undefined,
+        prospect_grade: (statusFilter === '가망' && gradeFilter) || undefined,
         assigned_to: assigneeFilter || undefined,
         search,
         page,
@@ -193,10 +195,12 @@ export default function ReservationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, assigneeFilter, search, page, pageSize, channelTab, dateStart, dateEnd]);
+  }, [statusFilter, gradeFilter, assigneeFilter, search, page, pageSize, channelTab, dateStart, dateEnd]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
   useEffect(() => { load(); }, [load]);
+  // 가망이 아닌 상태로 바뀌면 등급 필터는 의미가 없으므로 초기화
+  useEffect(() => { if (statusFilter !== '가망') setGradeFilter(''); }, [statusFilter]);
 
   // 채널별 카운트
   const channelCounts = useMemo(() => {
@@ -217,11 +221,24 @@ export default function ReservationsPage() {
     return counts;
   }, [allRows, channelTab]);
 
+  // 가망 등급별 카운트 (상/중/하, 현재 채널 탭 기준)
+  const gradeCounts = useMemo(() => {
+    const filtered = channelTab ? allRows.filter(r => (r as any).channel === channelTab) : allRows;
+    const prospects = filtered.filter(r => r.status === '가망');
+    const counts: Record<ProspectGrade | '미선택', number> = { 상: 0, 중: 0, 하: 0, 미선택: 0 };
+    prospects.forEach(r => {
+      const g = (r as any).prospect_grade as ProspectGrade | null;
+      if (g === '상' || g === '중' || g === '하') counts[g]++;
+      else counts['미선택']++;
+    });
+    return counts;
+  }, [allRows, channelTab]);
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const handleSearch = () => { setSearch(searchInput); setPage(1); };
   const handleReset = () => {
-    setSearch(''); setSearchInput(''); setStatusFilter(''); setAssigneeFilter('');
+    setSearch(''); setSearchInput(''); setStatusFilter(''); setGradeFilter(''); setAssigneeFilter('');
     setDateStart(''); setDateEnd(''); setPage(1);
   };
   const handleTabChange = (val: string) => {
@@ -305,6 +322,28 @@ export default function ReservationsPage() {
           >
             <div className="text-[10px] text-gray-400 font-medium truncate">{s.label}</div>
             <div className="text-lg font-bold mt-0.5">{statusCounts[s.value] ?? 0}</div>
+            {s.value === '가망' && (statusCounts['가망'] ?? 0) > 0 && (
+              <div className="flex items-center gap-1 mt-1 flex-wrap">
+                {PROSPECT_GRADE_OPTIONS.map((g) => (
+                  <span
+                    key={g}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setStatusFilter('가망');
+                      setGradeFilter(gradeFilter === g ? '' : g);
+                      setPage(1);
+                    }}
+                    className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                      gradeFilter === g && statusFilter === '가망'
+                        ? 'bg-amber-500 text-white'
+                        : 'bg-amber-50 text-amber-700'
+                    }`}
+                  >
+                    {g} {gradeCounts[g]}
+                  </span>
+                ))}
+              </div>
+            )}
           </button>
         ))}
       </div>
@@ -368,6 +407,21 @@ export default function ReservationsPage() {
               ))}
             </SelectContent>
           </Select>
+
+          {/* 가망 등급 필터 (상태=가망일 때만 노출) */}
+          {statusFilter === '가망' && (
+            <Select value={gradeFilter || '_all_'} onValueChange={(v) => { setGradeFilter((v === '_all_' ? '' : v) as ProspectGrade | ''); setPage(1); }}>
+              <SelectTrigger className="w-[110px] text-sm border-amber-200 text-amber-700">
+                <SelectValue placeholder="전체 등급" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_all_">전체 등급</SelectItem>
+                {PROSPECT_GRADE_OPTIONS.map((g) => (
+                  <SelectItem key={g} value={g}>{g} ({gradeCounts[g]})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           <Button variant="ghost" size="sm" onClick={handleReset} className="gap-1 text-gray-400">
             <X className="size-3.5" /> 초기화
