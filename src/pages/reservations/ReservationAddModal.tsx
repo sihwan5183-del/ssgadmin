@@ -11,7 +11,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { insertReservation } from '@/services/reservationService';
-import { CARRIER_OPTIONS, CHANNEL_OPTIONS } from '@/types/reservation';
+import { CARRIER_OPTIONS, CHANNEL_OPTIONS, DEVICE_OPTIONS, DEVICE_COLOR_MAP } from '@/types/reservation';
 import { useFieldOptions } from '@/hooks/useFieldOptions';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -127,13 +127,21 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
 
           <div>
             <label className="text-xs text-gray-500 mb-1 block">관심 기기 <span className="text-red-400">*</span></label>
-            <Select value={device || '_none_'} onValueChange={v => setDevice(v === '_none_' ? '' : v)}>
+            <Select
+              value={device || '_none_'}
+              onValueChange={v => {
+                const nextDevice = v === '_none_' ? '' : v;
+                setDevice(nextDevice);
+                const nextColors = DEVICE_COLOR_MAP[nextDevice];
+                if (nextColors && color && !nextColors.includes(color)) setColor('');
+              }}
+            >
               <SelectTrigger className="text-sm"><SelectValue placeholder="기기 선택" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="_none_">선택 안함</SelectItem>
-                <SelectItem value="갤럭시 Z 플립8">갤럭시 Z 플립8</SelectItem>
-                <SelectItem value="갤럭시 Z 폴드8">갤럭시 Z 폴드8</SelectItem>
-                <SelectItem value="갤럭시 Z 폴드8 와이드">갤럭시 Z 폴드8 와이드</SelectItem>
+                {DEVICE_OPTIONS.map(d => (
+                  <SelectItem key={d} value={d}>{d}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -152,13 +160,18 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
 
           <div className="col-span-2">
             <label className="text-xs text-gray-500 mb-1 block">
-              컬러 <span className="text-gray-400 text-[10px]">(재고/설정 → 필드 옵션에서 추가 가능)</span>
+              컬러{' '}
+              {DEVICE_COLOR_MAP[device] ? (
+                <span className="text-gray-400 text-[10px]">(출시 컬러)</span>
+              ) : (
+                <span className="text-gray-400 text-[10px]">(재고/설정 → 필드 옵션에서 추가 가능)</span>
+              )}
             </label>
             <Select value={color || '_none_'} onValueChange={v => setColor(v === '_none_' ? '' : v)}>
               <SelectTrigger className="text-sm"><SelectValue placeholder="미정" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="_none_">미정</SelectItem>
-                {colorOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                {(DEVICE_COLOR_MAP[device] ?? colorOptions).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

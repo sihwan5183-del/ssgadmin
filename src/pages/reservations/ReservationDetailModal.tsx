@@ -21,11 +21,14 @@ import {
   fetchMemoLogs,
   addMemoLog,
 } from '@/services/reservationService';
-import type { Reservation, ReservationStatus, FailStage, ReservationMemoLog } from '@/types/reservation';
+import type { Reservation, ReservationStatus, FailStage, ReservationMemoLog, ProspectGrade } from '@/types/reservation';
 import {
   RESERVATION_STATUS_LIST,
   CARRIER_OPTIONS,
   CHANNEL_OPTIONS,
+  DEVICE_OPTIONS,
+  DEVICE_COLOR_MAP,
+  PROSPECT_GRADE_OPTIONS,
 } from '@/types/reservation';
 import type { ReservationFailReason } from '@/types/reservation';
 import { useRole } from '@/hooks/useRole';
@@ -40,9 +43,6 @@ interface Props {
   onClose: () => void;
   onDone: () => void;
 }
-
-// 관심기기 표준 옵션 (신규 저장 시 이 값들만 선택 가능)
-const DEVICE_OPTIONS = ['갤럭시 Z 플립8', '갤럭시 Z 폴드8', '갤럭시 Z 폴드8 와이드'];
 
 function StatusBadge({ status }: { status: ReservationStatus }) {
   const found = RESERVATION_STATUS_LIST.find((s) => s.value === status);
@@ -76,6 +76,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
 
   // 수정 필드
   const [status, setStatus] = useState<ReservationStatus>('신규');
+  const [prospectGrade, setProspectGrade] = useState<ProspectGrade | null>(null);
   const [carrier, setCarrier] = useState('');
   const [channel, setChannel] = useState('');
   const [device, setDevice] = useState('');
@@ -101,6 +102,12 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
     ? [...DEVICE_OPTIONS, device]
     : DEVICE_OPTIONS;
 
+  // 기기가 매핑된 출시 기종이면 해당 컬러만, 아니면 필드 옵션(설정)의 일반 컬러 목록을 사용
+  const baseColorOptions = DEVICE_COLOR_MAP[device] ?? colorOptions;
+  const colorSelectOptions = color && !baseColorOptions.includes(color)
+    ? [...baseColorOptions, color]
+    : baseColorOptions;
+
   const loadMemoLogs = async () => {
     setMemoLogsLoading(true);
     try {
@@ -124,6 +131,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
         setRow(r);
         setFailReasons(fr);
         setStatus(r.status);
+        setProspectGrade((r as any).prospect_grade ?? null);
         setCarrier(r.carrier ?? '');
         setChannel(r.channel ?? '');
         setDevice(r.device_interest ?? '');
@@ -195,6 +203,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
       }
       await updateReservation(row.id, {
         status,
+        prospect_grade: status === '가망' ? prospectGrade : null,
         carrier: carrier || undefined,
         channel: channel || undefined,
         device_interest: device || undefined,
@@ -297,6 +306,29 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                 </Select>
               </div>
 
+              {/* 가망 상태일 때 가망 등급 표시 */}
+              {status === '가망' && (
+                <div className="bg-amber-50 rounded-xl p-3 border border-amber-100 space-y-2">
+                  <div className="text-xs font-medium text-amber-700">가망 등급 (선택)</div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {PROSPECT_GRADE_OPTIONS.map((g) => (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() => setProspectGrade(prospectGrade === g ? null : g)}
+                        className={`text-sm py-1.5 rounded-lg border font-medium transition-colors ${
+                          prospectGrade === g
+                            ? 'bg-amber-500 text-white border-amber-500'
+                            : 'bg-white text-gray-600 border-gray-200 hover:border-amber-300'
+                        }`}
+                      >
+                        {g}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* 상담실패 상태일 때 실패사유 표시 */}
               {status === '상담실패' && (
                 <div className="bg-red-50 rounded-xl p-3 border border-red-100 space-y-2">
@@ -361,7 +393,15 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                     </span>
                   )}
                 </label>
-                <Select value={device || '_none_'} onValueChange={v => setDevice(v === '_none_' ? '' : v)}>
+                <Select
+                  value={device || '_none_'}
+                  onValueChange={v => {
+                    const nextDevice = v === '_none_' ? '' : v;
+                    setDevice(nextDevice);
+                    const nextColors = DEVICE_COLOR_MAP[nextDevice];
+                    if (nextColors && color && !nextColors.includes(color)) setColor('');
+                  }}
+                >
                   <SelectTrigger className="text-sm"><SelectValue placeholder="기기 선택" /></SelectTrigger>
                   <SelectContent position="item-aligned">
                     <SelectItem value="_none_">선택 안함</SelectItem>
@@ -383,12 +423,24 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                 </Select>
               </div>
               <div className="col-span-2">
-                <label className="text-xs text-gray-500 mb-1 block">컬러 <span className="text-gray-400 text-[10px]">(재고/설정 → 필드 옵션)</span></label>
+                <label className="text-xs text-gray-500 mb-1 block">
+                  컬러{' '}
+                  {DEVICE_COLOR_MAP[device] ? (
+                    <span className="text-gray-400 text-[10px]">(출시 컬러)</span>
+                  ) : (
+                    <span className="text-gray-400 text-[10px]">(재고/설정 → 필드 옵션)</span>
+                  )}
+                  {color && DEVICE_COLOR_MAP[device] && !DEVICE_COLOR_MAP[device].includes(color) && (
+                    <span className="ml-1.5 text-[10px] text-orange-500 font-medium">
+                      ⚠ 표준값 아님 (원본 그대로 표시 중)
+                    </span>
+                  )}
+                </label>
                 <Select value={color || '_none_'} onValueChange={v => setColor(v === '_none_' ? '' : v)}>
                   <SelectTrigger className="text-sm"><SelectValue placeholder="미정" /></SelectTrigger>
                   <SelectContent position="item-aligned">
                     <SelectItem value="_none_">미정</SelectItem>
-                    {colorOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {colorSelectOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

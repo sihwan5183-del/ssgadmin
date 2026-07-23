@@ -293,7 +293,7 @@ export default function ReservationsPage() {
       </div>
 
       {/* 상태별 KPI 카드 */}
-      <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+      <div className="grid grid-cols-4 sm:grid-cols-9 gap-2">
         {RESERVATION_STATUS_LIST.map((s) => (
           <button
             key={s.value}
