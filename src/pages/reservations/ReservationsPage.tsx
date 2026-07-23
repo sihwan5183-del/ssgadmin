@@ -413,6 +413,7 @@ export default function ReservationsPage() {
                 <TableHead className="text-xs whitespace-nowrap">담당자</TableHead>
                 <TableHead className="text-xs">관심기기</TableHead>
                 <TableHead className="text-xs w-[70px]">용량</TableHead>
+                <TableHead className="text-xs w-[90px]">컬러</TableHead>
                 <TableHead className="text-xs">메모</TableHead>
                 <TableHead className="text-xs w-[80px] text-center">문자발송</TableHead>
               </TableRow>
@@ -472,6 +473,7 @@ export default function ReservationsPage() {
                     </TableCell>
                     <TableCell className="text-xs text-blue-600 font-medium whitespace-nowrap">{(r as any).device_interest ?? '-'}</TableCell>
                     <TableCell className="text-xs text-gray-500 text-center">{(r as any).capacity ?? '-'}</TableCell>
+                    <TableCell className="text-xs text-gray-500 text-center whitespace-nowrap">{(r as any).product_color ?? '-'}</TableCell>
                     <TableCell className="text-xs text-gray-500 max-w-[220px]" title={r.memo ?? ''}>
                       <span className="line-clamp-2 whitespace-normal break-all leading-snug">{r.memo ?? '-'}</span>
                     </TableCell>
