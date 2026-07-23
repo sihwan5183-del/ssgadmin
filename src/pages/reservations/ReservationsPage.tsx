@@ -133,7 +133,7 @@ export default function ReservationsPage() {
   const handleCSV = () => {
     const selected = rows.filter(r => selectedIds.has(r.id));
     const target = selected.length > 0 ? selected : rows;
-    const header = ['#', '접수일', '고객명', '연락처', '생년월일', '통신사', '채널', '상태', '담당자', '관심기기', '메모'];
+    const header = ['#', '접수일', '고객명', '연락처', '생년월일', '통신사', '채널', '캠페인', '상태', '담당자', '관심기기', '메모'];
     const csvRows = target.map((r, i) => [
       i + 1,
       r.created_at ? new Date(r.created_at).toLocaleDateString('ko-KR') : '',
@@ -142,6 +142,7 @@ export default function ReservationsPage() {
       r.birth_date ?? '',
       r.carrier ?? '',
       r.channel ?? '',
+      (r as any).utm_campaign ?? '',
       r.status,
       (r as any).assignee?.full_name ?? '',
       (r as any).device_interest ?? '',
@@ -406,6 +407,7 @@ export default function ReservationsPage() {
                 <TableHead className="text-xs">생년월일</TableHead>
                 <TableHead className="text-xs">통신사</TableHead>
                 <TableHead className="text-xs">채널</TableHead>
+                <TableHead className="text-xs">캠페인</TableHead>
                 <TableHead className="text-xs">상태</TableHead>
                 <TableHead className="text-xs">담당자</TableHead>
                 <TableHead className="text-xs">관심기기</TableHead>
@@ -457,6 +459,7 @@ export default function ReservationsPage() {
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${ r.channel === '메타광고' ? 'bg-blue-100 text-blue-700' : r.channel === '네이버 검색광고' ? 'bg-green-100 text-green-700' : r.channel === '기존고객' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>{r.channel}</span>
                       ) : '-'}
                     </TableCell>
+                    <TableCell className="text-xs text-gray-500">{(r as any).utm_campaign ?? '-'}</TableCell>
                     <TableCell>
                       <StatusBadge status={r.status} />
                       {r.status === '상담실패' && r.fail_reason && (
