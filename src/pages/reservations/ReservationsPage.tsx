@@ -38,11 +38,12 @@ const CHANNEL_TABS = [
   { value: '기존고객',    label: '기존고객' },
 ];
 
-function StatusBadge({ status }: { status: ReservationStatus }) {
+function StatusBadge({ status, prospectGrade }: { status: ReservationStatus; prospectGrade?: string | null }) {
   const found = RESERVATION_STATUS_LIST.find((s) => s.value === status);
+  const label = status === '가망' && prospectGrade ? prospectGrade : (found?.label ?? status);
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${found?.color ?? 'bg-gray-100 text-gray-600'}`}>
-      {found?.label ?? status}
+      {label}
     </span>
   );
 }
@@ -461,7 +462,7 @@ export default function ReservationsPage() {
                     </TableCell>
                     <TableCell className="text-xs text-gray-500 whitespace-nowrap">{(r as any).utm_campaign ?? '-'}</TableCell>
                     <TableCell className="whitespace-nowrap">
-                      <StatusBadge status={r.status} />
+                      <StatusBadge status={r.status} prospectGrade={(r as any).prospect_grade} />
                       {r.status === '상담실패' && r.fail_reason && (
                         <div className="text-[10px] text-red-400 mt-0.5">{r.fail_reason.reason}</div>
                       )}

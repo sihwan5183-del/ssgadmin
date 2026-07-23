@@ -44,11 +44,12 @@ interface Props {
   onDone: () => void;
 }
 
-function StatusBadge({ status }: { status: ReservationStatus }) {
+function StatusBadge({ status, prospectGrade }: { status: ReservationStatus; prospectGrade?: string | null }) {
   const found = RESERVATION_STATUS_LIST.find((s) => s.value === status);
+  const label = status === '가망' && prospectGrade ? prospectGrade : (found?.label ?? status);
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${found?.color ?? 'bg-gray-100 text-gray-600'}`}>
-      {found?.label ?? status}
+      {label}
     </span>
   );
 }
@@ -245,7 +246,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
           <DialogHeader>
             <DialogTitle className="text-base font-semibold">
               사전예약 상세
-              {row && <span className="ml-2"><StatusBadge status={row.status} /></span>}
+              {row && <span className="ml-2"><StatusBadge status={row.status} prospectGrade={row.prospect_grade} /></span>}
             </DialogTitle>
           </DialogHeader>
 
