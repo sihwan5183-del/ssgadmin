@@ -27,7 +27,7 @@ import {
   CARRIER_OPTIONS,
   CHANNEL_OPTIONS,
   DEVICE_OPTIONS,
-  DEVICE_COLOR_MAP,
+  getColorsForDevice,
   PROSPECT_GRADE_OPTIONS,
 } from '@/types/reservation';
 import type { ReservationFailReason } from '@/types/reservation';
@@ -104,7 +104,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
     : DEVICE_OPTIONS;
 
   // 기기가 매핑된 출시 기종이면 해당 컬러만, 아니면 필드 옵션(설정)의 일반 컬러 목록을 사용
-  const baseColorOptions = DEVICE_COLOR_MAP[device] ?? colorOptions;
+  const baseColorOptions = getColorsForDevice(device) ?? colorOptions;
   const colorSelectOptions = color && !baseColorOptions.includes(color)
     ? [...baseColorOptions, color]
     : baseColorOptions;
@@ -399,7 +399,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                   onValueChange={v => {
                     const nextDevice = v === '_none_' ? '' : v;
                     setDevice(nextDevice);
-                    const nextColors = DEVICE_COLOR_MAP[nextDevice];
+                    const nextColors = getColorsForDevice(nextDevice);
                     if (nextColors && color && !nextColors.includes(color)) setColor('');
                   }}
                 >
@@ -426,12 +426,12 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
               <div className="col-span-2">
                 <label className="text-xs text-gray-500 mb-1 block">
                   컬러{' '}
-                  {DEVICE_COLOR_MAP[device] ? (
+                  {getColorsForDevice(device) ? (
                     <span className="text-gray-400 text-[10px]">(출시 컬러)</span>
                   ) : (
                     <span className="text-gray-400 text-[10px]">(재고/설정 → 필드 옵션)</span>
                   )}
-                  {color && DEVICE_COLOR_MAP[device] && !DEVICE_COLOR_MAP[device].includes(color) && (
+                  {color && getColorsForDevice(device) && !getColorsForDevice(device)!.includes(color) && (
                     <span className="ml-1.5 text-[10px] text-orange-500 font-medium">
                       ⚠ 표준값 아님 (원본 그대로 표시 중)
                     </span>

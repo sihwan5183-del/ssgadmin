@@ -133,6 +133,17 @@ export const DEVICE_COLOR_MAP: Record<string, string[]> = {
   '갤럭시 Z 플립8': ['그라파이트', '핑크', '크림'],
 };
 
+// 관심기기 원본 텍스트(오타/띄어쓰기/구칭 포함)에서 출시 컬러 목록을 찾아준다.
+// 예: "갤럭시 Z 폴드8 와이드"(구칭) / "폴드 8 울트라" / "갤럭시 Z 폴드8 올트라"(오타) → 모두 폴드8 울트라 컬러로 매칭
+export function getColorsForDevice(device: string | null | undefined): string[] | undefined {
+  if (!device) return undefined;
+  const d = device.replace(/\s+/g, '');
+  if (d.includes('트라') || d.includes('와이드')) return DEVICE_COLOR_MAP['갤럭시 Z 폴드8 울트라'];
+  if (d.includes('플립8') || d.includes('플립')) return DEVICE_COLOR_MAP['갤럭시 Z 플립8'];
+  if (d.includes('폴드8') || d.includes('폴드')) return DEVICE_COLOR_MAP['갤럭시 Z 폴드8'];
+  return undefined;
+}
+
 // 실패 상태 판별
 export const isFailStatus = (status: ReservationStatus) =>
   status === '상담실패';

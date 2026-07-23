@@ -11,7 +11,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { insertReservation } from '@/services/reservationService';
-import { CARRIER_OPTIONS, CHANNEL_OPTIONS, DEVICE_OPTIONS, DEVICE_COLOR_MAP } from '@/types/reservation';
+import { CARRIER_OPTIONS, CHANNEL_OPTIONS, DEVICE_OPTIONS, getColorsForDevice } from '@/types/reservation';
 import { useFieldOptions } from '@/hooks/useFieldOptions';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -132,7 +132,7 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
               onValueChange={v => {
                 const nextDevice = v === '_none_' ? '' : v;
                 setDevice(nextDevice);
-                const nextColors = DEVICE_COLOR_MAP[nextDevice];
+                const nextColors = getColorsForDevice(nextDevice);
                 if (nextColors && color && !nextColors.includes(color)) setColor('');
               }}
             >
@@ -161,7 +161,7 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
           <div className="col-span-2">
             <label className="text-xs text-gray-500 mb-1 block">
               컬러{' '}
-              {DEVICE_COLOR_MAP[device] ? (
+              {getColorsForDevice(device) ? (
                 <span className="text-gray-400 text-[10px]">(출시 컬러)</span>
               ) : (
                 <span className="text-gray-400 text-[10px]">(재고/설정 → 필드 옵션에서 추가 가능)</span>
@@ -171,7 +171,7 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
               <SelectTrigger className="text-sm"><SelectValue placeholder="미정" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="_none_">미정</SelectItem>
-                {(DEVICE_COLOR_MAP[device] ?? colorOptions).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                {(getColorsForDevice(device) ?? colorOptions).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
