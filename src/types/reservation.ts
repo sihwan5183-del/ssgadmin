@@ -42,6 +42,7 @@ export interface Reservation {
   phone: string;
   carrier: string | null;
   channel: string | null;
+  utm_campaign: string | null;
   device_interest: string | null;
   capacity: string | null;
   product_color: string | null;
@@ -123,4 +124,3 @@ export const isFailStatus = (status: ReservationStatus) =>
 // 완료 상태 판별
 export const isCompleteStatus = (status: ReservationStatus) =>
   status === '예약완료' || status === '개통완료';
-
