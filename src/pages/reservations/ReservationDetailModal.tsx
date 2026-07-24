@@ -1,7 +1,7 @@
 import PiiWatermark from '@/components/PiiWatermark';
 // ============================================================
 // 사전예약 관리 — 상세 / 수정 모달
-// 상담실패 선택 시 실패사유 필수 인터셉트
+// 실패/취소 선택 시 사유·단계 필수 인터셉트
 // 메모는 덮어쓰기가 아닌 히스토리 로그로 관리 (reservation_memo_logs)
 // ============================================================
 import { useState, useEffect } from 'react';
@@ -21,7 +21,7 @@ import {
   fetchMemoLogs,
   addMemoLog,
 } from '@/services/reservationService';
-import type { Reservation, ReservationStatus, FailStage, ReservationMemoLog, ProspectGrade } from '@/types/reservation';
+import type { Reservation, ReservationStatus, FailStage, ReservationMemoLog, ProspectGrade, CancelStage } from '@/types/reservation';
 import {
   RESERVATION_STATUS_LIST,
   CARRIER_OPTIONS,
@@ -29,6 +29,7 @@ import {
   DEVICE_OPTIONS,
   getColorsForDevice,
   PROSPECT_GRADE_OPTIONS,
+  CANCEL_STAGE_OPTIONS,
 } from '@/types/reservation';
 import type { ReservationFailReason } from '@/types/reservation';
 import { useRole } from '@/hooks/useRole';
@@ -91,11 +92,15 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
   const [newMemo, setNewMemo] = useState('');
   const [memoSaving, setMemoSaving] = useState(false);
 
-  // 실패 사유 모달 (상담실패 선택 시 인터셉트)
+  // 실패 사유 모달 (실패 선택 시 인터셉트)
   const [failModalOpen, setFailModalOpen] = useState(false);
   const [selectedFailReason, setSelectedFailReason] = useState<string>('');
   const [failMemo, setFailMemo] = useState('');
   const [pendingStatus, setPendingStatus] = useState<ReservationStatus | null>(null);
+
+  // 취소 단계 모달 (취소 선택 시 인터셉트)
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelStage, setCancelStage] = useState<CancelStage | null>(null);
 
   // 저장된 값이 표준 옵션에 없을 경우, 목록에 그 값을 추가해서
   // 드롭다운이 비어 보이거나 저장 시 값이 유실되는 것을 방지
@@ -141,6 +146,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
         setAssignedTo(r.assigned_to ?? '');
         if (r.fail_reason_id) setSelectedFailReason(r.fail_reason_id);
         if (r.fail_memo) setFailMemo(r.fail_memo);
+        setCancelStage((r as any).cancel_stage ?? null);
       } catch (e: any) {
         toast.error('로드 실패: ' + e.message);
       } finally {
@@ -151,11 +157,16 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
     loadMemoLogs();
   }, [reservationId]);
 
-  // 상태 변경 시 실패 인터셉트
+  // 상태 변경 시 실패/취소 인터셉트
   const handleStatusChange = (val: ReservationStatus) => {
-    if (val === '상담실패') {
+    if (val === '실패') {
       setPendingStatus(val);
       setFailModalOpen(true);
+      return;
+    }
+    if (val === '취소') {
+      setPendingStatus(val);
+      setCancelModalOpen(true);
       return;
     }
     setStatus(val);
@@ -166,6 +177,13 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
     if (!selectedFailReason) return toast.error('실패 사유를 선택해주세요');
     if (pendingStatus) setStatus(pendingStatus);
     setFailModalOpen(false);
+  };
+
+  // 취소 단계 확정
+  const handleCancelConfirm = () => {
+    if (!cancelStage) return toast.error('취소된 단계를 선택해주세요');
+    if (pendingStatus) setStatus(pendingStatus);
+    setCancelModalOpen(false);
   };
 
   // 메모 추가 (즉시 저장, 누적 로그)
@@ -211,9 +229,10 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
         capacity: capacity || undefined,
         product_color: color || undefined,
         assigned_to: assignedTo || null,
-        fail_reason_id: status === '상담실패' ? selectedFailReason || null : null,
-        fail_stage: status === '상담실패' ? '상담' as FailStage : null,
-        fail_memo: status === '상담실패' ? failMemo.trim() || null : null,
+        fail_reason_id: status === '실패' ? selectedFailReason || null : null,
+        fail_stage: status === '실패' ? '상담' as FailStage : null,
+        fail_memo: status === '실패' ? failMemo.trim() || null : null,
+        cancel_stage: status === '취소' ? cancelStage : null,
       } as any);
       toast.success('저장되었습니다');
       onDone();
@@ -330,8 +349,31 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                 </div>
               )}
 
-              {/* 상담실패 상태일 때 실패사유 표시 */}
-              {status === '상담실패' && (
+              {/* 취소 상태일 때 취소 단계 표시 */}
+              {status === '취소' && (
+                <div className="bg-gray-50 rounded-xl p-3 border border-gray-200 space-y-2">
+                  <div className="text-xs font-medium text-gray-600">취소된 단계</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {CANCEL_STAGE_OPTIONS.map((cs) => (
+                      <button
+                        key={cs}
+                        type="button"
+                        onClick={() => setCancelStage(cs)}
+                        className={`text-sm py-1.5 rounded-lg border font-medium transition-colors ${
+                          cancelStage === cs
+                            ? 'bg-gray-500 text-white border-gray-500'
+                            : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                        }`}
+                      >
+                        {cs}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 실패 상태일 때 실패사유 표시 */}
+              {status === '실패' && (
                 <div className="bg-red-50 rounded-xl p-3 border border-red-100 space-y-2">
                   <div className="text-xs font-medium text-red-600">실패 사유</div>
                   <Select value={selectedFailReason} onValueChange={setSelectedFailReason}>
@@ -531,7 +573,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                 <Button
                   className="flex-1 bg-pink-500 hover:bg-pink-600 text-white"
                   onClick={handleSave}
-                  disabled={saving || (status === '상담실패' && !selectedFailReason)}
+                  disabled={saving || (status === '실패' && !selectedFailReason) || (status === '취소' && !cancelStage)}
                 >
                   {saving ? '저장 중...' : '저장'}
                 </Button>
@@ -545,7 +587,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
       {failModalOpen && (
         <AlertDialog open={failModalOpen} onOpenChange={(v) => { if (!v) { setFailModalOpen(false); setPendingStatus(null); } }}>
           <AlertDialogContent className="max-w-sm rounded-2xl">
-            <div className="font-bold text-sm mb-1 text-red-600">상담실패 처리</div>
+            <div className="font-bold text-sm mb-1 text-red-600">실패 처리</div>
             <div className="text-xs text-gray-500 mb-4">실패 사유를 선택해야 저장할 수 있습니다</div>
             <div className="space-y-3">
               <Select value={selectedFailReason} onValueChange={setSelectedFailReason}>
@@ -578,6 +620,48 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                 className="flex-1 bg-red-500 hover:bg-red-600 text-white"
                 onClick={handleFailConfirm}
                 disabled={!selectedFailReason}
+              >
+                확인
+              </Button>
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
+      {/* 취소 단계 인터셉트 모달 */}
+      {cancelModalOpen && (
+        <AlertDialog open={cancelModalOpen} onOpenChange={(v) => { if (!v) { setCancelModalOpen(false); setPendingStatus(null); } }}>
+          <AlertDialogContent className="max-w-sm rounded-2xl">
+            <div className="font-bold text-sm mb-1 text-gray-700">취소 처리</div>
+            <div className="text-xs text-gray-500 mb-4">어느 단계에서 취소되었는지 선택해야 저장할 수 있습니다</div>
+            <div className="grid grid-cols-2 gap-2">
+              {CANCEL_STAGE_OPTIONS.map((cs) => (
+                <button
+                  key={cs}
+                  type="button"
+                  onClick={() => setCancelStage(cs)}
+                  className={`text-sm py-2 rounded-lg border font-medium transition-colors ${
+                    cancelStage === cs
+                      ? 'bg-gray-500 text-white border-gray-500'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                  }`}
+                >
+                  {cs}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-4">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => { setCancelModalOpen(false); setPendingStatus(null); }}
+              >
+                취소
+              </Button>
+              <Button
+                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white"
+                onClick={handleCancelConfirm}
+                disabled={!cancelStage}
               >
                 확인
               </Button>
