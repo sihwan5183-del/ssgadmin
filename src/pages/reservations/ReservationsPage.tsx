@@ -518,8 +518,11 @@ export default function ReservationsPage() {
                     <TableCell className="text-xs text-gray-500 whitespace-nowrap">{(r as any).utm_campaign ?? '-'}</TableCell>
                     <TableCell className="whitespace-nowrap">
                       <StatusBadge status={r.status} prospectGrade={(r as any).prospect_grade} />
-                      {r.status === '상담실패' && r.fail_reason && (
+                      {r.status === '실패' && r.fail_reason && (
                         <div className="text-[10px] text-red-400 mt-0.5">{r.fail_reason.reason}</div>
+                      )}
+                      {r.status === '취소' && (r as any).cancel_stage && (
+                        <div className="text-[10px] text-gray-400 mt-0.5">{(r as any).cancel_stage} 단계에서 취소</div>
                       )}
                     </TableCell>
                     <TableCell className="text-sm text-gray-600 whitespace-nowrap">
