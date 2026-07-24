@@ -97,17 +97,13 @@ export async function updateReservation(
   id: string,
   payload: ReservationUpdate
 ): Promise<Reservation> {
-  // 상담실패 → fail_stage 자동 세팅
-  if (payload.status === '상담실패' && !payload.fail_stage) {
+  // 실패 → fail_stage 자동 세팅
+  if (payload.status === '실패' && !payload.fail_stage) {
     payload = { ...payload, fail_stage: '상담' };
   }
   // 예약완료 → reservation_confirmed_at 자동 세팅
   if (payload.status === '예약완료' && !payload.reservation_confirmed_at) {
     payload = { ...payload, reservation_confirmed_at: new Date().toISOString() };
-  }
-  // 개통완료 → activated_at 자동 세팅
-  if (payload.status === '개통완료' && !payload.activated_at) {
-    payload = { ...payload, activated_at: new Date().toISOString() };
   }
 
   const { data, error } = await supabase
@@ -175,7 +171,6 @@ export interface ReservationStats {
   total: number;
   byStatus: Record<string, number>;
   successRate: number;
-  activationRate: number;
 }
 
 export async function fetchReservationStats(): Promise<ReservationStats> {
@@ -191,15 +186,13 @@ export async function fetchReservationStats(): Promise<ReservationStats> {
     byStatus[r.status] = (byStatus[r.status] ?? 0) + 1;
   });
 
-  const successCount = (byStatus['상담성공'] ?? 0) + (byStatus['예약완료'] ?? 0) + (byStatus['개통완료'] ?? 0);
-  const activationCount = byStatus['개통완료'] ?? 0;
-  const progressCount = total - (byStatus['상담실패'] ?? 0);
+  const successCount = (byStatus['상담성공'] ?? 0) + (byStatus['확정'] ?? 0) + (byStatus['예약완료'] ?? 0);
+  const progressCount = total - (byStatus['실패'] ?? 0) - (byStatus['취소'] ?? 0);
 
   return {
     total,
     byStatus,
     successRate: progressCount > 0 ? Math.round((successCount / progressCount) * 100) : 0,
-    activationRate: successCount > 0 ? Math.round((activationCount / successCount) * 100) : 0,
   };
 }
 
