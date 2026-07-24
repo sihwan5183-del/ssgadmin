@@ -211,6 +211,32 @@ export default function ReservationsPage() {
     return counts;
   }, [allRows]);
 
+  // 테이블 인라인 즉시수정: 담당자
+  async function updateAssignee(id: string, assigned_to: string | null) {
+    const { error } = await supabase
+      .from('reservations')
+      .update({ assigned_to })
+      .eq('id', id);
+    if (error) { toast.error('담당자 변경 실패: ' + error.message); return; }
+    setRows((p) => p.map((r) => (r.id === id ? { ...r, assigned_to } : r)));
+    toast.success('담당자가 변경되었습니다');
+  }
+
+  // 테이블 인라인 즉시수정: 상태 (실패/취소는 사유·단계 필수라 상세모달로 유도)
+  async function updateStatusInline(id: string, status: ReservationStatus) {
+    if (status === '실패' || status === '취소') {
+      setDetailId(id);
+      return;
+    }
+    const { error } = await supabase
+      .from('reservations')
+      .update({ status, fail_reason_id: null, fail_stage: null, fail_memo: null, cancel_stage: null })
+      .eq('id', id);
+    if (error) { toast.error('상태 변경 실패: ' + error.message); return; }
+    setRows((p) => p.map((r) => (r.id === id ? { ...r, status, fail_reason_id: null, fail_stage: null, fail_memo: null, cancel_stage: null } as any : r)));
+    toast.success('상태가 변경되었습니다');
+  }
+
   // 상태별 카운트 (현재 채널 탭 기준)
   const statusCounts = useMemo(() => {
     const filtered = channelTab ? allRows.filter(r => (r as any).channel === channelTab) : allRows;
@@ -516,17 +542,39 @@ export default function ReservationsPage() {
                       ) : '-'}
                     </TableCell>
                     <TableCell className="text-xs text-gray-500 whitespace-nowrap">{(r as any).utm_campaign ?? '-'}</TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <StatusBadge status={r.status} prospectGrade={(r as any).prospect_grade} />
+                    <TableCell className="whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <Select value={r.status} onValueChange={(v) => updateStatusInline(r.id, v as ReservationStatus)}>
+                        <SelectTrigger className={`h-7 text-[11px] w-[132px] border-none font-semibold rounded-full px-2.5 ${RESERVATION_STATUS_LIST.find(s => s.value === r.status)?.color ?? 'bg-gray-100 text-gray-600'}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {RESERVATION_STATUS_LIST.map((s) => (
+                            <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {r.status === '가망' && (r as any).prospect_grade && (
+                        <div className="text-[10px] text-amber-500 mt-0.5 pl-1">{(r as any).prospect_grade} 등급</div>
+                      )}
                       {r.status === '실패' && r.fail_reason && (
-                        <div className="text-[10px] text-red-400 mt-0.5">{r.fail_reason.reason}</div>
+                        <div className="text-[10px] text-red-400 mt-0.5 pl-1">{r.fail_reason.reason}</div>
                       )}
                       {r.status === '취소' && (r as any).cancel_stage && (
-                        <div className="text-[10px] text-gray-400 mt-0.5">{(r as any).cancel_stage} 단계에서 취소</div>
+                        <div className="text-[10px] text-gray-400 mt-0.5 pl-1">{(r as any).cancel_stage} 단계에서 취소</div>
                       )}
                     </TableCell>
-                    <TableCell className="text-sm text-gray-600 whitespace-nowrap">
-                      {r.assigned_to ? (staff.find(s => s.user_id === r.assigned_to)?.display_name ?? '-') : '-'}
+                    <TableCell className="whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <Select value={r.assigned_to ?? '_none_'} onValueChange={(v) => updateAssignee(r.id, v === '_none_' ? null : v)}>
+                        <SelectTrigger className="h-7 text-xs w-[100px]">
+                          <SelectValue placeholder="담당자 지정" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="_none_">미지정</SelectItem>
+                          {staff.map((st) => (
+                            <SelectItem key={st.user_id} value={st.user_id}>{st.display_name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell className="text-xs text-blue-600 font-medium whitespace-nowrap">{(r as any).device_interest ?? '-'}</TableCell>
                     <TableCell className="text-xs text-gray-500 text-center">{(r as any).capacity ?? '-'}</TableCell>
