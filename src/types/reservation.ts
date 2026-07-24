@@ -1,32 +1,38 @@
 // ============================================================
 // 사전예약 관리 — 타입 정의
 // ============================================================
+// v20260724: 상태값 개편
+//  - 문자발송 → 재케어로 통합
+//  - 상담실패 → 실패로 개칭
+//  - 개통완료 제거 (activated_at 컬럼은 보존, 더 이상 상태로 쓰지 않음)
+//  - 확정(서류작성) 신규 추가 (상담성공과 예약완료 사이 단계)
+//  - 취소 신규 추가 (가망/상담성공/확정/예약완료 단계에서 고객 변심으로 취소)
 
 export type ReservationStatus =
   | '신규'
-  | '문자발송'
-  | '부재'
-  | '재케어'
+  | '확정'
+  | '예약완료'
   | '가망'
   | '상담성공'
-  | '상담실패'
-  | '예약완료'
-  | '개통완료';
+  | '재케어'
+  | '부재'
+  | '실패'
+  | '취소';
 
 export const RESERVATION_STATUS_LIST: {
   value: ReservationStatus;
   label: string;
   color: string;
 }[] = [
-  { value: '신규',     label: '신규',     color: 'bg-blue-100 text-blue-700' },
-  { value: '문자발송', label: '문자발송', color: 'bg-sky-100 text-sky-700' },
-  { value: '부재',     label: '부재',     color: 'bg-orange-100 text-orange-700' },
-  { value: '재케어',   label: '재케어',   color: 'bg-purple-100 text-purple-700' },
-  { value: '가망',     label: '가망',     color: 'bg-amber-100 text-amber-700' },
-  { value: '상담성공', label: '상담성공', color: 'bg-emerald-100 text-emerald-700' },
-  { value: '상담실패', label: '상담실패', color: 'bg-red-100 text-red-700' },
-  { value: '예약완료', label: '예약완료', color: 'bg-pink-100 text-pink-700' },
-  { value: '개통완료', label: '개통완료', color: 'bg-indigo-100 text-indigo-700' },
+  { value: '신규',     label: '신규',                 color: 'bg-blue-100 text-blue-700' },
+  { value: '확정',     label: '확정 (서류작성)',       color: 'bg-teal-100 text-teal-700' },
+  { value: '예약완료', label: '예약완료 (서류미작성)', color: 'bg-pink-100 text-pink-700' },
+  { value: '가망',     label: '가망 (최종해피콜)',     color: 'bg-amber-100 text-amber-700' },
+  { value: '상담성공', label: '상담성공',             color: 'bg-emerald-100 text-emerald-700' },
+  { value: '재케어',   label: '재케어 (추가케어필요)', color: 'bg-purple-100 text-purple-700' },
+  { value: '부재',     label: '부재',                 color: 'bg-orange-100 text-orange-700' },
+  { value: '실패',     label: '실패',                 color: 'bg-red-100 text-red-700' },
+  { value: '취소',     label: '취소',                 color: 'bg-gray-200 text-gray-600' },
 ];
 
 // 가망 등급 (상태='가망'일 때만 사용)
@@ -34,6 +40,11 @@ export type ProspectGrade = '상' | '중' | '하';
 export const PROSPECT_GRADE_OPTIONS: ProspectGrade[] = ['상', '중', '하'];
 
 export type FailStage = '상담' | '예약';
+
+// 취소된 단계 (상태='취소'일 때만 사용)
+// 가망/상담성공/확정/예약완료 중 어느 단계에서 고객이 취소 요청했는지 기록
+export type CancelStage = '가망' | '상담성공' | '확정' | '예약완료';
+export const CANCEL_STAGE_OPTIONS: CancelStage[] = ['가망', '상담성공', '확정', '예약완료'];
 
 export interface ReservationFailReason {
   id: string;
@@ -60,6 +71,7 @@ export interface Reservation {
   fail_reason_id: string | null;
   fail_stage: FailStage | null;
   fail_memo: string | null;
+  cancel_stage: CancelStage | null;
   contact_date: string | null;
   reservation_confirmed_at: string | null;
   activated_at: string | null;
@@ -105,6 +117,7 @@ export interface ReservationUpdate {
   fail_reason_id?: string | null;
   fail_stage?: FailStage | null;
   fail_memo?: string | null;
+  cancel_stage?: CancelStage | null;
   reservation_confirmed_at?: string | null;
   activated_at?: string | null;
   sms_sent?: boolean;
@@ -146,8 +159,12 @@ export function getColorsForDevice(device: string | null | undefined): string[] 
 
 // 실패 상태 판별
 export const isFailStatus = (status: ReservationStatus) =>
-  status === '상담실패';
+  status === '실패';
 
-// 완료 상태 판별
+// 취소 상태 판별
+export const isCancelStatus = (status: ReservationStatus) =>
+  status === '취소';
+
+// 완료(확정 계열) 상태 판별
 export const isCompleteStatus = (status: ReservationStatus) =>
-  status === '예약완료' || status === '개통완료';
+  status === '확정' || status === '예약완료';
