@@ -20,24 +20,28 @@ const CHANNEL_COLORS: Record<string, string> = {
   '네이버 검색광고': '#86efac',
   '기타': '#c4b5fd',
 };
+// 화면 표시 순서(뱃지/드롭다운과 동일): 신규-확정-예약완료-가망-상담성공-재케어-부재-실패-취소
 const FUNNEL_STEPS = [
-  { key: '신규',     label: '신규(인입)', color: '#93c5fd' },
-  { key: '문자발송', label: '문자발송',   color: '#7dd3fc' },
-  { key: '부재',     label: '부재',       color: '#fdba74' },
-  { key: '재케어',   label: '재케어',     color: '#c4b5fd' },
-  { key: '상담성공', label: '상담성공',   color: '#6ee7b7' },
-  { key: '상담실패', label: '상담실패',   color: '#fca5a5' },
-  { key: '예약완료', label: '예약완료',   color: '#f9a8d4' },
-  { key: '개통완료', label: '개통완료',   color: '#a5b4fc' },
+  { key: '신규',     label: '신규(인입)',   color: '#93c5fd' },
+  { key: '확정',     label: '확정',         color: '#5eead4' },
+  { key: '예약완료', label: '예약완료',     color: '#f9a8d4' },
+  { key: '가망',     label: '가망',         color: '#fcd34d' },
+  { key: '상담성공', label: '상담성공',     color: '#6ee7b7' },
+  { key: '재케어',   label: '재케어',       color: '#c4b5fd' },
+  { key: '부재',     label: '부재',         color: '#fdba74' },
+  { key: '실패',     label: '실패',         color: '#fca5a5' },
+  { key: '취소',     label: '취소',         color: '#d1d5db' },
 ];
+// 실제 진행 흐름 기준 전환 포인트 (신규→가망→상담성공→확정→예약완료 본류 + 부재/재케어 곁가지)
 const CONVERSION_POINTS = [
   { from: '신규',     to: '부재',     label: '신규→부재',        color: '#fb923c' },
   { from: '부재',     to: '상담성공', label: '부재→상담성공',     color: '#a78bfa' },
   { from: '재케어',   to: '상담성공', label: '재케어→상담성공',   color: '#60a5fa' },
-  { from: '상담성공', to: '예약완료', label: '상담성공→예약완료', color: '#f472b6' },
-  { from: '예약완료', to: '개통완료', label: '예약완료→개통완료', color: '#818cf8' },
+  { from: '상담성공', to: '확정',     label: '상담성공→확정',     color: '#2dd4bf' },
+  { from: '확정',     to: '예약완료', label: '확정→예약완료',     color: '#f472b6' },
 ];
-const STATUS_ORDER = ['신규', '문자발송', '부재', '재케어', '상담성공', '상담실패', '예약완료', '개통완료'];
+// 누적 퍼널 계산(cntFrom)용 논리적 진행 순서 — 화면 표시 순서와는 별개
+const STATUS_ORDER = ['신규', '부재', '재케어', '가망', '상담성공', '확정', '예약완료', '실패', '취소'];
 const PERIOD_BTNS = [
   { label: '전체', value: '' },
   { label: '일별', value: '일별' },
@@ -192,8 +196,8 @@ function PeriodCompareChart({ allRows }: { allRows: Row[] }) {
       기간: pair.labelA + ' vs ' + pair.labelB,
       [pair.labelA]: rowsA.length,
       [pair.labelB]: rowsB.length,
-      성공A: cnt(rowsA, '상담성공') + cnt(rowsA, '예약완료') + cnt(rowsA, '개통완료'),
-      성공B: cnt(rowsB, '상담성공') + cnt(rowsB, '예약완료') + cnt(rowsB, '개통완료'),
+      성공A: cnt(rowsA, '상담성공') + cnt(rowsA, '확정') + cnt(rowsA, '예약완료'),
+      성공B: cnt(rowsB, '상담성공') + cnt(rowsB, '확정') + cnt(rowsB, '예약완료'),
       labelA: pair.labelA,
       labelB: pair.labelB,
     };
@@ -307,7 +311,7 @@ export default function ReservationStatsPage() {
       const { data, error } = await supabase.from('reservations').select('status, channel, created_at');
       if (error) throw error;
       setAllRows((data ?? []) as Row[]);
-      const { data: fd } = await supabase.from('reservations').select('fail_reason:reservation_fail_reasons(reason)').eq('status','상담실패').not('fail_reason_id','is',null);
+      const { data: fd } = await supabase.from('reservations').select('fail_reason:reservation_fail_reasons(reason)').eq('status','실패').not('fail_reason_id','is',null);
       const rc: Record<string,number> = {};
       (fd ?? []).forEach((r: any) => { const rs = r.fail_reason?.reason; if (rs) rc[rs] = (rc[rs]??0)+1; });
       setFailStats(Object.entries(rc).map(([reason,count]) => ({reason,count})).sort((a,b) => b.count-a.count));
@@ -386,7 +390,7 @@ export default function ReservationStatsPage() {
 
       {/* 실패 사유 (퍼널 모드에서만) */}
       {viewMode === 'funnel' && (
-        <SectionCard title="상담실패 사유 분석">
+        <SectionCard title="실패 사유 분석">
           {failStats.length > 0 ? (
             <div className="space-y-2">
               {failStats.map(f => {
