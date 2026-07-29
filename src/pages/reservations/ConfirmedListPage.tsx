@@ -5,6 +5,7 @@
 //   좌측 #/대사 열 가로스크롤시 고정 + 인라인 저장 신뢰성 강화
 //   (디바운스 자동저장 + 저장상태 표시 점 + beforeunload 경고)
 // v20260729-3: 가입유형 자동계산 기본값 반영 (LG U+→기기변경, 그외→MNP(통신사))
+// v20260729-4: 관리자(isAdmin)는 고객명/연락처 마스킹 해제 + PII 워터마크 노출
 // ============================================================
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { RotateCw, X, Download, Search, BarChart2, CheckCircle2, XCircle, HelpCircle } from 'lucide-react';
@@ -27,6 +28,7 @@ import { formatPhone } from '@/lib/phoneFormat';
 import { WorkReportHeader, SectionCard, KpiCard } from '@/pages/work-report/_shared';
 import { CHANNEL_OPTIONS, HQ_CHECK_STATUS_LIST, type HqCheckStatus } from '@/types/reservation';
 import { ReservationDetailModal } from './ReservationDetailModal';
+import PiiWatermark from '@/components/PiiWatermark';
 import {
   fetchConfirmedReservations,
   downloadCsv,
@@ -295,6 +297,7 @@ export default function ConfirmedListPage() {
 
   return (
     <div className="p-6 space-y-4">
+      {isAdmin && <PiiWatermark />}
       <WorkReportHeader
         title="확정 발주 스펙시트"
         description="확정(서류작성) 건을 본사 제출 양식대로 정리합니다. 기존 값은 자동으로 채워지고, 없는 값만 입력하면 됩니다"
@@ -524,7 +527,7 @@ export default function ConfirmedListPage() {
 
                       {/* 고객정보 */}
                       <TableCell className="text-sm font-medium cursor-pointer border-l border-gray-100" onClick={() => setDetailId(r.id)}>
-                        {maskName(r.name)}
+                        {isAdmin ? (r.name || '-') : maskName(r.name)}
                       </TableCell>
                       <TableCell className="text-xs text-gray-500 whitespace-nowrap cursor-pointer" onClick={() => setDetailId(r.id)}>
                         {r.carrier ?? '-'}
@@ -540,7 +543,7 @@ export default function ConfirmedListPage() {
                         />
                       </TableCell>
                       <TableCell className="text-xs text-gray-600 whitespace-nowrap cursor-pointer" onClick={() => setDetailId(r.id)}>
-                        {maskPhone(formatPhone(r.phone))}
+                        {isAdmin ? formatPhone(r.phone) : maskPhone(formatPhone(r.phone))}
                       </TableCell>
 
                       {/* 고객주소 */}
