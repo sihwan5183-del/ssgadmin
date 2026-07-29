@@ -7,6 +7,7 @@
 //  - 개통완료 제거 (activated_at 컬럼은 보존, 더 이상 상태로 쓰지 않음)
 //  - 확정(서류작성) 신규 추가 (상담성공과 예약완료 사이 단계)
 //  - 취소 신규 추가 (가망/상담성공/확정/예약완료 단계에서 고객 변심으로 취소)
+// v20260729: 확정 발주 스펙시트 필드 + 본사 전산 수동 대사(3단계 토글) 추가
 
 export type ReservationStatus =
   | '신규'
@@ -46,6 +47,15 @@ export type FailStage = '상담' | '예약';
 export type CancelStage = '가망' | '상담성공' | '확정' | '예약완료';
 export const CANCEL_STAGE_OPTIONS: CancelStage[] = ['가망', '상담성공', '확정', '예약완료'];
 
+// 본사 전산 크로스체크 — 담당자가 눈으로 대조 후 수동으로 남기는 상태 (v20260729)
+// 자동 매칭 아님. LG본사 시스템에서 데이터를 뽑을 방법이 없어 화면 보고 눈으로 비교 후 토글.
+export type HqCheckStatus = '미확인' | '일치' | '불일치';
+export const HQ_CHECK_STATUS_LIST: { value: HqCheckStatus; label: string; color: string }[] = [
+  { value: '미확인', label: '미확인', color: 'bg-gray-100 text-gray-500' },
+  { value: '일치',   label: '일치',   color: 'bg-green-100 text-green-700' },
+  { value: '불일치', label: '불일치', color: 'bg-red-100 text-red-700' },
+];
+
 export interface ReservationFailReason {
   id: string;
   reason: string;
@@ -79,6 +89,24 @@ export interface Reservation {
   sms_sent_at: string | null;
   created_at: string;
   updated_at: string;
+
+  // ── 확정 발주 스펙시트 (v20260729) — 본사 제출용 엑셀 양식 재현 ──
+  customer_address: string | null;   // 고객주소
+  subscription_type: string | null;  // 가입유형 (MNP(SKT), 재가입 등 — carrier와 별개 개념)
+  rate_plan: string | null;          // 요금제정보 > 요금제
+  premium_pack: string | null;       // 요금제정보 > 프리미엄팩 (버즈4/티빙/유튜브 등)
+  bundle_watch: string | null;       // 2ND > 워치
+  bundle_tablet: string | null;      // 2ND > 태블릿
+  home_internet: string | null;      // 홈상품 > 인터넷
+  home_tv: string | null;            // 홈상품 > TV프리
+  home_smarthome: string | null;     // 홈상품 > 스마트홈
+
+  // ── 본사 전산 크로스체크 (v20260729) — 수동 대사 ──
+  hq_check_status: HqCheckStatus;
+  hq_check_note: string | null;
+  hq_checked_by: string | null;
+  hq_checked_at: string | null;
+
   // join
   fail_reason?: ReservationFailReason;
   assignee?: {
@@ -122,6 +150,19 @@ export interface ReservationUpdate {
   activated_at?: string | null;
   sms_sent?: boolean;
   sms_sent_at?: string | null;
+  customer_address?: string | null;
+  subscription_type?: string | null;
+  rate_plan?: string | null;
+  premium_pack?: string | null;
+  bundle_watch?: string | null;
+  bundle_tablet?: string | null;
+  home_internet?: string | null;
+  home_tv?: string | null;
+  home_smarthome?: string | null;
+  hq_check_status?: HqCheckStatus;
+  hq_check_note?: string | null;
+  hq_checked_by?: string | null;
+  hq_checked_at?: string | null;
 }
 
 // 메모 히스토리 로그 (reservation_memo_logs 테이블)
