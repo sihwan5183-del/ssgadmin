@@ -7,6 +7,7 @@
 // v20260729-3: 가입유형 자동계산 기본값 반영 (LG U+→기기변경, 그외→MNP(통신사))
 // v20260729-4: 관리자(isAdmin)는 고객명/연락처 마스킹 해제 + PII 워터마크 노출
 // v20260729-5: 2ND 태블릿에 신규/재가입 토글 추가 (다시 누르면 해제)
+// v20260729-6: 2ND 워치를 자유입력 → 고정 옵션 드롭다운으로 전환
 // ============================================================
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { RotateCw, X, Download, Search, BarChart2, CheckCircle2, XCircle, HelpCircle } from 'lucide-react';
@@ -27,7 +28,7 @@ import { useDashboardStaff } from '@/hooks/useDashboardStaff';
 import { maskName, maskPhone } from '@/lib/maskPii';
 import { formatPhone } from '@/lib/phoneFormat';
 import { WorkReportHeader, SectionCard, KpiCard } from '@/pages/work-report/_shared';
-import { CHANNEL_OPTIONS, HQ_CHECK_STATUS_LIST, TABLET_SUBTYPE_LIST, type HqCheckStatus, type TabletSubType } from '@/types/reservation';
+import { CHANNEL_OPTIONS, HQ_CHECK_STATUS_LIST, TABLET_SUBTYPE_LIST, WATCH_MODEL_OPTIONS, type HqCheckStatus, type TabletSubType } from '@/types/reservation';
 import { ReservationDetailModal } from './ReservationDetailModal';
 import PiiWatermark from '@/components/PiiWatermark';
 import {
@@ -592,12 +593,21 @@ export default function ConfirmedListPage() {
                       </TableCell>
 
                       {/* 2ND */}
-                      <TableCell className="border-l border-gray-100">
-                        <EditableCell
-                          value={r.bundle_watch} placeholder="워치9 40MM" width={90}
-                          fieldKey={`${r.id}:bundle_watch`} onDirtyChange={handleDirtyChange}
-                          onSave={(v) => saveField(r.id, 'bundle_watch', v)}
-                        />
+                      <TableCell className="border-l border-gray-100" onClick={(e) => e.stopPropagation()}>
+                        <Select
+                          value={r.bundle_watch ?? '_none_'}
+                          onValueChange={(v) => { saveField(r.id, 'bundle_watch', v === '_none_' ? '' : v).catch(() => {}); }}
+                        >
+                          <SelectTrigger className="h-7 w-[108px] text-xs px-2 border-transparent hover:border-gray-200 bg-gray-50/60 focus:ring-1 focus:ring-pink-300">
+                            <SelectValue placeholder="선택" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="_none_" className="text-xs text-gray-400">미지정</SelectItem>
+                            {WATCH_MODEL_OPTIONS.map((w) => (
+                              <SelectItem key={w} value={w} className="text-xs">{w}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <EditableCell
