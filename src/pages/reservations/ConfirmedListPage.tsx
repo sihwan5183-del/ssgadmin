@@ -4,6 +4,7 @@
 // v20260729-2: 스티키 헤더 버그 수정(overflow 이중래핑 제거) +
 //   좌측 #/대사 열 가로스크롤시 고정 + 인라인 저장 신뢰성 강화
 //   (디바운스 자동저장 + 저장상태 표시 점 + beforeunload 경고)
+// v20260729-3: 가입유형 자동계산 기본값 반영 (LG U+→기기변경, 그외→MNP(통신사))
 // ============================================================
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { RotateCw, X, Download, Search, BarChart2, CheckCircle2, XCircle, HelpCircle } from 'lucide-react';
@@ -29,6 +30,7 @@ import { ReservationDetailModal } from './ReservationDetailModal';
 import {
   fetchConfirmedReservations,
   downloadCsv,
+  computeSubscriptionType,
   UNSET,
   type ConfirmedRow,
 } from '@/services/confirmedOrderService';
@@ -261,7 +263,7 @@ export default function ConfirmedListPage() {
         i + 1,
         r.name ?? '',
         r.carrier ?? '',
-        r.subscription_type ?? '',
+        r.subscription_type ?? computeSubscriptionType(r.carrier),
         r.phone ?? '',
         r.customer_address ?? '',
         r.device_norm,
@@ -529,7 +531,7 @@ export default function ConfirmedListPage() {
                       </TableCell>
                       <TableCell>
                         <EditableCell
-                          value={r.subscription_type}
+                          value={r.subscription_type ?? computeSubscriptionType(r.carrier)}
                           placeholder="MNP(SKT)"
                           width={90}
                           fieldKey={`${r.id}:subscription_type`}
