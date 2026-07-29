@@ -97,14 +97,19 @@ function DeviceMatrix({ p }: { p: DevicePivot }) {
 // ── 2ND (워치 · 태블릿) 통계 ─────────────────────────────
 // 확정 스펙시트(확정 목록)에서 입력한 워치/태블릿 값을, 지금 대시보드에
 // 걸려있는 필터(기간/채널/담당자) 그대로 적용해서 집계한다.
+// 대소문자만 다른 표기(X236 / x236 등)는 통계에서 하나로 합친다.
+// (실제 저장값/CSV는 안 건드리고, 집계할 때만 대문자로 정규화)
 function groupByText(values: (string | null)[]): { label: string; count: number }[] {
   const m: Record<string, number> = {};
   values.forEach((v) => {
-    const t = (v ?? '').trim();
-    if (!t) return;
-    m[t] = (m[t] ?? 0) + 1;
+    const raw = (v ?? '').trim();
+    if (!raw) return;
+    const key = raw.toUpperCase();
+    m[key] = (m[key] ?? 0) + 1;
   });
-  return Object.entries(m).map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count);
+  return Object.entries(m)
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count);
 }
 
 function BundleBar({ label, count, denom, color }: { label: string; count: number; denom: number; color: string }) {
