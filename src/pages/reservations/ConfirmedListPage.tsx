@@ -6,6 +6,7 @@
 //   (디바운스 자동저장 + 저장상태 표시 점 + beforeunload 경고)
 // v20260729-3: 가입유형 자동계산 기본값 반영 (LG U+→기기변경, 그외→MNP(통신사))
 // v20260729-4: 관리자(isAdmin)는 고객명/연락처 마스킹 해제 + PII 워터마크 노출
+// v20260729-5: 2ND 태블릿에 신규/재가입 토글 추가 (다시 누르면 해제)
 // ============================================================
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { RotateCw, X, Download, Search, BarChart2, CheckCircle2, XCircle, HelpCircle } from 'lucide-react';
@@ -26,7 +27,7 @@ import { useDashboardStaff } from '@/hooks/useDashboardStaff';
 import { maskName, maskPhone } from '@/lib/maskPii';
 import { formatPhone } from '@/lib/phoneFormat';
 import { WorkReportHeader, SectionCard, KpiCard } from '@/pages/work-report/_shared';
-import { CHANNEL_OPTIONS, HQ_CHECK_STATUS_LIST, type HqCheckStatus } from '@/types/reservation';
+import { CHANNEL_OPTIONS, HQ_CHECK_STATUS_LIST, TABLET_SUBTYPE_LIST, type HqCheckStatus, type TabletSubType } from '@/types/reservation';
 import { ReservationDetailModal } from './ReservationDetailModal';
 import PiiWatermark from '@/components/PiiWatermark';
 import {
@@ -251,6 +252,14 @@ export default function ConfirmedListPage() {
     }
   };
 
+  // ── 2ND 태블릿 가입유형(신규/재가입) 토글 — 다시 누르면 해제 ──
+  const handleSetTabletType = async (r: ConfirmedRow, type: TabletSubType) => {
+    const next = r.bundle_tablet_type === type ? null : type;
+    const { error } = await supabase.from('reservations').update({ bundle_tablet_type: next }).eq('id', r.id);
+    if (error) return toast.error('저장 실패: ' + error.message);
+    setRows((prev) => prev.map((row) => (row.id === r.id ? { ...row, bundle_tablet_type: next } : row)));
+  };
+
   const handleCsv = () => {
     if (!isAdmin) return toast.error('관리자만 내보낼 수 있습니다');
     if (filtered.length === 0) return toast.error('내보낼 데이터가 없습니다');
@@ -258,7 +267,7 @@ export default function ConfirmedListPage() {
       `확정_발주스펙시트_${new Date().toISOString().slice(0, 10)}.csv`,
       [
         '#', '고객명', '통신사', '가입유형', 'CTN', '고객주소',
-        '모델명', '용량', '색상', '요금제', '프리미엄팩', '워치', '태블릿',
+        '모델명', '용량', '색상', '요금제', '프리미엄팩', '워치', '태블릿', '태블릿유형',
         '인터넷', 'TV프리', '스마트홈', '담당자', '대사상태', '불일치사유', '확인자', '확인시각',
       ],
       filtered.map((r, i) => [
@@ -275,6 +284,7 @@ export default function ConfirmedListPage() {
         r.premium_pack ?? '',
         r.bundle_watch ?? '',
         r.bundle_tablet ?? '',
+        r.bundle_tablet_type ?? '',
         r.home_internet ?? '',
         r.home_tv ?? '',
         r.home_smarthome ?? '',
@@ -589,12 +599,29 @@ export default function ConfirmedListPage() {
                           onSave={(v) => saveField(r.id, 'bundle_watch', v)}
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <EditableCell
                           value={r.bundle_tablet} placeholder="X236" width={70}
                           fieldKey={`${r.id}:bundle_tablet`} onDirtyChange={handleDirtyChange}
                           onSave={(v) => saveField(r.id, 'bundle_tablet', v)}
                         />
+                        <div className="flex items-center gap-0.5 mt-1">
+                          {TABLET_SUBTYPE_LIST.map((t) => {
+                            const active = r.bundle_tablet_type === t.value;
+                            return (
+                              <button
+                                key={t.value}
+                                onClick={() => handleSetTabletType(r, t.value)}
+                                title={`태블릿 ${t.label}${active ? ' (다시 누르면 해제)' : '로 표시'}`}
+                                className={`px-1.5 py-0.5 text-[9px] rounded font-medium transition-colors ${
+                                  active ? t.color + ' ring-1 ring-inset ring-current/20' : 'bg-gray-50 text-gray-300 hover:bg-gray-100 hover:text-gray-400'
+                                }`}
+                              >
+                                {t.label}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </TableCell>
 
                       {/* 홈상품 */}
