@@ -1,6 +1,9 @@
 // ============================================================
-// 확정(서류작성) 발주 대시보드
-// status='확정' 건만 읽어 기기 / 용량 / 컬러 분포도를 집계합니다.
+// 확정(서류작성) 발주 대시보드 — 기기별 완전분리
+// ============================================================
+// 좌(폴드8) / 가운데(폴드8 울트라) / 우(플립8) 3단 고정 레이아웃.
+// 폴드8 그라파이트와 울트라 그라파이트는 다른 제품이라, 기기를 섞은
+// 전체 통합 컬러/용량 분포는 보여주지 않는다. 반드시 기기 단위로만 집계.
 // ============================================================
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { RotateCw, X, Download, ListChecks, AlertTriangle } from 'lucide-react';
@@ -22,39 +25,72 @@ import {
   downloadCsv,
   UNSET,
   type ConfirmedRow,
-  type CountItem,
+  type DevicePivot,
 } from '@/services/confirmedOrderService';
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
-// 가로 막대 분포 리스트
-function DistList({ items, total, accent }: { items: CountItem[]; total: number; accent: string }) {
-  if (items.length === 0) {
-    return <div className="text-xs text-gray-400 py-6 text-center">데이터가 없습니다</div>;
-  }
-  const max = Math.max(...items.map((i) => i.count), 1);
+function DeviceMatrix({ p }: { p: DevicePivot }) {
   return (
-    <div className="flex flex-col gap-2.5">
-      {items.map((it) => (
-        <div key={it.key} className="flex items-center gap-3">
-          <div className={`text-xs w-[110px] shrink-0 truncate ${it.key === UNSET ? 'text-gray-400 italic' : 'text-gray-700 font-medium'}`}>
-            {it.key}
-          </div>
-          <div className="flex-1 h-5 bg-gray-100 rounded-md overflow-hidden">
-            <div
-              className={`h-full rounded-md transition-all ${it.key === UNSET ? 'bg-gray-300' : accent}`}
-              style={{ width: `${(it.count / max) * 100}%` }}
-            />
-          </div>
-          <div className="text-xs text-gray-800 font-semibold w-[38px] text-right shrink-0">{it.count}</div>
-          <div className="text-[10px] text-gray-400 w-[42px] text-right shrink-0">
-            {total > 0 ? `${it.ratio}%` : '-'}
-          </div>
-        </div>
-      ))}
-    </div>
+    <SectionCard
+      title={p.device}
+      rightSlot={<span className="text-xs font-semibold text-pink-600">{p.total}건</span>}
+    >
+      <div className="overflow-auto">
+        <Table className="[&_td]:py-1.5 [&_th]:py-1.5 min-w-full">
+          <TableHeader className="bg-gray-50">
+            <TableRow className="bg-gray-50">
+              <TableHead className="text-xs w-[64px]">용량\컬러</TableHead>
+              {p.colors.map((c) => (
+                <TableHead key={c} className={`text-xs text-center whitespace-nowrap ${c === UNSET ? 'text-gray-400 italic' : ''}`}>
+                  {c}
+                </TableHead>
+              ))}
+              <TableHead className="text-xs text-center w-[50px] bg-gray-100">합계</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {p.capacities.map((cap) => (
+              <TableRow key={cap}>
+                <TableCell className={`text-xs font-medium ${cap === UNSET ? 'text-gray-400 italic' : 'text-gray-700'}`}>
+                  {cap}
+                </TableCell>
+                {p.colors.map((col) => {
+                  const n = p.cells[`${cap}|${col}`] ?? 0;
+                  return (
+                    <TableCell key={col} className="text-center">
+                      {n > 0 ? (
+                        <span className={`inline-flex items-center justify-center min-w-[26px] h-6 px-1.5 rounded-full text-xs font-bold ${
+                          cap === UNSET || col === UNSET ? 'bg-gray-100 text-gray-500' : 'bg-pink-100 text-pink-700'
+                        }`}>
+                          {n}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-200">·</span>
+                      )}
+                    </TableCell>
+                  );
+                })}
+                <TableCell className="text-center text-xs font-bold text-gray-800 bg-gray-50">
+                  {p.rowTotals[cap] ?? 0}
+                </TableCell>
+              </TableRow>
+            ))}
+            <TableRow className="bg-gray-50">
+              <TableCell className="text-xs font-bold text-gray-700">합계</TableCell>
+              {p.colors.map((col) => (
+                <TableCell key={col} className="text-center text-xs font-bold text-gray-800">
+                  {p.colTotals[col] ?? 0}
+                </TableCell>
+              ))}
+              <TableCell className="text-center text-xs font-bold text-pink-600 bg-gray-100">{p.total}</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+    </SectionCard>
   );
 }
 
@@ -95,7 +131,6 @@ export default function ConfirmedDashboardPage() {
     setDateStart(''); setDateEnd(''); setChannel(''); setAssignee('');
   };
 
-  // 발주표 CSV (기기/용량/컬러 조합별 수량)
   const handleComboCsv = () => {
     if (summary.combos.length === 0) return toast.error('내보낼 데이터가 없습니다');
     downloadCsv(
@@ -112,7 +147,7 @@ export default function ConfirmedDashboardPage() {
     <div className="p-6 space-y-4">
       <WorkReportHeader
         title="확정 발주 대시보드"
-        description="확정(서류작성) 건의 기기 · 용량 · 컬러 분포도를 집계합니다"
+        description="확정(서류작성) 건의 기기별 용량 · 컬러 분포입니다. 기기가 다르면 같은 컬러명이라도 다른 제품이라 항상 기기 단위로 나눠 봅니다"
         rightSlot={
           <>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={handleComboCsv}>
@@ -123,7 +158,7 @@ export default function ConfirmedDashboardPage() {
               className="gap-1.5 bg-pink-500 hover:bg-pink-600"
               onClick={() => navigate('/reservations/confirmed/list')}
             >
-              <ListChecks className="size-3.5" /> 확정 목록
+              <ListChecks className="size-3.5" /> 확정 스펙시트
             </Button>
           </>
         }
@@ -149,9 +184,9 @@ export default function ConfirmedDashboardPage() {
           <Button
             variant="ghost" size="sm"
             className="ml-auto h-7 text-xs text-amber-700 hover:bg-amber-100 shrink-0"
-            onClick={() => navigate('/reservations/confirmed/list?unset=1')}
+            onClick={() => navigate('/reservations/confirmed/list')}
           >
-            미정 건 보기 →
+            확정 스펙시트에서 확인 →
           </Button>
         </div>
       )}
@@ -196,82 +231,12 @@ export default function ConfirmedDashboardPage() {
         </div>
       </SectionCard>
 
-      {/* 3분포 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <SectionCard title="기기별 분포">
-          <DistList items={summary.byDevice} total={summary.total} accent="bg-pink-400" />
-        </SectionCard>
-        <SectionCard title="용량별 분포">
-          <DistList items={summary.byCapacity} total={summary.total} accent="bg-indigo-400" />
-        </SectionCard>
-        <SectionCard title="컬러별 분포">
-          <DistList items={summary.byColor} total={summary.total} accent="bg-teal-400" />
-        </SectionCard>
+      {/* 좌: 폴드8 / 가운데: 폴드8 울트라 / 우: 플립8 — 완전 분리 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+        {summary.pivots.map((p) => (
+          <DeviceMatrix key={p.device} p={p} />
+        ))}
       </div>
-
-      {/* 기기별 매트릭스 (행=용량, 열=컬러) */}
-      {summary.pivots.map((p) => (
-        <SectionCard
-          key={p.device}
-          title={`${p.device} — 용량 × 컬러`}
-          rightSlot={<span className="text-xs text-gray-400">{p.total}건</span>}
-        >
-          <div className="overflow-auto">
-            <Table className="[&_td]:py-2 [&_th]:py-2 min-w-[520px]">
-              <TableHeader className="bg-gray-50">
-                <TableRow className="bg-gray-50">
-                  <TableHead className="text-xs w-[100px]">용량 / 컬러</TableHead>
-                  {p.colors.map((c) => (
-                    <TableHead key={c} className={`text-xs text-center whitespace-nowrap ${c === UNSET ? 'text-gray-400 italic' : ''}`}>
-                      {c}
-                    </TableHead>
-                  ))}
-                  <TableHead className="text-xs text-center w-[70px] bg-gray-100">합계</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {p.capacities.map((cap) => (
-                  <TableRow key={cap}>
-                    <TableCell className={`text-xs font-medium ${cap === UNSET ? 'text-gray-400 italic' : 'text-gray-700'}`}>
-                      {cap}
-                    </TableCell>
-                    {p.colors.map((col) => {
-                      const n = p.cells[`${cap}|${col}`] ?? 0;
-                      return (
-                        <TableCell key={col} className="text-center">
-                          {n > 0 ? (
-                            <span className={`inline-flex items-center justify-center min-w-[28px] h-6 px-2 rounded-full text-xs font-bold ${
-                              cap === UNSET || col === UNSET
-                                ? 'bg-gray-100 text-gray-500'
-                                : 'bg-pink-100 text-pink-700'
-                            }`}>
-                              {n}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-gray-200">·</span>
-                          )}
-                        </TableCell>
-                      );
-                    })}
-                    <TableCell className="text-center text-xs font-bold text-gray-800 bg-gray-50">
-                      {p.rowTotals[cap] ?? 0}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                <TableRow className="bg-gray-50">
-                  <TableCell className="text-xs font-bold text-gray-700">합계</TableCell>
-                  {p.colors.map((col) => (
-                    <TableCell key={col} className="text-center text-xs font-bold text-gray-800">
-                      {p.colTotals[col] ?? 0}
-                    </TableCell>
-                  ))}
-                  <TableCell className="text-center text-xs font-bold text-pink-600 bg-gray-100">{p.total}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
-        </SectionCard>
-      ))}
 
       {/* 전체 조합 발주표 */}
       <SectionCard title="발주표 (기기 · 용량 · 컬러 조합별 수량)">
@@ -291,10 +256,10 @@ export default function ConfirmedDashboardPage() {
             <TableBody>
               {loading ? (
                 <TableRow><TableCell colSpan={7} className="text-center py-12 text-sm text-gray-400">로딩 중...</TableCell></TableRow>
-              ) : summary.combos.length === 0 ? (
+              ) : summary.combos.filter((c) => c.count > 0).length === 0 ? (
                 <TableRow><TableCell colSpan={7} className="text-center py-12 text-sm text-gray-400">확정 건이 없습니다</TableCell></TableRow>
               ) : (
-                summary.combos.map((c, i) => (
+                summary.combos.filter((c) => c.count > 0).map((c, i) => (
                   <TableRow key={`${c.device}|${c.capacity}|${c.color}`} className={c.ready ? '' : 'bg-gray-50/60'}>
                     <TableCell className="text-xs text-gray-400">{i + 1}</TableCell>
                     <TableCell className="text-xs font-medium text-blue-600 whitespace-nowrap">{c.device}</TableCell>
