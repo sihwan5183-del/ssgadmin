@@ -240,7 +240,9 @@ export default function ConfirmedDashboardPage() {
 
       {/* 전체 조합 발주표 */}
       <SectionCard title="발주표 (기기 · 용량 · 컬러 조합별 수량)">
-        <div className="overflow-auto max-h-[420px]">
+        {/* shadcn Table 자체 overflow-auto div에 직접 높이 지정 (이중 스크롤 컨테이너로
+            sticky가 안 먹던 버그 수정 — 확정 스펙시트와 동일 원인) */}
+        <div className="[&>div]:max-h-[420px] [&>div]:overflow-auto">
           <Table className="[&_td]:py-2 [&_th]:py-2 min-w-[620px]">
             <TableHeader className="sticky top-0 z-10 bg-gray-50 shadow-[0_1px_0_0_#e5e7eb]">
               <TableRow className="bg-gray-50">
