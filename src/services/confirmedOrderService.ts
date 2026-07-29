@@ -12,9 +12,10 @@ export const CONFIRMED_STATUS = '확정';
 export const UNSET = '미정';
 
 // 정규화 기준값
+// 대시보드 표시 순서: 좌(폴드8) / 가운데(폴드8 울트라) / 우(플립8)
 export const DEVICE_CANON = [
-  '갤럭시 Z 폴드8 울트라',
   '갤럭시 Z 폴드8',
+  '갤럭시 Z 폴드8 울트라',
   '갤럭시 Z 플립8',
 ] as const;
 
@@ -209,14 +210,12 @@ export function buildConfirmedSummary(rows: ConfirmedRow[]): ConfirmedSummary {
     });
 
   // 기기별 피벗 (행=용량, 열=컬러)
-  const deviceKeys = Object.keys(dMap).sort((a, b) => {
-    const ia = deviceOrder.indexOf(a);
-    const ib = deviceOrder.indexOf(b);
-    if (ia !== -1 && ib !== -1) return ia - ib;
-    if (ia !== -1) return -1;
-    if (ib !== -1) return 1;
-    return dMap[b] - dMap[a];
-  });
+  // 대시보드는 좌/가운데/우 3단 고정 레이아웃이라, 확정 건이 0건이어도
+  // 폴드8/폴드8 울트라/플립8 3개 컬럼은 항상 노출한다 (그 외 미분류 기기는 뒤에 추가).
+  const nonCanonKeys = Object.keys(dMap)
+    .filter((k) => !deviceOrder.includes(k) && k !== UNSET)
+    .sort((a, b) => dMap[b] - dMap[a]);
+  const deviceKeys = [...deviceOrder, ...nonCanonKeys];
 
   const pivots: DevicePivot[] = deviceKeys.map((device) => {
     const sub = rows.filter((r) => r.device_norm === device);
@@ -230,8 +229,9 @@ export function buildConfirmedSummary(rows: ConfirmedRow[]): ConfirmedSummary {
     if (usedColors.includes(UNSET)) colors.push(UNSET);
 
     const usedCaps = Array.from(new Set(sub.map((r) => r.capacity_norm)));
+    // 컬러축과 동일하게: 데이터가 0건이어도 256GB/512GB/1TB 축은 항상 노출 (빈 그리드로 보여줌)
     const capacities = [
-      ...CAPACITY_CANON.filter((c) => usedCaps.includes(c)),
+      ...CAPACITY_CANON,
       ...usedCaps.filter((c) => !CAPACITY_CANON.includes(c as any) && c !== UNSET),
     ];
     if (usedCaps.includes(UNSET)) capacities.push(UNSET);
