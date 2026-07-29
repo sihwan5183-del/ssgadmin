@@ -189,6 +189,16 @@ export const CARRIER_OPTIONS = ['LG U+', 'SKT', 'KT', '알뜰폰'];
 export const CHANNEL_OPTIONS = ['메타광고', '네이버 검색광고', '기타', '기존고객']; // v20260720
 export const DEVICE_OPTIONS = ['갤럭시 Z 플립8', '갤럭시 Z 폴드8', '갤럭시 Z 폴드8 울트라']; // v20260723: 와이드 → 울트라(정식 출시명)
 
+// 2ND 워치 번들 모델 옵션 (v20260729-6) — 자유입력 → 고정 옵션 전환
+export const WATCH_MODEL_OPTIONS = [
+  '워치 8 40MM',
+  '워치 8 44MM',
+  '워치 9 40MM',
+  '워치 9 44MM',
+  '워치 울트라',
+  '워치 울트라 2',
+];
+
 // 기기별 출시 컬러 매핑 (v20260723)
 export const DEVICE_COLOR_MAP: Record<string, string[]> = {
   '갤럭시 Z 폴드8 울트라': ['그라파이트', '바이올렛 쉐도우', '크림'],
