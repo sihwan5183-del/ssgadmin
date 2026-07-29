@@ -238,6 +238,101 @@ function PeriodCompareChart({ allRows }: { allRows: Row[] }) {
   );
 }
 
+// ── 2ND(워치/태블릿) 통계 ─────────────────────────────────
+// 확정(서류작성) 건의 [확정 발주 스펙시트]에서 입력한 2ND 정보를 그대로 집계한다.
+// (별도 입력폼 없음 — 확정 목록 페이지 "워치"/"태블릿" 칸에 채운 값이 여기 반영됨)
+type BundleRow = {
+  bundle_watch: string | null;
+  bundle_tablet: string | null;
+  bundle_tablet_type: string | null;
+};
+
+function groupByText(values: (string | null)[]): { label: string; count: number }[] {
+  const m: Record<string, number> = {};
+  values.forEach((v) => {
+    const t = (v ?? '').trim();
+    if (!t) return;
+    m[t] = (m[t] ?? 0) + 1;
+  });
+  return Object.entries(m)
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+function BundleStatsSection({ rows }: { rows: BundleRow[] }) {
+  const total = rows.length;
+  const watchRows = rows.filter((r) => (r.bundle_watch ?? '').trim() !== '');
+  const tabletRows = rows.filter((r) => (r.bundle_tablet ?? '').trim() !== '');
+  const watchByModel = groupByText(watchRows.map((r) => r.bundle_watch));
+  const tabletByModel = groupByText(tabletRows.map((r) => r.bundle_tablet));
+  const tabletNew = tabletRows.filter((r) => r.bundle_tablet_type === '신규').length;
+  const tabletRejoin = tabletRows.filter((r) => r.bundle_tablet_type === '재가입').length;
+  const tabletUnset = tabletRows.length - tabletNew - tabletRejoin;
+
+  const Bar_ = ({ label, count, denom, color }: { label: string; count: number; denom: number; color: string }) => {
+    const pct = denom > 0 ? Math.round((count / denom) * 100) : 0;
+    return (
+      <div className="flex items-center gap-3">
+        <div className="w-[130px] text-xs text-gray-600 shrink-0 truncate" title={label}>{label}</div>
+        <div className="flex-1 bg-gray-100 rounded-full h-4 overflow-hidden relative">
+          <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
+        </div>
+        <div className="text-xs font-semibold text-gray-700 w-[42px] text-right">{count}건</div>
+        <div className="text-[10px] text-gray-400 w-[32px] text-right">{pct}%</div>
+      </div>
+    );
+  };
+
+  return (
+    <SectionCard title="2ND (워치 · 태블릿) 통계">
+      <p className="text-xs text-gray-400 mb-4 -mt-1">
+        확정(서류작성) 스펙시트의 워치 · 태블릿 입력값 기준 · 확정 총 {total}건 중 집계
+      </p>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* 워치 */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-gray-800">⌚ 워치 번들</h3>
+            <span className="text-xs text-gray-400">{watchRows.length}건 / {total}건 ({total > 0 ? Math.round(watchRows.length/total*100) : 0}%)</span>
+          </div>
+          {watchByModel.length > 0 ? (
+            <div className="space-y-2">
+              {watchByModel.map((w) => (
+                <Bar_ key={w.label} label={w.label} count={w.count} denom={watchRows.length} color="#f9a8d4" />
+              ))}
+            </div>
+          ) : <div className="text-sm text-gray-400 text-center py-4">워치 번들 입력 건이 없습니다</div>}
+        </div>
+
+        {/* 태블릿 */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-gray-800">📱 태블릿 번들</h3>
+            <span className="text-xs text-gray-400">{tabletRows.length}건 / {total}건 ({total > 0 ? Math.round(tabletRows.length/total*100) : 0}%)</span>
+          </div>
+          {/* 신규/재가입 요약 */}
+          {tabletRows.length > 0 && (
+            <div className="flex items-center gap-2 mb-3">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-700">신규 {tabletNew}건</span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-purple-100 text-purple-700">재가입 {tabletRejoin}건</span>
+              {tabletUnset > 0 && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-500">미표시 {tabletUnset}건</span>
+              )}
+            </div>
+          )}
+          {tabletByModel.length > 0 ? (
+            <div className="space-y-2">
+              {tabletByModel.map((w) => (
+                <Bar_ key={w.label} label={w.label} count={w.count} denom={tabletRows.length} color="#93c5fd" />
+              ))}
+            </div>
+          ) : <div className="text-sm text-gray-400 text-center py-4">태블릿 번들 입력 건이 없습니다</div>}
+        </div>
+      </div>
+    </SectionCard>
+  );
+}
+
 // ── 그래프 드로어 ─────────────────────────────────────────
 function GraphDrawer({ rows, step, channel, onClose }: { rows: Row[]; step: string; channel?: string; onClose: () => void }) {
   const stepInfo = FUNNEL_STEPS.find(s => s.key === step);
@@ -298,6 +393,7 @@ export default function ReservationStatsPage() {
   const [allRows, setAllRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [failStats, setFailStats] = useState<{ reason: string; count: number }[]>([]);
+  const [bundleRows, setBundleRows] = useState<BundleRow[]>([]);
   const [periodMode, setPeriodMode] = useState('');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
@@ -315,6 +411,9 @@ export default function ReservationStatsPage() {
       const rc: Record<string,number> = {};
       (fd ?? []).forEach((r: any) => { const rs = r.fail_reason?.reason; if (rs) rc[rs] = (rc[rs]??0)+1; });
       setFailStats(Object.entries(rc).map(([reason,count]) => ({reason,count})).sort((a,b) => b.count-a.count));
+
+      const { data: bd } = await supabase.from('reservations').select('bundle_watch, bundle_tablet, bundle_tablet_type').eq('status', '확정');
+      setBundleRows((bd ?? []) as BundleRow[]);
     } catch (e: any) { toast.error('통계 로드 실패: ' + e.message); }
     finally { setLoading(false); }
   };
@@ -412,8 +511,10 @@ export default function ReservationStatsPage() {
         </SectionCard>
       )}
 
+      {/* 2ND 워치/태블릿 통계 (뷰 모드 무관하게 항상 노출) */}
+      <BundleStatsSection rows={bundleRows} />
+
       {graphStep && <GraphDrawer rows={rows} step={graphStep} channel={graphChannel} onClose={() => setGraphStep(null)} />}
     </div>
   );
 }
-
