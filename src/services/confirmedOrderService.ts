@@ -56,6 +56,15 @@ export function normalizeColor(raw: string | null | undefined): string {
   return hit ?? raw.trim();
 }
 
+// 가입유형 자동계산 — 통신사=LG U+ → 기기변경, 그 외(SKT/KT/알뜰폰 등) → MNP(통신사)
+// subscription_type 컬럼이 비어있을 때 화면/CSV에서 이 값을 기본값으로 보여준다.
+// (DB에 강제로 써넣지 않음 — 담당자가 예외 케이스면 직접 수정 가능)
+export function computeSubscriptionType(carrier: string | null | undefined): string {
+  const c = (carrier ?? '').trim();
+  if (!c) return '';
+  return c === 'LG U+' ? '기기변경' : `MNP(${c})`;
+}
+
 // ── 조회 ──────────────────────────────────────────────────
 export interface ConfirmedRow extends Reservation {
   device_norm: string;
