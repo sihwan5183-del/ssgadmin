@@ -8,6 +8,7 @@
 // v20260729-4: 관리자(isAdmin)는 고객명/연락처 마스킹 해제 + PII 워터마크 노출
 // v20260729-5: 2ND 태블릿에 신규/재가입 토글 추가 (다시 누르면 해제)
 // v20260729-6: 2ND 워치를 자유입력 → 고정 옵션 드롭다운으로 전환
+// v20260729-7: 홈상품 인터넷/TV프리 고정옵션 드롭다운 + TV동시가입/번들언번들 토글 추가
 // ============================================================
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { RotateCw, X, Download, Search, BarChart2, CheckCircle2, XCircle, HelpCircle } from 'lucide-react';
@@ -28,7 +29,7 @@ import { useDashboardStaff } from '@/hooks/useDashboardStaff';
 import { maskName, maskPhone } from '@/lib/maskPii';
 import { formatPhone } from '@/lib/phoneFormat';
 import { WorkReportHeader, SectionCard, KpiCard } from '@/pages/work-report/_shared';
-import { CHANNEL_OPTIONS, HQ_CHECK_STATUS_LIST, TABLET_SUBTYPE_LIST, WATCH_MODEL_OPTIONS, type HqCheckStatus, type TabletSubType } from '@/types/reservation';
+import { CHANNEL_OPTIONS, HQ_CHECK_STATUS_LIST, TABLET_SUBTYPE_LIST, WATCH_MODEL_OPTIONS, HOME_INTERNET_OPTIONS, HOME_TV_OPTIONS, TV_BUNDLE_TYPE_LIST, type HqCheckStatus, type TabletSubType, type TvBundleType } from '@/types/reservation';
 import { ReservationDetailModal } from './ReservationDetailModal';
 import PiiWatermark from '@/components/PiiWatermark';
 import {
@@ -261,6 +262,22 @@ export default function ConfirmedListPage() {
     setRows((prev) => prev.map((row) => (row.id === r.id ? { ...row, bundle_tablet_type: next } : row)));
   };
 
+  // ── 홈상품 > 인터넷: TV 동시가입 토글 (다시 누르면 해제) ──
+  const handleToggleInternetTv = async (r: ConfirmedRow) => {
+    const next = !r.home_internet_tv_bundled;
+    const { error } = await supabase.from('reservations').update({ home_internet_tv_bundled: next }).eq('id', r.id);
+    if (error) return toast.error('저장 실패: ' + error.message);
+    setRows((prev) => prev.map((row) => (row.id === r.id ? { ...row, home_internet_tv_bundled: next } : row)));
+  };
+
+  // ── 홈상품 > TV프리: 번들/언번들 토글 (다시 누르면 해제) ──
+  const handleSetTvBundleType = async (r: ConfirmedRow, type: TvBundleType) => {
+    const next = r.home_tv_bundle_type === type ? null : type;
+    const { error } = await supabase.from('reservations').update({ home_tv_bundle_type: next }).eq('id', r.id);
+    if (error) return toast.error('저장 실패: ' + error.message);
+    setRows((prev) => prev.map((row) => (row.id === r.id ? { ...row, home_tv_bundle_type: next } : row)));
+  };
+
   const handleCsv = () => {
     if (!isAdmin) return toast.error('관리자만 내보낼 수 있습니다');
     if (filtered.length === 0) return toast.error('내보낼 데이터가 없습니다');
@@ -269,7 +286,7 @@ export default function ConfirmedListPage() {
       [
         '#', '고객명', '통신사', '가입유형', 'CTN', '고객주소',
         '모델명', '용량', '색상', '요금제', '프리미엄팩', '워치', '태블릿', '태블릿유형',
-        '인터넷', 'TV프리', '스마트홈', '담당자', '대사상태', '불일치사유', '확인자', '확인시각',
+        '인터넷', 'TV동시가입', 'TV프리', 'TV프리유형', '스마트홈', '담당자', '대사상태', '불일치사유', '확인자', '확인시각',
       ],
       filtered.map((r, i) => [
         i + 1,
@@ -287,7 +304,9 @@ export default function ConfirmedListPage() {
         r.bundle_tablet ?? '',
         r.bundle_tablet_type ?? '',
         r.home_internet ?? '',
+        r.home_internet_tv_bundled ? 'Y' : '',
         r.home_tv ?? '',
+        r.home_tv_bundle_type ?? '',
         r.home_smarthome ?? '',
         (r.assigned_to && staffMap[r.assigned_to]) || '미지정',
         r.hq_check_status,
@@ -475,8 +494,8 @@ export default function ConfirmedListPage() {
                 <TableHead className="text-xs w-[100px]">프리미엄팩</TableHead>
                 <TableHead className="text-xs w-[100px] border-l border-gray-200">워치</TableHead>
                 <TableHead className="text-xs w-[90px]">태블릿</TableHead>
-                <TableHead className="text-xs w-[100px] border-l border-gray-200">인터넷</TableHead>
-                <TableHead className="text-xs w-[80px]">TV프리</TableHead>
+                <TableHead className="text-xs w-[112px] border-l border-gray-200">인터넷</TableHead>
+                <TableHead className="text-xs w-[96px]">TV프리</TableHead>
                 <TableHead className="text-xs w-[90px]">스마트홈</TableHead>
                 <TableHead className="text-xs whitespace-nowrap border-l border-gray-200">담당자</TableHead>
               </TableRow>
@@ -635,19 +654,65 @@ export default function ConfirmedListPage() {
                       </TableCell>
 
                       {/* 홈상품 */}
-                      <TableCell className="border-l border-gray-100">
-                        <EditableCell
-                          value={r.home_internet} placeholder="올인원 500M" width={90}
-                          fieldKey={`${r.id}:home_internet`} onDirtyChange={handleDirtyChange}
-                          onSave={(v) => saveField(r.id, 'home_internet', v)}
-                        />
+                      <TableCell className="border-l border-gray-100" onClick={(e) => e.stopPropagation()}>
+                        <Select
+                          value={r.home_internet ?? '_none_'}
+                          onValueChange={(v) => { saveField(r.id, 'home_internet', v === '_none_' ? '' : v).catch(() => {}); }}
+                        >
+                          <SelectTrigger className="h-7 w-[108px] text-xs px-2 border-transparent hover:border-gray-200 bg-gray-50/60 focus:ring-1 focus:ring-pink-300">
+                            <SelectValue placeholder="선택" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="_none_" className="text-xs text-gray-400">미지정</SelectItem>
+                            {HOME_INTERNET_OPTIONS.map((o) => (
+                              <SelectItem key={o} value={o} className="text-xs">{o}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <button
+                          onClick={() => handleToggleInternetTv(r)}
+                          title={`TV 동시가입${r.home_internet_tv_bundled ? ' (다시 누르면 해제)' : '로 표시'}`}
+                          className={`mt-1 px-1.5 py-0.5 text-[9px] rounded font-medium transition-colors ${
+                            r.home_internet_tv_bundled
+                              ? 'bg-teal-100 text-teal-700 ring-1 ring-inset ring-current/20'
+                              : 'bg-gray-50 text-gray-300 hover:bg-gray-100 hover:text-gray-400'
+                          }`}
+                        >
+                          TV동시가입
+                        </button>
                       </TableCell>
-                      <TableCell>
-                        <EditableCell
-                          value={r.home_tv} placeholder="-" width={60}
-                          fieldKey={`${r.id}:home_tv`} onDirtyChange={handleDirtyChange}
-                          onSave={(v) => saveField(r.id, 'home_tv', v)}
-                        />
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Select
+                          value={r.home_tv ?? '_none_'}
+                          onValueChange={(v) => { saveField(r.id, 'home_tv', v === '_none_' ? '' : v).catch(() => {}); }}
+                        >
+                          <SelectTrigger className="h-7 w-[92px] text-xs px-2 border-transparent hover:border-gray-200 bg-gray-50/60 focus:ring-1 focus:ring-pink-300">
+                            <SelectValue placeholder="선택" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="_none_" className="text-xs text-gray-400">미지정</SelectItem>
+                            {HOME_TV_OPTIONS.map((o) => (
+                              <SelectItem key={o} value={o} className="text-xs">{o}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <div className="flex items-center gap-0.5 mt-1">
+                          {TV_BUNDLE_TYPE_LIST.map((t) => {
+                            const active = r.home_tv_bundle_type === t.value;
+                            return (
+                              <button
+                                key={t.value}
+                                onClick={() => handleSetTvBundleType(r, t.value)}
+                                title={`TV프리 ${t.label}${active ? ' (다시 누르면 해제)' : '로 표시'}`}
+                                className={`px-1.5 py-0.5 text-[9px] rounded font-medium transition-colors ${
+                                  active ? t.color + ' ring-1 ring-inset ring-current/20' : 'bg-gray-50 text-gray-300 hover:bg-gray-100 hover:text-gray-400'
+                                }`}
+                              >
+                                {t.label}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <EditableCell
