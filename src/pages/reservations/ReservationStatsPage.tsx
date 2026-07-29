@@ -247,12 +247,15 @@ type BundleRow = {
   bundle_tablet_type: string | null;
 };
 
+// 대소문자만 다른 표기(X236 / x236 등)는 통계에서 하나로 합친다.
+// (실제 저장값/CSV는 안 건드리고, 집계할 때만 대문자로 정규화)
 function groupByText(values: (string | null)[]): { label: string; count: number }[] {
   const m: Record<string, number> = {};
   values.forEach((v) => {
-    const t = (v ?? '').trim();
-    if (!t) return;
-    m[t] = (m[t] ?? 0) + 1;
+    const raw = (v ?? '').trim();
+    if (!raw) return;
+    const key = raw.toUpperCase();
+    m[key] = (m[key] ?? 0) + 1;
   });
   return Object.entries(m)
     .map(([label, count]) => ({ label, count }))
