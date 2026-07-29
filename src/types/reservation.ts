@@ -106,7 +106,9 @@ export interface Reservation {
   bundle_tablet: string | null;      // 2ND > 태블릿
   bundle_tablet_type: TabletSubType | null; // 2ND > 태블릿 가입유형 (신규/재가입)
   home_internet: string | null;      // 홈상품 > 인터넷
+  home_internet_tv_bundled: boolean; // 홈상품 > 인터넷 가입시 TV 동시가입 여부 (토글)
   home_tv: string | null;            // 홈상품 > TV프리
+  home_tv_bundle_type: TvBundleType | null; // 홈상품 > TV프리 번들형/언번들형 (토글)
   home_smarthome: string | null;     // 홈상품 > 스마트홈
 
   // ── 본사 전산 크로스체크 (v20260729) — 수동 대사 ──
@@ -166,7 +168,9 @@ export interface ReservationUpdate {
   bundle_tablet?: string | null;
   bundle_tablet_type?: TabletSubType | null;
   home_internet?: string | null;
+  home_internet_tv_bundled?: boolean;
   home_tv?: string | null;
+  home_tv_bundle_type?: TvBundleType | null;
   home_smarthome?: string | null;
   hq_check_status?: HqCheckStatus;
   hq_check_note?: string | null;
@@ -197,6 +201,24 @@ export const WATCH_MODEL_OPTIONS = [
   '워치 9 44MM',
   '워치 울트라',
   '워치 울트라 2',
+];
+
+// 홈상품 > 인터넷 옵션 (v20260729-7) — 자유입력 → 고정 옵션 전환
+export const HOME_INTERNET_OPTIONS = [
+  '안심보상 500MB',
+  '안심보상 1G',
+  '안심 500MB',
+  '안심 1G',
+];
+
+// 홈상품 > TV프리 옵션 (v20260729-7) — 자유입력 → 고정 옵션 전환
+export const HOME_TV_OPTIONS = ['프리4', '프리5', '아이패드'];
+
+// TV프리 번들형/언번들형 (v20260729-7)
+export type TvBundleType = '번들' | '언번들';
+export const TV_BUNDLE_TYPE_LIST: { value: TvBundleType; label: string; color: string }[] = [
+  { value: '번들',   label: '번들',   color: 'bg-teal-100 text-teal-700' },
+  { value: '언번들', label: '언번들', color: 'bg-orange-100 text-orange-700' },
 ];
 
 // 기기별 출시 컬러 매핑 (v20260723)
