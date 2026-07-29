@@ -56,6 +56,13 @@ export const HQ_CHECK_STATUS_LIST: { value: HqCheckStatus; label: string; color:
   { value: '불일치', label: '불일치', color: 'bg-red-100 text-red-700' },
 ];
 
+// 2ND 태블릿 가입유형 (v20260729-5) — 신규회선/재가입 중 선택
+export type TabletSubType = '신규' | '재가입';
+export const TABLET_SUBTYPE_LIST: { value: TabletSubType; label: string; color: string }[] = [
+  { value: '신규',   label: '신규',   color: 'bg-blue-100 text-blue-700' },
+  { value: '재가입', label: '재가입', color: 'bg-purple-100 text-purple-700' },
+];
+
 export interface ReservationFailReason {
   id: string;
   reason: string;
@@ -97,6 +104,7 @@ export interface Reservation {
   premium_pack: string | null;       // 요금제정보 > 프리미엄팩 (버즈4/티빙/유튜브 등)
   bundle_watch: string | null;       // 2ND > 워치
   bundle_tablet: string | null;      // 2ND > 태블릿
+  bundle_tablet_type: TabletSubType | null; // 2ND > 태블릿 가입유형 (신규/재가입)
   home_internet: string | null;      // 홈상품 > 인터넷
   home_tv: string | null;            // 홈상품 > TV프리
   home_smarthome: string | null;     // 홈상품 > 스마트홈
@@ -156,6 +164,7 @@ export interface ReservationUpdate {
   premium_pack?: string | null;
   bundle_watch?: string | null;
   bundle_tablet?: string | null;
+  bundle_tablet_type?: TabletSubType | null;
   home_internet?: string | null;
   home_tv?: string | null;
   home_smarthome?: string | null;
