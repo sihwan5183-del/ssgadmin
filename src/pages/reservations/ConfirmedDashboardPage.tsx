@@ -94,6 +94,89 @@ function DeviceMatrix({ p }: { p: DevicePivot }) {
   );
 }
 
+// ── 2ND (워치 · 태블릿) 통계 ─────────────────────────────
+// 확정 스펙시트(확정 목록)에서 입력한 워치/태블릿 값을, 지금 대시보드에
+// 걸려있는 필터(기간/채널/담당자) 그대로 적용해서 집계한다.
+function groupByText(values: (string | null)[]): { label: string; count: number }[] {
+  const m: Record<string, number> = {};
+  values.forEach((v) => {
+    const t = (v ?? '').trim();
+    if (!t) return;
+    m[t] = (m[t] ?? 0) + 1;
+  });
+  return Object.entries(m).map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count);
+}
+
+function BundleBar({ label, count, denom, color }: { label: string; count: number; denom: number; color: string }) {
+  const pct = denom > 0 ? Math.round((count / denom) * 100) : 0;
+  return (
+    <div className="flex items-center gap-3">
+      <div className="w-[120px] text-xs text-gray-600 shrink-0 truncate" title={label}>{label}</div>
+      <div className="flex-1 bg-gray-100 rounded-full h-4 overflow-hidden relative">
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
+      </div>
+      <div className="text-xs font-semibold text-gray-700 w-[42px] text-right">{count}건</div>
+      <div className="text-[10px] text-gray-400 w-[32px] text-right">{pct}%</div>
+    </div>
+  );
+}
+
+function BundleStatsSection({ rows }: { rows: ConfirmedRow[] }) {
+  const total = rows.length;
+  const watchRows = rows.filter((r) => (r.bundle_watch ?? '').trim() !== '');
+  const tabletRows = rows.filter((r) => (r.bundle_tablet ?? '').trim() !== '');
+  const watchByModel = groupByText(watchRows.map((r) => r.bundle_watch));
+  const tabletByModel = groupByText(tabletRows.map((r) => r.bundle_tablet));
+  const tabletNew = tabletRows.filter((r) => r.bundle_tablet_type === '신규').length;
+  const tabletRejoin = tabletRows.filter((r) => r.bundle_tablet_type === '재가입').length;
+  const tabletUnset = tabletRows.length - tabletNew - tabletRejoin;
+
+  return (
+    <SectionCard title="2ND (워치 · 태블릿) 통계" rightSlot={<span className="text-xs text-gray-400">현재 필터 기준</span>}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* 워치 */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-gray-800">⌚ 워치 번들</h3>
+            <span className="text-xs text-gray-400">{watchRows.length}건 / {total}건 ({total > 0 ? Math.round(watchRows.length / total * 100) : 0}%)</span>
+          </div>
+          {watchByModel.length > 0 ? (
+            <div className="space-y-2">
+              {watchByModel.map((w) => (
+                <BundleBar key={w.label} label={w.label} count={w.count} denom={watchRows.length} color="#f9a8d4" />
+              ))}
+            </div>
+          ) : <div className="text-sm text-gray-400 text-center py-4">워치 번들 입력 건이 없습니다</div>}
+        </div>
+
+        {/* 태블릿 */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-gray-800">📱 태블릿 번들</h3>
+            <span className="text-xs text-gray-400">{tabletRows.length}건 / {total}건 ({total > 0 ? Math.round(tabletRows.length / total * 100) : 0}%)</span>
+          </div>
+          {tabletRows.length > 0 && (
+            <div className="flex items-center gap-2 mb-3">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-700">신규 {tabletNew}건</span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-purple-100 text-purple-700">재가입 {tabletRejoin}건</span>
+              {tabletUnset > 0 && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-500">미표시 {tabletUnset}건</span>
+              )}
+            </div>
+          )}
+          {tabletByModel.length > 0 ? (
+            <div className="space-y-2">
+              {tabletByModel.map((w) => (
+                <BundleBar key={w.label} label={w.label} count={w.count} denom={tabletRows.length} color="#93c5fd" />
+              ))}
+            </div>
+          ) : <div className="text-sm text-gray-400 text-center py-4">태블릿 번들 입력 건이 없습니다</div>}
+        </div>
+      </div>
+    </SectionCard>
+  );
+}
+
 export default function ConfirmedDashboardPage() {
   const { staff } = useDashboardStaff();
   const navigate = useNavigate();
@@ -237,6 +320,9 @@ export default function ConfirmedDashboardPage() {
           <DeviceMatrix key={p.device} p={p} />
         ))}
       </div>
+
+      {/* 2ND (워치 · 태블릿) 통계 */}
+      <BundleStatsSection rows={rows} />
 
       {/* 전체 조합 발주표 */}
       <SectionCard title="발주표 (기기 · 용량 · 컬러 조합별 수량)">
