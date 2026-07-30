@@ -135,10 +135,13 @@ function BundleStatsSection({ rows }: { rows: ConfirmedRow[] }) {
   const tabletNew = tabletRows.filter((r) => r.bundle_tablet_type === '신규').length;
   const tabletRejoin = tabletRows.filter((r) => r.bundle_tablet_type === '재가입').length;
   const tabletUnset = tabletRows.length - tabletNew - tabletRejoin;
+  const internetRows = rows.filter((r) => (r.home_internet ?? '').trim() !== '');
+  const internetByPlan = groupByText(internetRows.map((r) => r.home_internet));
+  const internetTvBundled = internetRows.filter((r) => r.home_internet_tv_bundled).length;
 
   return (
-    <SectionCard title="2ND (워치 · 태블릿) 통계" rightSlot={<span className="text-xs text-gray-400">현재 필터 기준</span>}>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <SectionCard title="2ND (워치 · 태블릿 · 인터넷) 통계" rightSlot={<span className="text-xs text-gray-400">현재 필터 기준</span>}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 워치 */}
         <div>
           <div className="flex items-center justify-between mb-3">
@@ -176,6 +179,29 @@ function BundleStatsSection({ rows }: { rows: ConfirmedRow[] }) {
               ))}
             </div>
           ) : <div className="text-sm text-gray-400 text-center py-4">태블릿 번들 입력 건이 없습니다</div>}
+        </div>
+
+        {/* 인터넷 */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-gray-800">🌐 인터넷 번들</h3>
+            <span className="text-xs text-gray-400">{internetRows.length}건 / {total}건 ({total > 0 ? Math.round(internetRows.length / total * 100) : 0}%)</span>
+          </div>
+          {internetRows.length > 0 && (
+            <div className="flex items-center gap-2 mb-3">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-teal-100 text-teal-700">TV동시가입 {internetTvBundled}건</span>
+              {internetRows.length - internetTvBundled > 0 && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-500">인터넷만 {internetRows.length - internetTvBundled}건</span>
+              )}
+            </div>
+          )}
+          {internetByPlan.length > 0 ? (
+            <div className="space-y-2">
+              {internetByPlan.map((w) => (
+                <BundleBar key={w.label} label={w.label} count={w.count} denom={internetRows.length} color="#5eead4" />
+              ))}
+            </div>
+          ) : <div className="text-sm text-gray-400 text-center py-4">인터넷 번들 입력 건이 없습니다</div>}
         </div>
       </div>
     </SectionCard>
