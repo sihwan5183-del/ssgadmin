@@ -177,6 +177,65 @@ export default function ReservationsPage() {
     a.click(); URL.revokeObjectURL(url);
   };
 
+  // CSV 내보내기용 헤더/행 변환 (선택 export / 전체 export 공용)
+  const toCsvRows = (target: typeof rows) => target.map((r, i) => [
+    i + 1,
+    r.created_at ? new Date(r.created_at).toLocaleDateString('ko-KR') : '',
+    r.name,
+    r.phone,
+    r.birth_date ?? '',
+    r.carrier ?? '',
+    r.channel ?? '',
+    (r as any).utm_campaign ?? '',
+    r.status,
+    (r as any).assignee?.full_name ?? '',
+    (r as any).device_interest ?? '',
+    r.memo ?? ''
+  ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+
+  const downloadCsvText = (rowsCsv: string[], filenameSuffix: string) => {
+    const header = ['#', '접수일', '고객명', '연락처', '생년월일', '통신사', '채널', '캠페인', '상태', '담당자', '관심기기', '메모'];
+    const csv = [header.join(','), ...rowsCsv].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `사전예약_${filenameSuffix}_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  };
+
+  // [CSV 전체] — 화면 페이지 크기(최대 200건)에 안 걸리게, 지금 걸린 필터 조건(상태/담당자/검색어/채널/기간) 그대로
+  // 전체 건수를 끝까지 순회해서 한 번에 내려받는다.
+  const [csvAllLoading, setCsvAllLoading] = useState(false);
+  const handleCsvAll = async () => {
+    setCsvAllLoading(true);
+    try {
+      const CHUNK = 1000;
+      const all: typeof rows = [];
+      for (let p = 1; ; p++) {
+        const res = await fetchReservations({
+          status: statusFilter || undefined,
+          prospect_grade: (statusFilter === '가망' && gradeFilter) || undefined,
+          assigned_to: assigneeFilter || undefined,
+          search,
+          page: p,
+          pageSize: CHUNK,
+          channel: channelTab || undefined,
+          dateStart: dateStart || undefined,
+          dateEnd: dateEnd || undefined,
+        } as any);
+        all.push(...res.data);
+        if (res.data.length < CHUNK || all.length >= res.count) break;
+      }
+      if (all.length === 0) return toast.error('내보낼 데이터가 없습니다');
+      downloadCsvText(toCsvRows(all), '전체');
+      toast.success(`${all.length}건 CSV 다운로드`);
+    } catch (e: any) {
+      toast.error('전체 CSV 내보내기 실패: ' + e.message);
+    } finally {
+      setCsvAllLoading(false);
+    }
+  };
+
   // 전체 데이터 로드 (채널별 카운트용)
   // 중복 전화번호 계산
   const getDuplicatePhones = (list: typeof rows) => {
@@ -328,8 +387,8 @@ export default function ReservationsPage() {
               </>
             )}
             {isAdmin && (
-            <Button size="sm" onClick={handleCSV} variant="outline" className="gap-1.5 text-green-600 border-green-200 hover:bg-green-50">
-              CSV 전체
+            <Button size="sm" onClick={handleCsvAll} disabled={csvAllLoading} variant="outline" className="gap-1.5 text-green-600 border-green-200 hover:bg-green-50">
+              {csvAllLoading ? '내보내는 중...' : 'CSV 전체'}
             </Button>
             )}
             <Button size="sm" onClick={() => setAddOpen(true)} className="gap-1.5 bg-pink-500 hover:bg-pink-600 text-white">
