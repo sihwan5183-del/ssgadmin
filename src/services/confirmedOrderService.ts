@@ -293,3 +293,127 @@ export function downloadCsv(filename: string, header: string[], rows: (string | 
   a.click();
   URL.revokeObjectURL(url);
 }
+
+export function downloadCsvRaw(filename: string, rows: (string | number)[][]) {
+  const esc = (v: string | number) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const csv = rows.map((r) => r.map(esc).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── 팀별 확정 현황 리포트 ────────────────────────────────
+// 기기별 용량×컬러 표 + 가입유형/부가서비스 비율 + 2ND 상품 리스트를
+// 팀 단위로 묶어서 하나의 CSV로 뽑는다. (엑셀 서식 그대로 재현)
+function classifySubscriptionType(r: ConfirmedRow): 'MNP' | '기기변경' | '기타' {
+  const v = (r.subscription_type ?? computeSubscriptionType(r.carrier) ?? '').trim();
+  if (v.startsWith('MNP')) return 'MNP';
+  if (v.includes('기기변경')) return '기기변경';
+  return '기타';
+}
+
+function buildTeamReportBlock(teamName: string, rows: ConfirmedRow[]): (string | number)[][] {
+  const total = rows.length;
+  const colorUnset = rows.filter((r) => r.color_norm === UNSET).length;
+  const out: (string | number)[][] = [];
+
+  out.push([`⚠️ 컬러 미정 총 ${colorUnset}건 (전체 ${total}건 중)`]);
+  out.push([]);
+  out.push([`${teamName} 전체 확정 합계`, `${total}건`]);
+  out.push([]);
+
+  // 기기별 용량×컬러 표 (좌: 폴드8 / 가운데: 폴드8 울트라 / 우: 플립8 순서, 데이터 있는 기기만)
+  DEVICE_CANON.forEach((device) => {
+    const sub = rows.filter((r) => r.device_norm === device);
+    if (sub.length === 0) return;
+
+    const map: Record<string, number> = {};
+    sub.forEach((r) => {
+      const k = `${r.capacity_norm}|${r.color_norm}`;
+      map[k] = (map[k] ?? 0) + 1;
+    });
+    const combos = Object.entries(map)
+      .map(([k, count]) => {
+        const [cap, col] = k.split('|');
+        return { cap, col, count };
+      })
+      .sort((a, b) => {
+        const ia = CAPACITY_CANON.indexOf(a.cap as any);
+        const ib = CAPACITY_CANON.indexOf(b.cap as any);
+        if (ia !== ib) return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+        return a.col.localeCompare(b.col, 'ko');
+      });
+
+    out.push([device]);
+    out.push(['용량', '컬러', '수량']);
+    combos.forEach((c) => out.push([c.cap, c.col, c.count]));
+    out.push(['', '소계', sub.length]);
+    out.push([]);
+  });
+
+  // 가입유형 · 부가서비스 비율
+  const mnpCount = rows.filter((r) => classifySubscriptionType(r) === 'MNP').length;
+  const changeCount = rows.filter((r) => classifySubscriptionType(r) === '기기변경').length;
+  const etcCount = total - mnpCount - changeCount;
+  const bundleCount = rows.filter((r) => (r.bundle_watch ?? '').trim() !== '' || (r.bundle_tablet ?? '').trim() !== '').length;
+  const internetCount = rows.filter((r) => (r.home_internet ?? '').trim() !== '').length;
+  const pct = (n: number) => (total > 0 ? `${Math.round((n / total) * 1000) / 10}%` : '0%');
+
+  out.push([`가입유형 · 부가서비스 비율 (확정 ${total}건 기준)`]);
+  out.push(['구분', '건수', '비율']);
+  out.push(['MNP', mnpCount, pct(mnpCount)]);
+  out.push(['기기변경', changeCount, pct(changeCount)]);
+  if (etcCount > 0) out.push(['기타', etcCount, pct(etcCount)]);
+  out.push(['번들(2ND)', bundleCount, pct(bundleCount)]);
+  out.push(['인터넷(동판)', internetCount, pct(internetCount)]);
+  out.push([]);
+
+  // 2ND (워치·태블릿) — 상품명 합쳐서 한 표로
+  const productMap: Record<string, number> = {};
+  rows.forEach((r) => {
+    const w = (r.bundle_watch ?? '').trim();
+    if (w) productMap[w] = (productMap[w] ?? 0) + 1;
+    const t = (r.bundle_tablet ?? '').trim();
+    if (t) {
+      const key = t.toUpperCase(); // X236/x236 표기 통일 (통계 페이지와 동일 규칙)
+      productMap[key] = (productMap[key] ?? 0) + 1;
+    }
+  });
+  out.push(['2ND (워치·태블릿)']);
+  out.push(['상품명', '수량']);
+  Object.entries(productMap)
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([name, count]) => out.push([name, count]));
+
+  return out;
+}
+
+/**
+ * 팀별 확정 현황 리포트 CSV 다운로드.
+ * staffTeamMap: assigned_to(user_id) → 팀명. 팀 미배정 담당자는 "미배정"으로 묶임.
+ */
+export function downloadTeamReportCsv(rows: ConfirmedRow[], staffTeamMap: Record<string, string | null>) {
+  const teamGroups = new Map<string, ConfirmedRow[]>();
+  rows.forEach((r) => {
+    const team = (r.assigned_to && staffTeamMap[r.assigned_to]) || '미배정';
+    if (!teamGroups.has(team)) teamGroups.set(team, []);
+    teamGroups.get(team)!.push(r);
+  });
+
+  const allRows: (string | number)[][] = [];
+  Array.from(teamGroups.entries())
+    .sort((a, b) => b[1].length - a[1].length)
+    .forEach(([team, teamRows], idx) => {
+      if (idx > 0) {
+        allRows.push([]);
+        allRows.push([]);
+      }
+      allRows.push(...buildTeamReportBlock(team, teamRows));
+    });
+
+  downloadCsvRaw(`팀별_확정현황_${new Date().toISOString().slice(0, 10)}.csv`, allRows);
+}
