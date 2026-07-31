@@ -96,6 +96,7 @@ export interface Reservation {
   sms_sent_at: string | null;
   courier_sent: boolean;         // 택배 발송 완료 여부
   courier_sent_at: string | null;
+  courier_tracking_number: string | null; // 택배 송장번호
   created_at: string;
   updated_at: string;
 
@@ -164,6 +165,7 @@ export interface ReservationUpdate {
   sms_sent_at?: string | null;
   courier_sent?: boolean;
   courier_sent_at?: string | null;
+  courier_tracking_number?: string | null;
   customer_address?: string | null;
   subscription_type?: string | null;
   rate_plan?: string | null;
