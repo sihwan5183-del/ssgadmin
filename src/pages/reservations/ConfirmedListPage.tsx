@@ -35,7 +35,7 @@ import PiiWatermark from '@/components/PiiWatermark';
 import {
   fetchConfirmedReservations,
   downloadCsv,
-  downloadHierarchyReportCsv,
+  downloadHierarchyReportXls,
   computeSubscriptionType,
   UNSET,
   type ConfirmedRow,
@@ -353,7 +353,7 @@ export default function ConfirmedListPage() {
                 // 발주(재고 확보) 목적 리포트라 이미 택배발송 완료된 건은 제외 — 아직 나가야 할 물량만 집계
                 const orderableRows = rows.filter((r) => r.status === '확정');
                 if (orderableRows.length === 0) return toast.error('내보낼 데이터가 없습니다 (택배발송 완료 건 제외)');
-                downloadHierarchyReportCsv(orderableRows);
+                downloadHierarchyReportXls(orderableRows);
                 toast.success(`제품별 위계 리포트 CSV 다운로드 (택배발송 완료 ${rows.length - orderableRows.length}건 제외)`);
               }}
             >
