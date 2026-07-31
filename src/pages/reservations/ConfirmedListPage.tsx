@@ -35,6 +35,7 @@ import PiiWatermark from '@/components/PiiWatermark';
 import {
   fetchConfirmedReservations,
   downloadCsv,
+  downloadHierarchyReportCsv,
   computeSubscriptionType,
   UNSET,
   type ConfirmedRow,
@@ -344,6 +345,18 @@ export default function ConfirmedListPage() {
                 <Download className="size-3.5" /> CSV
               </Button>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => {
+                if (rows.length === 0) return toast.error('내보낼 데이터가 없습니다');
+                downloadHierarchyReportCsv(rows);
+                toast.success('제품별 위계 리포트 CSV 다운로드');
+              }}
+            >
+              <Download className="size-3.5" /> 제품·용량·컬러 CSV
+            </Button>
             <Button
               variant="outline"
               size="sm"
