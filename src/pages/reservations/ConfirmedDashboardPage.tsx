@@ -240,7 +240,11 @@ export default function ConfirmedDashboardPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const summary = useMemo(() => buildConfirmedSummary(rows), [rows]);
+  // 발주(재고 확보) 목적 화면이라 이미 택배발송 완료된 건은 매트릭스/발주표/KPI 집계에서 제외한다.
+  // (2ND 워치·태블릿·인터넷 통계는 전체 확정 파이프라인 추적용이라 택배발송 포함 그대로 둔다.)
+  const orderableRows = useMemo(() => rows.filter((r) => r.status === '확정'), [rows]);
+  const shippedCount = rows.length - orderableRows.length;
+  const summary = useMemo(() => buildConfirmedSummary(orderableRows), [orderableRows]);
 
   const handleReset = () => {
     setDateStart(''); setDateEnd(''); setChannel(''); setAssignee('');
@@ -274,7 +278,7 @@ export default function ConfirmedDashboardPage() {
     <div className="p-6 space-y-4">
       <WorkReportHeader
         title="확정 발주 대시보드"
-        description="확정(서류작성) 건의 기기별 용량 · 컬러 분포입니다. 기기가 다르면 같은 컬러명이라도 다른 제품이라 항상 기기 단위로 나눠 봅니다"
+        description="확정(서류작성) 건의 기기별 용량 · 컬러 분포입니다 (택배발송 완료 건은 제외 — 아직 나갈 물량만 집계). 기기가 다르면 같은 컬러명이라도 다른 제품이라 항상 기기 단위로 나눠 봅니다"
         rightSlot={
           <>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={handleComboCsv}>
@@ -357,7 +361,9 @@ export default function ConfirmedDashboardPage() {
           <Button variant="ghost" size="icon" onClick={load} className="shrink-0">
             <RotateCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
-          <span className="ml-auto text-xs text-gray-400">총 {summary.total}건</span>
+          <span className="ml-auto text-xs text-gray-400">
+            총 {summary.total}건 (발주대상){shippedCount > 0 && ` · 택배발송 완료 ${shippedCount}건 제외`}
+          </span>
         </div>
       </SectionCard>
 
