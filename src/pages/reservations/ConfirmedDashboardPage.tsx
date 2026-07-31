@@ -272,7 +272,7 @@ export default function ConfirmedDashboardPage() {
   const handleTeamReportCsv = () => {
     if (rows.length === 0) return toast.error('내보낼 데이터가 없습니다');
     downloadTeamReportXls(rows, staffTeamMap);
-    toast.success('팀별 확정현황 리포트 CSV 다운로드');
+    toast.success('팀별 확정현황 리포트 엑셀 다운로드');
   };
 
   const unsetCount = rows.filter((r) => !r.order_ready).length;
@@ -288,17 +288,17 @@ export default function ConfirmedDashboardPage() {
               <Download className="size-3.5" /> 발주표 CSV
             </Button>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={handleTeamReportCsv}>
-              <Download className="size-3.5" /> 팀별 리포트 CSV
+              <Download className="size-3.5" /> 팀별 리포트 엑셀
             </Button>
             <Button
               variant="outline" size="sm" className="gap-1.5"
               onClick={() => {
                 if (orderableRows.length === 0) return toast.error('내보낼 데이터가 없습니다');
                 downloadMnpSplitReportXls(orderableRows);
-                toast.success('MNP·자사 분리 리포트 CSV 다운로드');
+                toast.success('MNP·자사 분리 리포트 엑셀 다운로드');
               }}
             >
-              <Download className="size-3.5" /> MNP·자사 CSV
+              <Download className="size-3.5" /> MNP·자사 엑셀
             </Button>
             <Button
               size="sm"
