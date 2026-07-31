@@ -154,7 +154,7 @@ export default function ReservationsPage() {
   const handleCSV = () => {
     const selected = rows.filter(r => selectedIds.has(r.id));
     const target = selected.length > 0 ? selected : rows;
-    const header = ['#', '접수일', '고객명', '연락처', '생년월일', '통신사', '채널', '캠페인', '상태', '담당자', '관심기기', '메모'];
+    const header = ['#', '접수일', '고객명', '연락처', '생년월일', '통신사', '채널', '캠페인', '상태', '담당자', '관심기기', '메모', '택배발송', '송장번호'];
     const csvRows = target.map((r, i) => [
       i + 1,
       r.created_at ? new Date(r.created_at).toLocaleDateString('ko-KR') : '',
@@ -167,7 +167,9 @@ export default function ReservationsPage() {
       r.status,
       (r as any).assignee?.full_name ?? '',
       (r as any).device_interest ?? '',
-      r.memo ?? ''
+      r.memo ?? '',
+      (r as any).courier_sent ? 'O' : 'X',
+      (r as any).courier_tracking_number ?? '',
     ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
     const csv = [header.join(','), ...csvRows].join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -190,11 +192,13 @@ export default function ReservationsPage() {
     r.status,
     (r as any).assignee?.full_name ?? '',
     (r as any).device_interest ?? '',
-    r.memo ?? ''
+    r.memo ?? '',
+    (r as any).courier_sent ? 'O' : 'X',
+    (r as any).courier_tracking_number ?? '',
   ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
 
   const downloadCsvText = (rowsCsv: string[], filenameSuffix: string) => {
-    const header = ['#', '접수일', '고객명', '연락처', '생년월일', '통신사', '채널', '캠페인', '상태', '담당자', '관심기기', '메모'];
+    const header = ['#', '접수일', '고객명', '연락처', '생년월일', '통신사', '채널', '캠페인', '상태', '담당자', '관심기기', '메모', '택배발송', '송장번호'];
     const csv = [header.join(','), ...rowsCsv].join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -580,7 +584,7 @@ export default function ReservationsPage() {
                 <TableHead className="text-xs w-[90px]">컬러</TableHead>
                 <TableHead className="text-xs">메모</TableHead>
                 <TableHead className="text-xs w-[80px] text-center">문자발송</TableHead>
-                <TableHead className="text-xs w-[80px] text-center">택배발송</TableHead>
+                <TableHead className="text-xs w-[130px] text-center">택배발송 · 송장번호</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -693,29 +697,51 @@ export default function ReservationsPage() {
                       </button>
                     </TableCell>
                     <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={async () => {
-                          const newVal = !(r as any).courier_sent;
-                          const { error } = await supabase
-                            .from('reservations')
-                            .update({ courier_sent: newVal, courier_sent_at: newVal ? new Date().toISOString() : null })
-                            .eq('id', r.id);
-                          if (!error) {
-                            toast.success(newVal ? '택배 발송 완료 처리' : '발송 취소 처리');
-                            await load();
-                          } else {
-                            toast.error('처리 실패');
-                          }
-                        }}
-                        className={`w-8 h-8 rounded-full text-sm font-bold transition-colors ${
-                          (r as any).courier_sent
-                            ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
-                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                        }`}
-                        title={(r as any).courier_sent_at ? `발송: ${new Date((r as any).courier_sent_at).toLocaleString('ko-KR')}` : '미발송'}
-                      >
-                        {(r as any).courier_sent ? 'O' : 'X'}
-                      </button>
+                      <div className="flex flex-col items-center gap-1">
+                        <button
+                          onClick={async () => {
+                            const newVal = !(r as any).courier_sent;
+                            const { error } = await supabase
+                              .from('reservations')
+                              .update({ courier_sent: newVal, courier_sent_at: newVal ? new Date().toISOString() : null })
+                              .eq('id', r.id);
+                            if (!error) {
+                              toast.success(newVal ? '택배 발송 완료 처리' : '발송 취소 처리');
+                              await load();
+                            } else {
+                              toast.error('처리 실패');
+                            }
+                          }}
+                          className={`w-8 h-8 rounded-full text-sm font-bold transition-colors ${
+                            (r as any).courier_sent
+                              ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
+                              : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                          }`}
+                          title={(r as any).courier_sent_at ? `발송: ${new Date((r as any).courier_sent_at).toLocaleString('ko-KR')}` : '미발송'}
+                        >
+                          {(r as any).courier_sent ? 'O' : 'X'}
+                        </button>
+                        <input
+                          key={`${r.id}-tracking`}
+                          type="text"
+                          defaultValue={(r as any).courier_tracking_number ?? ''}
+                          placeholder="송장번호"
+                          onBlur={async (e) => {
+                            const v = e.target.value.trim();
+                            if (v === ((r as any).courier_tracking_number ?? '')) return;
+                            const { error } = await supabase
+                              .from('reservations')
+                              .update({ courier_tracking_number: v || null })
+                              .eq('id', r.id);
+                            if (!error) {
+                              toast.success('송장번호 저장');
+                            } else {
+                              toast.error('저장 실패');
+                            }
+                          }}
+                          className="w-[100px] text-[10px] text-center border border-gray-200 rounded px-1 py-0.5 bg-gray-50/60 focus:border-indigo-300 focus:bg-white outline-none"
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
