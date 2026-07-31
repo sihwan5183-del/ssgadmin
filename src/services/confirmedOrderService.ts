@@ -564,3 +564,256 @@ export function downloadMnpSplitReportCsv(rows: ConfirmedRow[]) {
   downloadCsvRaw(`MNP_자사_분리현황_${new Date().toISOString().slice(0, 10)}.csv`, buildMnpSplitReportRows(rows));
 }
 
+
+// ============================================================
+// 스타일 있는 엑셀(.xls) 출력 — HTML 테이블을 엑셀이 그대로 읽어서
+// 색상/테두리/병합셀까지 살아있는 실제 엑셀 파일로 열리게 한다.
+// (진짜 .xlsx 바이너리 대신 엑셀호환 HTML을 .xls로 저장하는 방식 — 새 라이브러리 없이 동작)
+// ============================================================
+const XLS_NAVY = '#1F3864';
+const XLS_DEVICE_BG = '#D9E2F3';
+const XLS_UNSET_BG = '#FADBD8';
+const XLS_UNSET_COLOR = '#C0392B';
+const XLS_SUBTOTAL_BG = '#D9D9D9';
+const XLS_WARN_BG = '#FDEDEC';
+const XLS_WARN_COLOR = '#C0392B';
+const XLS_BORDER = '1px solid #999999';
+
+function xlsEsc(v: string | number): string {
+  return String(v ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function xlsTitleRow(text: string, sub?: string): string {
+  return `<table style="border-collapse:collapse;margin-bottom:10px;"><tr>
+    <td style="background:${XLS_NAVY};color:#ffffff;font-weight:bold;font-size:14px;padding:8px 12px;border:${XLS_BORDER};">${xlsEsc(text)}</td>
+    ${sub ? `<td style="background:${XLS_NAVY};color:#ffffff;font-weight:bold;font-size:14px;padding:8px 12px;border:${XLS_BORDER};text-align:center;">${xlsEsc(sub)}</td>` : ''}
+  </tr></table>`;
+}
+
+function xlsWarnBanner(text: string): string {
+  return `<table style="border-collapse:collapse;margin-bottom:10px;"><tr>
+    <td style="background:${XLS_WARN_BG};color:${XLS_WARN_COLOR};font-weight:bold;font-size:12px;padding:6px 12px;border:${XLS_BORDER};">${xlsEsc(text)}</td>
+  </tr></table>`;
+}
+
+/** 기기 하나 = 용량×컬러 표 하나. 좌측에 기기명 병합셀(rowspan), 미정 행은 빨간 하이라이트, 소계는 회색 강조. */
+function xlsDeviceTable(device: string, sub: ConfirmedRow[]): string {
+  const map: Record<string, number> = {};
+  sub.forEach((r) => {
+    const k = `${r.capacity_norm}|${r.color_norm}`;
+    map[k] = (map[k] ?? 0) + 1;
+  });
+  const combos = Object.entries(map)
+    .map(([k, count]) => {
+      const [cap, col] = k.split('|');
+      return { cap, col, count };
+    })
+    .sort((a, b) => {
+      const ia = CAPACITY_CANON.indexOf(a.cap as any);
+      const ib = CAPACITY_CANON.indexOf(b.cap as any);
+      if (ia !== ib) return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+      return a.col.localeCompare(b.col, 'ko');
+    });
+  if (combos.length === 0) return '';
+
+  const headerCells = ['용량', '컬러', '수량']
+    .map((h) => `<td style="border:${XLS_BORDER};padding:6px 10px;background:${XLS_NAVY};color:#ffffff;font-weight:bold;font-size:12px;text-align:center;">${h}</td>`)
+    .join('');
+  const headerRow = `<tr><td style="border:${XLS_BORDER};background:${XLS_NAVY};"></td>${headerCells}</tr>`;
+
+  const dataRows = combos.map((c, i) => {
+    const isUnset = c.cap === UNSET || c.col === UNSET;
+    const rowBg = isUnset ? XLS_UNSET_BG : (i % 2 === 0 ? '#FFFFFF' : '#F2F5FA');
+    const textColor = isUnset ? XLS_UNSET_COLOR : '#333333';
+    const weight = isUnset ? 'font-weight:bold;' : '';
+    const deviceCell = i === 0
+      ? `<td rowspan="${combos.length + 1}" style="border:${XLS_BORDER};padding:6px 10px;background:${XLS_DEVICE_BG};font-weight:bold;font-size:13px;text-align:center;vertical-align:middle;">${xlsEsc(device)}</td>`
+      : '';
+    return `<tr>${deviceCell}
+      <td style="border:${XLS_BORDER};padding:4px 8px;background:${rowBg};color:${textColor};font-size:12px;text-align:center;${weight}">${xlsEsc(c.cap)}</td>
+      <td style="border:${XLS_BORDER};padding:4px 8px;background:${rowBg};color:${textColor};font-size:12px;text-align:center;${weight}">${xlsEsc(c.col)}</td>
+      <td style="border:${XLS_BORDER};padding:4px 8px;background:${rowBg};color:${textColor};font-size:12px;text-align:center;font-weight:bold;">${c.count}</td>
+    </tr>`;
+  }).join('');
+
+  const subtotalRow = `<tr>
+    <td colspan="2" style="border:${XLS_BORDER};padding:4px 8px;background:${XLS_SUBTOTAL_BG};font-weight:bold;font-size:12px;text-align:center;">소계</td>
+    <td style="border:${XLS_BORDER};padding:4px 8px;background:${XLS_SUBTOTAL_BG};font-weight:bold;font-size:12px;text-align:center;">${sub.length}</td>
+  </tr>`;
+
+  return `<table style="border-collapse:collapse;margin-bottom:14px;">${headerRow}${dataRows}${subtotalRow}</table>`;
+}
+
+/** 여러 기기(DEVICE_CANON 순서)의 표를 이어붙임 */
+function xlsDeviceTables(rows: ConfirmedRow[]): string {
+  return DEVICE_CANON.map((device) => {
+    const sub = rows.filter((r) => r.device_norm === device);
+    return sub.length > 0 ? xlsDeviceTable(device, sub) : '';
+  }).join('');
+}
+
+/** 구분/건수/비율 형태의 작은 요약표 (가입유형, MNP비율 등 공용) */
+function xlsRatioTable(title: string, items: { label: string; count: number; ratio: string; accent?: string }[]): string {
+  const rowsHtml = items.map((it) => `<tr>
+    <td style="border:${XLS_BORDER};padding:5px 10px;font-size:12px;${it.accent ? `background:${it.accent};font-weight:bold;` : ''}">${xlsEsc(it.label)}</td>
+    <td style="border:${XLS_BORDER};padding:5px 10px;font-size:12px;text-align:center;font-weight:bold;">${it.count}</td>
+    <td style="border:${XLS_BORDER};padding:5px 10px;font-size:12px;text-align:center;">${xlsEsc(it.ratio)}</td>
+  </tr>`).join('');
+  return `<table style="border-collapse:collapse;margin-bottom:14px;">
+    <tr>
+      <td style="border:${XLS_BORDER};padding:6px 10px;background:${XLS_NAVY};color:#fff;font-weight:bold;font-size:12px;" colspan="3">${xlsEsc(title)}</td>
+    </tr>
+    <tr>
+      <td style="border:${XLS_BORDER};padding:5px 10px;background:#E8EDF5;font-weight:bold;font-size:12px;">구분</td>
+      <td style="border:${XLS_BORDER};padding:5px 10px;background:#E8EDF5;font-weight:bold;font-size:12px;text-align:center;">건수</td>
+      <td style="border:${XLS_BORDER};padding:5px 10px;background:#E8EDF5;font-weight:bold;font-size:12px;text-align:center;">비율</td>
+    </tr>
+    ${rowsHtml}
+  </table>`;
+}
+
+/** 상품명/수량 형태의 작은 표 (2ND 워치·태블릿 등) */
+function xlsNameCountTable(title: string, items: { name: string; count: number }[]): string {
+  const rowsHtml = items.map((it) => `<tr>
+    <td style="border:${XLS_BORDER};padding:5px 10px;font-size:12px;">${xlsEsc(it.name)}</td>
+    <td style="border:${XLS_BORDER};padding:5px 10px;font-size:12px;text-align:center;font-weight:bold;">${it.count}</td>
+  </tr>`).join('');
+  return `<table style="border-collapse:collapse;margin-bottom:14px;">
+    <tr><td style="border:${XLS_BORDER};padding:6px 10px;background:${XLS_NAVY};color:#fff;font-weight:bold;font-size:12px;" colspan="2">${xlsEsc(title)}</td></tr>
+    <tr>
+      <td style="border:${XLS_BORDER};padding:5px 10px;background:#E8EDF5;font-weight:bold;font-size:12px;">상품명</td>
+      <td style="border:${XLS_BORDER};padding:5px 10px;background:#E8EDF5;font-weight:bold;font-size:12px;text-align:center;">수량</td>
+    </tr>
+    ${rowsHtml}
+  </table>`;
+}
+
+/** HTML 문자열을 엑셀이 인식하는 .xls 파일로 다운로드 (색상·병합셀 그대로 유지) */
+export function downloadStyledXls(filename: string, bodyHtml: string) {
+  const doc = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8" />
+<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>
+<x:Name>Sheet1</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+<style>td{font-family:맑은 고딕, Malgun Gothic, sans-serif;}</style>
+</head>
+<body>${bodyHtml}</body></html>`;
+  const blob = new Blob(['\ufeff' + doc], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── 제품·용량·컬러 위계 리포트 (엑셀 서식) ────────────────
+export function buildHierarchyReportXlsHtml(rows: ConfirmedRow[]): string {
+  const total = rows.length;
+  const colorUnset = rows.filter((r) => r.color_norm === UNSET).length;
+  let html = '';
+  if (colorUnset > 0) html += xlsWarnBanner(`⚠️ 컬러 미정 총 ${colorUnset}건 (전체 ${total}건 중)`);
+  html += xlsTitleRow('제품별 · 용량별 · 컬러별 확정 현황', `${total}건`);
+  html += xlsDeviceTables(rows);
+  return html;
+}
+
+export function downloadHierarchyReportXls(rows: ConfirmedRow[]) {
+  if (rows.length === 0) return;
+  downloadStyledXls(
+    `제품별_용량별_컬러별_확정현황_${new Date().toISOString().slice(0, 10)}.xls`,
+    buildHierarchyReportXlsHtml(rows),
+  );
+}
+
+// ── MNP vs 자사(기기변경) 분리 리포트 (엑셀 서식) ─────────
+export function buildMnpSplitReportXlsHtml(rows: ConfirmedRow[]): string {
+  const s = buildMnpSplitSummary(rows);
+  const mnpRows = rows.filter((r) => classifySubscriptionType(r) === 'MNP');
+  const ownRows = rows.filter((r) => classifySubscriptionType(r) === '기기변경');
+  const etcRows = rows.filter((r) => classifySubscriptionType(r) === '기타');
+  const pct = (n: number) => (s.total > 0 ? `${Math.round((n / s.total) * 1000) / 10}%` : '0%');
+
+  let html = xlsTitleRow('MNP · 자사(기기변경) 분리 현황 (발주대상, 택배발송 제외)', `${s.total}건`);
+  html += xlsRatioTable('가입유형 비율', [
+    { label: 'MNP', count: s.mnpCount, ratio: pct(s.mnpCount), accent: '#E8EAF6' },
+    { label: '자사(기기변경)', count: s.ownCount, ratio: pct(s.ownCount), accent: '#E3F2FD' },
+    ...(s.etcCount > 0 ? [{ label: '기타', count: s.etcCount, ratio: pct(s.etcCount) }] : []),
+  ]);
+  html += xlsTitleRow(`[MNP] ${mnpRows.length}건`);
+  html += xlsDeviceTables(mnpRows);
+  html += xlsTitleRow(`[자사(기기변경)] ${ownRows.length}건`);
+  html += xlsDeviceTables(ownRows);
+  if (etcRows.length > 0) {
+    html += xlsTitleRow(`[기타] ${etcRows.length}건`);
+    html += xlsDeviceTables(etcRows);
+  }
+  return html;
+}
+
+export function downloadMnpSplitReportXls(rows: ConfirmedRow[]) {
+  if (rows.length === 0) return;
+  downloadStyledXls(
+    `MNP_자사_분리현황_${new Date().toISOString().slice(0, 10)}.xls`,
+    buildMnpSplitReportXlsHtml(rows),
+  );
+}
+
+// ── 팀별 확정 현황 리포트 (엑셀 서식) ─────────────────────
+function xlsTeamReportBlock(teamName: string, rows: ConfirmedRow[]): string {
+  const total = rows.length;
+  const colorUnset = rows.filter((r) => r.color_norm === UNSET).length;
+  const mnpCount = rows.filter((r) => classifySubscriptionType(r) === 'MNP').length;
+  const changeCount = rows.filter((r) => classifySubscriptionType(r) === '기기변경').length;
+  const etcCount = total - mnpCount - changeCount;
+  const bundleCount = rows.filter((r) => (r.bundle_watch ?? '').trim() !== '' || (r.bundle_tablet ?? '').trim() !== '').length;
+  const internetCount = rows.filter((r) => (r.home_internet ?? '').trim() !== '').length;
+  const pct = (n: number) => (total > 0 ? `${Math.round((n / total) * 1000) / 10}%` : '0%');
+
+  const productMap: Record<string, number> = {};
+  rows.forEach((r) => {
+    const w = (r.bundle_watch ?? '').trim();
+    if (w) productMap[w] = (productMap[w] ?? 0) + 1;
+    const t = (r.bundle_tablet ?? '').trim();
+    if (t) { const key = t.toUpperCase(); productMap[key] = (productMap[key] ?? 0) + 1; }
+  });
+
+  let html = '';
+  if (colorUnset > 0) html += xlsWarnBanner(`⚠️ 컬러 미정 총 ${colorUnset}건 (전체 ${total}건 중)`);
+  html += xlsTitleRow(`${teamName} 전체 확정 합계`, `${total}건`);
+  html += xlsDeviceTables(rows);
+  html += xlsRatioTable(`가입유형 · 부가서비스 비율 (확정 ${total}건 기준)`, [
+    { label: 'MNP', count: mnpCount, ratio: pct(mnpCount), accent: '#E8EAF6' },
+    { label: '기기변경', count: changeCount, ratio: pct(changeCount), accent: '#E3F2FD' },
+    ...(etcCount > 0 ? [{ label: '기타', count: etcCount, ratio: pct(etcCount) }] : []),
+    { label: '번들(2ND)', count: bundleCount, ratio: pct(bundleCount) },
+    { label: '인터넷(동판)', count: internetCount, ratio: pct(internetCount) },
+  ]);
+  html += xlsNameCountTable(
+    '2ND (워치·태블릿)',
+    Object.entries(productMap).sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ name, count })),
+  );
+  return html;
+}
+
+export function downloadTeamReportXls(rows: ConfirmedRow[], staffTeamMap: Record<string, string | null>) {
+  const teamGroups = new Map<string, ConfirmedRow[]>();
+  rows.forEach((r) => {
+    const team = (r.assigned_to && staffTeamMap[r.assigned_to]) || '미배정';
+    if (!teamGroups.has(team)) teamGroups.set(team, []);
+    teamGroups.get(team)!.push(r);
+  });
+
+  let html = '';
+  Array.from(teamGroups.entries())
+    .sort((a, b) => b[1].length - a[1].length)
+    .forEach(([team, teamRows]) => {
+      html += xlsTeamReportBlock(team, teamRows);
+      html += '<br/>';
+    });
+
+  downloadStyledXls(`팀별_확정현황_${new Date().toISOString().slice(0, 10)}.xls`, html);
+}
