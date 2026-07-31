@@ -420,3 +420,56 @@ export function downloadTeamReportCsv(rows: ConfirmedRow[], staffTeamMap: Record
 
   downloadCsvRaw(`팀별_확정현황_${new Date().toISOString().slice(0, 10)}.csv`, allRows);
 }
+
+// ── 제품(기기) × 용량 × 컬러 위계 리포트 ──────────────────
+// 확정 목록(확정+택배발송) 전체를 기기 → 용량 → 컬러 순서로 들여쓰기 없이
+// 표 단위로 끊어서 정리한다. (팀 구분 없이 전체 합산 버전)
+export function buildHierarchyReportRows(rows: ConfirmedRow[]): (string | number)[][] {
+  const out: (string | number)[][] = [];
+  const total = rows.length;
+  const colorUnset = rows.filter((r) => r.color_norm === UNSET).length;
+
+  out.push([`⚠️ 컬러 미정 총 ${colorUnset}건 (전체 ${total}건 중)`]);
+  out.push([]);
+  out.push(['제품별 · 용량별 · 컬러별 확정 현황', `${total}건`]);
+  out.push([]);
+
+  DEVICE_CANON.forEach((device) => {
+    const sub = rows.filter((r) => r.device_norm === device);
+    if (sub.length === 0) return;
+
+    const map: Record<string, number> = {};
+    sub.forEach((r) => {
+      const k = `${r.capacity_norm}|${r.color_norm}`;
+      map[k] = (map[k] ?? 0) + 1;
+    });
+    const combos = Object.entries(map)
+      .map(([k, count]) => {
+        const [cap, col] = k.split('|');
+        return { cap, col, count };
+      })
+      .sort((a, b) => {
+        const ia = CAPACITY_CANON.indexOf(a.cap as any);
+        const ib = CAPACITY_CANON.indexOf(b.cap as any);
+        if (ia !== ib) return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+        return a.col.localeCompare(b.col, 'ko');
+      });
+
+    out.push([device, '', '', `${sub.length}건`]);
+    out.push(['용량', '컬러', '수량', '비중']);
+    combos.forEach((c) => {
+      const pct = sub.length > 0 ? `${Math.round((c.count / sub.length) * 1000) / 10}%` : '0%';
+      out.push([c.cap, c.col, c.count, pct]);
+    });
+    out.push(['', '소계', sub.length, '100%']);
+    out.push([]);
+  });
+
+  out.push(['전체 합계', '', total]);
+  return out;
+}
+
+export function downloadHierarchyReportCsv(rows: ConfirmedRow[]) {
+  if (rows.length === 0) return;
+  downloadCsvRaw(`제품별_용량별_컬러별_확정현황_${new Date().toISOString().slice(0, 10)}.csv`, buildHierarchyReportRows(rows));
+}
