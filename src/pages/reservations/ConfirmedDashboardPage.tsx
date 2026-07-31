@@ -23,6 +23,7 @@ import {
   fetchConfirmedReservations,
   buildConfirmedSummary,
   downloadCsv,
+  downloadTeamReportCsv,
   UNSET,
   type ConfirmedRow,
   type DevicePivot,
@@ -255,6 +256,18 @@ export default function ConfirmedDashboardPage() {
     toast.success('발주표 CSV 다운로드');
   };
 
+  const staffTeamMap = useMemo(() => {
+    const m: Record<string, string | null> = {};
+    staff.forEach((s) => { m[s.user_id] = s.team; });
+    return m;
+  }, [staff]);
+
+  const handleTeamReportCsv = () => {
+    if (rows.length === 0) return toast.error('내보낼 데이터가 없습니다');
+    downloadTeamReportCsv(rows, staffTeamMap);
+    toast.success('팀별 확정현황 리포트 CSV 다운로드');
+  };
+
   const unsetCount = rows.filter((r) => !r.order_ready).length;
 
   return (
@@ -266,6 +279,9 @@ export default function ConfirmedDashboardPage() {
           <>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={handleComboCsv}>
               <Download className="size-3.5" /> 발주표 CSV
+            </Button>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={handleTeamReportCsv}>
+              <Download className="size-3.5" /> 팀별 리포트 CSV
             </Button>
             <Button
               size="sm"
