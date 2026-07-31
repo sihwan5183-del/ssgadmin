@@ -29,7 +29,7 @@ import { useDashboardStaff } from '@/hooks/useDashboardStaff';
 import { maskName, maskPhone } from '@/lib/maskPii';
 import { formatPhone } from '@/lib/phoneFormat';
 import { WorkReportHeader, SectionCard, KpiCard } from '@/pages/work-report/_shared';
-import { CHANNEL_OPTIONS, HQ_CHECK_STATUS_LIST, TABLET_SUBTYPE_LIST, WATCH_MODEL_OPTIONS, HOME_INTERNET_OPTIONS, HOME_TV_OPTIONS, TV_BUNDLE_TYPE_LIST, type HqCheckStatus, type TabletSubType, type TvBundleType } from '@/types/reservation';
+import { CHANNEL_OPTIONS, HQ_CHECK_STATUS_LIST, TABLET_SUBTYPE_LIST, WATCH_MODEL_OPTIONS, WATCH_COLOR_OPTIONS, HOME_INTERNET_OPTIONS, HOME_TV_OPTIONS, TV_BUNDLE_TYPE_LIST, type HqCheckStatus, type TabletSubType, type TvBundleType } from '@/types/reservation';
 import { ReservationDetailModal } from './ReservationDetailModal';
 import PiiWatermark from '@/components/PiiWatermark';
 import {
@@ -51,7 +51,7 @@ const CC_ICON: Record<HqCheckStatus, any> = { '미확인': HelpCircle, '일치':
 type SpecField =
   | 'subscription_type' | 'customer_address'
   | 'rate_plan' | 'premium_pack'
-  | 'bundle_watch' | 'bundle_tablet'
+  | 'bundle_watch' | 'bundle_watch_color' | 'bundle_tablet'
   | 'home_internet' | 'home_tv' | 'home_smarthome';
 
 function formatDateTime(iso: string | null | undefined) {
@@ -285,7 +285,7 @@ export default function ConfirmedListPage() {
       `확정_발주스펙시트_${new Date().toISOString().slice(0, 10)}.csv`,
       [
         '#', '고객명', '통신사', '가입유형', 'CTN', '고객주소',
-        '모델명', '용량', '색상', '요금제', '프리미엄팩', '워치', '태블릿', '태블릿유형',
+        '모델명', '용량', '색상', '요금제', '프리미엄팩', '워치', '워치컬러', '태블릿', '태블릿유형',
         '인터넷', 'TV동시가입', 'TV프리', 'TV프리유형', '스마트홈', '담당자', '대사상태', '불일치사유', '확인자', '확인시각',
       ],
       filtered.map((r, i) => [
@@ -301,6 +301,7 @@ export default function ConfirmedListPage() {
         r.rate_plan ?? '',
         r.premium_pack ?? '',
         r.bundle_watch ?? '',
+        r.bundle_watch_color ?? '',
         r.bundle_tablet ?? '',
         r.bundle_tablet_type ?? '',
         r.home_internet ?? '',
@@ -624,6 +625,20 @@ export default function ConfirmedListPage() {
                             <SelectItem value="_none_" className="text-xs text-gray-400">미지정</SelectItem>
                             {WATCH_MODEL_OPTIONS.map((w) => (
                               <SelectItem key={w} value={w} className="text-xs">{w}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select
+                          value={r.bundle_watch_color ?? '_none_'}
+                          onValueChange={(v) => { saveField(r.id, 'bundle_watch_color', v === '_none_' ? '' : v).catch(() => {}); }}
+                        >
+                          <SelectTrigger className="h-6 w-[108px] text-[11px] px-2 mt-1 border-transparent hover:border-gray-200 bg-gray-50/60 focus:ring-1 focus:ring-pink-300">
+                            <SelectValue placeholder="컬러" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="_none_" className="text-xs text-gray-400">미지정</SelectItem>
+                            {WATCH_COLOR_OPTIONS.map((c) => (
+                              <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
