@@ -22,8 +22,10 @@ import { CHANNEL_OPTIONS } from '@/types/reservation';
 import {
   fetchConfirmedReservations,
   buildConfirmedSummary,
+  buildMnpSplitSummary,
   downloadCsv,
   downloadTeamReportCsv,
+  downloadMnpSplitReportCsv,
   UNSET,
   type ConfirmedRow,
   type DevicePivot,
@@ -245,6 +247,7 @@ export default function ConfirmedDashboardPage() {
   const orderableRows = useMemo(() => rows.filter((r) => r.status === '확정'), [rows]);
   const shippedCount = rows.length - orderableRows.length;
   const summary = useMemo(() => buildConfirmedSummary(orderableRows), [orderableRows]);
+  const mnpSplit = useMemo(() => buildMnpSplitSummary(orderableRows), [orderableRows]);
 
   const handleReset = () => {
     setDateStart(''); setDateEnd(''); setChannel(''); setAssignee('');
@@ -288,6 +291,16 @@ export default function ConfirmedDashboardPage() {
               <Download className="size-3.5" /> 팀별 리포트 CSV
             </Button>
             <Button
+              variant="outline" size="sm" className="gap-1.5"
+              onClick={() => {
+                if (orderableRows.length === 0) return toast.error('내보낼 데이터가 없습니다');
+                downloadMnpSplitReportCsv(orderableRows);
+                toast.success('MNP·자사 분리 리포트 CSV 다운로드');
+              }}
+            >
+              <Download className="size-3.5" /> MNP·자사 CSV
+            </Button>
+            <Button
               size="sm"
               className="gap-1.5 bg-pink-500 hover:bg-pink-600"
               onClick={() => navigate('/reservations/confirmed/list')}
@@ -299,12 +312,14 @@ export default function ConfirmedDashboardPage() {
       />
 
       {/* KPI */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
         <KpiCard label="확정 총건수" value={summary.total} color="pink" sub="status = 확정(서류작성)" />
         <KpiCard label="발주 가능" value={summary.orderReady} color="green" sub="기기·용량·컬러 모두 확정" />
         <KpiCard label="기기 미정" value={summary.deviceUnset} color={summary.deviceUnset > 0 ? 'orange' : 'gray'} />
         <KpiCard label="용량 미정" value={summary.capacityUnset} color={summary.capacityUnset > 0 ? 'orange' : 'gray'} />
         <KpiCard label="컬러 미정" value={summary.colorUnset} color={summary.colorUnset > 0 ? 'red' : 'gray'} />
+        <KpiCard label="MNP" value={mnpSplit.mnpCount} color="indigo" sub={`${summary.total > 0 ? Math.round(mnpSplit.mnpCount / summary.total * 100) : 0}%`} />
+        <KpiCard label="자사(기기변경)" value={mnpSplit.ownCount} color="blue" sub={`${summary.total > 0 ? Math.round(mnpSplit.ownCount / summary.total * 100) : 0}%`} />
       </div>
 
       {/* 미정 경고 */}
