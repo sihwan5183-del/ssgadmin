@@ -12,6 +12,7 @@
 export type ReservationStatus =
   | '신규'
   | '확정'
+  | '택배발송'
   | '예약완료'
   | '가망'
   | '상담성공'
@@ -27,6 +28,7 @@ export const RESERVATION_STATUS_LIST: {
 }[] = [
   { value: '신규',     label: '신규',                 color: 'bg-blue-100 text-blue-700' },
   { value: '확정',     label: '확정 (서류작성)',       color: 'bg-teal-100 text-teal-700' },
+  { value: '택배발송', label: '택배발송 (완료)',       color: 'bg-indigo-100 text-indigo-700' },
   { value: '예약완료', label: '예약완료 (서류미작성)', color: 'bg-pink-100 text-pink-700' },
   { value: '가망',     label: '가망 (최종해피콜)',     color: 'bg-amber-100 text-amber-700' },
   { value: '상담성공', label: '상담성공',             color: 'bg-emerald-100 text-emerald-700' },
@@ -255,4 +257,4 @@ export const isCancelStatus = (status: ReservationStatus) =>
 
 // 완료(확정 계열) 상태 판별
 export const isCompleteStatus = (status: ReservationStatus) =>
-  status === '확정' || status === '예약완료';
+  status === '확정' || status === '택배발송' || status === '예약완료';
