@@ -24,6 +24,7 @@ const CHANNEL_COLORS: Record<string, string> = {
 const FUNNEL_STEPS = [
   { key: '신규',     label: '신규(인입)',   color: '#93c5fd' },
   { key: '확정',     label: '확정',         color: '#5eead4' },
+  { key: '택배발송', label: '택배발송',     color: '#818cf8' },
   { key: '예약완료', label: '예약완료',     color: '#f9a8d4' },
   { key: '가망',     label: '가망',         color: '#fcd34d' },
   { key: '상담성공', label: '상담성공',     color: '#6ee7b7' },
@@ -41,7 +42,7 @@ const CONVERSION_POINTS = [
   { from: '확정',     to: '예약완료', label: '확정→예약완료',     color: '#f472b6' },
 ];
 // 누적 퍼널 계산(cntFrom)용 논리적 진행 순서 — 화면 표시 순서와는 별개
-const STATUS_ORDER = ['신규', '부재', '재케어', '가망', '상담성공', '확정', '예약완료', '실패', '취소'];
+const STATUS_ORDER = ['신규', '부재', '재케어', '가망', '상담성공', '확정', '택배발송', '예약완료', '실패', '취소'];
 const PERIOD_BTNS = [
   { label: '전체', value: '' },
   { label: '일별', value: '일별' },
@@ -196,8 +197,8 @@ function PeriodCompareChart({ allRows }: { allRows: Row[] }) {
       기간: pair.labelA + ' vs ' + pair.labelB,
       [pair.labelA]: rowsA.length,
       [pair.labelB]: rowsB.length,
-      성공A: cnt(rowsA, '상담성공') + cnt(rowsA, '확정') + cnt(rowsA, '예약완료'),
-      성공B: cnt(rowsB, '상담성공') + cnt(rowsB, '확정') + cnt(rowsB, '예약완료'),
+      성공A: cnt(rowsA, '상담성공') + cnt(rowsA, '확정') + cnt(rowsA, '택배발송') + cnt(rowsA, '예약완료'),
+      성공B: cnt(rowsB, '상담성공') + cnt(rowsB, '확정') + cnt(rowsB, '택배발송') + cnt(rowsB, '예약완료'),
       labelA: pair.labelA,
       labelB: pair.labelB,
     };
@@ -415,7 +416,7 @@ export default function ReservationStatsPage() {
       (fd ?? []).forEach((r: any) => { const rs = r.fail_reason?.reason; if (rs) rc[rs] = (rc[rs]??0)+1; });
       setFailStats(Object.entries(rc).map(([reason,count]) => ({reason,count})).sort((a,b) => b.count-a.count));
 
-      const { data: bd } = await supabase.from('reservations').select('bundle_watch, bundle_tablet, bundle_tablet_type').eq('status', '확정');
+      const { data: bd } = await supabase.from('reservations').select('bundle_watch, bundle_tablet, bundle_tablet_type').in('status', ['확정', '택배발송']);
       setBundleRows((bd ?? []) as BundleRow[]);
     } catch (e: any) { toast.error('통계 로드 실패: ' + e.message); }
     finally { setLoading(false); }
