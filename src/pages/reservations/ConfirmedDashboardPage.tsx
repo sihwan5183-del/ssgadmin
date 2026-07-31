@@ -24,8 +24,8 @@ import {
   buildConfirmedSummary,
   buildMnpSplitSummary,
   downloadCsv,
-  downloadTeamReportCsv,
-  downloadMnpSplitReportCsv,
+  downloadTeamReportXls,
+  downloadMnpSplitReportXls,
   UNSET,
   type ConfirmedRow,
   type DevicePivot,
@@ -271,7 +271,7 @@ export default function ConfirmedDashboardPage() {
 
   const handleTeamReportCsv = () => {
     if (rows.length === 0) return toast.error('내보낼 데이터가 없습니다');
-    downloadTeamReportCsv(rows, staffTeamMap);
+    downloadTeamReportXls(rows, staffTeamMap);
     toast.success('팀별 확정현황 리포트 CSV 다운로드');
   };
 
@@ -294,7 +294,7 @@ export default function ConfirmedDashboardPage() {
               variant="outline" size="sm" className="gap-1.5"
               onClick={() => {
                 if (orderableRows.length === 0) return toast.error('내보낼 데이터가 없습니다');
-                downloadMnpSplitReportCsv(orderableRows);
+                downloadMnpSplitReportXls(orderableRows);
                 toast.success('MNP·자사 분리 리포트 CSV 다운로드');
               }}
             >
