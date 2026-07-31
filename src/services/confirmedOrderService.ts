@@ -8,7 +8,10 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Reservation } from '@/types/reservation';
 import { DEVICE_COLOR_MAP } from '@/types/reservation';
 
-export const CONFIRMED_STATUS = '확정';
+// v20260731: 택배발송 완료된 건도 계속 "확정 파이프라인"에 남아 보여야 하므로
+// (발주표/스펙시트/팀리포트/2ND통계/본사대사에서 사라지면 안 됨) 확정+택배발송 둘 다 포함.
+export const CONFIRMED_STATUS = '확정'; // 하위호환용 단일값 (신규 코드에서는 CONFIRMED_STATUSES 사용)
+export const CONFIRMED_STATUSES = ['확정', '택배발송'] as const;
 export const UNSET = '미정';
 
 // 정규화 기준값
@@ -95,7 +98,7 @@ export async function fetchConfirmedReservations(
     let q = supabase
       .from('reservations')
       .select('*')
-      .eq('status', CONFIRMED_STATUS)
+      .in('status', CONFIRMED_STATUSES)
       .order('created_at', { ascending: false })
       .range(from, from + CHUNK - 1);
 
