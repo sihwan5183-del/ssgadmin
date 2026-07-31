@@ -186,7 +186,7 @@ export async function fetchReservationStats(): Promise<ReservationStats> {
     byStatus[r.status] = (byStatus[r.status] ?? 0) + 1;
   });
 
-  const successCount = (byStatus['상담성공'] ?? 0) + (byStatus['확정'] ?? 0) + (byStatus['예약완료'] ?? 0);
+  const successCount = (byStatus['상담성공'] ?? 0) + (byStatus['확정'] ?? 0) + (byStatus['택배발송'] ?? 0) + (byStatus['예약완료'] ?? 0);
   const progressCount = total - (byStatus['실패'] ?? 0) - (byStatus['취소'] ?? 0);
 
   return {
