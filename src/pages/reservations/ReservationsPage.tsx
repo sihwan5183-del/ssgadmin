@@ -698,29 +698,50 @@ export default function ReservationsPage() {
                     </TableCell>
                     <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                       <div className="flex flex-col items-center gap-1">
-                        <button
-                          onClick={async () => {
-                            const newVal = !(r as any).courier_sent;
-                            const { error } = await supabase
-                              .from('reservations')
-                              .update({ courier_sent: newVal, courier_sent_at: newVal ? new Date().toISOString() : null })
-                              .eq('id', r.id);
-                            if (!error) {
-                              toast.success(newVal ? '택배 발송 완료 처리' : '발송 취소 처리');
-                              await load();
-                            } else {
-                              toast.error('처리 실패');
-                            }
-                          }}
-                          className={`w-8 h-8 rounded-full text-sm font-bold transition-colors ${
-                            (r as any).courier_sent
-                              ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
-                              : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                          }`}
-                          title={(r as any).courier_sent_at ? `발송: ${new Date((r as any).courier_sent_at).toLocaleString('ko-KR')}` : '미발송'}
-                        >
-                          {(r as any).courier_sent ? 'O' : 'X'}
-                        </button>
+                        {(() => {
+                          const status = (r as any).status as string;
+                          const shipped = status === '택배발송';
+                          const canToggle = status === '확정' || shipped;
+                          return (
+                            <button
+                              disabled={!canToggle}
+                              onClick={async () => {
+                                if (!canToggle) return;
+                                const goingToShipped = !shipped;
+                                const { error } = await supabase
+                                  .from('reservations')
+                                  .update({
+                                    status: goingToShipped ? '택배발송' : '확정',
+                                    courier_sent: goingToShipped,
+                                    courier_sent_at: goingToShipped ? new Date().toISOString() : null,
+                                  })
+                                  .eq('id', r.id);
+                                if (!error) {
+                                  toast.success(goingToShipped ? '택배발송 완료 처리' : '확정으로 되돌림');
+                                  await load();
+                                } else {
+                                  toast.error('처리 실패');
+                                }
+                              }}
+                              title={
+                                !canToggle
+                                  ? '확정 상태에서만 처리할 수 있습니다'
+                                  : shipped
+                                  ? ((r as any).courier_sent_at ? `발송: ${new Date((r as any).courier_sent_at).toLocaleString('ko-KR')} (다시 누르면 확정으로 되돌림)` : '다시 누르면 확정으로 되돌림')
+                                  : '누르면 택배발송 완료로 전환'
+                              }
+                              className={`w-8 h-8 rounded-full text-sm font-bold transition-colors ${
+                                !canToggle
+                                  ? 'bg-gray-50 text-gray-200 cursor-not-allowed'
+                                  : shipped
+                                  ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
+                                  : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                              }`}
+                            >
+                              {shipped ? 'O' : 'X'}
+                            </button>
+                          );
+                        })()}
                         <input
                           key={`${r.id}-tracking`}
                           type="text"
