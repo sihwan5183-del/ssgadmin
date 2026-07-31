@@ -312,7 +312,7 @@ export function downloadCsvRaw(filename: string, rows: (string | number)[][]) {
 // ── 팀별 확정 현황 리포트 ────────────────────────────────
 // 기기별 용량×컬러 표 + 가입유형/부가서비스 비율 + 2ND 상품 리스트를
 // 팀 단위로 묶어서 하나의 CSV로 뽑는다. (엑셀 서식 그대로 재현)
-function classifySubscriptionType(r: ConfirmedRow): 'MNP' | '기기변경' | '기타' {
+export function classifySubscriptionType(r: ConfirmedRow): 'MNP' | '기기변경' | '기타' {
   const v = (r.subscription_type ?? computeSubscriptionType(r.carrier) ?? '').trim();
   if (v.startsWith('MNP')) return 'MNP';
   if (v.includes('기기변경')) return '기기변경';
@@ -473,3 +473,94 @@ export function downloadHierarchyReportCsv(rows: ConfirmedRow[]) {
   if (rows.length === 0) return;
   downloadCsvRaw(`제품별_용량별_컬러별_확정현황_${new Date().toISOString().slice(0, 10)}.csv`, buildHierarchyReportRows(rows));
 }
+
+// 기기별 용량×컬러 표만 뽑아내는 재사용 헬퍼 (헤더/합계 없이 표 블록만) — 상위 리포트에서 그룹별로 반복 사용
+function buildDeviceCapacityColorBlocks(rows: ConfirmedRow[]): (string | number)[][] {
+  const out: (string | number)[][] = [];
+  DEVICE_CANON.forEach((device) => {
+    const sub = rows.filter((r) => r.device_norm === device);
+    if (sub.length === 0) return;
+
+    const map: Record<string, number> = {};
+    sub.forEach((r) => {
+      const k = `${r.capacity_norm}|${r.color_norm}`;
+      map[k] = (map[k] ?? 0) + 1;
+    });
+    const combos = Object.entries(map)
+      .map(([k, count]) => {
+        const [cap, col] = k.split('|');
+        return { cap, col, count };
+      })
+      .sort((a, b) => {
+        const ia = CAPACITY_CANON.indexOf(a.cap as any);
+        const ib = CAPACITY_CANON.indexOf(b.cap as any);
+        if (ia !== ib) return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+        return a.col.localeCompare(b.col, 'ko');
+      });
+
+    out.push([device, '', '', `${sub.length}건`]);
+    out.push(['용량', '컬러', '수량', '비중']);
+    combos.forEach((c) => {
+      const pct = sub.length > 0 ? `${Math.round((c.count / sub.length) * 1000) / 10}%` : '0%';
+      out.push([c.cap, c.col, c.count, pct]);
+    });
+    out.push(['', '소계', sub.length, '100%']);
+    out.push([]);
+  });
+  return out;
+}
+
+// ── MNP vs 자사(기기변경) 분리 리포트 ────────────────────
+// 발주대상(확정, 택배발송 제외) 건을 가입유형으로 나눠서 각각 기기×용량×컬러 매트릭스를 같이 보여준다.
+export interface MnpSplitSummary {
+  total: number;
+  mnpCount: number;
+  ownCount: number;
+  etcCount: number;
+}
+
+export function buildMnpSplitSummary(rows: ConfirmedRow[]): MnpSplitSummary {
+  const total = rows.length;
+  const mnpCount = rows.filter((r) => classifySubscriptionType(r) === 'MNP').length;
+  const ownCount = rows.filter((r) => classifySubscriptionType(r) === '기기변경').length;
+  const etcCount = total - mnpCount - ownCount;
+  return { total, mnpCount, ownCount, etcCount };
+}
+
+export function buildMnpSplitReportRows(rows: ConfirmedRow[]): (string | number)[][] {
+  const s = buildMnpSplitSummary(rows);
+  const mnpRows = rows.filter((r) => classifySubscriptionType(r) === 'MNP');
+  const ownRows = rows.filter((r) => classifySubscriptionType(r) === '기기변경');
+  const etcRows = rows.filter((r) => classifySubscriptionType(r) === '기타');
+
+  const out: (string | number)[][] = [];
+  out.push(['MNP · 자사(기기변경) 분리 현황 (발주대상, 택배발송 제외)', `${s.total}건`]);
+  out.push([]);
+  out.push(['구분', '건수', '비율']);
+  out.push(['MNP', s.mnpCount, s.total > 0 ? `${Math.round((s.mnpCount / s.total) * 1000) / 10}%` : '0%']);
+  out.push(['자사(기기변경)', s.ownCount, s.total > 0 ? `${Math.round((s.ownCount / s.total) * 1000) / 10}%` : '0%']);
+  if (s.etcCount > 0) out.push(['기타', s.etcCount, s.total > 0 ? `${Math.round((s.etcCount / s.total) * 1000) / 10}%` : '0%']);
+  out.push([]);
+
+  out.push([`[MNP] ${mnpRows.length}건`]);
+  out.push([]);
+  out.push(...buildDeviceCapacityColorBlocks(mnpRows));
+
+  out.push([`[자사(기기변경)] ${ownRows.length}건`]);
+  out.push([]);
+  out.push(...buildDeviceCapacityColorBlocks(ownRows));
+
+  if (etcRows.length > 0) {
+    out.push([`[기타] ${etcRows.length}건`]);
+    out.push([]);
+    out.push(...buildDeviceCapacityColorBlocks(etcRows));
+  }
+
+  return out;
+}
+
+export function downloadMnpSplitReportCsv(rows: ConfirmedRow[]) {
+  if (rows.length === 0) return;
+  downloadCsvRaw(`MNP_자사_분리현황_${new Date().toISOString().slice(0, 10)}.csv`, buildMnpSplitReportRows(rows));
+}
+
