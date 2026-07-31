@@ -118,6 +118,25 @@ export default function ReservationsPage() {
     }
   };
 
+  // 일괄 택배발송 처리
+  const handleBulkCourier = async (sent: boolean) => {
+    if (selectedIds.size === 0) return;
+    const label = sent ? '발송완료' : '미발송';
+    if (!window.confirm(`선택한 ${selectedIds.size}건을 택배 ${label}으로 처리할까요?`)) return;
+    try {
+      const { error } = await supabase
+        .from('reservations')
+        .update({ courier_sent: sent, courier_sent_at: sent ? new Date().toISOString() : null })
+        .in('id', [...selectedIds]);
+      if (error) throw error;
+      toast.success(`${selectedIds.size}건 택배 ${label} 처리 완료`);
+      setSelectedIds(new Set());
+      await load();
+    } catch (e: any) {
+      toast.error('처리 실패: ' + e.message);
+    }
+  };
+
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
     if (!window.confirm(`선택한 ${selectedIds.size}건을 삭제하시겠어요?`)) return;
@@ -291,6 +310,12 @@ export default function ReservationsPage() {
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => handleBulkSms(false)} className="gap-1.5 text-gray-500 border-gray-200 hover:bg-gray-50">
                   문자발송 X ({selectedIds.size})
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleBulkCourier(true)} className="gap-1.5 text-indigo-600 border-indigo-200 hover:bg-indigo-50">
+                  📦 택배발송 O ({selectedIds.size})
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleBulkCourier(false)} className="gap-1.5 text-gray-500 border-gray-200 hover:bg-gray-50">
+                  택배발송 X ({selectedIds.size})
                 </Button>
                 {isAdmin && (
                 <Button size="sm" variant="outline" onClick={handleCSV} className="gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50">
@@ -496,6 +521,7 @@ export default function ReservationsPage() {
                 <TableHead className="text-xs w-[90px]">컬러</TableHead>
                 <TableHead className="text-xs">메모</TableHead>
                 <TableHead className="text-xs w-[80px] text-center">문자발송</TableHead>
+                <TableHead className="text-xs w-[80px] text-center">택배발송</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -582,7 +608,7 @@ export default function ReservationsPage() {
                     <TableCell className="text-xs text-gray-500 max-w-[220px]" title={r.memo ?? ''}>
                       <span className="line-clamp-2 whitespace-normal break-all leading-snug">{r.memo ?? '-'}</span>
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={async () => {
                           const newVal = !(r as any).sms_sent;
@@ -605,6 +631,31 @@ export default function ReservationsPage() {
                         title={(r as any).sms_sent_at ? `발송: ${new Date((r as any).sms_sent_at).toLocaleString('ko-KR')}` : '미발송'}
                       >
                         {(r as any).sms_sent ? 'O' : 'X'}
+                      </button>
+                    </TableCell>
+                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={async () => {
+                          const newVal = !(r as any).courier_sent;
+                          const { error } = await supabase
+                            .from('reservations')
+                            .update({ courier_sent: newVal, courier_sent_at: newVal ? new Date().toISOString() : null })
+                            .eq('id', r.id);
+                          if (!error) {
+                            toast.success(newVal ? '택배 발송 완료 처리' : '발송 취소 처리');
+                            await load();
+                          } else {
+                            toast.error('처리 실패');
+                          }
+                        }}
+                        className={`w-8 h-8 rounded-full text-sm font-bold transition-colors ${
+                          (r as any).courier_sent
+                            ? 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
+                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                        }`}
+                        title={(r as any).courier_sent_at ? `발송: ${new Date((r as any).courier_sent_at).toLocaleString('ko-KR')}` : '미발송'}
+                      >
+                        {(r as any).courier_sent ? 'O' : 'X'}
                       </button>
                     </TableCell>
                   </TableRow>
