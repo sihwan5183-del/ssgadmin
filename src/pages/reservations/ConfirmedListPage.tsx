@@ -42,10 +42,15 @@ import {
 import { setHqCheckStatus } from '@/services/crossCheckService';
 
 type ViewFilter = '전체' | '발주가능' | '미정';
-type CcFilter = '전체' | HqCheckStatus;
+type CcFilter = '전체' | HqCheckStatus | '택배완료';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 const CC_ICON: Record<HqCheckStatus, any> = { '미확인': HelpCircle, '일치': CheckCircle2, '불일치': XCircle };
+
+// 택배발송 처리된 건은 본사대사(일치/불일치) 상태와 별개로 "택배완료" 버킷으로 잡는다.
+// (재고 확보 관점 — 이미 나간 건 vs 아직 안 나간 건 구분)
+const getEffectiveCcStatus = (r: ConfirmedRow): HqCheckStatus | '택배완료' =>
+  r.status === '택배발송' ? '택배완료' : r.hq_check_status;
 
 // 확정 건에 새로 얹는 스펙시트 필드. key = DB 컬럼명.
 type SpecField =
@@ -209,15 +214,15 @@ export default function ConfirmedListPage() {
     return rows.filter((r) => {
       if (view === '발주가능' && !r.order_ready) return false;
       if (view === '미정' && r.order_ready) return false;
-      if (ccFilter !== '전체' && r.hq_check_status !== ccFilter) return false;
+      if (ccFilter !== '전체' && getEffectiveCcStatus(r) !== ccFilter) return false;
       if (q && !(r.name?.includes(q) || r.phone?.includes(q))) return false;
       return true;
     });
   }, [rows, view, ccFilter, search]);
 
   const ccCounts = useMemo(() => {
-    const c: Record<HqCheckStatus, number> = { '미확인': 0, '일치': 0, '불일치': 0 };
-    rows.forEach((r) => { c[r.hq_check_status] = (c[r.hq_check_status] ?? 0) + 1; });
+    const c: Record<HqCheckStatus | '택배완료', number> = { '미확인': 0, '일치': 0, '불일치': 0, '택배완료': 0 };
+    rows.forEach((r) => { const s = getEffectiveCcStatus(r); c[s] = (c[s] ?? 0) + 1; });
     return c;
   }, [rows]);
 
@@ -356,8 +361,8 @@ export default function ConfirmedListPage() {
         입력칸은 타이핑 멈추면 자동저장됩니다 (칸 우측 상단 점: <span className="text-amber-500">●</span>저장중 <span className="text-green-500">●</span>저장됨 <span className="text-red-500">●</span>실패)
       </div>
 
-      {/* 대사 현황 KPI */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* 대사 현황 KPI — 택배발송 처리되면 일치/불일치와 별개로 "택배완료"로 옮겨짐 */}
+      <div className="grid grid-cols-4 gap-3">
         {HQ_CHECK_STATUS_LIST.map((s) => (
           <KpiCard
             key={s.value}
@@ -366,6 +371,7 @@ export default function ConfirmedListPage() {
             color={s.value === '일치' ? 'green' : s.value === '불일치' ? 'red' : 'gray'}
           />
         ))}
+        <KpiCard label="택배완료" value={ccCounts['택배완료']} color="indigo" sub="재고 확보 완료" />
       </div>
 
       {/* 필터 */}
@@ -382,7 +388,7 @@ export default function ConfirmedListPage() {
           </div>
 
           <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-            {(['전체', '미확인', '일치', '불일치'] as CcFilter[]).map((v) => (
+            {(['전체', '미확인', '일치', '불일치', '택배완료'] as CcFilter[]).map((v) => (
               <button
                 key={v}
                 onClick={() => setCcFilter(v)}
@@ -518,34 +524,52 @@ export default function ConfirmedListPage() {
                         {idx + 1}
                       </TableCell>
 
-                      {/* 대사 상태 + 버튼 */}
+                      {/* 대사 상태 + 버튼 — 택배발송 처리되면 대사 토글 대신 택배완료 배지로 전환 */}
                       <TableCell
                         onClick={(e) => e.stopPropagation()}
                         className={`sticky z-[5] border-r border-gray-200 ${rowBg} group-hover:bg-pink-50`}
                         style={{ left: COL_NO_W, width: COL_STATUS_W, minWidth: COL_STATUS_W }}
                       >
-                        <div className="flex items-center gap-1">
-                          {(['미확인', '일치', '불일치'] as HqCheckStatus[]).map((s) => {
-                            const Icon = CC_ICON[s];
-                            const active = r.hq_check_status === s;
-                            return (
-                              <button
-                                key={s}
-                                title={s}
-                                onClick={() => handleSetCheck(r, s)}
-                                className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
-                                  active
-                                    ? s === '일치' ? 'bg-green-500 text-white'
-                                    : s === '불일치' ? 'bg-red-500 text-white'
-                                    : 'bg-gray-300 text-white'
-                                    : 'bg-gray-100 text-gray-300 hover:bg-gray-200'
-                                }`}
-                              >
-                                <Icon className="size-3.5" />
-                              </button>
-                            );
-                          })}
-                        </div>
+                        {r.status === '택배발송' ? (
+                          <button
+                            onClick={async () => {
+                              if (!window.confirm('택배발송을 취소하고 확정 상태로 되돌릴까요?')) return;
+                              const { error } = await supabase
+                                .from('reservations')
+                                .update({ status: '확정', courier_sent: false, courier_sent_at: null })
+                                .eq('id', r.id);
+                              if (!error) { toast.success('확정으로 되돌렸습니다'); await load(); }
+                              else toast.error('처리 실패');
+                            }}
+                            title="다시 누르면 확정으로 되돌립니다"
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors"
+                          >
+                            📦 택배완료
+                          </button>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            {(['미확인', '일치', '불일치'] as HqCheckStatus[]).map((s) => {
+                              const Icon = CC_ICON[s];
+                              const active = r.hq_check_status === s;
+                              return (
+                                <button
+                                  key={s}
+                                  title={s}
+                                  onClick={() => handleSetCheck(r, s)}
+                                  className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
+                                    active
+                                      ? s === '일치' ? 'bg-green-500 text-white'
+                                      : s === '불일치' ? 'bg-red-500 text-white'
+                                      : 'bg-gray-300 text-white'
+                                      : 'bg-gray-100 text-gray-300 hover:bg-gray-200'
+                                  }`}
+                                >
+                                  <Icon className="size-3.5" />
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                         {r.hq_checked_at && (
                           <div className="text-[10px] text-gray-400 mt-0.5">
                             {(r.hq_checked_by && staffMap[r.hq_checked_by]) || '-'} · {formatDateTime(r.hq_checked_at)}
