@@ -354,10 +354,10 @@ export default function ConfirmedListPage() {
                 const orderableRows = rows.filter((r) => r.status === '확정');
                 if (orderableRows.length === 0) return toast.error('내보낼 데이터가 없습니다 (택배발송 완료 건 제외)');
                 downloadHierarchyReportXls(orderableRows);
-                toast.success(`제품별 위계 리포트 CSV 다운로드 (택배발송 완료 ${rows.length - orderableRows.length}건 제외)`);
+                toast.success(`제품별 위계 리포트 엑셀 다운로드 (택배발송 완료 ${rows.length - orderableRows.length}건 제외)`);
               }}
             >
-              <Download className="size-3.5" /> 제품·용량·컬러 CSV
+              <Download className="size-3.5" /> 제품·용량·컬러 엑셀
             </Button>
             <Button
               variant="outline"
