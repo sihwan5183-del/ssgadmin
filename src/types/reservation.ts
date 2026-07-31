@@ -94,6 +94,8 @@ export interface Reservation {
   activated_at: string | null;
   sms_sent: boolean;
   sms_sent_at: string | null;
+  courier_sent: boolean;         // 택배 발송 완료 여부
+  courier_sent_at: string | null;
   created_at: string;
   updated_at: string;
 
@@ -160,6 +162,8 @@ export interface ReservationUpdate {
   activated_at?: string | null;
   sms_sent?: boolean;
   sms_sent_at?: string | null;
+  courier_sent?: boolean;
+  courier_sent_at?: string | null;
   customer_address?: string | null;
   subscription_type?: string | null;
   rate_plan?: string | null;
