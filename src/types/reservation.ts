@@ -108,6 +108,7 @@ export interface Reservation {
   rate_plan: string | null;          // 요금제정보 > 요금제
   premium_pack: string | null;       // 요금제정보 > 프리미엄팩 (버즈4/티빙/유튜브 등)
   bundle_watch: string | null;       // 2ND > 워치
+  bundle_watch_color: string | null;  // 2ND > 워치 컬러 (크림/그라파이트/블루)
   bundle_tablet: string | null;      // 2ND > 태블릿
   bundle_tablet_type: TabletSubType | null; // 2ND > 태블릿 가입유형 (신규/재가입)
   home_internet: string | null;      // 홈상품 > 인터넷
@@ -173,6 +174,7 @@ export interface ReservationUpdate {
   rate_plan?: string | null;
   premium_pack?: string | null;
   bundle_watch?: string | null;
+  bundle_watch_color?: string | null;
   bundle_tablet?: string | null;
   bundle_tablet_type?: TabletSubType | null;
   home_internet?: string | null;
@@ -210,6 +212,9 @@ export const WATCH_MODEL_OPTIONS = [
   '워치 울트라',
   '워치 울트라 2',
 ];
+
+// 2ND 워치 컬러 옵션 (v20260731)
+export const WATCH_COLOR_OPTIONS = ['크림', '그라파이트', '블루'];
 
 // 홈상품 > 인터넷 옵션 (v20260729-7) — 자유입력 → 고정 옵션 전환
 export const HOME_INTERNET_OPTIONS = [
