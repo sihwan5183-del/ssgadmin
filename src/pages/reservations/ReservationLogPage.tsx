@@ -10,6 +10,9 @@
 //   reservation_status_logs 테이블(from_status='신규' 인 건만)을 사용해서
 //   "신규 건이 언제 몇 건씩 빠지고 있는지" = 처리 페이스를 정확히 보여줌.
 //   + "신규 잔량"(아직 손 안 댄 전체 건수) KPI 추가.
+// v20260803-3: 담당자별 현황에 "몇 건 처리(해결)했는지" + "시간당 처리 페이스" 추가.
+//   reservation_status_logs.changed_by(실제로 상태를 바꾼 사람)를 기준으로 집계.
+//   기존 "오늘 접수"는 배정된 신규 건수일 뿐 처리 속도가 아니라서 별도 컬럼으로 유지.
 // ============================================================
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { RotateCw } from 'lucide-react';
@@ -126,30 +129,44 @@ export default function ReservationLogPage() {
     [statusTotals],
   );
 
-  // ── 담당자별 (오늘 접수 + 전체 배정) ──
+  // ── 담당자별: 오늘 접수(배정) + 오늘 처리(해결, changed_by 기준) + 시간당 페이스 + 전체 배정 ──
   const assigneeRows = useMemo(() => {
-    const todayCounts: Record<string, number> = {};
+    const todayIntakeCounts: Record<string, number> = {};
     intakeRows.forEach((r) => {
       const key = r.assigned_to ?? '__unassigned__';
-      todayCounts[key] = (todayCounts[key] ?? 0) + 1;
+      todayIntakeCounts[key] = (todayIntakeCounts[key] ?? 0) + 1;
     });
-    const keys = new Set([...Object.keys(todayCounts), ...Object.keys(assigneeAllCounts)]);
+    const processedCounts: Record<string, number> = {};
+    transitionRows.forEach((r) => {
+      const key = r.changed_by ?? '__unknown__';
+      processedCounts[key] = (processedCounts[key] ?? 0) + 1;
+    });
+    const keys = new Set([
+      ...Object.keys(todayIntakeCounts),
+      ...Object.keys(assigneeAllCounts),
+      ...Object.keys(processedCounts),
+    ]);
     return Array.from(keys)
-      .map((key) => ({
-        key,
-        name: key === '__unassigned__' ? '미배정' : (staffMap[key] || '알 수 없음'),
-        today: todayCounts[key] ?? 0,
-        total: assigneeAllCounts[key] ?? 0,
-      }))
-      .filter((a) => a.today > 0 || a.total > 0)
-      .sort((a, b) => (b.today - a.today) || (b.total - a.total));
-  }, [intakeRows, assigneeAllCounts, staffMap]);
+      .map((key) => {
+        const processed = processedCounts[key] ?? 0;
+        return {
+          key,
+          name: key === '__unassigned__' ? '미배정' : key === '__unknown__' ? '알 수 없음' : (staffMap[key] || '알 수 없음'),
+          processed,
+          pace: elapsedHours > 0 ? Math.round((processed / elapsedHours) * 10) / 10 : 0,
+          todayIntake: todayIntakeCounts[key] ?? 0,
+          total: assigneeAllCounts[key] ?? 0,
+        };
+      })
+      .filter((a) => a.processed > 0 || a.todayIntake > 0 || a.total > 0)
+      .sort((a, b) => (b.processed - a.processed) || (b.todayIntake - a.todayIntake));
+  }, [intakeRows, transitionRows, assigneeAllCounts, staffMap, elapsedHours]);
 
   return (
     <div className="p-6 space-y-4">
       <WorkReportHeader
         title="사전예약 실시간 로그"
-        description="시간대별 접수량과 '신규 → 다른 상태' 처리 페이스, 담당자별 입력 현황입니다. 처리량은 스펙시트 등 다른 항목 수정이 아니라 상태가 실제로 바뀐 시점만 집계합니다"
+        description="시간대별 접수량과 '신규 → 다른 상태' 처리 페이스, 담당자별 해결 현황입니다. 처리량은 스펙시트 등 다른 항목 수정이 아니라 상태가 실제로 바뀐 시점만 집계합니다"
         rightSlot={
           <>
             <input
@@ -237,31 +254,38 @@ export default function ReservationLogPage() {
       </SectionCard>
 
       {/* 담당자별 현황 */}
-      <SectionCard title="담당자별 현황" rightSlot={<span className="text-xs text-gray-400">오늘 접수 순</span>}>
+      <SectionCard
+        title="담당자별 현황"
+        rightSlot={<span className="text-xs text-gray-400">오늘 처리(해결) 순 · 페이스 = 시간당 처리건수</span>}
+      >
         <div className="overflow-auto">
-          <Table className="[&_td]:py-1.5 [&_th]:py-1.5 min-w-[420px]">
+          <Table className="[&_td]:py-1.5 [&_th]:py-1.5 min-w-[520px]">
             <TableHeader className="bg-gray-50">
               <TableRow className="bg-gray-50">
                 <TableHead className="text-xs w-[40px]">#</TableHead>
                 <TableHead className="text-xs">담당자</TableHead>
-                <TableHead className="text-xs text-center w-[100px] bg-pink-50">오늘 접수</TableHead>
+                <TableHead className="text-xs text-center w-[100px] bg-indigo-50">오늘 처리</TableHead>
+                <TableHead className="text-xs text-center w-[100px]">시간당 페이스</TableHead>
+                <TableHead className="text-xs text-center w-[90px]">오늘 접수</TableHead>
                 <TableHead className="text-xs text-center w-[110px]">전체 배정건수</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {assigneeRows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-10 text-sm text-gray-400">데이터가 없습니다</TableCell>
+                  <TableCell colSpan={6} className="text-center py-10 text-sm text-gray-400">데이터가 없습니다</TableCell>
                 </TableRow>
               ) : (
                 assigneeRows.map((a, i) => (
-                  <TableRow key={a.key} className={a.key === '__unassigned__' ? 'text-gray-400' : ''}>
+                  <TableRow key={a.key} className={a.key === '__unassigned__' || a.key === '__unknown__' ? 'text-gray-400' : ''}>
                     <TableCell className="text-xs text-gray-400">{i + 1}</TableCell>
                     <TableCell className="text-sm font-medium">
-                      {i < 3 && a.today > 0 && <span className="mr-1">{MEDALS[i]}</span>}
+                      {i < 3 && a.processed > 0 && <span className="mr-1">{MEDALS[i]}</span>}
                       {a.name}
                     </TableCell>
-                    <TableCell className="text-center text-sm font-bold text-pink-600 bg-pink-50/40">{a.today}</TableCell>
+                    <TableCell className="text-center text-sm font-bold text-indigo-600 bg-indigo-50/40">{a.processed}</TableCell>
+                    <TableCell className="text-center text-xs text-gray-700">{a.pace}건/시간</TableCell>
+                    <TableCell className="text-center text-xs font-semibold text-pink-600">{a.todayIntake}</TableCell>
                     <TableCell className="text-center text-xs text-gray-600">{a.total}</TableCell>
                   </TableRow>
                 ))
