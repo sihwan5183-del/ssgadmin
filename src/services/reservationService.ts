@@ -199,10 +199,6 @@ export async function fetchReservationStats(): Promise<ReservationStats> {
 // ============================================================
 // 실시간 로그 — 시간대별 접수/처리량 + 담당자별 현황 (v20260803-1)
 // ============================================================
-// reservations 테이블에 상태변경 이력을 별도로 저장하지 않기 때문에,
-// "시간대별 처리량"은 updated_at(마지막으로 값이 바뀐 시각)을 처리 시점의
-// 근사값으로 사용합니다. 한 건이 하루에 여러 번 상태가 바뀌면 가장 마지막
-// 상태 변경만 잡힙니다 (중간 단계는 집계되지 않음).
 const LOG_CHUNK = 1000;
 
 async function fetchAllPaged<T>(
@@ -240,23 +236,6 @@ export async function fetchIntakeRowsForDate(dateStr: string): Promise<IntakeLog
   );
 }
 
-export interface StatusLogRow {
-  id: string;
-  status: ReservationStatus;
-  updated_at: string;
-}
-
-/** 선택한 날짜에 마지막으로 상태가 바뀐(updated_at) 건들 — 시간대별 상태 처리량 집계용 */
-export async function fetchStatusChangeRowsForDate(dateStr: string): Promise<StatusLogRow[]> {
-  return fetchAllPaged<StatusLogRow>(
-    'id, status, updated_at',
-    (q) => q
-      .gte('updated_at', `${dateStr}T00:00:00`)
-      .lte('updated_at', `${dateStr}T23:59:59`)
-      .order('updated_at', { ascending: true }),
-  );
-}
-
 export interface AssigneeAllRow {
   assigned_to: string | null;
 }
@@ -264,4 +243,45 @@ export interface AssigneeAllRow {
 /** 담당자별 "현재 배정되어 있는 전체 건수" — 날짜 무관, 전체 파이프라인 기준 */
 export async function fetchAllAssigneeRows(): Promise<AssigneeAllRow[]> {
   return fetchAllPaged<AssigneeAllRow>('assigned_to');
+}
+
+// v20260803-2: 처리량을 "신규 → 다른 상태" 전이만 정확히 집계하도록 변경.
+//  reservations.updated_at은 상태 외 다른 필드 수정(스펙시트 인라인 편집 등)만으로도
+//  바뀌어서 처리량을 부풀렸기 때문에, 실제 상태 전이 이력이 남는
+//  reservation_status_logs 테이블(응답시간 분석 기능이 이미 쌓고 있음)을 대신 사용합니다.
+//  이 테이블은 ReservationDetailModal에서 상태를 실제로 바꿀 때만 기록됩니다.
+export interface NewOriginTransition {
+  to_status: ReservationStatus;
+  changed_at: string;
+}
+
+/** 그날 "신규" 상태에서 다른 상태로 넘어간 건들 — 시간대별 신규 처리 속도(페이스) 집계용 */
+export async function fetchNewOriginTransitionsForDate(dateStr: string): Promise<NewOriginTransition[]> {
+  const all: NewOriginTransition[] = [];
+  for (let from = 0; ; from += LOG_CHUNK) {
+    const to = from + LOG_CHUNK - 1;
+    const { data, error } = await supabase
+      .from('reservation_status_logs')
+      .select('to_status, changed_at')
+      .eq('from_status', '신규')
+      .gte('changed_at', `${dateStr}T00:00:00`)
+      .lte('changed_at', `${dateStr}T23:59:59`)
+      .order('changed_at', { ascending: true })
+      .range(from, to);
+    if (error) throw error;
+    const page = (data ?? []) as NewOriginTransition[];
+    all.push(...page);
+    if (page.length < LOG_CHUNK) break;
+  }
+  return all;
+}
+
+/** 현재 시점 기준 "신규" 상태로 남아있는 전체 건수 (날짜 무관 — 아직 손 안 댄 잔량) */
+export async function fetchNewBacklogCount(): Promise<number> {
+  const { count, error } = await supabase
+    .from('reservations')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', '신규');
+  if (error) throw error;
+  return count ?? 0;
 }
