@@ -250,19 +250,22 @@ export async function fetchAllAssigneeRows(): Promise<AssigneeAllRow[]> {
 //  바뀌어서 처리량을 부풀렸기 때문에, 실제 상태 전이 이력이 남는
 //  reservation_status_logs 테이블(응답시간 분석 기능이 이미 쌓고 있음)을 대신 사용합니다.
 //  이 테이블은 ReservationDetailModal에서 상태를 실제로 바꿀 때만 기록됩니다.
+// v20260803-3: changed_by(누가 처리했는지)를 같이 가져와서 담당자별 "처리 건수/페이스"도 집계.
 export interface NewOriginTransition {
   to_status: ReservationStatus;
   changed_at: string;
+  changed_by: string | null;
 }
 
-/** 그날 "신규" 상태에서 다른 상태로 넘어간 건들 — 시간대별 신규 처리 속도(페이스) 집계용 */
+/** 그날 "신규" 상태에서 다른 상태로 넘어간 건들 — 시간대별 신규 처리 속도(페이스) +
+ *  담당자별 처리 건수 집계용 (changed_by = 실제로 상태를 바꾼 사람) */
 export async function fetchNewOriginTransitionsForDate(dateStr: string): Promise<NewOriginTransition[]> {
   const all: NewOriginTransition[] = [];
   for (let from = 0; ; from += LOG_CHUNK) {
     const to = from + LOG_CHUNK - 1;
     const { data, error } = await supabase
       .from('reservation_status_logs')
-      .select('to_status, changed_at')
+      .select('to_status, changed_at, changed_by')
       .eq('from_status', '신규')
       .gte('changed_at', `${dateStr}T00:00:00`)
       .lte('changed_at', `${dateStr}T23:59:59`)
