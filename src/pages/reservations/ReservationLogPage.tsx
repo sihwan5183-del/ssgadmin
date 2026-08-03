@@ -1,0 +1,264 @@
+// ============================================================
+// 사전예약 실시간 로그 — 시간대별 접수/처리량 + 담당자별 현황
+// ============================================================
+// v20260803-1: 최초 작성
+//  - 시간대별: 접수량(created_at 기준) + 상태별 처리량(updated_at 기준)을 같이 표시
+//    (상태변경 이력 테이블이 따로 없어, updated_at을 처리 시점의 근사값으로 사용 —
+//     한 건이 하루에 여러 번 바뀌면 마지막 상태 변경만 잡힘)
+//  - 담당자별: 오늘 접수건수 + 현재 배정된 전체 건수 함께 표시
+//  - 자동 새로고침 없음, 새로고침 버튼 + 날짜 선택만 제공
+// ============================================================
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { RotateCw } from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
+import { useDashboardStaff } from '@/hooks/useDashboardStaff';
+import { WorkReportHeader, SectionCard, KpiCard } from '@/pages/work-report/_shared';
+import { RESERVATION_STATUS_LIST } from '@/types/reservation';
+import {
+  fetchIntakeRowsForDate,
+  fetchStatusChangeRowsForDate,
+  fetchAllAssigneeRows,
+  type IntakeLogRow,
+  type StatusLogRow,
+} from '@/services/reservationService';
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+
+// 처리량 표에서 보여줄 상태 목록 (신규 접수는 왼쪽 "접수" 열에서 이미 보여주므로 제외)
+const TRACKED_STATUSES = RESERVATION_STATUS_LIST.filter((s) => s.value !== '신규');
+
+const MEDALS = ['🥇', '🥈', '🥉'];
+
+export default function ReservationLogPage() {
+  const { staff } = useDashboardStaff();
+  const [date, setDate] = useState(todayStr());
+  const [loading, setLoading] = useState(false);
+  const [intakeRows, setIntakeRows] = useState<IntakeLogRow[]>([]);
+  const [statusRows, setStatusRows] = useState<StatusLogRow[]>([]);
+  const [assigneeAllCounts, setAssigneeAllCounts] = useState<Record<string, number>>({});
+
+  const staffMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    staff.forEach((s) => { m[s.user_id] = s.display_name; });
+    return m;
+  }, [staff]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [intake, statusChanges, allAssignees] = await Promise.all([
+        fetchIntakeRowsForDate(date),
+        fetchStatusChangeRowsForDate(date),
+        fetchAllAssigneeRows(),
+      ]);
+      setIntakeRows(intake);
+      setStatusRows(statusChanges);
+      const counts: Record<string, number> = {};
+      allAssignees.forEach((r) => {
+        const key = r.assigned_to ?? '__unassigned__';
+        counts[key] = (counts[key] ?? 0) + 1;
+      });
+      setAssigneeAllCounts(counts);
+    } catch (e: any) {
+      toast.error('데이터 로드 실패: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [date]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // ── 시간대별 접수량 ──
+  const hourlyIntake = useMemo(() => {
+    const m: Record<number, number> = {};
+    intakeRows.forEach((r) => {
+      const h = new Date(r.created_at).getHours();
+      m[h] = (m[h] ?? 0) + 1;
+    });
+    return m;
+  }, [intakeRows]);
+
+  // ── 시간대별 상태 처리량 (행=시, 열=상태) ──
+  const hourlyStatus = useMemo(() => {
+    const m: Record<number, Record<string, number>> = {};
+    statusRows.forEach((r) => {
+      const h = new Date(r.updated_at).getHours();
+      if (!m[h]) m[h] = {};
+      m[h][r.status] = (m[h][r.status] ?? 0) + 1;
+    });
+    return m;
+  }, [statusRows]);
+
+  const isToday = date === todayStr();
+  const currentHour = isToday ? new Date().getHours() : 23;
+  // 데이터가 있는 시간대 + (오늘이면) 지금까지 경과한 시간대는 항상 노출
+  const visibleHours = HOURS.filter((h) => h <= currentHour || hourlyIntake[h] || hourlyStatus[h]);
+
+  const totalIntake = intakeRows.length;
+  const elapsedHours = isToday ? currentHour + 1 : 24;
+  const avgPerHour = elapsedHours > 0 ? Math.round((totalIntake / elapsedHours) * 10) / 10 : 0;
+
+  const statusTotals = useMemo(() => {
+    const t: Record<string, number> = {};
+    statusRows.forEach((r) => { t[r.status] = (t[r.status] ?? 0) + 1; });
+    return t;
+  }, [statusRows]);
+
+  const activeStatuses = useMemo(
+    () => TRACKED_STATUSES.filter((s) => (statusTotals[s.value] ?? 0) > 0),
+    [statusTotals],
+  );
+
+  // ── 담당자별 (오늘 접수 + 전체 배정) ──
+  const assigneeRows = useMemo(() => {
+    const todayCounts: Record<string, number> = {};
+    intakeRows.forEach((r) => {
+      const key = r.assigned_to ?? '__unassigned__';
+      todayCounts[key] = (todayCounts[key] ?? 0) + 1;
+    });
+    const keys = new Set([...Object.keys(todayCounts), ...Object.keys(assigneeAllCounts)]);
+    return Array.from(keys)
+      .map((key) => ({
+        key,
+        name: key === '__unassigned__' ? '미배정' : (staffMap[key] || '알 수 없음'),
+        today: todayCounts[key] ?? 0,
+        total: assigneeAllCounts[key] ?? 0,
+      }))
+      .filter((a) => a.today > 0 || a.total > 0)
+      .sort((a, b) => (b.today - a.today) || (b.total - a.total));
+  }, [intakeRows, assigneeAllCounts, staffMap]);
+
+  return (
+    <div className="p-6 space-y-4">
+      <WorkReportHeader
+        title="사전예약 실시간 로그"
+        description="시간대별 접수량 · 상태 처리량과 담당자별 입력 현황입니다. 상태변경 이력을 따로 저장하지 않아, 처리량은 각 건이 마지막으로 바뀐 시각(updated_at) 기준 근사치입니다"
+        rightSlot={
+          <>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700"
+            />
+            <Button variant="ghost" size="icon" onClick={load} className="shrink-0">
+              <RotateCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+          </>
+        }
+      />
+
+      {/* KPI */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <KpiCard label="오늘 총 접수" value={totalIntake} color="pink" sub={isToday ? '실시간' : date} />
+        <KpiCard label="시간당 평균 접수" value={avgPerHour} color="blue" sub={`${elapsedHours}시간 경과`} />
+        <KpiCard label="확정 처리" value={statusTotals['확정'] ?? 0} color="green" />
+        <KpiCard label="취소" value={statusTotals['취소'] ?? 0} color="gray" />
+        <KpiCard label="실패" value={statusTotals['실패'] ?? 0} color="red" />
+      </div>
+
+      {/* 시간대별 접수 · 처리 현황 */}
+      <SectionCard
+        title="시간대별 접수 · 처리 현황"
+        rightSlot={<span className="text-xs text-gray-400">{date} 기준{loading && ' · 불러오는 중...'}</span>}
+      >
+        <div className="overflow-auto">
+          <Table className="[&_td]:py-1.5 [&_th]:py-1.5 min-w-[640px]">
+            <TableHeader className="bg-gray-50">
+              <TableRow className="bg-gray-50">
+                <TableHead className="text-xs w-[64px]">시간</TableHead>
+                <TableHead className="text-xs text-center w-[70px] bg-blue-50">접수</TableHead>
+                {activeStatuses.map((s) => (
+                  <TableHead key={s.value} className="text-xs text-center whitespace-nowrap">
+                    {s.value}
+                  </TableHead>
+                ))}
+                <TableHead className="text-xs text-center w-[76px] bg-gray-100">처리합계</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visibleHours.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={activeStatuses.length + 3} className="text-center py-10 text-sm text-gray-400">
+                    데이터가 없습니다
+                  </TableCell>
+                </TableRow>
+              ) : (
+                visibleHours.map((h) => {
+                  const isNow = isToday && h === currentHour;
+                  const rowStatusMap = hourlyStatus[h] ?? {};
+                  const rowStatusTotal = Object.values(rowStatusMap).reduce((a, b) => a + b, 0);
+                  return (
+                    <TableRow key={h} className={isNow ? 'bg-pink-50/60' : ''}>
+                      <TableCell className="text-xs font-medium text-gray-700 whitespace-nowrap">
+                        {String(h).padStart(2, '0')}시
+                        {isNow && <span className="ml-1 text-[9px] text-pink-500 font-bold">NOW</span>}
+                      </TableCell>
+                      <TableCell className="text-center text-xs font-bold text-blue-700 bg-blue-50/50">
+                        {hourlyIntake[h] ?? 0}
+                      </TableCell>
+                      {activeStatuses.map((s) => (
+                        <TableCell key={s.value} className="text-center text-xs text-gray-700">
+                          {rowStatusMap[s.value] ?? 0}
+                        </TableCell>
+                      ))}
+                      <TableCell className="text-center text-xs font-bold text-gray-800 bg-gray-50">
+                        {rowStatusTotal}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        {activeStatuses.length === 0 && statusRows.length === 0 && (
+          <div className="text-xs text-gray-400 text-center py-2">이 날짜엔 상태 변경 건이 없습니다</div>
+        )}
+      </SectionCard>
+
+      {/* 담당자별 현황 */}
+      <SectionCard title="담당자별 현황" rightSlot={<span className="text-xs text-gray-400">오늘 접수 순</span>}>
+        <div className="overflow-auto">
+          <Table className="[&_td]:py-1.5 [&_th]:py-1.5 min-w-[420px]">
+            <TableHeader className="bg-gray-50">
+              <TableRow className="bg-gray-50">
+                <TableHead className="text-xs w-[40px]">#</TableHead>
+                <TableHead className="text-xs">담당자</TableHead>
+                <TableHead className="text-xs text-center w-[100px] bg-pink-50">오늘 접수</TableHead>
+                <TableHead className="text-xs text-center w-[110px]">전체 배정건수</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {assigneeRows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-10 text-sm text-gray-400">데이터가 없습니다</TableCell>
+                </TableRow>
+              ) : (
+                assigneeRows.map((a, i) => (
+                  <TableRow key={a.key} className={a.key === '__unassigned__' ? 'text-gray-400' : ''}>
+                    <TableCell className="text-xs text-gray-400">{i + 1}</TableCell>
+                    <TableCell className="text-sm font-medium">
+                      {i < 3 && a.today > 0 && <span className="mr-1">{MEDALS[i]}</span>}
+                      {a.name}
+                    </TableCell>
+                    <TableCell className="text-center text-sm font-bold text-pink-600 bg-pink-50/40">{a.today}</TableCell>
+                    <TableCell className="text-center text-xs text-gray-600">{a.total}</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
