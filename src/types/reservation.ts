@@ -99,6 +99,7 @@ export interface Reservation {
   cancel_stage: CancelStage | null;
   contact_date: string | null;
   reservation_confirmed_at: string | null;
+  confirmed_at: string | null;         // 확정 상태로 최초 전환된 시각 (택배발송 이후에도 유지)
   activated_at: string | null;
   sms_sent: boolean;
   sms_sent_at: string | null;
@@ -169,6 +170,7 @@ export interface ReservationUpdate {
   fail_memo?: string | null;
   cancel_stage?: CancelStage | null;
   reservation_confirmed_at?: string | null;
+  confirmed_at?: string | null;
   activated_at?: string | null;
   sms_sent?: boolean;
   sms_sent_at?: string | null;
