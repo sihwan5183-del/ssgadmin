@@ -763,10 +763,16 @@ export function downloadMnpSplitReportXls(rows: ConfirmedRow[]) {
 }
 
 // ── 팀별 확정 현황 리포트 (엑셀 서식) ─────────────────────
+// v20260803: 팀 전체 기기별 표 옆에 "MNP만" 별도 기기별 표를 추가.
+//  기존엔 MNP 비율이 가입유형 요약표에 숫자 한 줄로만 나와서, 그 팀 안에서
+//  MNP 건이 어떤 기기·용량·컬러로 들어왔는지는 별도 리포트(MNP·자사 엑셀,
+//  회사 전체 기준이라 팀 구분이 없음)를 따로 받아야 했음. 이제 같은 리포트
+//  안에서 동일한 서식(xlsDeviceTables)으로 바로 확인 가능.
 function xlsTeamReportBlock(teamName: string, rows: ConfirmedRow[]): string {
   const total = rows.length;
   const colorUnset = rows.filter((r) => r.color_norm === UNSET).length;
-  const mnpCount = rows.filter((r) => classifySubscriptionType(r) === 'MNP').length;
+  const mnpRows = rows.filter((r) => classifySubscriptionType(r) === 'MNP');
+  const mnpCount = mnpRows.length;
   const changeCount = rows.filter((r) => classifySubscriptionType(r) === '기기변경').length;
   const etcCount = total - mnpCount - changeCount;
   const bundleCount = rows.filter((r) => (r.bundle_watch ?? '').trim() !== '' || (r.bundle_tablet ?? '').trim() !== '').length;
@@ -785,6 +791,13 @@ function xlsTeamReportBlock(teamName: string, rows: ConfirmedRow[]): string {
   if (colorUnset > 0) html += xlsWarnBanner(`⚠️ 컬러 미정 총 ${colorUnset}건 (전체 ${total}건 중)`);
   html += xlsTitleRow(`${teamName} 전체 확정 합계`, `${total}건`);
   html += xlsDeviceTables(rows);
+
+  // MNP 건만 별도 위계 표 — 나머지와 완전히 동일한 스타일(xlsDeviceTables)로 렌더링
+  if (mnpCount > 0) {
+    html += xlsTitleRow(`${teamName} MNP 건 (자사 기기변경 제외)`, `${mnpCount}건`);
+    html += xlsDeviceTables(mnpRows);
+  }
+
   html += xlsRatioTable(`가입유형 · 부가서비스 비율 (확정 ${total}건 기준)`, [
     { label: 'MNP', count: mnpCount, ratio: pct(mnpCount), accent: '#E8EAF6' },
     { label: '기기변경', count: changeCount, ratio: pct(changeCount), accent: '#E3F2FD' },
