@@ -107,6 +107,10 @@ export async function updateReservation(
   if (payload.status === '예약완료' && !payload.reservation_confirmed_at) {
     payload = { ...payload, reservation_confirmed_at: new Date().toISOString() };
   }
+  // 확정 → confirmed_at 자동 세팅 (택배발송으로 넘어가도 최초 확정 시각은 보존)
+  if (payload.status === '확정' && !(payload as any).confirmed_at) {
+    payload = { ...payload, confirmed_at: new Date().toISOString() } as any;
+  }
 
   const { data, error } = await supabase
     .from('reservations')
