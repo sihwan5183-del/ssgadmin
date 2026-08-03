@@ -26,6 +26,7 @@ import {
   downloadCsv,
   downloadTeamReportXls,
   downloadMnpSplitReportXls,
+  downloadAssigneeBreakdownReportXls,
   UNSET,
   type ConfirmedRow,
   type DevicePivot,
@@ -269,6 +270,12 @@ export default function ConfirmedDashboardPage() {
     return m;
   }, [staff]);
 
+  const staffNameMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    staff.forEach((s) => { m[s.user_id] = s.display_name; });
+    return m;
+  }, [staff]);
+
   const handleTeamReportCsv = () => {
     if (rows.length === 0) return toast.error('내보낼 데이터가 없습니다');
     downloadTeamReportXls(rows, staffTeamMap);
@@ -299,6 +306,16 @@ export default function ConfirmedDashboardPage() {
               }}
             >
               <Download className="size-3.5" /> MNP·자사 엑셀
+            </Button>
+            <Button
+              variant="outline" size="sm" className="gap-1.5"
+              onClick={() => {
+                if (rows.length === 0) return toast.error('내보낼 데이터가 없습니다');
+                downloadAssigneeBreakdownReportXls(rows, staffNameMap);
+                toast.success('담당자별 현황 엑셀 다운로드');
+              }}
+            >
+              <Download className="size-3.5" /> 담당자별 현황 엑셀
             </Button>
             <Button
               size="sm"
