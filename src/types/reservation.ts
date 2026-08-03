@@ -8,6 +8,9 @@
 //  - 확정(서류작성) 신규 추가 (상담성공과 예약완료 사이 단계)
 //  - 취소 신규 추가 (가망/상담성공/확정/예약완료 단계에서 고객 변심으로 취소)
 // v20260729: 확정 발주 스펙시트 필드 + 본사 전산 수동 대사(3단계 토글) 추가
+// v20260803: 관심기기에 "유심 MNP" 추가 — 단말기 없이 유심만으로 번호이동하는
+//  건을 별도로 추적하기 위함. 폴드/플립 등 실제 단말과 섞이지 않도록
+//  사전예약 목록 화면에서 상태 카드들과 별개의 카운트 카드로 관리.
 
 export type ReservationStatus =
   | '신규'
@@ -201,7 +204,10 @@ export interface ReservationMemoLog {
 
 export const CARRIER_OPTIONS = ['LG U+', 'SKT', 'KT', '알뜰폰'];
 export const CHANNEL_OPTIONS = ['메타광고', '네이버 검색광고', '기타', '기존고객']; // v20260720
-export const DEVICE_OPTIONS = ['갤럭시 Z 플립8', '갤럭시 Z 폴드8', '갤럭시 Z 폴드8 울트라']; // v20260723: 와이드 → 울트라(정식 출시명)
+
+// 단말기 없이 유심만으로 번호이동하는 건 — 폴드/플립 실단말과 구분해서 별도로 추적 (v20260803)
+export const USIM_MNP_DEVICE = '유심 MNP';
+export const DEVICE_OPTIONS = ['갤럭시 Z 플립8', '갤럭시 Z 폴드8', '갤럭시 Z 폴드8 울트라', USIM_MNP_DEVICE]; // v20260723: 와이드 → 울트라(정식 출시명)
 
 // 2ND 워치 번들 모델 옵션 (v20260729-6) — 자유입력 → 고정 옵션 전환
 export const WATCH_MODEL_OPTIONS = [
