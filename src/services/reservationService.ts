@@ -28,6 +28,7 @@ export interface FetchReservationsParams {
   assigned_to?: string;
   search?: string;
   channel?: string;
+  device_interest?: string;
   dateStart?: string;
   dateEnd?: string;
   page?: number;
@@ -38,7 +39,7 @@ export async function fetchReservations(params: FetchReservationsParams = {}): P
   data: Reservation[];
   count: number;
 }> {
-  const { status, prospect_grade, assigned_to, search, channel, dateStart, dateEnd, page = 1, pageSize = 50 } = params;
+  const { status, prospect_grade, assigned_to, search, channel, device_interest, dateStart, dateEnd, page = 1, pageSize = 50 } = params;
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
@@ -56,6 +57,7 @@ export async function fetchReservations(params: FetchReservationsParams = {}): P
   if (prospect_grade) query = query.eq('prospect_grade', prospect_grade);
   if (assigned_to) query = query.eq('assigned_to', assigned_to);
   if (channel) query = query.eq('channel', channel);
+  if (device_interest) query = query.eq('device_interest', device_interest);
   if (dateStart) query = query.gte('contact_date', dateStart);
   if (dateEnd) query = query.lte('contact_date', dateEnd + 'T23:59:59');
   if (search) {
