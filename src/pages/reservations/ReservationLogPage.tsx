@@ -13,6 +13,8 @@
 // v20260803-3: 담당자별 현황에 "몇 건 처리(해결)했는지" + "시간당 처리 페이스" 추가.
 //   reservation_status_logs.changed_by(실제로 상태를 바꾼 사람)를 기준으로 집계.
 //   기존 "오늘 접수"는 배정된 신규 건수일 뿐 처리 속도가 아니라서 별도 컬럼으로 유지.
+// v20260803-4: 페이스(시간당) 계산의 경과시간 기준을 00시가 아니라
+//   영업 시작 시각(BUSINESS_START_HOUR, 기본 11시)부터로 변경.
 // ============================================================
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { RotateCw } from 'lucide-react';
@@ -43,6 +45,9 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const TRACKED_STATUSES = RESERVATION_STATUS_LIST.filter((s) => s.value !== '신규');
 
 const MEDALS = ['🥇', '🥈', '🥉'];
+
+// 시간당 페이스 계산의 기준 시각 — 영업(처리) 시작 시각. 필요하면 여기 숫자만 바꾸면 됨.
+const BUSINESS_START_HOUR = 11;
 
 export default function ReservationLogPage() {
   const { staff } = useDashboardStaff();
@@ -113,7 +118,11 @@ export default function ReservationLogPage() {
   const visibleHours = HOURS.filter((h) => h <= currentHour || hourlyIntake[h] || hourlyTransitions[h]);
 
   const totalIntake = intakeRows.length;
-  const elapsedHours = isToday ? currentHour + 1 : 24;
+  // 페이스(시간당) 계산은 영업 시작 시각(BUSINESS_START_HOUR) 기준 경과시간을 씀 —
+  // 아직 영업 시작 전이면 0시간, 시작 시각 그 시(예: 11시)는 1시간으로 계산.
+  const elapsedHours = isToday
+    ? Math.max(0, currentHour - BUSINESS_START_HOUR + 1)
+    : Math.max(0, 24 - BUSINESS_START_HOUR);
   const avgPerHour = elapsedHours > 0 ? Math.round((totalIntake / elapsedHours) * 10) / 10 : 0;
 
   const statusTotals = useMemo(() => {
@@ -166,7 +175,7 @@ export default function ReservationLogPage() {
     <div className="p-6 space-y-4">
       <WorkReportHeader
         title="사전예약 실시간 로그"
-        description="시간대별 접수량과 '신규 → 다른 상태' 처리 페이스, 담당자별 해결 현황입니다. 처리량은 스펙시트 등 다른 항목 수정이 아니라 상태가 실제로 바뀐 시점만 집계합니다"
+        description={`시간대별 접수량과 '신규 → 다른 상태' 처리 페이스, 담당자별 해결 현황입니다. 페이스(시간당)는 영업 시작 시각인 ${BUSINESS_START_HOUR}시부터 경과시간을 기준으로 계산합니다`}
         rightSlot={
           <>
             <input
@@ -185,7 +194,7 @@ export default function ReservationLogPage() {
       {/* KPI */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
         <KpiCard label="오늘 총 접수" value={totalIntake} color="pink" sub={isToday ? '실시간' : date} />
-        <KpiCard label="시간당 평균 접수" value={avgPerHour} color="blue" sub={`${elapsedHours}시간 경과`} />
+        <KpiCard label="시간당 평균 접수" value={avgPerHour} color="blue" sub={`${BUSINESS_START_HOUR}시~ ${elapsedHours}시간 경과`} />
         <KpiCard label="오늘 신규 처리" value={totalProcessed} color="indigo" sub="신규→다른 상태" />
         <KpiCard label="신규 잔량" value={newBacklog} color={newBacklog > 0 ? 'orange' : 'gray'} sub="현재 시점, 미처리" />
         <KpiCard label="확정 처리" value={statusTotals['확정'] ?? 0} color="green" />
@@ -222,13 +231,15 @@ export default function ReservationLogPage() {
               ) : (
                 visibleHours.map((h) => {
                   const isNow = isToday && h === currentHour;
+                  const isBeforeBusiness = h < BUSINESS_START_HOUR;
                   const rowMap = hourlyTransitions[h] ?? {};
                   const rowTotal = Object.values(rowMap).reduce((a, b) => a + b, 0);
                   return (
-                    <TableRow key={h} className={isNow ? 'bg-pink-50/60' : ''}>
+                    <TableRow key={h} className={isNow ? 'bg-pink-50/60' : isBeforeBusiness ? 'opacity-40' : ''}>
                       <TableCell className="text-xs font-medium text-gray-700 whitespace-nowrap">
                         {String(h).padStart(2, '0')}시
                         {isNow && <span className="ml-1 text-[9px] text-pink-500 font-bold">NOW</span>}
+                        {h === BUSINESS_START_HOUR && <span className="ml-1 text-[9px] text-indigo-500 font-bold">영업시작</span>}
                       </TableCell>
                       <TableCell className="text-center text-xs font-bold text-blue-700 bg-blue-50/50">
                         {hourlyIntake[h] ?? 0}
@@ -256,7 +267,7 @@ export default function ReservationLogPage() {
       {/* 담당자별 현황 */}
       <SectionCard
         title="담당자별 현황"
-        rightSlot={<span className="text-xs text-gray-400">오늘 처리(해결) 순 · 페이스 = 시간당 처리건수</span>}
+        rightSlot={<span className="text-xs text-gray-400">오늘 처리(해결) 순 · 페이스 = {BUSINESS_START_HOUR}시~ 시간당 처리건수</span>}
       >
         <div className="overflow-auto">
           <Table className="[&_td]:py-1.5 [&_th]:py-1.5 min-w-[520px]">
