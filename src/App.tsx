@@ -61,6 +61,7 @@ import ReservationStatsPage from "./pages/reservations/ReservationStatsPage.tsx"
 import ResponseTimePage from "./pages/reservations/ResponseTimePage.tsx";
 import ConfirmedDashboardPage from "./pages/reservations/ConfirmedDashboardPage.tsx";
 import ConfirmedListPage from "./pages/reservations/ConfirmedListPage.tsx";
+import ReservationLogPage from "./pages/reservations/ReservationLogPage.tsx";
 import ProfitPage from "./pages/ProfitPage.tsx";
 import DogmaruPage from "./pages/DogmaruPage.tsx";
 import TrashPage from "./pages/TrashPage.tsx";
@@ -196,6 +197,7 @@ const App = () => {
                         <Route path="/reservations" element={<ReservationsPage />} />
                         <Route path="/reservations/stats" element={<ReservationStatsPage />} />
                         <Route path="/reservations/response-time" element={<ResponseTimePage />} />
+                        <Route path="/reservations/log" element={<ReservationLogPage />} />
                         {/* 확정(서류작성) 발주 관리 */}
                         <Route path="/reservations/confirmed" element={<ConfirmedDashboardPage />} />
                         <Route path="/reservations/confirmed/list" element={<ConfirmedListPage />} />
@@ -227,7 +229,6 @@ const App = () => {
 };
 
 export default App;
-
 
 
 
