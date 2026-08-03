@@ -9,8 +9,9 @@
 //  - 취소 신규 추가 (가망/상담성공/확정/예약완료 단계에서 고객 변심으로 취소)
 // v20260729: 확정 발주 스펙시트 필드 + 본사 전산 수동 대사(3단계 토글) 추가
 // v20260803: 관심기기에 "유심 MNP" 추가 — 단말기 없이 유심만으로 번호이동하는
-//  건을 별도로 추적하기 위함. 폴드/플립 등 실제 단말과 섞이지 않도록
-//  사전예약 목록 화면에서 상태 카드들과 별개의 카운트 카드로 관리.
+//  건을 별도로 추적하기 위함.
+// v20260803-2: 상태(status)에도 "유심 MNP" 추가 — 단말 배송이 없는 유심 단독
+//  MNP 건은 확정→택배발송 흐름을 안 타므로, 자체 완료 상태로 별도 관리.
 
 export type ReservationStatus =
   | '신규'
@@ -22,7 +23,8 @@ export type ReservationStatus =
   | '재케어'
   | '부재'
   | '실패'
-  | '취소';
+  | '취소'
+  | '유심 MNP';
 
 export const RESERVATION_STATUS_LIST: {
   value: ReservationStatus;
@@ -39,6 +41,7 @@ export const RESERVATION_STATUS_LIST: {
   { value: '부재',     label: '부재',                 color: 'bg-orange-100 text-orange-700' },
   { value: '실패',     label: '실패',                 color: 'bg-red-100 text-red-700' },
   { value: '취소',     label: '취소',                 color: 'bg-gray-200 text-gray-600' },
+  { value: '유심 MNP', label: '유심 MNP (완료)',       color: 'bg-cyan-100 text-cyan-700' },
 ];
 
 // 가망 등급 (상태='가망'일 때만 사용)
@@ -266,6 +269,6 @@ export const isFailStatus = (status: ReservationStatus) =>
 export const isCancelStatus = (status: ReservationStatus) =>
   status === '취소';
 
-// 완료(확정 계열) 상태 판별
+// 완료(확정 계열) 상태 판별 — 유심 MNP는 단말 배송 없이 그 자체로 완료 처리라 포함
 export const isCompleteStatus = (status: ReservationStatus) =>
-  status === '확정' || status === '택배발송' || status === '예약완료';
+  status === '확정' || status === '택배발송' || status === '예약완료' || status === '유심 MNP';
