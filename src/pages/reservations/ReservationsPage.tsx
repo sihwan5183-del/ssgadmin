@@ -308,17 +308,25 @@ export default function ReservationsPage() {
   }
 
   // 테이블 인라인 즉시수정: 상태 (실패/취소는 사유·단계 필수라 상세모달로 유도)
+  // v20260803: 일반 상태 드롭다운으로 "택배발송"을 고르면(전용 토글 버튼 안 거치고)
+  // courier_sent/courier_sent_at이 안 채워지던 버그 수정 — 어느 경로로 바꾸든 항상 같이 채워지게 함.
   async function updateStatusInline(id: string, status: ReservationStatus) {
     if (status === '실패' || status === '취소') {
       setDetailId(id);
       return;
     }
+    const goingToShipped = status === '택배발송';
+    const payload: Record<string, any> = {
+      status, fail_reason_id: null, fail_stage: null, fail_memo: null, cancel_stage: null,
+      courier_sent: goingToShipped,
+      courier_sent_at: goingToShipped ? new Date().toISOString() : null,
+    };
     const { error } = await supabase
       .from('reservations')
-      .update({ status, fail_reason_id: null, fail_stage: null, fail_memo: null, cancel_stage: null })
+      .update(payload)
       .eq('id', id);
     if (error) { toast.error('상태 변경 실패: ' + error.message); return; }
-    setRows((p) => p.map((r) => (r.id === id ? { ...r, status, fail_reason_id: null, fail_stage: null, fail_memo: null, cancel_stage: null } as any : r)));
+    setRows((p) => p.map((r) => (r.id === id ? { ...r, ...payload } as any : r)));
     toast.success('상태가 변경되었습니다');
   }
 
