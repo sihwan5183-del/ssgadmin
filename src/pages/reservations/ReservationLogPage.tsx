@@ -1,12 +1,15 @@
 // ============================================================
-// 사전예약 실시간 로그 — 시간대별 접수/처리량 + 담당자별 현황
+// 사전예약 실시간 로그 — 시간대별 접수/신규처리량 + 담당자별 현황
 // ============================================================
 // v20260803-1: 최초 작성
-//  - 시간대별: 접수량(created_at 기준) + 상태별 처리량(updated_at 기준)을 같이 표시
-//    (상태변경 이력 테이블이 따로 없어, updated_at을 처리 시점의 근사값으로 사용 —
-//     한 건이 하루에 여러 번 바뀌면 마지막 상태 변경만 잡힘)
-//  - 담당자별: 오늘 접수건수 + 현재 배정된 전체 건수 함께 표시
-//  - 자동 새로고침 없음, 새로고침 버튼 + 날짜 선택만 제공
+// v20260803-2: 처리량 집계 방식 교체 — "신규 → 다른 상태" 전이만 정확히 카운트.
+//   기존엔 reservations.updated_at(마지막으로 아무 값이나 바뀐 시각)을 썼는데,
+//   확정 스펙시트에서 주소·요금제 등 아무 필드나 인라인 수정만 해도 그 시각이
+//   "처리"로 잡혀서 숫자가 부풀려졌음 (예: 택배발송 25건처럼 튀는 값).
+//   이제는 ReservationDetailModal에서 실제로 상태를 바꿀 때만 쌓이는
+//   reservation_status_logs 테이블(from_status='신규' 인 건만)을 사용해서
+//   "신규 건이 언제 몇 건씩 빠지고 있는지" = 처리 페이스를 정확히 보여줌.
+//   + "신규 잔량"(아직 손 안 댄 전체 건수) KPI 추가.
 // ============================================================
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { RotateCw } from 'lucide-react';
@@ -20,10 +23,11 @@ import { WorkReportHeader, SectionCard, KpiCard } from '@/pages/work-report/_sha
 import { RESERVATION_STATUS_LIST } from '@/types/reservation';
 import {
   fetchIntakeRowsForDate,
-  fetchStatusChangeRowsForDate,
+  fetchNewOriginTransitionsForDate,
   fetchAllAssigneeRows,
+  fetchNewBacklogCount,
   type IntakeLogRow,
-  type StatusLogRow,
+  type NewOriginTransition,
 } from '@/services/reservationService';
 
 function todayStr() {
@@ -42,8 +46,9 @@ export default function ReservationLogPage() {
   const [date, setDate] = useState(todayStr());
   const [loading, setLoading] = useState(false);
   const [intakeRows, setIntakeRows] = useState<IntakeLogRow[]>([]);
-  const [statusRows, setStatusRows] = useState<StatusLogRow[]>([]);
+  const [transitionRows, setTransitionRows] = useState<NewOriginTransition[]>([]);
   const [assigneeAllCounts, setAssigneeAllCounts] = useState<Record<string, number>>({});
+  const [newBacklog, setNewBacklog] = useState(0);
 
   const staffMap = useMemo(() => {
     const m: Record<string, string> = {};
@@ -54,13 +59,15 @@ export default function ReservationLogPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [intake, statusChanges, allAssignees] = await Promise.all([
+      const [intake, transitions, allAssignees, backlog] = await Promise.all([
         fetchIntakeRowsForDate(date),
-        fetchStatusChangeRowsForDate(date),
+        fetchNewOriginTransitionsForDate(date),
         fetchAllAssigneeRows(),
+        fetchNewBacklogCount(),
       ]);
       setIntakeRows(intake);
-      setStatusRows(statusChanges);
+      setTransitionRows(transitions);
+      setNewBacklog(backlog);
       const counts: Record<string, number> = {};
       allAssignees.forEach((r) => {
         const key = r.assigned_to ?? '__unassigned__';
@@ -86,21 +93,21 @@ export default function ReservationLogPage() {
     return m;
   }, [intakeRows]);
 
-  // ── 시간대별 상태 처리량 (행=시, 열=상태) ──
-  const hourlyStatus = useMemo(() => {
+  // ── 시간대별 "신규 → 상태" 처리량 (행=시, 열=넘어간 상태) ──
+  const hourlyTransitions = useMemo(() => {
     const m: Record<number, Record<string, number>> = {};
-    statusRows.forEach((r) => {
-      const h = new Date(r.updated_at).getHours();
+    transitionRows.forEach((r) => {
+      const h = new Date(r.changed_at).getHours();
       if (!m[h]) m[h] = {};
-      m[h][r.status] = (m[h][r.status] ?? 0) + 1;
+      m[h][r.to_status] = (m[h][r.to_status] ?? 0) + 1;
     });
     return m;
-  }, [statusRows]);
+  }, [transitionRows]);
 
   const isToday = date === todayStr();
   const currentHour = isToday ? new Date().getHours() : 23;
   // 데이터가 있는 시간대 + (오늘이면) 지금까지 경과한 시간대는 항상 노출
-  const visibleHours = HOURS.filter((h) => h <= currentHour || hourlyIntake[h] || hourlyStatus[h]);
+  const visibleHours = HOURS.filter((h) => h <= currentHour || hourlyIntake[h] || hourlyTransitions[h]);
 
   const totalIntake = intakeRows.length;
   const elapsedHours = isToday ? currentHour + 1 : 24;
@@ -108,9 +115,11 @@ export default function ReservationLogPage() {
 
   const statusTotals = useMemo(() => {
     const t: Record<string, number> = {};
-    statusRows.forEach((r) => { t[r.status] = (t[r.status] ?? 0) + 1; });
+    transitionRows.forEach((r) => { t[r.to_status] = (t[r.to_status] ?? 0) + 1; });
     return t;
-  }, [statusRows]);
+  }, [transitionRows]);
+
+  const totalProcessed = transitionRows.length;
 
   const activeStatuses = useMemo(
     () => TRACKED_STATUSES.filter((s) => (statusTotals[s.value] ?? 0) > 0),
@@ -140,7 +149,7 @@ export default function ReservationLogPage() {
     <div className="p-6 space-y-4">
       <WorkReportHeader
         title="사전예약 실시간 로그"
-        description="시간대별 접수량 · 상태 처리량과 담당자별 입력 현황입니다. 상태변경 이력을 따로 저장하지 않아, 처리량은 각 건이 마지막으로 바뀐 시각(updated_at) 기준 근사치입니다"
+        description="시간대별 접수량과 '신규 → 다른 상태' 처리 페이스, 담당자별 입력 현황입니다. 처리량은 스펙시트 등 다른 항목 수정이 아니라 상태가 실제로 바뀐 시점만 집계합니다"
         rightSlot={
           <>
             <input
@@ -157,17 +166,19 @@ export default function ReservationLogPage() {
       />
 
       {/* KPI */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
         <KpiCard label="오늘 총 접수" value={totalIntake} color="pink" sub={isToday ? '실시간' : date} />
         <KpiCard label="시간당 평균 접수" value={avgPerHour} color="blue" sub={`${elapsedHours}시간 경과`} />
+        <KpiCard label="오늘 신규 처리" value={totalProcessed} color="indigo" sub="신규→다른 상태" />
+        <KpiCard label="신규 잔량" value={newBacklog} color={newBacklog > 0 ? 'orange' : 'gray'} sub="현재 시점, 미처리" />
         <KpiCard label="확정 처리" value={statusTotals['확정'] ?? 0} color="green" />
         <KpiCard label="취소" value={statusTotals['취소'] ?? 0} color="gray" />
         <KpiCard label="실패" value={statusTotals['실패'] ?? 0} color="red" />
       </div>
 
-      {/* 시간대별 접수 · 처리 현황 */}
+      {/* 시간대별 접수 · 신규 처리 현황 */}
       <SectionCard
-        title="시간대별 접수 · 처리 현황"
+        title="시간대별 접수 · 신규 처리 현황"
         rightSlot={<span className="text-xs text-gray-400">{date} 기준{loading && ' · 불러오는 중...'}</span>}
       >
         <div className="overflow-auto">
@@ -178,10 +189,10 @@ export default function ReservationLogPage() {
                 <TableHead className="text-xs text-center w-[70px] bg-blue-50">접수</TableHead>
                 {activeStatuses.map((s) => (
                   <TableHead key={s.value} className="text-xs text-center whitespace-nowrap">
-                    {s.value}
+                    신규→{s.value}
                   </TableHead>
                 ))}
-                <TableHead className="text-xs text-center w-[76px] bg-gray-100">처리합계</TableHead>
+                <TableHead className="text-xs text-center w-[86px] bg-gray-100">신규처리합계</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -194,8 +205,8 @@ export default function ReservationLogPage() {
               ) : (
                 visibleHours.map((h) => {
                   const isNow = isToday && h === currentHour;
-                  const rowStatusMap = hourlyStatus[h] ?? {};
-                  const rowStatusTotal = Object.values(rowStatusMap).reduce((a, b) => a + b, 0);
+                  const rowMap = hourlyTransitions[h] ?? {};
+                  const rowTotal = Object.values(rowMap).reduce((a, b) => a + b, 0);
                   return (
                     <TableRow key={h} className={isNow ? 'bg-pink-50/60' : ''}>
                       <TableCell className="text-xs font-medium text-gray-700 whitespace-nowrap">
@@ -207,11 +218,11 @@ export default function ReservationLogPage() {
                       </TableCell>
                       {activeStatuses.map((s) => (
                         <TableCell key={s.value} className="text-center text-xs text-gray-700">
-                          {rowStatusMap[s.value] ?? 0}
+                          {rowMap[s.value] ?? 0}
                         </TableCell>
                       ))}
                       <TableCell className="text-center text-xs font-bold text-gray-800 bg-gray-50">
-                        {rowStatusTotal}
+                        {rowTotal}
                       </TableCell>
                     </TableRow>
                   );
@@ -220,8 +231,8 @@ export default function ReservationLogPage() {
             </TableBody>
           </Table>
         </div>
-        {activeStatuses.length === 0 && statusRows.length === 0 && (
-          <div className="text-xs text-gray-400 text-center py-2">이 날짜엔 상태 변경 건이 없습니다</div>
+        {activeStatuses.length === 0 && transitionRows.length === 0 && (
+          <div className="text-xs text-gray-400 text-center py-2">이 날짜엔 신규 → 다른 상태로 처리된 건이 없습니다</div>
         )}
       </SectionCard>
 
