@@ -9,6 +9,7 @@
 // v20260729-5: 2ND 태블릿에 신규/재가입 토글 추가 (다시 누르면 해제)
 // v20260729-6: 2ND 워치를 자유입력 → 고정 옵션 드롭다운으로 전환
 // v20260729-7: 홈상품 인터넷/TV프리 고정옵션 드롭다운 + TV동시가입/번들언번들 토글 추가
+// v20260803-1: 팀별 리포트 엑셀 버튼 추가 (컬러/위계 서식 — 발주 대시보드와 동일 함수 재사용)
 // ============================================================
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { RotateCw, X, Download, Search, BarChart2, CheckCircle2, XCircle, HelpCircle } from 'lucide-react';
@@ -36,6 +37,7 @@ import {
   fetchConfirmedReservations,
   downloadCsv,
   downloadHierarchyReportXls,
+  downloadTeamReportXls,
   computeSubscriptionType,
   UNSET,
   type ConfirmedRow,
@@ -191,6 +193,12 @@ export default function ConfirmedListPage() {
     return m;
   }, [staff]);
 
+  const staffTeamMap = useMemo(() => {
+    const m: Record<string, string | null> = {};
+    staff.forEach((s) => { m[s.user_id] = s.team; });
+    return m;
+  }, [staff]);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -325,6 +333,15 @@ export default function ConfirmedListPage() {
     toast.success(`${filtered.length}건 CSV 다운로드`);
   };
 
+  // ── 팀별 리포트 엑셀 — 발주 대시보드와 동일한 위계/색상 서식(.xls)을
+  //    현재 화면에 표시 중인(필터 적용된) 건 기준으로 다운로드 ──
+  const handleTeamReportXls = () => {
+    if (!isAdmin) return toast.error('관리자만 내보낼 수 있습니다');
+    if (filtered.length === 0) return toast.error('내보낼 데이터가 없습니다');
+    downloadTeamReportXls(filtered, staffTeamMap);
+    toast.success('팀별 확정현황 리포트 엑셀 다운로드');
+  };
+
   const cellClass = (v: string) =>
     v === UNSET ? 'text-xs text-gray-300 italic' : 'text-xs text-gray-700';
 
@@ -343,6 +360,11 @@ export default function ConfirmedListPage() {
             {isAdmin && (
               <Button variant="outline" size="sm" className="gap-1.5" onClick={handleCsv}>
                 <Download className="size-3.5" /> CSV
+              </Button>
+            )}
+            {isAdmin && (
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={handleTeamReportXls}>
+                <Download className="size-3.5" /> 팀별 리포트 엑셀
               </Button>
             )}
             <Button
