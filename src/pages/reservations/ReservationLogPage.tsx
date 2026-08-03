@@ -18,6 +18,9 @@
 //   예: 8/2~8/3 인입건을 함께 봐야 할 때. 시간대별 표는 날짜와 무관하게
 //   "시(0~23시)" 단위로 합산되고, 페이스 계산은 기간에 포함된 각 날짜별로
 //   영업시간 경과분을 더해서 계산합니다 (지난 날은 하루 풀로 영업한 것으로 간주).
+// v20260803-6: 팀 전체 "시간당 처리 페이스" KPI 추가 + 신규 잔량 카드에
+//   "이 페이스면 약 N시간 소요" 추정치 표시 (담당자별 페이스는 있었는데 팀 전체
+//   합산 숫자가 안 보였던 부분 보완).
 // ============================================================
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { RotateCw } from 'lucide-react';
@@ -163,6 +166,10 @@ export default function ReservationLogPage() {
   }, [transitionRows]);
 
   const totalProcessed = transitionRows.length;
+  // 팀 전체 시간당 처리 페이스 — "우리가 시간당 대략 몇 건 치고 있는지"
+  const processPace = elapsedHours > 0 ? Math.round((totalProcessed / elapsedHours) * 10) / 10 : 0;
+  // 지금 페이스로 신규 잔량을 다 처리하는 데 대략 몇 시간 걸릴지 (참고용 추정치)
+  const etaHours = processPace > 0 && newBacklog > 0 ? Math.round((newBacklog / processPace) * 10) / 10 : null;
 
   const activeStatuses = useMemo(
     () => TRACKED_STATUSES.filter((s) => (statusTotals[s.value] ?? 0) > 0),
@@ -230,11 +237,17 @@ export default function ReservationLogPage() {
       />
 
       {/* KPI */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
         <KpiCard label="기간 총 접수" value={totalIntake} color="pink" sub={`${dateStart} ~ ${dateEnd}`} />
         <KpiCard label="시간당 평균 접수" value={avgPerHour} color="blue" sub={`${BUSINESS_START_HOUR}시~ ${elapsedHours}시간 경과`} />
         <KpiCard label="기간 신규 처리" value={totalProcessed} color="indigo" sub="신규→다른 상태" />
-        <KpiCard label="신규 잔량" value={newBacklog} color={newBacklog > 0 ? 'orange' : 'gray'} sub="현재 시점, 미처리" />
+        <KpiCard label="시간당 처리 페이스" value={processPace} color="indigo" sub="팀 전체, 건/시간" />
+        <KpiCard
+          label="신규 잔량"
+          value={newBacklog}
+          color={newBacklog > 0 ? 'orange' : 'gray'}
+          sub={etaHours !== null ? `이 페이스면 약 ${etaHours}시간 소요` : '현재 시점, 미처리'}
+        />
         <KpiCard label="확정 처리" value={statusTotals['확정'] ?? 0} color="green" />
         <KpiCard label="취소" value={statusTotals['취소'] ?? 0} color="gray" />
         <KpiCard label="실패" value={statusTotals['실패'] ?? 0} color="red" />
