@@ -21,7 +21,7 @@ import { useDashboardStaff } from '@/hooks/useDashboardStaff';
 import { WorkReportHeader, SectionCard } from '@/pages/work-report/_shared';
 import { fetchReservations, deleteReservation } from '@/services/reservationService';
 import type { Reservation, ReservationStatus, ProspectGrade } from '@/types/reservation';
-import { RESERVATION_STATUS_LIST, PROSPECT_GRADE_OPTIONS } from '@/types/reservation';
+import { RESERVATION_STATUS_LIST, PROSPECT_GRADE_OPTIONS, USIM_MNP_DEVICE } from '@/types/reservation';
 import { ReservationAddModal } from './ReservationAddModal';
 import { ReservationDetailModal } from './ReservationDetailModal';
 import { formatPhone } from '@/lib/phoneFormat';
@@ -76,6 +76,8 @@ export default function ReservationsPage() {
   const [statusFilter, setStatusFilter] = useState<ReservationStatus | ''>('');
   const [gradeFilter, setGradeFilter] = useState<ProspectGrade | ''>('');
   const [assigneeFilter, setAssigneeFilter] = useState('');
+  // 유심 MNP 카테고리 필터 — 폴드/플립 실단말과 별개로 관리 (v20260803)
+  const [deviceFilter, setDeviceFilter] = useState('');
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [dateStart, setDateStart] = useState('');
@@ -220,6 +222,7 @@ export default function ReservationsPage() {
           status: statusFilter || undefined,
           prospect_grade: (statusFilter === '가망' && gradeFilter) || undefined,
           assigned_to: assigneeFilter || undefined,
+          device_interest: deviceFilter || undefined,
           search,
           page: p,
           pageSize: CHUNK,
@@ -251,7 +254,7 @@ export default function ReservationsPage() {
   const loadAll = useCallback(async () => {
     const { data } = await supabase
       .from('reservations')
-      .select('id, status, channel, contact_date, prospect_grade');
+      .select('id, status, channel, contact_date, prospect_grade, device_interest');
     setAllRows((data ?? []) as any[]);
   }, []);
 
@@ -263,6 +266,7 @@ export default function ReservationsPage() {
         status: statusFilter || undefined,
         prospect_grade: (statusFilter === '가망' && gradeFilter) || undefined,
         assigned_to: assigneeFilter || undefined,
+        device_interest: deviceFilter || undefined,
         search,
         page,
         pageSize,
@@ -277,7 +281,7 @@ export default function ReservationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, gradeFilter, assigneeFilter, search, page, pageSize, channelTab, dateStart, dateEnd]);
+  }, [statusFilter, gradeFilter, assigneeFilter, deviceFilter, search, page, pageSize, channelTab, dateStart, dateEnd]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
   useEffect(() => { load(); }, [load]);
@@ -329,6 +333,12 @@ export default function ReservationsPage() {
     return counts;
   }, [allRows, channelTab]);
 
+  // 유심 MNP 카운트 (현재 채널 탭 기준) — 상태와 별개로 관심기기 = 유심 MNP 인 건수
+  const usimMnpCount = useMemo(() => {
+    const filtered = channelTab ? allRows.filter(r => (r as any).channel === channelTab) : allRows;
+    return filtered.filter(r => (r as any).device_interest === USIM_MNP_DEVICE).length;
+  }, [allRows, channelTab]);
+
   // 가망 등급별 카운트 (상/중/하, 현재 채널 탭 기준)
   const gradeCounts = useMemo(() => {
     const filtered = channelTab ? allRows.filter(r => (r as any).channel === channelTab) : allRows;
@@ -347,10 +357,10 @@ export default function ReservationsPage() {
   const handleSearch = () => { setSearch(searchInput); setPage(1); };
   const handleReset = () => {
     setSearch(''); setSearchInput(''); setStatusFilter(''); setGradeFilter(''); setAssigneeFilter('');
-    setDateStart(''); setDateEnd(''); setPage(1);
+    setDeviceFilter(''); setDateStart(''); setDateEnd(''); setPage(1);
   };
   const handleTabChange = (val: string) => {
-    setChannelTab(val); setPage(1); setStatusFilter('');
+    setChannelTab(val); setPage(1); setStatusFilter(''); setDeviceFilter('');
   };
 
   return (
@@ -460,6 +470,16 @@ export default function ReservationsPage() {
             )}
           </button>
         ))}
+        {/* 유심 MNP — 상태 카드와는 별개 카테고리(관심기기 기준). 취소 카드 바로 다음에 노출되도록 여기 배치 */}
+        <button
+          onClick={() => { setDeviceFilter(deviceFilter === USIM_MNP_DEVICE ? '' : USIM_MNP_DEVICE); setPage(1); }}
+          className={`rounded-xl border p-2.5 text-left transition-all hover:shadow-md bg-white ${
+            deviceFilter === USIM_MNP_DEVICE ? 'ring-2 ring-indigo-400 shadow-md' : 'border-gray-100'
+          }`}
+        >
+          <div className="text-[10px] text-gray-400 font-medium truncate">유심 MNP</div>
+          <div className="text-lg font-bold mt-0.5">{usimMnpCount}</div>
+        </button>
       </div>
 
       {/* 검색 + 날짜 필터 */}
@@ -519,6 +539,17 @@ export default function ReservationsPage() {
               {RESERVATION_STATUS_LIST.map((s) => (
                 <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+
+          {/* 유심 MNP 필터 */}
+          <Select value={deviceFilter || '_all_'} onValueChange={(v) => { setDeviceFilter(v === '_all_' ? '' : v); setPage(1); }}>
+            <SelectTrigger className="w-[130px] text-sm">
+              <SelectValue placeholder="전체 관심기기" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_all_">전체 관심기기</SelectItem>
+              <SelectItem value={USIM_MNP_DEVICE}>{USIM_MNP_DEVICE}만</SelectItem>
             </SelectContent>
           </Select>
 
