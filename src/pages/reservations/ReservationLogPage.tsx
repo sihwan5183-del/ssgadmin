@@ -19,8 +19,11 @@
 //   "시(0~23시)" 단위로 합산되고, 페이스 계산은 기간에 포함된 각 날짜별로
 //   영업시간 경과분을 더해서 계산합니다 (지난 날은 하루 풀로 영업한 것으로 간주).
 // v20260803-6: 팀 전체 "시간당 처리 페이스" KPI 추가 + 신규 잔량 카드에
-//   "이 페이스면 약 N시간 소요" 추정치 표시 (담당자별 페이스는 있었는데 팀 전체
-//   합산 숫자가 안 보였던 부분 보완).
+//   "이 페이스면 약 N시간 소요" 추정치 표시.
+// v20260803-7: 시간대별 표의 상태 컬럼을 "그 기간에 값이 있는 상태만" 동적으로
+//   보여주던 걸 없앰 — 예: 신규→확정 건이 0이면 컬럼 자체가 통째로 사라져서
+//   빠진 것처럼 보이는 문제가 있었음. 이제 확정/택배발송/예약완료/가망/상담성공/
+//   재케어/부재/실패/취소 9개 상태 컬럼을 항상 전부 표시(0이어도 0으로 노출).
 // ============================================================
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { RotateCw } from 'lucide-react';
@@ -60,7 +63,9 @@ function enumerateDates(start: string, end: string): string[] {
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
-// 처리량 표에서 보여줄 상태 목록 (신규 접수는 왼쪽 "접수" 열에서 이미 보여주므로 제외)
+// 처리량 표에서 항상 보여줄 상태 목록 (신규 접수는 왼쪽 "접수" 열에서 이미 보여주므로 제외).
+// 건수가 0이어도 컬럼은 항상 노출 — 특정 상태(예: 확정)로 아직 아무도 안 넘어갔다는 것도
+// 중요한 정보라서, 0이라고 컬럼째 숨기면 "빠진 것처럼" 보여서 혼동을 줌.
 const TRACKED_STATUSES = RESERVATION_STATUS_LIST.filter((s) => s.value !== '신규');
 
 const MEDALS = ['🥇', '🥈', '🥉'];
@@ -171,11 +176,6 @@ export default function ReservationLogPage() {
   // 지금 페이스로 신규 잔량을 다 처리하는 데 대략 몇 시간 걸릴지 (참고용 추정치)
   const etaHours = processPace > 0 && newBacklog > 0 ? Math.round((newBacklog / processPace) * 10) / 10 : null;
 
-  const activeStatuses = useMemo(
-    () => TRACKED_STATUSES.filter((s) => (statusTotals[s.value] ?? 0) > 0),
-    [statusTotals],
-  );
-
   // ── 담당자별: 기간 접수(배정) + 기간 처리(해결, changed_by 기준) + 시간당 페이스 + 전체 배정 ──
   const assigneeRows = useMemo(() => {
     const intakeCounts: Record<string, number> = {};
@@ -259,12 +259,12 @@ export default function ReservationLogPage() {
         rightSlot={<span className="text-xs text-gray-400">{dateStart} ~ {dateEnd} 합산{loading && ' · 불러오는 중...'}</span>}
       >
         <div className="overflow-auto">
-          <Table className="[&_td]:py-1.5 [&_th]:py-1.5 min-w-[640px]">
+          <Table className="[&_td]:py-1.5 [&_th]:py-1.5 min-w-[1180px]">
             <TableHeader className="bg-gray-50">
               <TableRow className="bg-gray-50">
                 <TableHead className="text-xs w-[64px]">시간</TableHead>
                 <TableHead className="text-xs text-center w-[70px] bg-blue-50">접수</TableHead>
-                {activeStatuses.map((s) => (
+                {TRACKED_STATUSES.map((s) => (
                   <TableHead key={s.value} className="text-xs text-center whitespace-nowrap">
                     신규→{s.value}
                   </TableHead>
@@ -275,7 +275,7 @@ export default function ReservationLogPage() {
             <TableBody>
               {visibleHours.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={activeStatuses.length + 3} className="text-center py-10 text-sm text-gray-400">
+                  <TableCell colSpan={TRACKED_STATUSES.length + 3} className="text-center py-10 text-sm text-gray-400">
                     데이터가 없습니다
                   </TableCell>
                 </TableRow>
@@ -295,7 +295,7 @@ export default function ReservationLogPage() {
                       <TableCell className="text-center text-xs font-bold text-blue-700 bg-blue-50/50">
                         {hourlyIntake[h] ?? 0}
                       </TableCell>
-                      {activeStatuses.map((s) => (
+                      {TRACKED_STATUSES.map((s) => (
                         <TableCell key={s.value} className="text-center text-xs text-gray-700">
                           {rowMap[s.value] ?? 0}
                         </TableCell>
@@ -310,7 +310,7 @@ export default function ReservationLogPage() {
             </TableBody>
           </Table>
         </div>
-        {activeStatuses.length === 0 && transitionRows.length === 0 && (
+        {transitionRows.length === 0 && (
           <div className="text-xs text-gray-400 text-center py-2">이 기간엔 신규 → 다른 상태로 처리된 건이 없습니다</div>
         )}
       </SectionCard>
