@@ -1,6 +1,8 @@
 // ============================================================
 // 사전예약 관리 — 신규 등록 모달
 // ============================================================
+// v20260803: 관심기기에 "직접 입력" 옵션 추가 — 목록에 없는 기종(다른 폰 등)
+//  문의가 계속 들어와서, 고정 옵션 4개 외에 자유 텍스트로도 입력 가능하게 함.
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -30,6 +32,7 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
   const [carrier, setCarrier] = useState('');
   const [channel, setChannel] = useState('');
   const [device, setDevice] = useState('');
+  const [isCustomDevice, setIsCustomDevice] = useState(false);
   const [birthDate, setBirthDate] = useState('');
   const [capacity, setCapacity] = useState('');
   const [color, setColor] = useState('');
@@ -47,7 +50,7 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
         phone: phone.trim(),
         carrier: carrier || undefined,
         channel: channel || undefined,
-        device_interest: device || undefined,
+        device_interest: device.trim() || undefined,
         capacity: capacity || undefined,
         product_color: color || undefined,
         memo: memo.trim() || undefined,
@@ -128,8 +131,14 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
           <div>
             <label className="text-xs text-gray-500 mb-1 block">관심 기기 <span className="text-red-400">*</span></label>
             <Select
-              value={device || '_none_'}
+              value={isCustomDevice ? '_custom_' : (device || '_none_')}
               onValueChange={v => {
+                if (v === '_custom_') {
+                  setIsCustomDevice(true);
+                  setDevice('');
+                  return;
+                }
+                setIsCustomDevice(false);
                 const nextDevice = v === '_none_' ? '' : v;
                 setDevice(nextDevice);
                 const nextColors = getColorsForDevice(nextDevice);
@@ -142,8 +151,18 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
                 {DEVICE_OPTIONS.map(d => (
                   <SelectItem key={d} value={d}>{d}</SelectItem>
                 ))}
+                <SelectItem value="_custom_">✏️ 직접 입력</SelectItem>
               </SelectContent>
             </Select>
+            {isCustomDevice && (
+              <Input
+                value={device}
+                onChange={(e) => setDevice(e.target.value)}
+                placeholder="기기명을 직접 입력 (예: 갤럭시 S25, 아이폰 16 등)"
+                className="text-sm mt-1.5"
+                autoFocus
+              />
+            )}
           </div>
 
           <div>
@@ -215,7 +234,3 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
     </Dialog>
   );
 }
-
-
-
-
