@@ -843,3 +843,78 @@ export function downloadTeamReportXls(rows: ConfirmedRow[], staffTeamMap: Record
 
   downloadStyledXls(`팀별_확정현황_${new Date().toISOString().slice(0, 10)}.xls`, html);
 }
+
+
+// ── 담당자별 MNP·기변 / 2ND·홈상품 현황 리포트 (엑셀 서식) ─
+// 확정+택배발송 전체 기준: 1) 전체 요약, 2) 담당자별 요약 순서로 구성.
+interface CategoryBreakdown {
+  total: number;
+  mnpCount: number;
+  ownCount: number;
+  etcCount: number;
+  watchCount: number;
+  tabletCount: number;
+  internetCount: number;
+  tvCount: number;
+}
+
+function computeCategoryBreakdown(rows: ConfirmedRow[]): CategoryBreakdown {
+  const total = rows.length;
+  const mnpCount = rows.filter((r) => classifySubscriptionType(r) === 'MNP').length;
+  const ownCount = rows.filter((r) => classifySubscriptionType(r) === '기기변경').length;
+  const etcCount = total - mnpCount - ownCount;
+  const watchCount = rows.filter((r) => (r.bundle_watch ?? '').trim() !== '').length;
+  const tabletCount = rows.filter((r) => (r.bundle_tablet ?? '').trim() !== '').length;
+  const internetCount = rows.filter((r) => (r.home_internet ?? '').trim() !== '').length;
+  const tvCount = rows.filter((r) => (r.home_tv ?? '').trim() !== '').length;
+  return { total, mnpCount, ownCount, etcCount, watchCount, tabletCount, internetCount, tvCount };
+}
+
+function xlsBreakdownBlock(title: string, b: CategoryBreakdown): string {
+  const pct = (n: number) => (b.total > 0 ? `${Math.round((n / b.total) * 1000) / 10}%` : '0%');
+  let html = xlsTitleRow(title, `${b.total}건`);
+  html += xlsRatioTable('가입유형 (MNP · 기기변경)', [
+    { label: 'MNP', count: b.mnpCount, ratio: pct(b.mnpCount), accent: '#E8EAF6' },
+    { label: '기기변경', count: b.ownCount, ratio: pct(b.ownCount), accent: '#E3F2FD' },
+    ...(b.etcCount > 0 ? [{ label: '기타', count: b.etcCount, ratio: pct(b.etcCount) }] : []),
+  ]);
+  html += xlsRatioTable('2ND · 홈상품', [
+    { label: '워치', count: b.watchCount, ratio: pct(b.watchCount) },
+    { label: '태블릿', count: b.tabletCount, ratio: pct(b.tabletCount) },
+    { label: '인터넷', count: b.internetCount, ratio: pct(b.internetCount) },
+    { label: 'TV프리', count: b.tvCount, ratio: pct(b.tvCount) },
+  ]);
+  return html;
+}
+
+export function buildAssigneeBreakdownReportXlsHtml(
+  rows: ConfirmedRow[],
+  staffNameMap: Record<string, string>,
+): string {
+  let html = xlsBreakdownBlock('전체 (확정 + 택배발송)', computeCategoryBreakdown(rows));
+  html += '<br/>';
+
+  const byAssignee = new Map<string, ConfirmedRow[]>();
+  rows.forEach((r) => {
+    const name = (r.assigned_to && staffNameMap[r.assigned_to]) || '미지정';
+    if (!byAssignee.has(name)) byAssignee.set(name, []);
+    byAssignee.get(name)!.push(r);
+  });
+
+  Array.from(byAssignee.entries())
+    .sort((a, b) => b[1].length - a[1].length)
+    .forEach(([name, subRows]) => {
+      html += xlsBreakdownBlock(name, computeCategoryBreakdown(subRows));
+      html += '<br/>';
+    });
+
+  return html;
+}
+
+export function downloadAssigneeBreakdownReportXls(rows: ConfirmedRow[], staffNameMap: Record<string, string>) {
+  if (rows.length === 0) return;
+  downloadStyledXls(
+    `담당자별_MNP기변_2ND현황_${new Date().toISOString().slice(0, 10)}.xls`,
+    buildAssigneeBreakdownReportXlsHtml(rows, staffNameMap),
+  );
+}
