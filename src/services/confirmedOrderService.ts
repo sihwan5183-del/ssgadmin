@@ -579,6 +579,17 @@ const XLS_WARN_BG = '#FDEDEC';
 const XLS_WARN_COLOR = '#C0392B';
 const XLS_BORDER = '1px solid #999999';
 
+// v20260803: 컬러명 글자 자체를 그 색상 톤으로 표시 — 원본 참고 엑셀처럼
+// "그라파이트"는 청회색, "크림"은 금색, "핑크"는 마젠타 계열 글자색으로
+// 스와치처럼 한눈에 읽히게. 여기 없는 색상명은 기본 텍스트색을 그대로 씀.
+const XLS_COLOR_TEXT: Record<string, string> = {
+  '그라파이트': '#31597A',
+  '바이올렛 쉐도우': '#7030A0',
+  '라벤더': '#8064A2',
+  '크림': '#BF8F00',
+  '핑크': '#C0006B',
+};
+
 function xlsEsc(v: string | number): string {
   return String(v ?? '')
     .replace(/&/g, '&amp;')
@@ -599,7 +610,8 @@ function xlsWarnBanner(text: string): string {
   </tr></table>`;
 }
 
-/** 기기 하나 = 용량×컬러 표 하나. 좌측에 기기명 병합셀(rowspan), 미정 행은 빨간 하이라이트, 소계는 회색 강조. */
+/** 기기 하나 = 용량×컬러 표 하나. 좌측에 기기명 병합셀(rowspan), 미정 행은 빨간 하이라이트, 소계는 회색 강조,
+ *  컬러명은 실제 색상 톤 글자색(스와치 느낌)으로 표시. */
 function xlsDeviceTable(device: string, sub: ConfirmedRow[]): string {
   const map: Record<string, number> = {};
   sub.forEach((r) => {
@@ -628,13 +640,14 @@ function xlsDeviceTable(device: string, sub: ConfirmedRow[]): string {
     const isUnset = c.cap === UNSET || c.col === UNSET;
     const rowBg = isUnset ? XLS_UNSET_BG : (i % 2 === 0 ? '#FFFFFF' : '#F2F5FA');
     const textColor = isUnset ? XLS_UNSET_COLOR : '#333333';
+    const colorTextColor = isUnset ? XLS_UNSET_COLOR : (XLS_COLOR_TEXT[c.col] ?? textColor);
     const weight = isUnset ? 'font-weight:bold;' : '';
     const deviceCell = i === 0
       ? `<td rowspan="${combos.length + 1}" style="border:${XLS_BORDER};padding:6px 10px;background:${XLS_DEVICE_BG};font-weight:bold;font-size:13px;text-align:center;vertical-align:middle;">${xlsEsc(device)}</td>`
       : '';
     return `<tr>${deviceCell}
       <td style="border:${XLS_BORDER};padding:4px 8px;background:${rowBg};color:${textColor};font-size:12px;text-align:center;${weight}">${xlsEsc(c.cap)}</td>
-      <td style="border:${XLS_BORDER};padding:4px 8px;background:${rowBg};color:${textColor};font-size:12px;text-align:center;${weight}">${xlsEsc(c.col)}</td>
+      <td style="border:${XLS_BORDER};padding:4px 8px;background:${rowBg};color:${colorTextColor};font-size:12px;text-align:center;font-weight:bold;">${xlsEsc(c.col)}</td>
       <td style="border:${XLS_BORDER};padding:4px 8px;background:${rowBg};color:${textColor};font-size:12px;text-align:center;font-weight:bold;">${c.count}</td>
     </tr>`;
   }).join('');
