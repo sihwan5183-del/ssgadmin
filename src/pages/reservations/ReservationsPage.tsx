@@ -321,6 +321,7 @@ export default function ReservationsPage() {
       courier_sent: goingToShipped,
       courier_sent_at: goingToShipped ? new Date().toISOString() : null,
     };
+    if (status === '확정') payload.confirmed_at = new Date().toISOString();
     const { error } = await supabase
       .from('reservations')
       .update(payload)
