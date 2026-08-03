@@ -4,11 +4,16 @@ import PiiWatermark from '@/components/PiiWatermark';
 // 실패/취소 선택 시 사유·단계 필수 인터셉트
 // 메모는 덮어쓰기가 아닌 히스토리 로그로 관리 (reservation_memo_logs)
 // ============================================================
+// v20260803: 관심기기에 "직접 입력" 옵션 추가 — 목록에 없는 기종 문의가
+//  계속 들어와서, 고정 옵션 4개 외에 자유 텍스트로도 입력 가능하게 함.
+//  (기존엔 저장된 값이 표준 옵션 밖이면 목록에 끼워 넣기만 했고, 사용자가
+//  직접 새 값을 타이핑할 방법이 없었음)
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -82,6 +87,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
   const [carrier, setCarrier] = useState('');
   const [channel, setChannel] = useState('');
   const [device, setDevice] = useState('');
+  const [isCustomDevice, setIsCustomDevice] = useState(false);
   const [capacity, setCapacity] = useState('');
   const [color, setColor] = useState('');
   const [assignedTo, setAssignedTo] = useState<string>('');
@@ -101,12 +107,6 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
   // 취소 단계 모달 (취소 선택 시 인터셉트)
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelStage, setCancelStage] = useState<CancelStage | null>(null);
-
-  // 저장된 값이 표준 옵션에 없을 경우, 목록에 그 값을 추가해서
-  // 드롭다운이 비어 보이거나 저장 시 값이 유실되는 것을 방지
-  const deviceSelectOptions = device && !DEVICE_OPTIONS.includes(device)
-    ? [...DEVICE_OPTIONS, device]
-    : DEVICE_OPTIONS;
 
   // 기기가 매핑된 출시 기종이면 해당 컬러만, 아니면 필드 옵션(설정)의 일반 컬러 목록을 사용
   const baseColorOptions = getColorsForDevice(device) ?? colorOptions;
@@ -140,7 +140,9 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
         setProspectGrade((r as any).prospect_grade ?? null);
         setCarrier(r.carrier ?? '');
         setChannel(r.channel ?? '');
-        setDevice(r.device_interest ?? '');
+        const initialDevice = r.device_interest ?? '';
+        setDevice(initialDevice);
+        setIsCustomDevice(!!initialDevice && !DEVICE_OPTIONS.includes(initialDevice));
         setCapacity(r.capacity ?? '');
         setColor((r as any).product_color ?? '');
         setAssignedTo(r.assigned_to ?? '');
@@ -225,7 +227,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
         prospect_grade: status === '가망' ? prospectGrade : null,
         carrier: carrier || undefined,
         channel: channel || undefined,
-        device_interest: device || undefined,
+        device_interest: device.trim() || undefined,
         capacity: capacity || undefined,
         product_color: color || undefined,
         assigned_to: assignedTo || null,
@@ -428,17 +430,16 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
               </div>
 
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">
-                  관심 기기
-                  {device && !DEVICE_OPTIONS.includes(device) && (
-                    <span className="ml-1.5 text-[10px] text-orange-500 font-medium">
-                      ⚠ 표준값 아님 (원본 그대로 표시 중)
-                    </span>
-                  )}
-                </label>
+                <label className="text-xs text-gray-500 mb-1 block">관심 기기</label>
                 <Select
-                  value={device || '_none_'}
+                  value={isCustomDevice ? '_custom_' : (device || '_none_')}
                   onValueChange={v => {
+                    if (v === '_custom_') {
+                      setIsCustomDevice(true);
+                      setDevice('');
+                      return;
+                    }
+                    setIsCustomDevice(false);
                     const nextDevice = v === '_none_' ? '' : v;
                     setDevice(nextDevice);
                     const nextColors = getColorsForDevice(nextDevice);
@@ -448,11 +449,21 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                   <SelectTrigger className="text-sm"><SelectValue placeholder="기기 선택" /></SelectTrigger>
                   <SelectContent position="item-aligned">
                     <SelectItem value="_none_">선택 안함</SelectItem>
-                    {deviceSelectOptions.map(d => (
+                    {DEVICE_OPTIONS.map(d => (
                       <SelectItem key={d} value={d}>{d}</SelectItem>
                     ))}
+                    <SelectItem value="_custom_">✏️ 직접 입력</SelectItem>
                   </SelectContent>
                 </Select>
+                {isCustomDevice && (
+                  <Input
+                    value={device}
+                    onChange={(e) => setDevice(e.target.value)}
+                    placeholder="기기명을 직접 입력 (예: 갤럭시 S25, 아이폰 16 등)"
+                    className="text-sm mt-1.5"
+                    autoFocus
+                  />
+                )}
               </div>
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">용량</label>
