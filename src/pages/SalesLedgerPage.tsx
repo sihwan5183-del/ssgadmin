@@ -804,10 +804,16 @@ const SalesLedgerPage = () => {
     let q = supabase
       .from("sales")
       .select("*")
-      .or(
+      .is("deleted_at", null);
+    // v20260805: "전체 기간 보기"(viewAll) 켜져 있으면 목록 화면과 동일하게 기간필터 자체를 안 건다.
+    // 이전엔 여기 체크가 빠져있어서, 전체기간 보기를 켜놔도 엑셀은 항상 현재 선택된 기간(예: 이번달)만
+    // 내려받아졌음 — "163건밖에 안 된다"던 문제의 원인.
+    if (!qViewAll) {
+      q = q.or(
         `and(open_date.gte.${qStart},open_date.lte.${qEnd}),` +
         `and(open_date.is.null,created_at.gte.${qStart}T00:00:00,created_at.lte.${qEnd}T23:59:59.999)`
       );
+    }
     if (colFilters.status.length > 0) q = q.in("status", colFilters.status);
     if (colFilters.channel.length > 0) q = q.in("channel", colFilters.channel);
     if (colFilters.product.length > 0) q = q.in("product", colFilters.product);
@@ -851,14 +857,17 @@ const SalesLedgerPage = () => {
 
   const handleExportOffers = async () => {
     const isPending = showPendingRef.current;
-    const { data, error } = await supabase
+    let oq = supabase
       .from("sales")
       .select(
         "seq, open_date, channel, manager, customer_name, phone, product, sale_type, device_model, rate_plan, unit_price, vas_fee, distributor_amount, extra_subsidy, cash_support_amount, receivable_amount, receivable_paid, cash_open, cash_bank, cash_account, cash_holder, voucher, voucher_returned, net_fee, approval_status, note",
       )
-      .gte("open_date", qStart)
-      .lte("open_date", qEnd)
-      .order("open_date", { ascending: isPending, nullsFirst: isPending });
+      .is("deleted_at", null);
+    // v20260805: 실적엑셀과 동일하게 전체기간 보기 존중
+    if (!qViewAll) {
+      oq = oq.gte("open_date", qStart).lte("open_date", qEnd);
+    }
+    const { data, error } = await oq.order("open_date", { ascending: isPending, nullsFirst: isPending });
     if (error) return toast.error("오퍼 내보내기 실패", { description: error.message });
     const filtered = (data ?? []).filter((r: any) =>
       Number(r.distributor_amount ?? 0) > 0 ||
