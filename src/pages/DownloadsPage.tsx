@@ -11,16 +11,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Download, FileSpreadsheet, Loader2, RefreshCw, Trash2, Clock, CheckCircle2, XCircle, CreditCard, Calculator, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import {
   exportToExcel,
+  exportSalesFullExcel,
   SALES_COLUMNS,
   AD_SPEND_COLUMNS,
   DEVICE_INVENTORY_COLUMNS,
   type ColumnDef,
 } from "@/lib/excelExport";
+import { ShieldCheck } from "lucide-react";
 
 type TabKey = "sales" | "expenses" | "customers" | "inventory";
 
@@ -168,6 +171,7 @@ const monthStart = () => format(new Date(new Date().getFullYear(), new Date().ge
 
 const DownloadsPage = () => {
   const { user } = useAuth();
+  const { isAdmin } = useRole();
   const [activeTab, setActiveTab] = useState<TabKey>("sales");
   const [start, setStart] = useState(monthStart());
   const [end, setEnd] = useState(today());
@@ -280,6 +284,30 @@ const DownloadsPage = () => {
   const handleSettlement = () => {
     const salesTab = TABS.find((t) => t.key === "sales")!;
     runClientExport(salesTab, SETTLEMENT_COLUMNS, "_정산양식");
+  };
+
+  /* 관리자 전용 — 판매실적 전체(필터 없음, 전 항목) 한 번에 다운로드 */
+  const [fullBusy, setFullBusy] = useState(false);
+  const handleFullSalesDownload = async () => {
+    setFullBusy(true);
+    try {
+      const { data: salesRows, error } = await supabase
+        .from("sales")
+        .select("*")
+        .order("open_date", { ascending: false })
+        .limit(20000);
+      if (error) throw error;
+
+      const { data: profiles } = await supabase.from("profiles").select("user_id, display_name");
+      const uidToName: Record<string, string> = {};
+      (profiles ?? []).forEach((p: any) => { uidToName[p.user_id] = p.display_name; });
+
+      exportSalesFullExcel(salesRows ?? [], uidToName, "판매실적장표_전체", "판매원장");
+    } catch (e) {
+      toast.error("전체 다운로드 실패", { description: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setFullBusy(false);
+    }
   };
 
   const handleReDownload = async (row: HistoryRow) => {
@@ -416,6 +444,16 @@ const DownloadsPage = () => {
                   <Button variant="outline" onClick={handleSettlement} disabled={!!busy} className="gap-1.5">
                     <Calculator className="size-4" /> 정산용 양식
                   </Button>
+                  {isAdmin && (
+                    <Button
+                      onClick={handleFullSalesDownload}
+                      disabled={fullBusy}
+                      className="gap-1.5 bg-gray-900 hover:bg-gray-800 text-white"
+                    >
+                      {fullBusy ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
+                      {fullBusy ? "생성 중…" : "전체 다운로드 (관리자)"}
+                    </Button>
+                  )}
                 </>
               )}
 
