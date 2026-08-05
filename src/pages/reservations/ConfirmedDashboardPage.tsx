@@ -142,10 +142,15 @@ function BundleStatsSection({ rows }: { rows: ConfirmedRow[] }) {
   const internetRows = rows.filter((r) => (r.home_internet ?? '').trim() !== '');
   const internetByPlan = groupByText(internetRows.map((r) => r.home_internet));
   const internetTvBundled = internetRows.filter((r) => r.home_internet_tv_bundled).length;
+  const tvRows = rows.filter((r) => (r.home_tv ?? '').trim() !== '');
+  const tvByModel = groupByText(tvRows.map((r) => r.home_tv));
+  const tvBundled = tvRows.filter((r) => r.home_tv_bundle_type === '번들').length;
+  const tvUnbundled = tvRows.filter((r) => r.home_tv_bundle_type === '언번들').length;
+  const tvTypeUnset = tvRows.length - tvBundled - tvUnbundled;
 
   return (
-    <SectionCard title="2ND (워치 · 태블릿 · 인터넷) 통계" rightSlot={<span className="text-xs text-gray-400">현재 필터 기준</span>}>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <SectionCard title="2ND (워치 · 태블릿 · 인터넷 · TV프리) 통계" rightSlot={<span className="text-xs text-gray-400">현재 필터 기준</span>}>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* 워치 */}
         <div>
           <div className="flex items-center justify-between mb-3">
@@ -206,6 +211,30 @@ function BundleStatsSection({ rows }: { rows: ConfirmedRow[] }) {
               ))}
             </div>
           ) : <div className="text-sm text-gray-400 text-center py-4">인터넷 번들 입력 건이 없습니다</div>}
+        </div>
+
+        {/* TV프리 */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-gray-800">📺 TV프리 번들</h3>
+            <span className="text-xs text-gray-400">{tvRows.length}건 / {total}건 ({total > 0 ? Math.round(tvRows.length / total * 100) : 0}%)</span>
+          </div>
+          {tvRows.length > 0 && (
+            <div className="flex items-center gap-2 mb-3">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-teal-100 text-teal-700">번들 {tvBundled}건</span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-orange-100 text-orange-700">언번들 {tvUnbundled}건</span>
+              {tvTypeUnset > 0 && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-500">미표시 {tvTypeUnset}건</span>
+              )}
+            </div>
+          )}
+          {tvByModel.length > 0 ? (
+            <div className="space-y-2">
+              {tvByModel.map((w) => (
+                <BundleBar key={w.label} label={w.label} count={w.count} denom={tvRows.length} color="#fbbf24" />
+              ))}
+            </div>
+          ) : <div className="text-sm text-gray-400 text-center py-4">TV프리 번들 입력 건이 없습니다</div>}
         </div>
       </div>
     </SectionCard>
