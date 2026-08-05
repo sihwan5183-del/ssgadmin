@@ -79,29 +79,27 @@ const pickCustom = (row: any, key: string) => {
 type FullCol = [string, string, ((r: any) => any)?, string?];
 
 export const FULL_SALES_COLUMNS: FullCol[] = [
+  // ===== 앞쪽 9개 — 김시환 지정 순서 (2026-08-05) =====
   ["seq", "순번"],
+  ["customer_name", "이름"],
+  ["birth_date", "생년월일"],
+  ["carrier", "통신사", (r: any) => pickCustom(r, "carrier") ?? ""], // sales 테이블에 통신사 전용 컬럼이 없어 일단 빈칸 (custom_fields.carrier 있으면 그거 사용)
+  ["phone", "연락처"],
+  ["channel", "인입경로"],
+  ["product", "가입상품"],
+  ["sale_type", "판매유형(신규/MNP/기변)"],
+  ["device_model", "단말기"],
+  // ===== 나머지 =====
   ["open_date", "개통일"],
   ["open_month", "개통월"],
   ["status", "최종상태"],
   ["approval_status", "검수상태"],
-  // 담당자/채널
   ["created_by", "담당자 UID"],
   ["manager", "담당자명"],
-  ["channel", "인입경로"],
-  // 가입 정보
-  ["product", "가입상품"],
-  ["sale_type", "판매유형(신규/MNP/기변)"],
   ["open_method", "개통방식"],
-  // 고객 정보
-  ["customer_name", "고객명"],
-  ["birth_date", "생년월일"],
-  ["phone", "연락처"],
-  // 단말 / USIM
-  ["device_model", "단말기"],
   ["device_serial", "단말 일련번호"],
   ["usim_model", "USIM"],
   ["usim_serial", "USIM 일련번호"],
-  // 요금제 / 부가서비스
   ["rate_plan", "개통요금제"],
   ["vas1", "부가서비스1"],
   ["vas2", "부가서비스2"],
