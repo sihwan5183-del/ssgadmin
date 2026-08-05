@@ -158,6 +158,30 @@ export const FULL_SALES_COLUMNS: FullCol[] = [
  * @param rows  sales rows (custom_fields 포함된 raw row)
  * @param uidToName  user_id → display_name 매핑
  */
+// v20260805: 무료 xlsx 라이브러리는 셀 스타일(색상/테두리)을 실제 파일에 못 씀 —
+// 코드에 .s 스타일을 지정해도 XLSX.writeFile()이 그냥 버림 (Pro버전 전용 기능).
+// 그래서 엑셀이 그대로 읽는 HTML표를 .xls로 저장하는 방식으로 바꿔서 색상/테두리/포인트가
+// 실제로 살아있는 파일이 나가게 함. 호출부(SalesLedgerPage, DownloadsPage)는 그대로 둬도 됨 —
+// 함수 시그니처(인자/이름) 동일하게 유지.
+const XSF_NAVY = "#1F3864";
+const XSF_BORDER = "1px solid #999999";
+const XSF_ZEBRA = "#F4F6FA";
+const XSF_GREEN = "#D9F2E3"; const XSF_GREEN_TXT = "#1E7B4D";
+const XSF_AMBER = "#FDEFD8"; const XSF_AMBER_TXT = "#B4720A";
+const XSF_RED = "#FBE0E0"; const XSF_RED_TXT = "#C0392B";
+
+const xsfEsc = (v: unknown) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/** approval_status/status 등 상태값에 색 포인트 (확정류=초록, 대기류=주황, 반려/취소류=빨강) */
+const xsfStatusAccent = (v: string): { bg: string; color: string } | null => {
+  const s = String(v ?? "");
+  if (!s) return null;
+  if (/(확정|완료|승인|정상)/.test(s)) return { bg: XSF_GREEN, color: XSF_GREEN_TXT };
+  if (/(대기|보류|검토)/.test(s)) return { bg: XSF_AMBER, color: XSF_AMBER_TXT };
+  if (/(반려|취소|실패|미수)/.test(s)) return { bg: XSF_RED, color: XSF_RED_TXT };
+  return null;
+};
+
 export const exportSalesFullExcel = (
   rows: any[],
   uidToName: Record<string, string> = {},
@@ -174,74 +198,69 @@ export const exportSalesFullExcel = (
     manager: uidToName[r.manager] || (r.manager && !r.manager.includes("-") ? r.manager : "") || uidToName[r.created_by] || "",
   }));
 
-  // AOA 방식으로 작성 (셀 단위 type/format 제어)
-  const headerRow = FULL_SALES_COLUMNS.map(([, label]) => label);
-  const aoa: any[][] = [headerRow];
+  const cols = FULL_SALES_COLUMNS;
 
-  for (const row of enriched) {
-    const line = FULL_SALES_COLUMNS.map(([key, , fn]) => {
+  const headerHtml = cols.map(([, label]) =>
+    `<td style="border:${XSF_BORDER};background:${XSF_NAVY};color:#ffffff;font-weight:bold;font-size:11px;padding:6px 8px;text-align:center;white-space:nowrap;">${xsfEsc(label)}</td>`
+  ).join("");
+
+  const bodyRowsHtml = enriched.map((row, ri) => {
+    const zebraBg = ri % 2 === 0 ? "#FFFFFF" : XSF_ZEBRA;
+    const cells = cols.map(([key, , fn, fmt]) => {
       let v: any;
-      if (typeof fn === "function") {
-        try { v = fn(row); } catch { v = ""; }
-      } else {
-        v = row[key];
+      if (typeof fn === "function") { try { v = fn(row); } catch { v = ""; } }
+      else { v = row[key]; }
+
+      const isNumeric = !!fmt;
+      let display = v == null ? "" : v;
+      let cellBg = zebraBg;
+      let cellColor = "#333333";
+      let bold = false;
+      let align = isNumeric ? "right" : "left";
+
+      if (isNumeric) {
+        const num = typeof v === "number" ? v : Number(String(v ?? "").replace(/,/g, ""));
+        display = Number.isFinite(num) && num !== 0 ? num.toLocaleString("ko-KR") : (Number.isFinite(num) ? "-" : "");
+        // 순수익류(계산결과)는 양/음수에 따라 초록/빨강 포인트
+        if (key === "calc_profit" || key === "net_fee") {
+          bold = true;
+          if (Number.isFinite(num)) { cellColor = num >= 0 ? XSF_GREEN_TXT : XSF_RED_TXT; }
+        }
+      } else if (key === "approval_status" || key === "status") {
+        const accent = xsfStatusAccent(String(v ?? ""));
+        if (accent) { cellBg = accent.bg; cellColor = accent.color; bold = true; align = "center"; }
       }
-      return v == null ? "" : v;
-    });
-    aoa.push(line);
-  }
 
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
+      return `<td style="border:${XSF_BORDER};background:${cellBg};color:${cellColor};font-size:11px;padding:4px 8px;text-align:${align};white-space:nowrap;${bold ? "font-weight:bold;" : ""}">${xsfEsc(display)}</td>`;
+    }).join("");
+    return `<tr>${cells}</tr>`;
+  }).join("");
 
-  // 숫자 포맷 + 셀 타입 적용
-  const range = XLSX.utils.decode_range(ws["!ref"] as string);
-  for (let c = 0; c < FULL_SALES_COLUMNS.length; c++) {
-    const [, , , fmt] = FULL_SALES_COLUMNS[c];
-    if (!fmt) continue;
-    for (let r = 1; r <= range.e.r; r++) {
-      const addr = XLSX.utils.encode_cell({ r, c });
-      const cell = ws[addr];
-      if (!cell) continue;
-      const num = typeof cell.v === "number" ? cell.v : Number(String(cell.v).replace(/,/g, ""));
-      if (Number.isFinite(num)) {
-        cell.t = "n";
-        cell.v = num;
-        cell.z = fmt;
-      }
-    }
-  }
+  const table = `<table style="border-collapse:collapse;">
+    <thead><tr>${headerHtml}</tr></thead>
+    <tbody>${bodyRowsHtml}</tbody>
+  </table>`;
 
-  // 헤더 셀 스타일 (xlsx 커뮤니티는 일부만 반영 — 폰트 굵게 시도)
-  for (let c = 0; c < FULL_SALES_COLUMNS.length; c++) {
-    const addr = XLSX.utils.encode_cell({ r: 0, c });
-    if (ws[addr]) {
-      ws[addr].s = {
-        font: { bold: true, color: { rgb: "FFFFFF" } },
-        fill: { fgColor: { rgb: "1F2937" }, patternType: "solid" },
-        alignment: { horizontal: "center", vertical: "center" },
-      };
-    }
-  }
+  const doc = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8" />
+<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>
+<x:Name>${xsfEsc(sheetName)}</x:Name><x:WorksheetOptions><x:DisplayGridlines/><x:FreezePanes/><x:FrozenNoSplit/><x:SplitHorizontal>1</x:SplitHorizontal><x:TopRowBottomPane>1</x:TopRowBottomPane></x:WorksheetOptions>
+</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+<style>td{font-family:맑은 고딕, Malgun Gothic, sans-serif;}</style>
+</head>
+<body>${table}</body></html>`;
 
-  // 자동 컬럼 폭
-  ws["!cols"] = FULL_SALES_COLUMNS.map((col, idx) => {
-    const label = col[1];
-    const headerLen = label.length * 2;
-    const maxBody = aoa.slice(1).reduce((m, line) => {
-      const s = String(line[idx] ?? "");
-      return Math.max(m, s.length);
-    }, 0);
-    return { wch: Math.min(45, Math.max(headerLen, maxBody) + 2) };
-  });
-
-  // 첫 행 고정
-  ws["!freeze"] = { xSplit: 0, ySplit: 1 };
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  const blob = new Blob(["\ufeff" + doc], { type: "application/vnd.ms-excel;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
   const stamp = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(wb, `${fileName}_${stamp}.xlsx`, { cellStyles: true });
-  toast.success(`${rows.length}건 엑셀로 내보냈습니다 (전체 항목)`);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${fileName}_${stamp}.xls`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 15000);
+  toast.success(`${rows.length}건 엑셀로 내보냈습니다 (전체 항목, 서식 적용)`);
 };
 
 /** 여러 시트를 하나의 워크북으로 저장 */
