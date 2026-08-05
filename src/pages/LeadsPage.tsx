@@ -1398,40 +1398,68 @@ export default function LeadsPage() {
   const bulk = useBulkSelection<string>(filteredIds);
 
   // ── CSV 다운로드 ──
+  // v20260804: 모바일 브라우저에서 대용량(전체) CSV가 blob+가짜클릭 방식으로
+  // 종종 "다운로드 실패"가 나던 문제 대응 — try/catch로 실제 에러를 토스트로 노출하고,
+  // a.click()이 씹히는 환경 대비 window.open() 폴백을 같이 건다. 500KB 넘으면 안내 문구 표시.
   const downloadCSV = (mode: 'all' | 'filtered' | 'selected') => {
-    const DQ = String.fromCharCode(34);
-    const esc = (v: unknown) => { const s = String(v ?? '').replace(new RegExp(DQ, 'g'), DQ + DQ); return DQ + s + DQ; };
-    const r2c = (cols: unknown[]) => cols.map(esc).join(',');
-    const getA = (r: any) => {
-      if (!r.assigned_to) return '';
-      const f = staff.find((s: any) => s.user_id === r.assigned_to);
-      return f?.display_name ?? f?.name ?? r.assigned_to;
-    };
-    const selSet = new Set(bulk.selectedIds);
-    const allSelected = mode === 'selected' ? rows.filter(r => selSet.has(r.id)) : null;
-    const base = mode === 'all' ? rows : mode === 'selected' ? (allSelected ?? []) : filtered;
-    let hdrs: string[];
-    let fn: (r: any) => unknown[];
-    if (sourceTab === 'allinone') {
-      hdrs = ['접수일시', '고객명', '연락처', '생년월일', '휴대폰통신사', '인터넷통신사', '진행방식', '요금제', '결합인원', '예상월요금', '상담가능시간', '담당자', '상담상태', '미성년자', '법정대리인명', '법정대리인연락처', '법정대리인관계', '메모'];
-      fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', (r as any).birth ?? '', r.current_carrier ?? '', (r as any).internet_carrier ?? '', (r as any).discount ?? '', r.desired_product ?? '', (r as any).bundling ?? '', (r as any).estimated_fee ?? '', (r as any).consult_time ?? '', getA(r), r.status ?? '', (r as any).is_minor ? 'Y' : '', (r as any).guardian_name ?? '', (r as any).guardian_phone ?? '', (r as any).guardian_relation ?? '', r.memo ?? ''];
-    } else {
-      hdrs = ['접수일시', '고객명', '연락처', '현재통신사', '희망기종', '희망상품', '캠페인', '담당자', '상담상태', '채널', '메모'];
-      fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', r.current_carrier ?? '', r.desired_device ?? '', r.desired_product ?? '', r.campaign_name ?? '', getA(r), r.status ?? '', r.channel ?? '', r.memo ?? ''];
+    try {
+      const DQ = String.fromCharCode(34);
+      const esc = (v: unknown) => { const s = String(v ?? '').replace(new RegExp(DQ, 'g'), DQ + DQ); return DQ + s + DQ; };
+      const r2c = (cols: unknown[]) => cols.map(esc).join(',');
+      const getA = (r: any) => {
+        if (!r.assigned_to) return '';
+        const f = staff.find((s: any) => s.user_id === r.assigned_to);
+        return f?.display_name ?? f?.name ?? r.assigned_to;
+      };
+      const selSet = new Set(bulk.selectedIds);
+      const allSelected = mode === 'selected' ? rows.filter(r => selSet.has(r.id)) : null;
+      const base = mode === 'all' ? rows : mode === 'selected' ? (allSelected ?? []) : filtered;
+
+      if (base.length === 0) {
+        toast.error('내보낼 데이터가 없습니다');
+        return;
+      }
+
+      let hdrs: string[];
+      let fn: (r: any) => unknown[];
+      if (sourceTab === 'allinone') {
+        hdrs = ['접수일시', '고객명', '연락처', '생년월일', '휴대폰통신사', '인터넷통신사', '진행방식', '요금제', '결합인원', '예상월요금', '상담가능시간', '담당자', '상담상태', '미성년자', '법정대리인명', '법정대리인연락처', '법정대리인관계', '메모'];
+        fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', (r as any).birth ?? '', r.current_carrier ?? '', (r as any).internet_carrier ?? '', (r as any).discount ?? '', r.desired_product ?? '', (r as any).bundling ?? '', (r as any).estimated_fee ?? '', (r as any).consult_time ?? '', getA(r), r.status ?? '', (r as any).is_minor ? 'Y' : '', (r as any).guardian_name ?? '', (r as any).guardian_phone ?? '', (r as any).guardian_relation ?? '', r.memo ?? ''];
+      } else {
+        hdrs = ['접수일시', '고객명', '연락처', '현재통신사', '희망기종', '희망상품', '캠페인', '담당자', '상담상태', '채널', '메모'];
+        fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', r.current_carrier ?? '', r.desired_device ?? '', r.desired_product ?? '', r.campaign_name ?? '', getA(r), r.status ?? '', r.channel ?? '', r.memo ?? ''];
+      }
+      const csvRows = base.map(r => r2c(fn(r)));
+      const bom = '\uFEFF';
+      const csv = bom + [r2c(hdrs), ...csvRows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const tl = sourceTab === 'meta' ? '메타' : sourceTab === 'dogmaru' ? '도그마루' : sourceTab === 'udak' ? '유닥' : sourceTab === 'allinone' ? '올인원' : '기타인입';
+      const ml = mode === 'all' ? '전체' : mode === 'selected' ? '선택' : '필터';
+      const dt = new Date().toISOString().slice(0, 10);
+      const filename = '리드_' + tl + '_' + ml + '_' + dt + '.csv';
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      // 모바일 브라우저/웹뷰에서 위 a.click()이 씹히는 경우 대비 — 새 탭으로 폴백
+      // (다운로드 안 되고 그냥 열리기만 해도, 사용자가 길게 눌러 저장할 수 있음)
+      window.setTimeout(() => {
+        try { window.open(url, '_blank'); } catch { /* 폴백 실패는 무시 — 이미 위에서 시도함 */ }
+      }, 150);
+
+      window.setTimeout(() => URL.revokeObjectURL(url), 15000);
+      toast.success(`${base.length}건 CSV 생성 완료 (${(blob.size / 1024).toFixed(0)}KB)`, {
+        description: '다운로드가 안 뜨면 방금 열린 새 탭에서 길게 눌러 저장해주세요.',
+      });
+    } catch (e) {
+      toast.error('다운로드 실패', { description: e instanceof Error ? e.message : String(e) });
     }
-    const csvRows = base.map(r => r2c(fn(r)));
-    const bom = '\uFEFF';
-    const csv = bom + [r2c(hdrs), ...csvRows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const tl = sourceTab === 'meta' ? '메타' : sourceTab === 'dogmaru' ? '도그마루' : sourceTab === 'udak' ? '유닥' : sourceTab === 'allinone' ? '올인원' : '기타인입';
-    const ml = mode === 'all' ? '전체' : mode === 'selected' ? '선택' : '필터';
-    const dt = new Date().toISOString().slice(0, 10);
-    a.download = '리드_' + tl + '_' + ml + '_' + dt + '.csv';
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
