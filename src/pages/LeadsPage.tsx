@@ -1,4 +1,5 @@
 import { lazy, memo, startTransition, Suspense, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
@@ -57,6 +58,28 @@ import { logLeadStatusChange } from "@/services/workReport/activityLogService";
 // 무거운(1k+ LOC) 페이지 — 사용자가 [기타인입] 탭을 처음 클릭할 때만 로드해서
 // 메타/도그마루 탭의 초기 진입과 탭 전환 응답성을 잡아준다.
 const ChannelIntakePage = lazy(() => import("@/pages/ChannelIntakePage"));
+
+// ── 유닥 스냅샷 텍스트 파서 ─────────────────────────────────────
+// device.html 저장 시 "항목명 금액원 항목명 금액원 ..." 형태로 공백만 남기고
+// 이어붙여 저장하므로(줄바꿈 제거), 랜딩 주문신청 모달과 동일한 행(항목-금액)
+// 레이아웃으로 다시 보여주려면 "금액원" 패턴을 기준으로 잘라 재구성해야 한다.
+// 예: "플러스플랜115 115,000원 월 통신요금 115,000원"
+//  -> [{label:"플러스플랜115", amount:"115,000원"}, {label:"월 통신요금", amount:"115,000원"}]
+// 꼬리에 붙는 "할부 연 5.9%" 같은 금액 없는 안내문은 note로 별도 반환한다.
+const parseFeeRows = (text: string): { rows: { label: string; amount: string }[]; note: string } => {
+  if (!text) return { rows: [], note: "" };
+  const amountPattern = /-?[\d,]+원/g;
+  const amounts = text.match(amountPattern) ?? [];
+  const segments = text.split(amountPattern);
+  const rows: { label: string; amount: string }[] = [];
+  for (let i = 0; i < amounts.length; i++) {
+    const label = (segments[i] ?? "").trim();
+    if (label) rows.push({ label, amount: amounts[i] });
+  }
+  const note = (segments[segments.length - 1] ?? "").trim();
+  return { rows, note };
+};
+
 // ─── 모바일 영업 전용 뷰 ───────────────────────────────────────────────────
 // ── 통일 상태값 (메타/유닥/올인원/기타인입 공통) ──────────
 // 신규 접수 → 부재 → 재케어 → 실패 / 성공 → 개통완료
@@ -1432,8 +1455,13 @@ export default function LeadsPage() {
             const item = section.replace('[요금제별혜택]', '').split('|').map(s => s.trim()).find(it => it.startsWith(label + ':'));
             return item ? item.slice(item.indexOf(':') + 1).trim() : '';
           };
-          hdrs = ['접수일시', '고객명', '연락처', '생년월일', '현재통신사', '희망기종', '용량', '컬러', '희망상품', '캠페인', '담당자', '상담상태', '워치', '탭', '프리미엄', '데일리', '메모'];
-          fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', (r as any).birth ?? '', r.current_carrier ?? '', r.desired_device ?? '', (r as any).storage ?? '', (r as any).color ?? '', r.desired_product ?? '', r.campaign_name ?? '', getA(r), r.status ?? '', catPick((r as any).additional_benefits, '워치'), catPick((r as any).additional_benefits, '탭'), catPick((r as any).additional_benefits, '프리미엄플러스'), catPick((r as any).additional_benefits, '데일리플러스'), r.memo ?? ''];
+          const getSectionCSV = (raw: string | null | undefined, label: string) => {
+            const parts = (raw ?? '').split(' / ');
+            const found = parts.find(s => s.trim().startsWith(label));
+            return found ? found.replace(label, '').trim() : '';
+          };
+          hdrs = ['접수일시', '고객명', '연락처', '생년월일', '현재통신사', '희망기종', '용량', '컬러', '희망상품', '할인방식', '요금상세', '지원금상세', '요금제별혜택', '예상월납부금액', '캠페인', '담당자', '상담상태', '워치', '탭', '프리미엄', '데일리', '메모'];
+          fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', (r as any).birth ?? '', r.current_carrier ?? '', r.desired_device ?? '', (r as any).storage ?? '', (r as any).color ?? '', r.desired_product ?? '', (r as any).discount ?? '', getSectionCSV((r as any).additional_benefits, '[요금상세]'), getSectionCSV((r as any).additional_benefits, '[지원금상세]'), getSectionCSV((r as any).additional_benefits, '[요금제별혜택]'), (r as any).estimated_fee ?? '', r.campaign_name ?? '', getA(r), r.status ?? '', catPick((r as any).additional_benefits, '워치'), catPick((r as any).additional_benefits, '탭'), catPick((r as any).additional_benefits, '프리미엄플러스'), catPick((r as any).additional_benefits, '데일리플러스'), r.memo ?? ''];
         } else {
           hdrs = ['접수일시', '고객명', '연락처', '현재통신사', '희망기종', '희망상품', '캠페인', '담당자', '상담상태', '채널', '메모'];
           fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', r.current_carrier ?? '', r.desired_device ?? '', r.desired_product ?? '', r.campaign_name ?? '', getA(r), r.status ?? '', r.channel ?? '', r.memo ?? ''];
@@ -2832,10 +2860,6 @@ export default function LeadsPage() {
               <TableHead className="text-foreground font-bold w-28 text-xs whitespace-nowrap">최종액션</TableHead>
               {sourceTab !== "udak" && sourceTab !== "allinone" && <TableHead className="text-foreground font-bold w-16 text-center">해피콜</TableHead>}
               {sourceTab !== "udak" && sourceTab !== "allinone" && <TableHead className="text-foreground font-bold w-16 text-center">영업</TableHead>}
-              {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-16 text-center text-xs">워치</TableHead>}
-              {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-16 text-center text-xs">탭</TableHead>}
-              {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-16 text-center text-xs">프리미엄</TableHead>}
-              {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-16 text-center text-xs">데일리</TableHead>}
               <TableHead className="text-foreground font-bold w-20 text-center">관리</TableHead>
             </TableRow>
           </TableHeader>
@@ -3014,30 +3038,6 @@ export default function LeadsPage() {
                     ) : <span className="text-muted-foreground text-[11px]">-</span>}
                   </TableCell>
                 )}
-                {sourceTab === "udak" && (() => {
-                  const raw = r.additional_benefits ?? "";
-                  const benefitSection = raw.split(" / ").find(s => s.trim().startsWith("[요금제별혜택]")) ?? "";
-                  const items = benefitSection.replace("[요금제별혜택]", "").split("|").map(s => s.trim()).filter(Boolean);
-                  const findCat = (label: string) => items.find(it => it.startsWith(label + ":"));
-                  const fmtItem = (it?: string) => it ? it.slice(it.indexOf(":") + 1).trim() : null;
-                  const watchPick = fmtItem(findCat("워치"));
-                  const tabPick = fmtItem(findCat("탭"));
-                  const premiumPick = fmtItem(findCat("프리미엄플러스"));
-                  const dailyPick = fmtItem(findCat("데일리플러스"));
-                  const cellFor = (v: string | null, color: string) => (
-                    <TableCell className="text-center py-1.5 text-[10px]" title={v ?? ""}>
-                      {v ? <span className={`font-bold ${color}`}>{v.length > 8 ? v.slice(0, 7) + "…" : v}</span> : <span className="text-muted-foreground">-</span>}
-                    </TableCell>
-                  );
-                  return (
-                    <>
-                      {cellFor(watchPick, "text-emerald-600")}
-                      {cellFor(tabPick, "text-blue-600")}
-                      {cellFor(premiumPick, "text-purple-600")}
-                      {cellFor(dailyPick, "text-pink-600")}
-                    </>
-                  );
-                })()}
                 <TableCell className="text-center py-1.5" onClick={(e) => e.stopPropagation()}>
                   <Button size="sm" variant="ghost" onClick={() => { if (failModal) return; setOpenLead(r); }}>
                     상세
@@ -3131,7 +3131,7 @@ export default function LeadsPage() {
             )}
           </div>
         )}
-        {/* 유닥 스냅샷 카드 */}
+        {/* 유닥 스냅샷 카드 — 고객정보 → 제품정보 → 요금·혜택정보 3단 위계로 구성 */}
                 {(openLead.channel === "유닥" || openLead.channel === "메타광고") && openLead.desired_device && (() => {
                   const rawBenefits = openLead.additional_benefits ?? "";
                   const isNewFormat = rawBenefits.includes("[요금상세]") || rawBenefits.includes("[지원금상세]") || rawBenefits.includes("[요금제별혜택]");
@@ -3145,60 +3145,117 @@ export default function LeadsPage() {
                   const benefitSection = getSection("[요금제별혜택]");
                   const benefitItems = benefitSection.split("|").map(s => s.trim()).filter(Boolean);
                   const catColor: Record<string, string> = { "워치": "bg-emerald-100 text-emerald-700 border-emerald-200", "탭": "bg-blue-100 text-blue-700 border-blue-200", "프리미엄플러스": "bg-purple-100 text-purple-700 border-purple-200", "데일리플러스": "bg-pink-100 text-pink-700 border-pink-200" };
+                  const feeParsed = parseFeeRows(feeSection);
+                  const subsidyParsed = parseFeeRows(subsidySection);
+                  const jointypeLabel = (openLead as any).jointype === "번호이동" ? "번호이동" : (openLead as any).jointype === "기기변경" ? "기기변경" : (openLead as any).jointype;
+                  const FeeRowsTable = ({ rows, note }: { rows: { label: string; amount: string }[]; note: string }) => (
+                    <div className="text-[11px] bg-white rounded-lg border border-orange-100 overflow-hidden">
+                      {rows.map((r, i) => {
+                        const isNegative = r.amount.trim().startsWith("-");
+                        const isTotalRow = /^(기기값 원금|월 통신요금)$/.test(r.label);
+                        return (
+                          <div key={i} className={`flex items-center justify-between px-2 py-1.5 ${i > 0 ? "border-t border-orange-50" : ""} ${isTotalRow ? "bg-orange-50/60" : ""}`}>
+                            <span className={`text-orange-900/80 ${isTotalRow ? "font-semibold" : ""}`}>{r.label}</span>
+                            <span className={`font-bold tabular-nums ${isNegative ? "text-rose-600" : isTotalRow ? "text-orange-900" : "text-orange-700"}`}>{r.amount}</span>
+                          </div>
+                        );
+                      })}
+                      {note && <div className="px-2 py-1 text-[10px] text-orange-400 text-right border-t border-orange-50">{note}</div>}
+                    </div>
+                  );
+                  const SectionLabel = ({ children }: { children: ReactNode }) => (
+                    <div className="text-[10px] font-bold text-orange-500 tracking-wide mb-1.5">{children}</div>
+                  );
                   return (
                     <div className="mx-3 my-3 rounded-xl border border-orange-200 bg-orange-50 p-3">
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-2 mb-3">
                         <span className="text-base">📱</span>
                         <span className="font-bold text-sm">{openLead.desired_device}</span>
                         <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 border border-orange-200">{openLead.channel}</span>
                       </div>
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {openLead.current_carrier && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.current_carrier}</span>}
-                        {(openLead as any).birth && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">🎂 {(openLead as any).birth}</span>}
-                        {openLead.storage && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.storage}</span>}
-                        {openLead.color && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.color}</span>}
-                        {openLead.desired_product && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.desired_product}</span>}
-                        {openLead.discount && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.discount}</span>}
-                      </div>
-                      {isNewFormat ? (
-                        <>
-                          {benefitItems.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mb-2">
-                              {benefitItems.map((it, i) => {
-                                const catLabel = it.slice(0, it.indexOf(":"));
-                                const rest = it.slice(it.indexOf(":") + 1).trim();
-                                return <span key={i} className={`text-[11px] px-2 py-0.5 rounded-full font-medium border ${catColor[catLabel] ?? "bg-orange-100 text-orange-700 border-orange-200"}`}>🎁 {catLabel} · {rest}</span>;
-                              })}
-                            </div>
-                          )}
-                          {feeSection && (
-                            <div className="mt-2 pt-2 border-t border-orange-200">
-                              <div className="text-[10px] font-bold text-orange-700 mb-1">💳 요금 상세 (복지·결합할인 반영)</div>
-                              <div className="text-[11px] text-orange-800 bg-white rounded-lg p-2 border border-orange-100 leading-relaxed">{feeSection}</div>
-                            </div>
-                          )}
-                          {subsidySection && (
-                            <div className="mt-2">
-                              <div className="text-[10px] font-bold text-orange-700 mb-1">🏷️ 지원금 상세 (기기값)</div>
-                              <div className="text-[11px] text-orange-800 bg-white rounded-lg p-2 border border-orange-100 leading-relaxed">{subsidySection}</div>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        rawBenefits && (
-                          <div className="flex flex-wrap gap-1">
-                            {rawBenefits.split(",").filter(Boolean).map((b, i) => {
-                              const bonusMap: Record<string,string> = {
-                                watch:"갤럭시 워치", tab:"갤럭시 탭", internet:"인터넷",
-                                ott_disney:"디즈니+", ott_netflix:"넷플릭스", ott_tving:"티빙", ott_youtube:"유튜브 프리미엄",
-                              };
-                              return <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 font-medium">🎁 {bonusMap[b.trim()] ?? b.trim()}</span>;
-                            })}
+
+                      {/* ① 고객정보 — 고객명 / 통신사 / 생년월일 / 연락처 */}
+                      <div className="mb-3">
+                        <SectionLabel>👤 고객정보</SectionLabel>
+                        <div className="bg-white rounded-lg border border-orange-100 overflow-hidden text-[11px]">
+                          <div className="grid grid-cols-2">
+                            <div className="px-2 py-1.5 border-r border-b border-orange-50"><span className="text-orange-500">고객명</span><div className="font-semibold text-orange-900 mt-0.5">{openLead.customer_name ?? openLead.name ?? "-"}</div></div>
+                            <div className="px-2 py-1.5 border-b border-orange-50"><span className="text-orange-500">통신사</span><div className="font-semibold text-orange-900 mt-0.5">{openLead.current_carrier ?? "-"}</div></div>
+                            <div className="px-2 py-1.5 border-r border-orange-50"><span className="text-orange-500">생년월일</span><div className="font-semibold text-orange-900 mt-0.5">{(openLead as any).birth ?? "-"}</div></div>
+                            <div className="px-2 py-1.5"><span className="text-orange-500">연락처</span><div className="font-semibold text-orange-900 mt-0.5">{openLead.customer_phone ?? openLead.phone ?? "-"}</div></div>
                           </div>
-                        )
-                      )}
+                        </div>
+                      </div>
+
+                      {/* ② 제품정보 — 선택한 제품 / 용량 / 컬러 */}
+                      <div className="mb-3">
+                        <SectionLabel>📦 제품정보</SectionLabel>
+                        <div className="bg-white rounded-lg border border-orange-100 overflow-hidden text-[11px]">
+                          <div className="px-2 py-1.5 border-b border-orange-50 flex items-center justify-between">
+                            <span className="text-orange-500">선택한 제품</span>
+                            <span className="font-semibold text-orange-900">{openLead.desired_device ?? "-"}{jointypeLabel && ` · ${jointypeLabel}`}</span>
+                          </div>
+                          <div className="grid grid-cols-2">
+                            <div className="px-2 py-1.5 border-r border-orange-50"><span className="text-orange-500">용량</span><div className="font-semibold text-orange-900 mt-0.5">{openLead.storage ?? "-"}</div></div>
+                            <div className="px-2 py-1.5"><span className="text-orange-500">컬러</span><div className="font-semibold text-orange-900 mt-0.5">{openLead.color ?? "-"}</div></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* ③ 요금·혜택정보 — 선택한 요금제 / 요금제별 혜택 (요금상세·지원금상세는 이 섹션에 종속) */}
+                      <div>
+                        <SectionLabel>💳 요금·혜택정보</SectionLabel>
+                        <div className="space-y-2">
+                          <div className="bg-white rounded-lg border border-orange-100 px-2 py-1.5 text-[11px] flex items-center justify-between">
+                            <span className="text-orange-500">선택한 요금제</span>
+                            <span className="font-semibold text-orange-900">{openLead.desired_product ?? "-"}{openLead.discount && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 border border-orange-200">{openLead.discount}</span>}</span>
+                          </div>
+                          {isNewFormat ? (
+                            <>
+                              {benefitItems.length > 0 && (
+                                <div>
+                                  <div className="text-[10px] font-bold text-orange-700 mb-1">요금제별 혜택</div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {benefitItems.map((it, i) => {
+                                      const catLabel = it.slice(0, it.indexOf(":"));
+                                      const rest = it.slice(it.indexOf(":") + 1).trim();
+                                      return <span key={i} className={`text-[11px] px-2 py-0.5 rounded-full font-medium border ${catColor[catLabel] ?? "bg-orange-100 text-orange-700 border-orange-200"}`}>{catLabel} · {rest}</span>;
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                              {feeParsed.rows.length > 0 && (
+                                <div>
+                                  <div className="text-[10px] font-bold text-orange-700 mb-1">요금 상세</div>
+                                  <FeeRowsTable rows={feeParsed.rows} note={feeParsed.note} />
+                                </div>
+                              )}
+                              {subsidyParsed.rows.length > 0 && (
+                                <div>
+                                  <div className="text-[10px] font-bold text-orange-700 mb-1">지원금 상세</div>
+                                  <FeeRowsTable rows={subsidyParsed.rows} note={subsidyParsed.note} />
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            rawBenefits && (
+                              <div className="flex flex-wrap gap-1">
+                                {rawBenefits.split(",").filter(Boolean).map((b, i) => {
+                                  const bonusMap: Record<string,string> = {
+                                    watch:"갤럭시 워치", tab:"갤럭시 탭", internet:"인터넷",
+                                    ott_disney:"디즈니+", ott_netflix:"넷플릭스", ott_tving:"티빙", ott_youtube:"유튜브 프리미엄",
+                                  };
+                                  return <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 font-medium">🎁 {bonusMap[b.trim()] ?? b.trim()}</span>;
+                                })}
+                              </div>
+                            )
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 총액 — 위계 밖 최하단 강조 */}
                       {openLead.estimated_fee && (
-                        <div className="mt-2 pt-2 border-t border-orange-200">
+                        <div className="mt-3 pt-2 border-t border-orange-200">
                           <div className="flex justify-between items-center">
                             <span className="text-[11px] text-orange-700 font-semibold">💰 예상 월 납부금액</span>
                             <span className="text-sm font-black text-orange-600">{openLead.estimated_fee.toLocaleString()}원/월</span>
@@ -3211,6 +3268,7 @@ export default function LeadsPage() {
                       {openLead.utm_campaign && <div className="mt-2 text-[10px] text-orange-500 font-medium">📣 {openLead.utm_campaign}</div>}
                     </div>
                   );
+
                 })()}
                 {/* ── 편집 가능한 고객 기본 정보 ── */}
                 <div className="p-3 border-b border-border/30">
@@ -3248,6 +3306,31 @@ export default function LeadsPage() {
                     )}
                     <InfoRow label="결합 인원" value={(openLead as any).bundling} right={{ label: "예상 월요금", value: (openLead as any).estimated_fee ? Number((openLead as any).estimated_fee).toLocaleString() + "원" : null }} />
                     <InfoRow label="상담 희망 시간" value={(openLead as any).consult_time} right={undefined} />
+                  </>
+                ) : openLead.channel === "유닥" ? (
+                  // 유닥은 위 스냅샷 카드에서 현재통신사/생년월일/희망상품/용량/컬러/할인방식을
+                  // 이미 다 보여주므로 여기서는 스냅샷에 없는 항목만 남긴다 (중복 표시 방지).
+                  <>
+                    {(openLead.birth || openLead.consult_time) && (
+                      <InfoRow label="상담 희망 시간" value={openLead.consult_time} right={undefined} />
+                    )}
+                    {(openLead as any).is_minor && (
+                      <div className="mt-3 p-3 rounded-xl border-2 border-red-300 bg-red-50 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">⚠️ 미성년자</span>
+                          <span className="text-[11px] text-red-500">법정대리인 정보 확인 필요</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                          <div><span className="text-muted-foreground">이름</span><div className="font-semibold text-foreground mt-0.5">{(openLead as any).guardian_name ?? "–"}</div></div>
+                          <div><span className="text-muted-foreground">관계</span><div className="font-semibold text-foreground mt-0.5">{(openLead as any).guardian_relation ?? "–"}</div></div>
+                          <div><span className="text-muted-foreground">연락처</span><div className="font-semibold text-foreground mt-0.5">{(openLead as any).guardian_phone ?? "–"}</div></div>
+                          <div><span className="text-muted-foreground">생년월일</span><div className="font-semibold text-foreground mt-0.5">{openLead.birth ?? "–"}</div></div>
+                        </div>
+                      </div>
+                    )}
+                    {(openLead.channel || openLead.utm_campaign) && (
+                      <InfoRow label="채널" value={openLead.channel} right={{ label: "UTM", value: openLead.utm_campaign }} />
+                    )}
                   </>
                 ) : (
                   <>
