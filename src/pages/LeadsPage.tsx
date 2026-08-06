@@ -1426,8 +1426,18 @@ export default function LeadsPage() {
         hdrs = ['접수일시', '고객명', '연락처', '생년월일', '휴대폰통신사', '인터넷통신사', '진행방식', '요금제', '결합인원', '예상월요금', '상담가능시간', '담당자', '상담상태', '미성년자', '법정대리인명', '법정대리인연락처', '법정대리인관계', '메모'];
         fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', (r as any).birth ?? '', r.current_carrier ?? '', (r as any).internet_carrier ?? '', (r as any).discount ?? '', r.desired_product ?? '', (r as any).bundling ?? '', (r as any).estimated_fee ?? '', (r as any).consult_time ?? '', getA(r), r.status ?? '', (r as any).is_minor ? 'Y' : '', (r as any).guardian_name ?? '', (r as any).guardian_phone ?? '', (r as any).guardian_relation ?? '', r.memo ?? ''];
       } else {
-        hdrs = ['접수일시', '고객명', '연락처', '현재통신사', '희망기종', '희망상품', '캠페인', '담당자', '상담상태', '채널', '메모'];
-        fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', r.current_carrier ?? '', r.desired_device ?? '', r.desired_product ?? '', r.campaign_name ?? '', getA(r), r.status ?? '', r.channel ?? '', r.memo ?? ''];
+        if (sourceTab === 'udak') {
+          const catPick = (raw: string | null | undefined, label: string) => {
+            const section = (raw ?? '').split(' / ').find(s => s.trim().startsWith('[요금제별혜택]')) ?? '';
+            const item = section.replace('[요금제별혜택]', '').split('|').map(s => s.trim()).find(it => it.startsWith(label + ':'));
+            return item ? item.slice(item.indexOf(':') + 1).trim() : '';
+          };
+          hdrs = ['접수일시', '고객명', '연락처', '생년월일', '현재통신사', '희망기종', '용량', '컬러', '희망상품', '캠페인', '담당자', '상담상태', '워치', '탭', '프리미엄', '데일리', '메모'];
+          fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', (r as any).birth ?? '', r.current_carrier ?? '', r.desired_device ?? '', (r as any).storage ?? '', (r as any).color ?? '', r.desired_product ?? '', r.campaign_name ?? '', getA(r), r.status ?? '', catPick((r as any).additional_benefits, '워치'), catPick((r as any).additional_benefits, '탭'), catPick((r as any).additional_benefits, '프리미엄플러스'), catPick((r as any).additional_benefits, '데일리플러스'), r.memo ?? ''];
+        } else {
+          hdrs = ['접수일시', '고객명', '연락처', '현재통신사', '희망기종', '희망상품', '캠페인', '담당자', '상담상태', '채널', '메모'];
+          fn = r => [r.registration_date ?? r.created_at?.slice(0, 10) ?? '', r.customer_name ?? r.name ?? '', r.customer_phone ?? r.phone ?? '', r.current_carrier ?? '', r.desired_device ?? '', r.desired_product ?? '', r.campaign_name ?? '', getA(r), r.status ?? '', r.channel ?? '', r.memo ?? ''];
+        }
       }
       const csvRows = base.map(r => r2c(fn(r)));
       const bom = '\uFEFF';
@@ -2798,6 +2808,9 @@ export default function LeadsPage() {
               {sourceTab === "allinone" && <TableHead className="text-foreground font-bold text-xs whitespace-nowrap">휴대폰 통신사</TableHead>}
               {sourceTab === "allinone" && <TableHead className="text-foreground font-bold text-xs whitespace-nowrap">인터넷 통신사</TableHead>}
               {sourceTab !== "allinone" && <TableHead className="text-foreground font-bold w-[160px] text-xs whitespace-nowrap">희망 기종</TableHead>}
+              {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-[70px] text-xs whitespace-nowrap">생년월일</TableHead>}
+              {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-[70px] text-xs whitespace-nowrap">용량</TableHead>}
+              {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-[80px] text-xs whitespace-nowrap">컬러</TableHead>}
               {sourceTab === "allinone" && <TableHead className="text-foreground font-bold text-xs whitespace-nowrap">진행방식</TableHead>}
               {sourceTab === "allinone" && <TableHead className="text-foreground font-bold text-xs whitespace-nowrap">요금제</TableHead>}
               {sourceTab === "allinone" && <TableHead className="text-foreground font-bold text-xs whitespace-nowrap">결합인원</TableHead>}
@@ -2819,9 +2832,10 @@ export default function LeadsPage() {
               <TableHead className="text-foreground font-bold w-28 text-xs whitespace-nowrap">최종액션</TableHead>
               {sourceTab !== "udak" && sourceTab !== "allinone" && <TableHead className="text-foreground font-bold w-16 text-center">해피콜</TableHead>}
               {sourceTab !== "udak" && sourceTab !== "allinone" && <TableHead className="text-foreground font-bold w-16 text-center">영업</TableHead>}
-              {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-16 text-center text-xs">2ND</TableHead>}
-              {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-16 text-center text-xs">인터넷</TableHead>}
-              {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-16 text-center text-xs">OTT</TableHead>}
+              {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-16 text-center text-xs">워치</TableHead>}
+              {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-16 text-center text-xs">탭</TableHead>}
+              {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-16 text-center text-xs">프리미엄</TableHead>}
+              {sourceTab === "udak" && <TableHead className="text-foreground font-bold w-16 text-center text-xs">데일리</TableHead>}
               <TableHead className="text-foreground font-bold w-20 text-center">관리</TableHead>
             </TableRow>
           </TableHeader>
@@ -2896,6 +2910,9 @@ export default function LeadsPage() {
                 {sourceTab === "allinone" && <TableCell className="text-foreground py-1.5 whitespace-nowrap">{(r as any).carrier ?? r.current_carrier ?? "-"}</TableCell>}
                 {sourceTab === "allinone" && <TableCell className="text-foreground py-1.5 whitespace-nowrap">{(r as any).internet_carrier ?? "-"}</TableCell>}
                 {sourceTab !== "allinone" && <TableCell className="text-foreground text-xs whitespace-nowrap py-1.5" title={r.desired_device ?? ""}>{r.desired_device ?? "-"}</TableCell>}
+                {sourceTab === "udak" && <TableCell className="text-foreground text-xs whitespace-nowrap py-1.5">{r.birth ?? "-"}</TableCell>}
+                {sourceTab === "udak" && <TableCell className="text-foreground text-xs whitespace-nowrap py-1.5">{r.storage ?? "-"}</TableCell>}
+                {sourceTab === "udak" && <TableCell className="text-foreground text-xs whitespace-nowrap py-1.5">{r.color ?? "-"}</TableCell>}
                 {sourceTab === "allinone" && <TableCell className="text-foreground text-xs py-1.5 whitespace-nowrap">{(r as any).jointype ?? "-"}</TableCell>}
                 {sourceTab === "allinone" && <TableCell className="text-foreground text-xs py-1.5 whitespace-nowrap">{(r as any).desired_product ?? "-"}</TableCell>}
                 {sourceTab === "allinone" && <TableCell className="text-foreground text-xs py-1.5 whitespace-nowrap">{(r as any).bundling ?? "-"}</TableCell>}
@@ -2998,35 +3015,26 @@ export default function LeadsPage() {
                   </TableCell>
                 )}
                 {sourceTab === "udak" && (() => {
-                  const benefits = (r.additional_benefits ?? "").split(",").map(b => b.trim());
-                  const has = (k: string) => benefits.includes(k);
-                  const plan = r.desired_product ?? "";
-                  const is95or115 = plan.includes("95") || plan.includes("115");
-                  const ott = benefits.find(b => b.startsWith("ott_"));
-                  const ottMap: Record<string,string> = { ott_disney:"디즈니+", ott_netflix:"넷플릭스", ott_tving:"티빙", ott_youtube:"유튜브" };
+                  const raw = r.additional_benefits ?? "";
+                  const benefitSection = raw.split(" / ").find(s => s.trim().startsWith("[요금제별혜택]")) ?? "";
+                  const items = benefitSection.replace("[요금제별혜택]", "").split("|").map(s => s.trim()).filter(Boolean);
+                  const findCat = (label: string) => items.find(it => it.startsWith(label + ":"));
+                  const fmtItem = (it?: string) => it ? it.slice(it.indexOf(":") + 1).trim() : null;
+                  const watchPick = fmtItem(findCat("워치"));
+                  const tabPick = fmtItem(findCat("탭"));
+                  const premiumPick = fmtItem(findCat("프리미엄플러스"));
+                  const dailyPick = fmtItem(findCat("데일리플러스"));
+                  const cellFor = (v: string | null, color: string) => (
+                    <TableCell className="text-center py-1.5 text-[10px]" title={v ?? ""}>
+                      {v ? <span className={`font-bold ${color}`}>{v.length > 8 ? v.slice(0, 7) + "…" : v}</span> : <span className="text-muted-foreground">-</span>}
+                    </TableCell>
+                  );
                   return (
                     <>
-                      <TableCell className="text-center py-1.5 text-[10px]">
-                        {is95or115 ? (
-                          <div className="flex flex-col gap-0.5 items-center">
-                            {has("watch") && <span className="text-emerald-600 font-bold">⌚</span>}
-                            {has("tab") && <span className="text-blue-600 font-bold">📱</span>}
-                            {!has("watch") && !has("tab") && <span className="text-muted-foreground">-</span>}
-                          </div>
-                        ) : <span className="text-muted-foreground">-</span>}
-                      </TableCell>
-                      <TableCell className="text-center py-1.5 text-[10px]">
-                        {is95or115 ? (
-                          has("internet")
-                            ? <span className="text-emerald-600 font-bold">O</span>
-                            : <span className="text-rose-500 font-bold">X</span>
-                        ) : <span className="text-muted-foreground">-</span>}
-                      </TableCell>
-                      <TableCell className="text-center py-1.5 text-[10px]">
-                        {is95or115 && ott
-                          ? <span className="text-purple-600 font-bold">{ottMap[ott] ?? ott}</span>
-                          : <span className="text-muted-foreground">-</span>}
-                      </TableCell>
+                      {cellFor(watchPick, "text-emerald-600")}
+                      {cellFor(tabPick, "text-blue-600")}
+                      {cellFor(premiumPick, "text-purple-600")}
+                      {cellFor(dailyPick, "text-pink-600")}
                     </>
                   );
                 })()}
@@ -3124,45 +3132,86 @@ export default function LeadsPage() {
           </div>
         )}
         {/* 유닥 스냅샷 카드 */}
-                {(openLead.channel === "유닥" || openLead.channel === "메타광고") && openLead.desired_device && (
-                  <div className="mx-3 my-3 rounded-xl border border-orange-200 bg-orange-50 p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-base">📱</span>
-                      <span className="font-bold text-sm">{openLead.desired_device}</span>
-                      <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 border border-orange-200">{openLead.channel}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {openLead.current_carrier && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.current_carrier}</span>}
-                      {openLead.storage && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.storage}</span>}
-                      {openLead.color && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.color}</span>}
-                      {openLead.desired_product && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.desired_product}</span>}
-                      {openLead.discount && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.discount}</span>}
-                    </div>
-                    {openLead.additional_benefits && (
-                      <div className="flex flex-wrap gap-1">
-                        {openLead.additional_benefits.split(",").filter(Boolean).map((b, i) => {
-                          const bonusMap: Record<string,string> = {
-                            watch:"갤럭시 워치", tab:"갤럭시 탭", internet:"인터넷",
-                            ott_disney:"디즈니+", ott_netflix:"넷플릭스", ott_tving:"티빙", ott_youtube:"유튜브 프리미엄",
-                          };
-                          return <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 font-medium">🎁 {bonusMap[b.trim()] ?? b.trim()}</span>;
-                        })}
+                {(openLead.channel === "유닥" || openLead.channel === "메타광고") && openLead.desired_device && (() => {
+                  const rawBenefits = openLead.additional_benefits ?? "";
+                  const isNewFormat = rawBenefits.includes("[요금상세]") || rawBenefits.includes("[지원금상세]") || rawBenefits.includes("[요금제별혜택]");
+                  const getSection = (label: string) => {
+                    const parts = rawBenefits.split(" / ");
+                    const found = parts.find(s => s.trim().startsWith(label));
+                    return found ? found.replace(label, "").trim() : "";
+                  };
+                  const feeSection = getSection("[요금상세]");
+                  const subsidySection = getSection("[지원금상세]");
+                  const benefitSection = getSection("[요금제별혜택]");
+                  const benefitItems = benefitSection.split("|").map(s => s.trim()).filter(Boolean);
+                  const catColor: Record<string, string> = { "워치": "bg-emerald-100 text-emerald-700 border-emerald-200", "탭": "bg-blue-100 text-blue-700 border-blue-200", "프리미엄플러스": "bg-purple-100 text-purple-700 border-purple-200", "데일리플러스": "bg-pink-100 text-pink-700 border-pink-200" };
+                  return (
+                    <div className="mx-3 my-3 rounded-xl border border-orange-200 bg-orange-50 p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-base">📱</span>
+                        <span className="font-bold text-sm">{openLead.desired_device}</span>
+                        <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 border border-orange-200">{openLead.channel}</span>
                       </div>
-                    )}
-                    {openLead.estimated_fee && (
-                      <div className="mt-2 pt-2 border-t border-orange-200">
-                        <div className="flex justify-between items-center">
-                          <span className="text-[11px] text-orange-700 font-semibold">💰 예상 월 부담금</span>
-                          <span className="text-sm font-black text-orange-600">{openLead.estimated_fee.toLocaleString()}원/월</span>
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {openLead.current_carrier && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.current_carrier}</span>}
+                        {(openLead as any).birth && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">🎂 {(openLead as any).birth}</span>}
+                        {openLead.storage && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.storage}</span>}
+                        {openLead.color && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.color}</span>}
+                        {openLead.desired_product && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.desired_product}</span>}
+                        {openLead.discount && <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-orange-200 font-medium">{openLead.discount}</span>}
+                      </div>
+                      {isNewFormat ? (
+                        <>
+                          {benefitItems.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {benefitItems.map((it, i) => {
+                                const catLabel = it.slice(0, it.indexOf(":"));
+                                const rest = it.slice(it.indexOf(":") + 1).trim();
+                                return <span key={i} className={`text-[11px] px-2 py-0.5 rounded-full font-medium border ${catColor[catLabel] ?? "bg-orange-100 text-orange-700 border-orange-200"}`}>🎁 {catLabel} · {rest}</span>;
+                              })}
+                            </div>
+                          )}
+                          {feeSection && (
+                            <div className="mt-2 pt-2 border-t border-orange-200">
+                              <div className="text-[10px] font-bold text-orange-700 mb-1">💳 요금 상세 (복지·결합할인 반영)</div>
+                              <div className="text-[11px] text-orange-800 bg-white rounded-lg p-2 border border-orange-100 leading-relaxed">{feeSection}</div>
+                            </div>
+                          )}
+                          {subsidySection && (
+                            <div className="mt-2">
+                              <div className="text-[10px] font-bold text-orange-700 mb-1">🏷️ 지원금 상세 (기기값)</div>
+                              <div className="text-[11px] text-orange-800 bg-white rounded-lg p-2 border border-orange-100 leading-relaxed">{subsidySection}</div>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        rawBenefits && (
+                          <div className="flex flex-wrap gap-1">
+                            {rawBenefits.split(",").filter(Boolean).map((b, i) => {
+                              const bonusMap: Record<string,string> = {
+                                watch:"갤럭시 워치", tab:"갤럭시 탭", internet:"인터넷",
+                                ott_disney:"디즈니+", ott_netflix:"넷플릭스", ott_tving:"티빙", ott_youtube:"유튜브 프리미엄",
+                              };
+                              return <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 font-medium">🎁 {bonusMap[b.trim()] ?? b.trim()}</span>;
+                            })}
+                          </div>
+                        )
+                      )}
+                      {openLead.estimated_fee && (
+                        <div className="mt-2 pt-2 border-t border-orange-200">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[11px] text-orange-700 font-semibold">💰 예상 월 납부금액</span>
+                            <span className="text-sm font-black text-orange-600">{openLead.estimated_fee.toLocaleString()}원/월</span>
+                          </div>
+                          {openLead.estimated_fee_memo && (
+                            <div className="text-[10px] text-orange-500 mt-0.5 text-right">({openLead.estimated_fee_memo})</div>
+                          )}
                         </div>
-                        {openLead.estimated_fee_memo && (
-                          <div className="text-[10px] text-orange-500 mt-0.5 text-right">({openLead.estimated_fee_memo})</div>
-                        )}
-                      </div>
-                    )}
-                    {openLead.utm_campaign && <div className="mt-2 text-[10px] text-orange-500 font-medium">📣 {openLead.utm_campaign}</div>}
-                  </div>
-                )}
+                      )}
+                      {openLead.utm_campaign && <div className="mt-2 text-[10px] text-orange-500 font-medium">📣 {openLead.utm_campaign}</div>}
+                    </div>
+                  );
+                })()}
                 {/* ── 편집 가능한 고객 기본 정보 ── */}
                 <div className="p-3 border-b border-border/30">
                   <div className="flex items-center justify-between mb-2">
