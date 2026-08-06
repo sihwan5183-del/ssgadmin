@@ -12,6 +12,10 @@
 //  건을 별도로 추적하기 위함.
 // v20260803-2: 상태(status)에도 "유심 MNP" 추가 — 단말 배송이 없는 유심 단독
 //  MNP 건은 확정→택배발송 흐름을 안 타므로, 자체 완료 상태로 별도 관리.
+// v20260806: 서류작성/온라인접수 독립 토글 추가 — 기존 status(확정/예약완료)는
+//  둘 중 하나만 표현 가능해서, 두 작업이 각각 따로 완료됐는지 동시에 추적하기
+//  위해 별도 boolean 컬럼으로 분리. status 값 자체는 건드리지 않음.
+//  개통완료 토글은 기존 activated_at 컬럼을 그대로 재사용 (신규 컬럼 추가 없음).
 
 export type ReservationStatus =
   | '신규'
@@ -106,6 +110,10 @@ export interface Reservation {
   courier_sent: boolean;         // 택배 발송 완료 여부
   courier_sent_at: string | null;
   courier_tracking_number: string | null; // 택배 송장번호
+  document_completed: boolean;         // 서류 작성 완료 여부 (v20260806)
+  document_completed_at: string | null;
+  online_reservation_completed: boolean; // 온라인(사전예약) 접수 완료 여부 — 미완료 시 혜택 누락 위험 (v20260806)
+  online_reservation_completed_at: string | null;
   created_at: string;
   updated_at: string;
 
@@ -177,6 +185,10 @@ export interface ReservationUpdate {
   courier_sent?: boolean;
   courier_sent_at?: string | null;
   courier_tracking_number?: string | null;
+  document_completed?: boolean;
+  document_completed_at?: string | null;
+  online_reservation_completed?: boolean;
+  online_reservation_completed_at?: string | null;
   customer_address?: string | null;
   subscription_type?: string | null;
   rate_plan?: string | null;

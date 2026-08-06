@@ -157,7 +157,7 @@ export default function ReservationsPage() {
   const handleCSV = () => {
     const selected = rows.filter(r => selectedIds.has(r.id));
     const target = selected.length > 0 ? selected : rows;
-    const header = ['#', '접수일', '고객명', '연락처', '생년월일', '통신사', '채널', '캠페인', '상태', '담당자', '관심기기', '메모', '택배발송', '송장번호'];
+    const header = ['#', '접수일', '고객명', '연락처', '생년월일', '통신사', '채널', '캠페인', '상태', '담당자', '관심기기', '메모', '택배발송', '송장번호', '서류작성', '온라인접수', '개통'];
     const csvRows = target.map((r, i) => [
       i + 1,
       r.created_at ? new Date(r.created_at).toLocaleDateString('ko-KR') : '',
@@ -173,6 +173,9 @@ export default function ReservationsPage() {
       r.memo ?? '',
       (r as any).courier_sent ? 'O' : 'X',
       (r as any).courier_tracking_number ?? '',
+      (r as any).document_completed ? 'O' : 'X',
+      (r as any).online_reservation_completed ? 'O' : 'X',
+      (r as any).activated_at ? 'O' : 'X',
     ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
     const csv = [header.join(','), ...csvRows].join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -198,10 +201,13 @@ export default function ReservationsPage() {
     r.memo ?? '',
     (r as any).courier_sent ? 'O' : 'X',
     (r as any).courier_tracking_number ?? '',
+    (r as any).document_completed ? 'O' : 'X',
+    (r as any).online_reservation_completed ? 'O' : 'X',
+    (r as any).activated_at ? 'O' : 'X',
   ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
 
   const downloadCsvText = (rowsCsv: string[], filenameSuffix: string) => {
-    const header = ['#', '접수일', '고객명', '연락처', '생년월일', '통신사', '채널', '캠페인', '상태', '담당자', '관심기기', '메모', '택배발송', '송장번호'];
+    const header = ['#', '접수일', '고객명', '연락처', '생년월일', '통신사', '채널', '캠페인', '상태', '담당자', '관심기기', '메모', '택배발송', '송장번호', '서류작성', '온라인접수', '개통'];
     const csv = [header.join(','), ...rowsCsv].join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -597,6 +603,9 @@ export default function ReservationsPage() {
                 <TableHead className="text-xs">메모</TableHead>
                 <TableHead className="text-xs w-[80px] text-center">문자발송</TableHead>
                 <TableHead className="text-xs w-[130px] text-center">택배발송 · 송장번호</TableHead>
+                <TableHead className="text-xs w-[70px] text-center">서류작성</TableHead>
+                <TableHead className="text-xs w-[70px] text-center">온라인접수</TableHead>
+                <TableHead className="text-xs w-[70px] text-center">개통</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -775,6 +784,82 @@ export default function ReservationsPage() {
                           className="w-[100px] text-[10px] text-center border border-gray-200 rounded px-1 py-0.5 bg-gray-50/60 focus:border-indigo-300 focus:bg-white outline-none"
                         />
                       </div>
+                    </TableCell>
+                    {/* v20260806: 서류작성/온라인접수/개통 — status와 무관하게 자유롭게 토글 가능한 독립 체크포인트 */}
+                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={async () => {
+                          const newVal = !(r as any).document_completed;
+                          const { error } = await supabase
+                            .from('reservations')
+                            .update({ document_completed: newVal, document_completed_at: newVal ? new Date().toISOString() : null })
+                            .eq('id', r.id);
+                          if (!error) {
+                            toast.success(newVal ? '서류작성 완료 처리' : '서류작성 취소 처리');
+                            await load();
+                          } else {
+                            toast.error('처리 실패');
+                          }
+                        }}
+                        className={`w-8 h-8 rounded-full text-sm font-bold transition-colors ${
+                          (r as any).document_completed
+                            ? 'bg-teal-100 text-teal-600 hover:bg-teal-200'
+                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                        }`}
+                        title={(r as any).document_completed_at ? `작성완료: ${new Date((r as any).document_completed_at).toLocaleString('ko-KR')}` : '서류 미작성'}
+                      >
+                        {(r as any).document_completed ? 'O' : 'X'}
+                      </button>
+                    </TableCell>
+                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={async () => {
+                          const newVal = !(r as any).online_reservation_completed;
+                          const { error } = await supabase
+                            .from('reservations')
+                            .update({ online_reservation_completed: newVal, online_reservation_completed_at: newVal ? new Date().toISOString() : null })
+                            .eq('id', r.id);
+                          if (!error) {
+                            toast.success(newVal ? '온라인접수 완료 처리' : '온라인접수 취소 처리');
+                            await load();
+                          } else {
+                            toast.error('처리 실패');
+                          }
+                        }}
+                        className={`w-8 h-8 rounded-full text-sm font-bold transition-colors ${
+                          (r as any).online_reservation_completed
+                            ? 'bg-pink-100 text-pink-600 hover:bg-pink-200'
+                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                        }`}
+                        title={(r as any).online_reservation_completed_at ? `접수완료: ${new Date((r as any).online_reservation_completed_at).toLocaleString('ko-KR')}` : '미접수 — 완료 안 하면 혜택 누락 위험'}
+                      >
+                        {(r as any).online_reservation_completed ? 'O' : 'X'}
+                      </button>
+                    </TableCell>
+                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={async () => {
+                          const newVal = !(r as any).activated_at;
+                          const { error } = await supabase
+                            .from('reservations')
+                            .update({ activated_at: newVal ? new Date().toISOString() : null })
+                            .eq('id', r.id);
+                          if (!error) {
+                            toast.success(newVal ? '개통완료 처리' : '개통 취소 처리');
+                            await load();
+                          } else {
+                            toast.error('처리 실패');
+                          }
+                        }}
+                        className={`w-8 h-8 rounded-full text-sm font-bold transition-colors ${
+                          (r as any).activated_at
+                            ? 'bg-violet-100 text-violet-600 hover:bg-violet-200'
+                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                        }`}
+                        title={(r as any).activated_at ? `개통: ${new Date((r as any).activated_at).toLocaleString('ko-KR')}` : '미개통 — 방치 여부 확인 필요'}
+                      >
+                        {(r as any).activated_at ? 'O' : 'X'}
+                      </button>
                     </TableCell>
                   </TableRow>
                 ))
