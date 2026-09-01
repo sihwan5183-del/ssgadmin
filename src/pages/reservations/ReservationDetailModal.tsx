@@ -26,7 +26,7 @@ import {
   fetchMemoLogs,
   addMemoLog,
 } from '@/services/reservationService';
-import type { Reservation, ReservationStatus, FailStage, ReservationMemoLog, ProspectGrade, CancelStage } from '@/types/reservation';
+import type { Reservation, ReservationStatus, FailStage, ReservationMemoLog, ProspectGrade, CancelStage, AbsentCount } from '@/types/reservation';
 import {
   RESERVATION_STATUS_LIST,
   CARRIER_OPTIONS,
@@ -34,6 +34,7 @@ import {
   DEVICE_OPTIONS,
   getColorsForDevice,
   PROSPECT_GRADE_OPTIONS,
+  ABSENT_COUNT_OPTIONS,
   CANCEL_STAGE_OPTIONS,
 } from '@/types/reservation';
 import type { ReservationFailReason } from '@/types/reservation';
@@ -50,9 +51,11 @@ interface Props {
   onDone: () => void;
 }
 
-function StatusBadge({ status, prospectGrade }: { status: ReservationStatus; prospectGrade?: string | null }) {
+function StatusBadge({ status, prospectGrade, absentCount }: { status: ReservationStatus; prospectGrade?: string | null; absentCount?: number | null }) {
   const found = RESERVATION_STATUS_LIST.find((s) => s.value === status);
-  const label = status === '가망' && prospectGrade ? prospectGrade : (found?.label ?? status);
+  const label = status === '가망' && prospectGrade ? prospectGrade
+    : status === '부재' && absentCount ? `부재 ${absentCount}회`
+    : (found?.label ?? status);
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${found?.color ?? 'bg-gray-100 text-gray-600'}`}>
       {label}
@@ -84,6 +87,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
   // 수정 필드
   const [status, setStatus] = useState<ReservationStatus>('신규');
   const [prospectGrade, setProspectGrade] = useState<ProspectGrade | null>(null);
+  const [absentCount, setAbsentCount] = useState<AbsentCount | null>(null); // 부재 회차 (v20260901)
   const [carrier, setCarrier] = useState('');
   const [channel, setChannel] = useState('');
   const [device, setDevice] = useState('');
@@ -138,6 +142,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
         setFailReasons(fr);
         setStatus(r.status);
         setProspectGrade((r as any).prospect_grade ?? null);
+        setAbsentCount((r as any).absent_count ?? (r.status === '부재' ? 1 : null));
         setCarrier(r.carrier ?? '');
         setChannel(r.channel ?? '');
         const initialDevice = r.device_interest ?? '';
@@ -225,6 +230,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
       await updateReservation(row.id, {
         status,
         prospect_grade: status === '가망' ? prospectGrade : null,
+        absent_count: status === '부재' ? (absentCount ?? 1) : null,
         carrier: carrier || undefined,
         channel: channel || undefined,
         device_interest: device.trim() || undefined,
@@ -267,7 +273,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
           <DialogHeader>
             <DialogTitle className="text-base font-semibold">
               사전예약 상세
-              {row && <span className="ml-2"><StatusBadge status={row.status} prospectGrade={row.prospect_grade} /></span>}
+              {row && <span className="ml-2"><StatusBadge status={row.status} prospectGrade={row.prospect_grade} absentCount={(row as any).absent_count} /></span>}
             </DialogTitle>
           </DialogHeader>
 
@@ -345,6 +351,34 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
                         }`}
                       >
                         {g}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 부재 상태일 때 부재 회차 (v20260901) — 3회면 강조 */}
+              {status === '부재' && (
+                <div className="bg-orange-50 rounded-xl p-3 border border-orange-100 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-medium text-orange-700">부재 회차</div>
+                    {absentCount === 3 && (
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600">부재 3회 — 최종 판단 필요</span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {ABSENT_COUNT_OPTIONS.map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setAbsentCount(n)}
+                        className={`text-sm py-1.5 rounded-lg border font-medium transition-colors ${
+                          absentCount === n
+                            ? n === 3 ? 'bg-red-500 text-white border-red-500' : 'bg-orange-500 text-white border-orange-500'
+                            : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300'
+                        }`}
+                      >
+                        {n}회
                       </button>
                     ))}
                   </div>

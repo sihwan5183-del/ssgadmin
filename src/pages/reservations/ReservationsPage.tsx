@@ -24,7 +24,8 @@ import { useDashboardStaff } from '@/hooks/useDashboardStaff';
 import { WorkReportHeader, SectionCard } from '@/pages/work-report/_shared';
 import { fetchReservations, deleteReservation } from '@/services/reservationService';
 import type { Reservation, ReservationStatus, ProspectGrade } from '@/types/reservation';
-import { RESERVATION_STATUS_LIST, PROSPECT_GRADE_OPTIONS } from '@/types/reservation';
+import { RESERVATION_STATUS_LIST, PROSPECT_GRADE_OPTIONS, ABSENT_COUNT_OPTIONS, ABSENT_MAX } from '@/types/reservation';
+import type { AbsentCount } from '@/types/reservation';
 import { ReservationAddModal } from './ReservationAddModal';
 import { ReservationDetailModal } from './ReservationDetailModal';
 import { formatPhone } from '@/lib/phoneFormat';
@@ -78,6 +79,7 @@ export default function ReservationsPage() {
   const [channelTab, setChannelTab] = useState('');
   const [statusFilter, setStatusFilter] = useState<ReservationStatus | ''>('');
   const [gradeFilter, setGradeFilter] = useState<ProspectGrade | ''>('');
+  const [absentFilter, setAbsentFilter] = useState<AbsentCount | 0>(0); // 부재 회차 필터 (v20260901) — 0=전체
   const [assigneeFilter, setAssigneeFilter] = useState('');
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -222,6 +224,7 @@ export default function ReservationsPage() {
         const res = await fetchReservations({
           status: statusFilter || undefined,
           prospect_grade: (statusFilter === '가망' && gradeFilter) || undefined,
+          absent_count: (statusFilter === '부재' && absentFilter) || undefined,
           assigned_to: assigneeFilter || undefined,
           search,
           page: p,
@@ -254,7 +257,7 @@ export default function ReservationsPage() {
   const loadAll = useCallback(async () => {
     const { data } = await supabase
       .from('reservations')
-      .select('id, status, channel, contact_date, prospect_grade');
+      .select('id, status, channel, contact_date, prospect_grade, absent_count');
     setAllRows((data ?? []) as any[]);
   }, []);
 
@@ -265,6 +268,7 @@ export default function ReservationsPage() {
       const res = await fetchReservations({
         status: statusFilter || undefined,
         prospect_grade: (statusFilter === '가망' && gradeFilter) || undefined,
+        absent_count: (statusFilter === '부재' && absentFilter) || undefined,
         assigned_to: assigneeFilter || undefined,
         search,
         page,
@@ -280,12 +284,13 @@ export default function ReservationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, gradeFilter, assigneeFilter, search, page, pageSize, channelTab, dateStart, dateEnd]);
+  }, [statusFilter, gradeFilter, absentFilter, assigneeFilter, search, page, pageSize, channelTab, dateStart, dateEnd]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
   useEffect(() => { load(); }, [load]);
   // 가망이 아닌 상태로 바뀌면 등급 필터는 의미가 없으므로 초기화
   useEffect(() => { if (statusFilter !== '가망') setGradeFilter(''); }, [statusFilter]);
+  useEffect(() => { if (statusFilter !== '부재') setAbsentFilter(0); }, [statusFilter]);
 
   // 채널별 카운트
   const channelCounts = useMemo(() => {
@@ -316,8 +321,11 @@ export default function ReservationsPage() {
       return;
     }
     const goingToShipped = status === '택배발송';
+    // 부재로 바꾸면 회차는 기존값 유지(없으면 1회), 부재가 아니면 회차 초기화 (v20260901)
+    const cur = rows.find((r) => r.id === id);
+    const absent_count = status === '부재' ? ((cur as any)?.absent_count ?? 1) : null;
     const payload: Record<string, any> = {
-      status, fail_reason_id: null, fail_stage: null, fail_memo: null, cancel_stage: null,
+      status, fail_reason_id: null, fail_stage: null, fail_memo: null, cancel_stage: null, absent_count,
       courier_sent: goingToShipped,
       courier_sent_at: goingToShipped ? new Date().toISOString() : null,
     };
@@ -329,6 +337,15 @@ export default function ReservationsPage() {
     if (error) { toast.error('상태 변경 실패: ' + error.message); return; }
     setRows((p) => p.map((r) => (r.id === id ? { ...r, ...payload } as any : r)));
     toast.success('상태가 변경되었습니다');
+  }
+
+  // 테이블 인라인 즉시수정: 부재 회차 (v20260901)
+  async function updateAbsentCountInline(id: string, absent_count: AbsentCount) {
+    const { error } = await supabase.from('reservations').update({ absent_count }).eq('id', id);
+    if (error) { toast.error('부재 회차 변경 실패: ' + error.message); return; }
+    setRows((p) => p.map((r) => (r.id === id ? { ...r, absent_count } as any : r)));
+    setAllRows((p) => p.map((r) => (r.id === id ? { ...r, absent_count } as any : r)));
+    toast.success(`부재 ${absent_count}회로 변경`);
   }
 
   // 상태별 카운트 (현재 채널 탭 기준)
@@ -354,11 +371,22 @@ export default function ReservationsPage() {
     return counts;
   }, [allRows, channelTab]);
 
+  // 부재 회차별 카운트 (1/2/3회, 현재 채널 탭 기준) — v20260901
+  const absentCounts = useMemo(() => {
+    const filtered = channelTab ? allRows.filter(r => (r as any).channel === channelTab) : allRows;
+    const counts: Record<number, number> = { 1: 0, 2: 0, 3: 0 };
+    filtered.filter(r => r.status === '부재').forEach(r => {
+      const n = ((r as any).absent_count ?? 1) as number;
+      counts[n] = (counts[n] ?? 0) + 1;
+    });
+    return counts;
+  }, [allRows, channelTab]);
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const handleSearch = () => { setSearch(searchInput); setPage(1); };
   const handleReset = () => {
-    setSearch(''); setSearchInput(''); setStatusFilter(''); setGradeFilter(''); setAssigneeFilter('');
+    setSearch(''); setSearchInput(''); setStatusFilter(''); setGradeFilter(''); setAbsentFilter(0); setAssigneeFilter('');
     setDateStart(''); setDateEnd(''); setPage(1);
   };
   const handleTabChange = (val: string) => {
@@ -448,6 +476,33 @@ export default function ReservationsPage() {
           >
             <div className="text-[10px] text-gray-400 font-medium truncate">{s.label}</div>
             <div className="text-lg font-bold mt-0.5">{statusCounts[s.value] ?? 0}</div>
+            {s.value === '부재' && (statusCounts['부재'] ?? 0) > 0 && (
+              <div className="flex items-center gap-1 mt-1 flex-wrap">
+                {ABSENT_COUNT_OPTIONS.map((n) => {
+                  const active = absentFilter === n && statusFilter === '부재';
+                  const isMax = n === ABSENT_MAX;
+                  return (
+                    <span
+                      key={n}
+                      title={isMax ? '부재 3회 건만 보기 (토글)' : `부재 ${n}회 건만 보기`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setStatusFilter('부재');
+                        setAbsentFilter(absentFilter === n ? 0 : n);
+                        setPage(1);
+                      }}
+                      className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full cursor-pointer ${
+                        active
+                          ? isMax ? 'bg-red-500 text-white' : 'bg-orange-500 text-white'
+                          : isMax ? 'bg-red-50 text-red-600' : 'bg-orange-50 text-orange-700'
+                      }`}
+                    >
+                      {n}회 {absentCounts[n] ?? 0}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
             {s.value === '가망' && (statusCounts['가망'] ?? 0) > 0 && (
               <div className="flex items-center gap-1 mt-1 flex-wrap">
                 {PROSPECT_GRADE_OPTIONS.map((g) => (
@@ -544,6 +599,21 @@ export default function ReservationsPage() {
                 <SelectItem value="_all_">전체 등급</SelectItem>
                 {PROSPECT_GRADE_OPTIONS.map((g) => (
                   <SelectItem key={g} value={g}>{g} ({gradeCounts[g]})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {/* 부재 회차 필터 (상태=부재일 때만 노출) — v20260901 */}
+          {statusFilter === '부재' && (
+            <Select value={absentFilter ? String(absentFilter) : '_all_'} onValueChange={(v) => { setAbsentFilter((v === '_all_' ? 0 : Number(v)) as AbsentCount | 0); setPage(1); }}>
+              <SelectTrigger className={`w-[120px] text-sm ${absentFilter === ABSENT_MAX ? 'border-red-200 text-red-600' : 'border-orange-200 text-orange-700'}`}>
+                <SelectValue placeholder="전체 회차" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_all_">전체 회차</SelectItem>
+                {ABSENT_COUNT_OPTIONS.map((n) => (
+                  <SelectItem key={n} value={String(n)}>{n}회 ({absentCounts[n] ?? 0})</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -656,6 +726,20 @@ export default function ReservationsPage() {
                       </Select>
                       {r.status === '가망' && (r as any).prospect_grade && (
                         <div className="text-[10px] text-amber-500 mt-0.5 pl-1">{(r as any).prospect_grade} 등급</div>
+                      )}
+                      {r.status === '부재' && (
+                        <Select value={String((r as any).absent_count ?? 1)} onValueChange={(v) => updateAbsentCountInline(r.id, Number(v) as AbsentCount)}>
+                          <SelectTrigger className={`h-5 mt-1 text-[10px] w-[74px] border-none rounded-full px-2 font-semibold ${
+                            ((r as any).absent_count ?? 1) === ABSENT_MAX ? 'bg-red-100 text-red-600' : 'bg-orange-50 text-orange-600'
+                          }`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ABSENT_COUNT_OPTIONS.map((n) => (
+                              <SelectItem key={n} value={String(n)}>부재 {n}회</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       )}
                       {r.status === '실패' && r.fail_reason && (
                         <div className="text-[10px] text-red-400 mt-0.5 pl-1">{r.fail_reason.reason}</div>

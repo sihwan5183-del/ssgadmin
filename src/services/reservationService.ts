@@ -25,6 +25,7 @@ export async function fetchFailReasons(): Promise<ReservationFailReason[]> {
 export interface FetchReservationsParams {
   status?: ReservationStatus | '';
   prospect_grade?: string;
+  absent_count?: number;
   assigned_to?: string;
   search?: string;
   channel?: string;
@@ -39,7 +40,7 @@ export async function fetchReservations(params: FetchReservationsParams = {}): P
   data: Reservation[];
   count: number;
 }> {
-  const { status, prospect_grade, assigned_to, search, channel, device_interest, dateStart, dateEnd, page = 1, pageSize = 50 } = params;
+  const { status, prospect_grade, absent_count, assigned_to, search, channel, device_interest, dateStart, dateEnd, page = 1, pageSize = 50 } = params;
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
@@ -55,6 +56,7 @@ export async function fetchReservations(params: FetchReservationsParams = {}): P
 
   if (status) query = query.eq('status', status);
   if (prospect_grade) query = query.eq('prospect_grade', prospect_grade);
+  if (absent_count) query = query.eq('absent_count', absent_count);
   if (assigned_to) query = query.eq('assigned_to', assigned_to);
   if (channel) query = query.eq('channel', channel);
   if (device_interest) query = query.eq('device_interest', device_interest);
@@ -102,6 +104,12 @@ export async function updateReservation(
   // 실패 → fail_stage 자동 세팅
   if (payload.status === '실패' && !payload.fail_stage) {
     payload = { ...payload, fail_stage: '상담' };
+  }
+  // 부재 → 회차 없으면 1회로, 부재가 아니면 회차 초기화
+  if (payload.status === '부재' && !payload.absent_count) {
+    payload = { ...payload, absent_count: 1 };
+  } else if (payload.status && payload.status !== '부재') {
+    payload = { ...payload, absent_count: null };
   }
   // 예약완료 → reservation_confirmed_at 자동 세팅
   if (payload.status === '예약완료' && !payload.reservation_confirmed_at) {

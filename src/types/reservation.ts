@@ -12,6 +12,8 @@
 //  건을 별도로 추적하기 위함.
 // v20260803-2: 상태(status)에도 "유심 MNP" 추가 — 단말 배송이 없는 유심 단독
 //  MNP 건은 확정→택배발송 흐름을 안 타므로, 자체 완료 상태로 별도 관리.
+// v20260901: 부재 회차(absent_count) 추가 — 부재를 실패로 넘기지 않고 부재 상태 안에서
+//  1회/2회/3회로 세분 관리. 3회 건은 대시보드에서 토글로 따로 모아본다.
 
 export type ReservationStatus =
   | '신규'
@@ -49,6 +51,11 @@ export type ProspectGrade = '상' | '중' | '하';
 export const PROSPECT_GRADE_OPTIONS: ProspectGrade[] = ['상', '중', '하'];
 
 export type FailStage = '상담' | '예약';
+
+// 부재 회차 (상태='부재'일 때만 사용) — v20260901
+export type AbsentCount = 1 | 2 | 3;
+export const ABSENT_COUNT_OPTIONS: AbsentCount[] = [1, 2, 3];
+export const ABSENT_MAX = 3;
 
 // 취소된 단계 (상태='취소'일 때만 사용)
 // 가망/상담성공/확정/예약완료 중 어느 단계에서 고객이 취소 요청했는지 기록
@@ -90,6 +97,7 @@ export interface Reservation {
   product_color: string | null;
   status: ReservationStatus;
   prospect_grade: ProspectGrade | null;
+  absent_count: AbsentCount | null;   // 부재 회차 (v20260901)
   assigned_to: string | null;
   birth_date: string | null;
   memo: string | null;
@@ -147,6 +155,7 @@ export interface ReservationInsert {
   device_interest?: string;
   status?: ReservationStatus;
   prospect_grade?: ProspectGrade | null;
+  absent_count?: AbsentCount | null;
   capacity?: string;
   product_color?: string;
   assigned_to?: string;
@@ -158,6 +167,7 @@ export interface ReservationInsert {
 export interface ReservationUpdate {
   status?: ReservationStatus;
   prospect_grade?: ProspectGrade | null;
+  absent_count?: AbsentCount | null;
   carrier?: string;
   channel?: string;
   device_interest?: string;
@@ -266,6 +276,10 @@ export function getColorsForDevice(device: string | null | undefined): string[] 
 // 실패 상태 판별
 export const isFailStatus = (status: ReservationStatus) =>
   status === '실패';
+
+// 부재 상태 판별
+export const isAbsentStatus = (status: ReservationStatus) =>
+  status === '부재';
 
 // 취소 상태 판별
 export const isCancelStatus = (status: ReservationStatus) =>
