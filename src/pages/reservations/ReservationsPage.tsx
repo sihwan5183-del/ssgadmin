@@ -63,12 +63,13 @@ export default function ReservationsPage() {
   // 필터된 표시 데이터
   const [rows, setRows] = useState<Reservation[]>([]);
 
-  // 중복 전화번호 Set
+  // 중복 전화번호 Set — 현재 페이지(rows)가 아니라 전체 데이터(allRows) 기준으로 잡아야
+  // 상태/채널/페이지가 달라서 화면에 같이 안 보이는 중복도 놓치지 않고 잡힘 (v20260902)
   const duplicatePhones = useMemo(() => {
     const cnt: Record<string, number> = {};
-    rows.forEach(r => { if (r.phone) cnt[r.phone] = (cnt[r.phone] || 0) + 1; });
+    allRows.forEach((r: any) => { if (r.phone) cnt[r.phone] = (cnt[r.phone] || 0) + 1; });
     return new Set(Object.keys(cnt).filter(p => cnt[p] > 1));
-  }, [rows]);
+  }, [allRows]);
 
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -257,7 +258,7 @@ export default function ReservationsPage() {
   const loadAll = useCallback(async () => {
     const { data } = await supabase
       .from('reservations')
-      .select('id, status, channel, contact_date, prospect_grade, absent_count');
+      .select('id, status, channel, contact_date, prospect_grade, absent_count, phone');
     setAllRows((data ?? []) as any[]);
   }, []);
 
