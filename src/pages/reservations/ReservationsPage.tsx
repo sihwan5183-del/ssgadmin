@@ -52,9 +52,10 @@ const CAMPAIGN_OPTIONS = [
 const CAMPAIGN_LABELS: Record<string, string> = Object.fromEntries(
   CAMPAIGN_OPTIONS.map((c) => [c.value, c.label])
 );
+// 화면/CSV에는 MNP전용만 눈에 띄게 표시하고 나머지는 비워둡니다 (기존1은 기본값이라 따로 표시 안 함)
+const MNP_CAMPAIGN_ID = '120249757384390479';
 function campaignLabel(v?: string | null): string {
-  if (!v) return '-';
-  return CAMPAIGN_LABELS[v] ?? v;
+  return v === MNP_CAMPAIGN_ID ? 'MNP전용' : '-';
 }
 
 function StatusBadge({ status, prospectGrade }: { status: ReservationStatus; prospectGrade?: string | null }) {
@@ -749,7 +750,11 @@ export default function ReservationsPage() {
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${ r.channel === '메타광고' ? 'bg-blue-100 text-blue-700' : r.channel === '네이버 검색광고' ? 'bg-green-100 text-green-700' : r.channel === '기존고객' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>{r.channel}</span>
                       ) : '-'}
                     </TableCell>
-                    <TableCell className="text-xs text-gray-500 whitespace-nowrap">{campaignLabel((r as any).utm_campaign)}</TableCell>
+                    <TableCell className="text-xs text-gray-500 whitespace-nowrap">
+                      {(r as any).utm_campaign === MNP_CAMPAIGN_ID ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700">MNP전용</span>
+                      ) : '-'}
+                    </TableCell>
                     <TableCell className="whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <Select value={r.status} onValueChange={(v) => updateStatusInline(r.id, v as ReservationStatus)}>
                         <SelectTrigger className={`h-7 text-[11px] w-[132px] border-none font-semibold rounded-full px-2.5 ${RESERVATION_STATUS_LIST.find(s => s.value === r.status)?.color ?? 'bg-gray-100 text-gray-600'}`}>
