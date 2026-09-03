@@ -222,6 +222,10 @@ export async function fetchAllPaged<T>(
     const to = from + LOG_CHUNK - 1;
     let q = supabase.from('reservations').select(selectCols);
     if (applyFilters) q = applyFilters(q);
+    // 정렬 없이 range()만 쓰면 청크 경계에서 행이 누락/중복될 수 있어(예: 중복전화 감지가
+    // 안 잡히던 원인), id를 안정적인 타이브레이커로 항상 마지막에 추가한다.
+    // applyFilters가 이미 자체 정렬(예: created_at)을 지정했다면 그 순서를 그대로 우선한다.
+    q = q.order('id', { ascending: true });
     const { data, error } = await q.range(from, to);
     if (error) throw error;
     const page = (data ?? []) as T[];
