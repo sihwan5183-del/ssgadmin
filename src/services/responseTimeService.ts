@@ -94,7 +94,12 @@ function applyDateFilter(logs: any[], dateStart?: string, dateEnd?: string) {
   });
 }
 
+const LOG_CHUNK = 1000;
+
 // 응답시간 통계 조회
+// v20260903: reservation_status_logs가 1000건을 넘어가면서(현재 1000건대) Supabase가 요청 1건당
+// 최대 1000행만 돌려주는 기본 제한에 걸려, 오래된 로그가 팀 평균/담당자별/시간대별/일별 통계에서
+// 통째로 누락되던 버그 수정. 1000건씩 range로 끝까지 순회해서 빠짐없이 가져온다.
 export async function fetchResponseTimeStats(dateStart?: string, dateEnd?: string): Promise<{
   logs: any[];
   byStaff: ResponseTimeStat[];
@@ -109,19 +114,26 @@ export async function fetchResponseTimeStats(dateStart?: string, dateEnd?: strin
   };
 }> {
   // 로그 + 프로필 + 예약 join
-  const { data: rawLogs, error } = await supabase
-    .from('reservation_status_logs')
-    .select(`
-      *,
-      profile:profiles!changed_by(user_id, display_name),
-      reservation:reservations!reservation_id(contact_date, name)
-    `)
-    .not('response_minutes', 'is', null)
-    .order('changed_at', { ascending: false });
+  const rawLogs: any[] = [];
+  for (let from = 0; ; from += LOG_CHUNK) {
+    const { data, error } = await supabase
+      .from('reservation_status_logs')
+      .select(`
+        *,
+        profile:profiles!changed_by(user_id, display_name),
+        reservation:reservations!reservation_id(contact_date, name)
+      `)
+      .not('response_minutes', 'is', null)
+      .order('changed_at', { ascending: false })
+      .range(from, from + LOG_CHUNK - 1);
 
-  if (error) throw error;
+    if (error) throw error;
+    const page = data ?? [];
+    rawLogs.push(...page);
+    if (page.length < LOG_CHUNK) break;
+  }
 
-  const logs = applyDateFilter(rawLogs ?? [], dateStart, dateEnd);
+  const logs = applyDateFilter(rawLogs, dateStart, dateEnd);
 
   // 담당자별 집계
   const staffMap: Record<string, any[]> = {};
