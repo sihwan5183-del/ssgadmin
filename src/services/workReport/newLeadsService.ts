@@ -4,6 +4,7 @@
 // activity_logs와 혼용하지 않음
 // ============================================================
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAllRows } from '@/lib/supabaseFetchAll';
 import { resolveStaffDisplayNames } from './staffDisplayService';
 import { maskCustomerName } from './reportFormatService';
 
@@ -139,11 +140,18 @@ export async function getTeamNewLeadsSummary(
   isAdmin: boolean,
   userId: string
 ): Promise<{ today_new: number; pending_new: number; by_channel: Record<string, number> }> {
-  let baseQuery = supabase.from('leads').select('id, channel, campaign_name, status, created_at', { count: 'exact' }).is('deleted_at', null);
-  if (!isAdmin) baseQuery = baseQuery.eq('assigned_to', userId);
-
-  const { data: allLeads } = await baseQuery;
-  const leads = allLeads ?? [];
+  // v20260903: isAdmin일 때 전체 leads를 필터 없이 조회하는데, 현재 삭제되지 않은
+  // leads가 1000건을 넘어(1477건) Supabase 기본 응답 제한에 걸려 오늘신규/미처리신규/
+  // 채널별 집계가 실제보다 적게 나오던 버그 수정. fetchAllRows로 끝까지 순회해서 가져온다.
+  const leads = await fetchAllRows<{ id: string; channel: string | null; campaign_name: string | null; status: string; created_at: string }>(
+    'leads',
+    'id, channel, campaign_name, status, created_at',
+    (q) => {
+      let query = q.is('deleted_at', null);
+      if (!isAdmin) query = query.eq('assigned_to', userId);
+      return query;
+    },
+  );
 
   const todayLeads = leads.filter((l) =>
     l.created_at >= `${date}T00:00:00` && l.created_at <= `${date}T23:59:59`

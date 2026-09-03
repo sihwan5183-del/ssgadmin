@@ -4,6 +4,7 @@
 // lead_status_logs previous_status 기준 전환 집계 (신규 데이터부터)
 // ============================================================
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAllRows } from '@/lib/supabaseFetchAll';
 import { getKstDateRangeUtc } from './dateUtils';
 import { resolveStaffDisplayNames } from './staffDisplayService';
 
@@ -125,13 +126,13 @@ export async function getChannelFunnelData(
   const { start, end } = getKstDateRangeUtc(from, to);
   const today = new Date().toISOString().slice(0, 10);
 
-  // 1. leads 테이블 - 해당 기간 생성된 리드
-  const { data: leads } = await supabase
-    .from('leads')
-    .select('id, channel, campaign_name, source, status, last_action_at, assigned_to')
-    .gte('created_at', start)
-    .lte('created_at', end)
-    .is('deleted_at', null);
+  // v20260903: '전체'/넓은 기간 선택 시 leads가 1000건(현재 1477건)을 넘어 Supabase 기본
+  // 응답 제한에 걸려 채널별 퍼널 집계가 실제보다 적게 나오던 버그 수정.
+  const leads = await fetchAllRows<any>(
+    'leads',
+    'id, channel, campaign_name, source, status, last_action_at, assigned_to',
+    (q) => q.gte('created_at', start).lte('created_at', end).is('deleted_at', null),
+  );
 
   // 2. lead_status_logs - 전환 집계 (previous_status 기준)
   const leadIds = (leads ?? []).map((l: any) => l.id);
@@ -253,10 +254,14 @@ export async function getStaffFunnelData(
   const yStr = yDate.toISOString().slice(0, 10);
   const { start: yStart, end: yEnd } = getKstDateRangeUtc(yStr, yStr);
 
-  const [{ data: leads }, { data: yesterdayLeads }] = await Promise.all([
-    supabase.from('leads')
-      .select('id, channel, campaign_name, source, status, last_action_at, assigned_to')
-      .gte('created_at', start).lte('created_at', end).is('deleted_at', null),
+  // v20260903: 메인 기간 leads 조회가 '전체' 선택 시 1000건 제한에 걸리던 것 수정.
+  // 어제 하루치 조회는 원래도 소량이라 그대로 둔다.
+  const [leads, { data: yesterdayLeads }] = await Promise.all([
+    fetchAllRows<any>(
+      'leads',
+      'id, channel, campaign_name, source, status, last_action_at, assigned_to',
+      (q) => q.gte('created_at', start).lte('created_at', end).is('deleted_at', null),
+    ),
     supabase.from('leads')
       .select('assigned_to, channel, campaign_name, source, status')
       .gte('created_at', yStart).lte('created_at', yEnd).is('deleted_at', null),
@@ -387,16 +392,17 @@ export async function getFunnelDrillLeads(
   const { start, end } = getKstDateRangeUtc(from, to);
   const today = new Date().toISOString().slice(0, 10);
 
-  // 기본 leads 조회
-  let q = supabase.from('leads')
-    .select('id, name, phone, customer_name, customer_phone, assigned_to, channel, campaign_name, source, status, created_at, last_action_at, memo')
-    .gte('created_at', start).lte('created_at', end)
-    .is('deleted_at', null);
-
-  if (staffId) q = q.eq('assigned_to', staffId);
-
-  const { data: leads } = await q;
-  const allLeads = leads ?? [];
+  // v20260903: 드릴다운도 '전체' 선택 시 1000건 제한에 걸려 일부 리드가 누락되던 버그 수정.
+  const leads = await fetchAllRows<any>(
+    'leads',
+    'id, name, phone, customer_name, customer_phone, assigned_to, channel, campaign_name, source, status, created_at, last_action_at, memo',
+    (q) => {
+      let query = q.gte('created_at', start).lte('created_at', end).is('deleted_at', null);
+      if (staffId) query = query.eq('assigned_to', staffId);
+      return query;
+    },
+  );
+  const allLeads = leads;
 
   // 채널 필터
   const filtered = allLeads.filter((l: any) => {
@@ -493,13 +499,12 @@ export async function getFailReasonStats(
 ): Promise<{ byReason: Record<string, Record<string, number>>; total: Record<string, number> }> {
   const { start, end } = getKstDateRangeUtc(from, to);
 
-  const { data: logs } = await supabase
-    .from('activity_logs')
-    .select('fail_reason, channel, lead_id')
-    .eq('action_type', 'failed')
-    .not('fail_reason', 'is', null)
-    .gte('created_at', start)
-    .lte('created_at', end);
+  // v20260903: '전체' 선택 시 1000건을 넘을 수 있어 나머지 조회도 동일하게 정리.
+  const logs = await fetchAllRows<any>(
+    'activity_logs',
+    'fail_reason, channel, lead_id',
+    (q) => q.eq('action_type', 'failed').not('fail_reason', 'is', null).gte('created_at', start).lte('created_at', end),
+  );
 
   const byReason: Record<string, Record<string, number>> = {};
   const total: Record<string, number> = {};
@@ -514,13 +519,11 @@ export async function getFailReasonStats(
   }
 
   // activity_logs.fail_reason 없는 경우 leads.memo 파싱으로 보완
-  const { data: failLeads } = await supabase
-    .from('leads')
-    .select('id, memo, channel, campaign_name, source')
-    .in('status', ['실패', '취소'])
-    .gte('created_at', start)
-    .lte('created_at', end)
-    .is('deleted_at', null);
+  const failLeads = await fetchAllRows<any>(
+    'leads',
+    'id, memo, channel, campaign_name, source',
+    (q) => q.in('status', ['실패', '취소']).gte('created_at', start).lte('created_at', end).is('deleted_at', null),
+  );
 
   for (const lead of (failLeads ?? [])) {
     const ch = detectChannel(lead.channel, lead.campaign_name, lead.source);
@@ -557,13 +560,11 @@ export async function getAbsentCountAnalysis(
 ): Promise<AbsentCountRow[]> {
   const { start, end } = getKstDateRangeUtc(from, to);
 
-  const { data: leads } = await supabase
-    .from('leads')
-    .select('id, memo, status, channel, campaign_name, source')
-    .gte('created_at', start)
-    .lte('created_at', end)
-    .is('deleted_at', null)
-    .not('memo', 'is', null);
+  const leads = await fetchAllRows<any>(
+    'leads',
+    'id, memo, status, channel, campaign_name, source',
+    (q) => q.gte('created_at', start).lte('created_at', end).is('deleted_at', null).not('memo', 'is', null),
+  );
 
   const map = new Map<number, { total: number; success: number; fail: number; still_absent: number; recare: number }>();
 
@@ -612,12 +613,11 @@ export async function getHourlyAbsentStats(
 ): Promise<HourlyAbsentRow[]> {
   const { start, end } = getKstDateRangeUtc(from, to);
 
-  const { data: logs } = await supabase
-    .from('activity_logs')
-    .select('action_type, channel, created_at')
-    .in('action_type', ['call_attempt', 'absent'])
-    .gte('created_at', start)
-    .lte('created_at', end);
+  const logs = await fetchAllRows<any>(
+    'activity_logs',
+    'action_type, channel, created_at',
+    (q) => q.in('action_type', ['call_attempt', 'absent']).gte('created_at', start).lte('created_at', end),
+  );
 
   const map = new Map<number, { attempt: number; absent: number }>();
   for (let h = 9; h <= 21; h++) map.set(h, { attempt: 0, absent: 0 });

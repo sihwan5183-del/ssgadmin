@@ -3,6 +3,7 @@
 // leads(신규접수) / activity_logs(업무량) / sales(개통·정산) 분리
 // ============================================================
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAllRows } from '@/lib/supabaseFetchAll';
 import { maskCustomerName } from './reportFormatService';
 import { getKstDateRangeUtc } from './dateUtils';
 
@@ -78,22 +79,27 @@ export async function getKpiSummary(
   if (staffId) pq = pq.eq('assigned_to', staffId);
   const { count: pending_leads } = await pq;
 
-  // activity_logs
-  const { start: aStart, end: aEnd } = getKstDateRangeUtc(from, to);
-  let aq = supabase.from('activity_logs').select('action_type')
-    .gte('created_at', aStart).lte('created_at', aEnd)
-    .eq('is_counted', true);
-  if (staffId) aq = aq.eq('staff_id', staffId);
-  if (channel) aq = aq.eq('channel', channel);
-  const { data: logs } = await aq;
-  const cnt = (t: string[]) => (logs ?? []).filter((l: any) => t.includes(l.action_type)).length;
+  // v20260903: '전체기간' 선택 시 activity_logs/sales가 1000건 제한에 걸릴 수 있어
+  // (sales는 이미 1000건대) fetchAllRows로 끝까지 순회하도록 수정.
+  const logs = await fetchAllRows<any>(
+    'activity_logs',
+    'action_type',
+    (q) => {
+      let query = q.gte('created_at', aStart).lte('created_at', aEnd).eq('is_counted', true);
+      if (staffId) query = query.eq('staff_id', staffId);
+      if (channel) query = query.eq('channel', channel);
+      return query;
+    },
+  );
+  const cnt = (t: string[]) => logs.filter((l: any) => t.includes(l.action_type)).length;
 
   // sales — 기간 필터 기준 open_date 조회 (직원 성과 분석용)
-  let sq = supabase.from('sales').select('status')
-    .gte('open_date', from).lte('open_date', to)
-    .is('deleted_at', null);
-  const { data: sales } = await sq;
-  const activated = (sales ?? []).filter((s: any) =>
+  const sales = await fetchAllRows<any>(
+    'sales',
+    'status',
+    (q) => q.gte('open_date', from).lte('open_date', to).is('deleted_at', null),
+  );
+  const activated = sales.filter((s: any) =>
     COUNTED_OPEN_STATUSES.includes(s.status ?? '')
   ).length;
 
@@ -126,24 +132,29 @@ export async function getStaffWorkSummary(
   const nameToId = new Map((profiles ?? []).map((p: any) => [p.display_name, p.user_id]));
 
   const { start: aStart, end: aEnd } = getKstDateRangeUtc(from, to);
-  let aq = supabase.from('activity_logs')
-    .select('staff_id, staff_name, action_type')
-    .gte('created_at', aStart).lte('created_at', aEnd)
-    .eq('is_counted', true);
-  if (channel) aq = aq.eq('channel', channel);
-  const { data: logs } = await aq;
+  const logs = await fetchAllRows<any>(
+    'activity_logs',
+    'staff_id, staff_name, action_type',
+    (q) => {
+      let query = q.gte('created_at', aStart).lte('created_at', aEnd).eq('is_counted', true);
+      if (channel) query = query.eq('channel', channel);
+      return query;
+    },
+  );
 
   const { start: lStart, end: lEnd } = getKstDateRangeUtc(from, to);
-  const { data: leads } = await supabase.from('leads')
-    .select('assigned_to, status')
-    .gte('created_at', lStart).lte('created_at', lEnd)
-    .is('deleted_at', null);
+  const leads = await fetchAllRows<any>(
+    'leads',
+    'assigned_to, status',
+    (q) => q.gte('created_at', lStart).lte('created_at', lEnd).is('deleted_at', null),
+  );
 
   // ── sales: 기간 필터 기준 open_date 조회, sales.id 기준 dedupe ──
-  const { data: salesRaw } = await supabase.from('sales')
-    .select('id, manager, status')
-    .gte('open_date', from).lte('open_date', to)
-    .is('deleted_at', null);
+  const salesRaw = await fetchAllRows<any>(
+    'sales',
+    'id, manager, status',
+    (q) => q.gte('open_date', from).lte('open_date', to).is('deleted_at', null),
+  );
 
   // sales.id 기준 dedupe 후 UUID→이름 정규화
   const seenSalesIds = new Set<string>();
@@ -222,16 +233,26 @@ export async function getStaffDailyTrend(
   const { staffId } = filters;
   const { start: aStart, end: aEnd } = getKstDateRangeUtc(from, to);
 
-  let aq = supabase.from('activity_logs').select('created_at, action_type')
-    .gte('created_at', aStart).lte('created_at', aEnd).eq('is_counted', true);
-  if (staffId) aq = aq.eq('staff_id', staffId);
-  const { data: logs } = await aq;
+  const logs = await fetchAllRows<any>(
+    'activity_logs',
+    'created_at, action_type',
+    (q) => {
+      let query = q.gte('created_at', aStart).lte('created_at', aEnd).eq('is_counted', true);
+      if (staffId) query = query.eq('staff_id', staffId);
+      return query;
+    },
+  );
 
   const { start: lStart, end: lEnd } = getKstDateRangeUtc(from, to);
-  let lq = supabase.from('leads').select('created_at')
-    .gte('created_at', lStart).lte('created_at', lEnd).is('deleted_at', null);
-  if (staffId) lq = lq.eq('assigned_to', staffId);
-  const { data: leads } = await lq;
+  const leads = await fetchAllRows<any>(
+    'leads',
+    'created_at',
+    (q) => {
+      let query = q.gte('created_at', lStart).lte('created_at', lEnd).is('deleted_at', null);
+      if (staffId) query = query.eq('assigned_to', staffId);
+      return query;
+    },
+  );
 
   const map = new Map<string, DailyTrendRow>();
   const ensure = (date: string) => {
@@ -276,11 +297,16 @@ export async function getChannelPerformance(
   const { staffId, channel } = filters;
   const { start: aStart, end: aEnd } = getKstDateRangeUtc(from, to);
 
-  let aq = supabase.from('activity_logs').select('channel, action_type')
-    .gte('created_at', aStart).lte('created_at', aEnd).eq('is_counted', true);
-  if (staffId) aq = aq.eq('staff_id', staffId);
-  if (channel) aq = aq.eq('channel', channel);
-  const { data: logs } = await aq;
+  const logs = await fetchAllRows<any>(
+    'activity_logs',
+    'channel, action_type',
+    (q) => {
+      let query = q.gte('created_at', aStart).lte('created_at', aEnd).eq('is_counted', true);
+      if (staffId) query = query.eq('staff_id', staffId);
+      if (channel) query = query.eq('channel', channel);
+      return query;
+    },
+  );
 
   type Raw = Omit<ChannelPerformanceRow, 'connect_rate' | 'success_rate'>;
   const map = new Map<string, Raw>();
@@ -444,11 +470,11 @@ export async function getStaffSalesSummary(
   const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.display_name]));
   const nameToId = new Map((profiles ?? []).map((p: any) => [p.display_name, p.user_id]));
 
-  let q = supabase.from('sales')
-    .select('id, manager, product, channel, status')
-    .gte('open_date', from).lte('open_date', to)
-    .is('deleted_at', null);
-  const { data: salesRaw } = await q;
+  const salesRaw = await fetchAllRows<any>(
+    'sales',
+    'id, manager, product, channel, status',
+    (q) => q.gte('open_date', from).lte('open_date', to).is('deleted_at', null),
+  );
 
   // dedupe by id
   const seen = new Set<string>();
@@ -518,11 +544,11 @@ export async function getStaffChannelSalesStats(
   const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.display_name]));
   const nameToId = new Map((profiles ?? []).map((p: any) => [p.display_name, p.user_id]));
 
-  let q = supabase.from('sales')
-    .select('id, manager, product, channel, status, device_model, rate_plan')
-    .gte('open_date', from).lte('open_date', to)
-    .is('deleted_at', null).eq('status', '개통완료');
-  const { data: salesRaw } = await q;
+  const salesRaw = await fetchAllRows<any>(
+    'sales',
+    'id, manager, product, channel, status, device_model, rate_plan',
+    (q) => q.gte('open_date', from).lte('open_date', to).is('deleted_at', null).eq('status', '개통완료'),
+  );
 
   const seen = new Set<string>();
   // key: staff_name + channel
@@ -596,14 +622,17 @@ export async function getStaffProductDetailStats(
   const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.display_name]));
   const nameToId = new Map((profiles ?? []).map((p: any) => [p.display_name, p.user_id]));
 
-  let q = supabase.from('sales')
-    .select('id, manager, product, channel, status, device_model, rate_plan, sale_type, open_method, custom_fields')
-    .gte('open_date', from).lte('open_date', to)
-    .is('deleted_at', null).eq('status', '개통완료');
-  if (filterDevice) q = q.eq('device_model', filterDevice);
-  if (filterPlan) q = q.eq('rate_plan', filterPlan);
-  if (filterSaleType) q = q.eq('sale_type', filterSaleType);
-  const { data: salesRaw } = await q;
+  const salesRaw = await fetchAllRows<any>(
+    'sales',
+    'id, manager, product, channel, status, device_model, rate_plan, sale_type, open_method, custom_fields',
+    (q) => {
+      let query = q.gte('open_date', from).lte('open_date', to).is('deleted_at', null).eq('status', '개통완료');
+      if (filterDevice) query = query.eq('device_model', filterDevice);
+      if (filterPlan) query = query.eq('rate_plan', filterPlan);
+      if (filterSaleType) query = query.eq('sale_type', filterSaleType);
+      return query;
+    },
+  );
 
   const seen = new Set<string>();
   const map = new Map<string, { count: number }>();
@@ -661,11 +690,26 @@ export async function getChannelFunnelStats(
 ): Promise<ChannelFunnelRow[]> {
   const { start: lStart, end: lEnd } = getKstDateRangeUtc(from, to);
 
-  const [leadsRes, logsRes, salesRes] = await Promise.all([
-    supabase.from('leads').select('channel, campaign_name').gte('created_at', lStart).lte('created_at', lEnd).is('deleted_at', null),
-    supabase.from('activity_logs').select('channel, action_type').gte('created_at', lStart).lte('created_at', lEnd).eq('is_counted', true),
-    supabase.from('sales').select('id, channel, status').gte('open_date', from).lte('open_date', to).is('deleted_at', null).eq('status', '개통완료'),
+  const [leadsData, logsData, salesData] = await Promise.all([
+    fetchAllRows<any>(
+      'leads',
+      'channel, campaign_name',
+      (q) => q.gte('created_at', lStart).lte('created_at', lEnd).is('deleted_at', null),
+    ),
+    fetchAllRows<any>(
+      'activity_logs',
+      'channel, action_type',
+      (q) => q.gte('created_at', lStart).lte('created_at', lEnd).eq('is_counted', true),
+    ),
+    fetchAllRows<any>(
+      'sales',
+      'id, channel, status',
+      (q) => q.gte('open_date', from).lte('open_date', to).is('deleted_at', null).eq('status', '개통완료'),
+    ),
   ]);
+  const leadsRes = { data: leadsData };
+  const logsRes = { data: logsData };
+  const salesRes = { data: salesData };
 
   const CHANNELS = ['meta', 'dogmaru', 'udak', 'moyo', '기타'];
   const map = new Map<string, ChannelFunnelRow>();
@@ -732,11 +776,15 @@ export async function getStaffChannelFocusStats(
   const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.display_name]));
 
   const { start: aStart, end: aEnd } = getKstDateRangeUtc(from, to);
-  let q = supabase.from('activity_logs')
-    .select('staff_id, staff_name, channel, action_type')
-    .gte('created_at', aStart).lte('created_at', aEnd).eq('is_counted', true);
-  if (staffId) q = q.eq('staff_id', staffId);
-  const { data: logs } = await q;
+  const logs = await fetchAllRows<any>(
+    'activity_logs',
+    'staff_id, staff_name, channel, action_type',
+    (q) => {
+      let query = q.gte('created_at', aStart).lte('created_at', aEnd).eq('is_counted', true);
+      if (staffId) query = query.eq('staff_id', staffId);
+      return query;
+    },
+  );
 
   const map = new Map<string, StaffChannelFocusRow>();
   const staffAttempt = new Map<string, number>();
@@ -767,10 +815,11 @@ export async function getStaffChannelFocusStats(
 export async function getDeviceFilterOptions(from: string, to: string): Promise<{
   devices: string[]; plans: string[]; saleTypes: string[];
 }> {
-  const { data } = await supabase.from('sales')
-    .select('device_model, rate_plan, sale_type')
-    .gte('open_date', from).lte('open_date', to)
-    .is('deleted_at', null).eq('status', '개통완료');
+  const data = await fetchAllRows<any>(
+    'sales',
+    'device_model, rate_plan, sale_type',
+    (q) => q.gte('open_date', from).lte('open_date', to).is('deleted_at', null).eq('status', '개통완료'),
+  );
   const uniq = (arr: (string | null)[]) => [...new Set(arr.filter(Boolean) as string[])].sort();
   return {
     devices: uniq((data ?? []).map((r: any) => r.device_model)),
