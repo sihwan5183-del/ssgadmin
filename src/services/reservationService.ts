@@ -188,12 +188,8 @@ export interface ReservationStats {
 }
 
 export async function fetchReservationStats(): Promise<ReservationStats> {
-  const { data, error } = await supabase
-    .from('reservations')
-    .select('status');
-  if (error) throw error;
-
-  const rows = (data ?? []) as { status: string }[];
+  const data = await fetchAllPaged<{ status: string }>('status');
+  const rows = data;
   const total = rows.length;
   const byStatus: Record<string, number> = {};
   rows.forEach((r) => {
