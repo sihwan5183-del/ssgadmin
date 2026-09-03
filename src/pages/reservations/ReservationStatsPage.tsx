@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { WorkReportHeader, SectionCard } from '@/pages/work-report/_shared';
-import { supabase } from '@/integrations/supabase/client';
+import { fetchAllPaged } from '@/services/reservationService';
 
 // ── 상수 ──────────────────────────────────────────────────
 // v20260805: "기존고객" 채널이 빠져있어서 전체 합계랑 채널별 카드 합이 안 맞던 버그 수정
@@ -408,19 +408,28 @@ export default function ReservationStatsPage() {
   const [graphStep, setGraphStep] = useState<string | null>(null);
   const [graphChannel, setGraphChannel] = useState<string | undefined>();
 
+  // v20260903: 사전예약이 1000건을 넘어가면서(현재 1000건대) Supabase가 요청 1건당 최대 1000행만
+  // 돌려주는 기본 제한에 걸려, 퍼널 카운트("신규(인입)" 포함)가 실제 DB 건수보다 적게 나오던 버그
+  // 수정. fetchAllPaged로 1000건씩 끝까지 순회해서 빠짐없이 가져온다(아래 세 조회 전부 동일 적용).
   const load = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.from('reservations').select('status, channel, created_at');
-      if (error) throw error;
-      setAllRows((data ?? []) as Row[]);
-      const { data: fd } = await supabase.from('reservations').select('fail_reason:reservation_fail_reasons(reason)').eq('status','실패').not('fail_reason_id','is',null);
+      const data = await fetchAllPaged<Row>('status, channel, created_at');
+      setAllRows(data);
+
+      const fd = await fetchAllPaged<any>(
+        'fail_reason:reservation_fail_reasons(reason)',
+        (q) => q.eq('status', '실패').not('fail_reason_id', 'is', null),
+      );
       const rc: Record<string,number> = {};
-      (fd ?? []).forEach((r: any) => { const rs = r.fail_reason?.reason; if (rs) rc[rs] = (rc[rs]??0)+1; });
+      fd.forEach((r: any) => { const rs = r.fail_reason?.reason; if (rs) rc[rs] = (rc[rs]??0)+1; });
       setFailStats(Object.entries(rc).map(([reason,count]) => ({reason,count})).sort((a,b) => b.count-a.count));
 
-      const { data: bd } = await supabase.from('reservations').select('bundle_watch, bundle_tablet, bundle_tablet_type').in('status', ['확정', '택배발송']);
-      setBundleRows((bd ?? []) as BundleRow[]);
+      const bd = await fetchAllPaged<BundleRow>(
+        'bundle_watch, bundle_tablet, bundle_tablet_type',
+        (q) => q.in('status', ['확정', '택배발송']),
+      );
+      setBundleRows(bd);
     } catch (e: any) { toast.error('통계 로드 실패: ' + e.message); }
     finally { setLoading(false); }
   };

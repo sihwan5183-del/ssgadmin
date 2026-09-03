@@ -215,7 +215,7 @@ export async function fetchReservationStats(): Promise<ReservationStats> {
 // ============================================================
 const LOG_CHUNK = 1000;
 
-async function fetchAllPaged<T>(
+export async function fetchAllPaged<T>(
   selectCols: string,
   applyFilters?: (q: any) => any,
 ): Promise<T[]> {

@@ -22,7 +22,7 @@ import { useRole } from '@/hooks/useRole';
 import { maskName, maskPhone } from '@/lib/maskPii';
 import { useDashboardStaff } from '@/hooks/useDashboardStaff';
 import { WorkReportHeader, SectionCard } from '@/pages/work-report/_shared';
-import { fetchReservations, deleteReservation } from '@/services/reservationService';
+import { fetchReservations, fetchAllPaged, deleteReservation } from '@/services/reservationService';
 import type { Reservation, ReservationStatus, ProspectGrade } from '@/types/reservation';
 import { RESERVATION_STATUS_LIST, PROSPECT_GRADE_OPTIONS, ABSENT_COUNT_OPTIONS, ABSENT_MAX } from '@/types/reservation';
 import type { AbsentCount } from '@/types/reservation';
@@ -255,11 +255,16 @@ export default function ReservationsPage() {
     return new Set(Object.entries(phoneCnt).filter(([,cnt]) => cnt > 1).map(([p]) => p));
   };
 
+  // v20260903: 사전예약이 1000건을 넘어가면서(현재 1000건대) Supabase가 요청 1건당 최대 1000행만
+  // 돌려주는 기본 제한에 걸려, 이 화면의 KPI 카드(상태별/부재 회차별/채널별 카운트)가 실제 DB
+  // 건수보다 적게 표시되던 버그 수정. fetchAllPaged로 1000건씩 끝까지 순회해서 빠짐없이 가져온다.
   const loadAll = useCallback(async () => {
-    const { data } = await supabase
-      .from('reservations')
-      .select('id, status, channel, contact_date, prospect_grade, absent_count, phone');
-    setAllRows((data ?? []) as any[]);
+    try {
+      const data = await fetchAllPaged<any>('id, status, channel, contact_date, prospect_grade, absent_count, phone');
+      setAllRows(data);
+    } catch (e: any) {
+      toast.error('전체 데이터 로드 실패: ' + e.message);
+    }
   }, []);
 
   // 필터 적용 데이터 로드
