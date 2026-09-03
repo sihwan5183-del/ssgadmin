@@ -25,6 +25,9 @@ export async function fetchAllRows<T>(
     // 실제 반환 타입은 호출부에서 지정하는 제네릭 <T>가 담당한다.
     let q: any = supabase.from(table as any).select(selectCols);
     if (applyFilters) q = applyFilters(q);
+    // 정렬 없이 range()만 쓰면 청크 경계에서 행이 누락/중복될 수 있어(reservationService.ts
+    // fetchAllPaged에서 실제로 발생했던 문제), id를 안정적인 타이브레이커로 항상 추가한다.
+    q = q.order('id', { ascending: true });
     const { data, error } = await q.range(from, to);
     if (error) throw error;
     const page = (data ?? []) as T[];
