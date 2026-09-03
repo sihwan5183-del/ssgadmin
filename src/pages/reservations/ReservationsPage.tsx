@@ -42,6 +42,21 @@ const CHANNEL_TABS = [
   { value: '기존고객',    label: '기존고객' },
 ];
 
+// iphone18 캠페인 — 기존1(전체통신사) / 신규2(MNP전용) 구분용
+// utm_campaign에는 메타 광고관리자가 자동으로 채워주는 캠페인 ID(숫자)가 그대로 들어오므로,
+// 여기서 사람이 읽을 수 있는 이름으로 매핑해서 보여줍니다. 새 캠페인이 생기면 이 배열에 추가하세요.
+const CAMPAIGN_OPTIONS = [
+  { value: '120249648804880479', label: '기존1 (전체통신사)' },
+  { value: '120249757384390479', label: '신규2 (MNP전용)' },
+];
+const CAMPAIGN_LABELS: Record<string, string> = Object.fromEntries(
+  CAMPAIGN_OPTIONS.map((c) => [c.value, c.label])
+);
+function campaignLabel(v?: string | null): string {
+  if (!v) return '-';
+  return CAMPAIGN_LABELS[v] ?? v;
+}
+
 function StatusBadge({ status, prospectGrade }: { status: ReservationStatus; prospectGrade?: string | null }) {
   const found = RESERVATION_STATUS_LIST.find((s) => s.value === status);
   const label = status === '가망' && prospectGrade ? prospectGrade : (found?.label ?? status);
@@ -78,6 +93,7 @@ export default function ReservationsPage() {
 
   // 필터 상태
   const [channelTab, setChannelTab] = useState('');
+  const [campaignFilter, setCampaignFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<ReservationStatus | ''>('');
   const [gradeFilter, setGradeFilter] = useState<ProspectGrade | ''>('');
   const [absentFilter, setAbsentFilter] = useState<AbsentCount | 0>(0); // 부재 회차 필터 (v20260901) — 0=전체
@@ -169,7 +185,7 @@ export default function ReservationsPage() {
       r.birth_date ?? '',
       r.carrier ?? '',
       r.channel ?? '',
-      (r as any).utm_campaign ?? '',
+      campaignLabel((r as any).utm_campaign),
       r.status,
       (r as any).assignee?.full_name ?? '',
       (r as any).device_interest ?? '',
@@ -194,7 +210,7 @@ export default function ReservationsPage() {
     r.birth_date ?? '',
     r.carrier ?? '',
     r.channel ?? '',
-    (r as any).utm_campaign ?? '',
+    campaignLabel((r as any).utm_campaign),
     r.status,
     (r as any).assignee?.full_name ?? '',
     (r as any).device_interest ?? '',
@@ -231,6 +247,7 @@ export default function ReservationsPage() {
           page: p,
           pageSize: CHUNK,
           channel: channelTab || undefined,
+          campaign: campaignFilter || undefined,
           dateStart: dateStart || undefined,
           dateEnd: dateEnd || undefined,
         } as any);
@@ -280,6 +297,7 @@ export default function ReservationsPage() {
         page,
         pageSize,
         channel: channelTab || undefined,
+        campaign: campaignFilter || undefined,
         dateStart: dateStart || undefined,
         dateEnd: dateEnd || undefined,
       } as any);
@@ -290,7 +308,7 @@ export default function ReservationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, gradeFilter, absentFilter, assigneeFilter, search, page, pageSize, channelTab, dateStart, dateEnd]);
+  }, [statusFilter, gradeFilter, absentFilter, assigneeFilter, search, page, pageSize, channelTab, campaignFilter, dateStart, dateEnd]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
   useEffect(() => { load(); }, [load]);
@@ -392,7 +410,7 @@ export default function ReservationsPage() {
 
   const handleSearch = () => { setSearch(searchInput); setPage(1); };
   const handleReset = () => {
-    setSearch(''); setSearchInput(''); setStatusFilter(''); setGradeFilter(''); setAbsentFilter(0); setAssigneeFilter('');
+    setSearch(''); setSearchInput(''); setStatusFilter(''); setGradeFilter(''); setAbsentFilter(0); setAssigneeFilter(''); setCampaignFilter('');
     setDateStart(''); setDateEnd(''); setPage(1);
   };
   const handleTabChange = (val: string) => {
@@ -582,6 +600,19 @@ export default function ReservationsPage() {
             </SelectContent>
           </Select>
 
+          {/* 캠페인 필터 (iphone18 기존1/신규2 MNP 구분용) */}
+          <Select value={campaignFilter || '_all_'} onValueChange={(v) => { setCampaignFilter(v === '_all_' ? '' : v); setPage(1); }}>
+            <SelectTrigger className="w-[150px] text-sm">
+              <SelectValue placeholder="전체 캠페인" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_all_">전체 캠페인</SelectItem>
+              {CAMPAIGN_OPTIONS.map((c) => (
+                <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           {/* 상태 필터 */}
           <Select value={statusFilter || '_all_'} onValueChange={(v) => { setStatusFilter((v === '_all_' ? '' : v) as ReservationStatus | ''); setPage(1); }}>
             <SelectTrigger className="w-[120px] text-sm">
@@ -718,7 +749,7 @@ export default function ReservationsPage() {
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${ r.channel === '메타광고' ? 'bg-blue-100 text-blue-700' : r.channel === '네이버 검색광고' ? 'bg-green-100 text-green-700' : r.channel === '기존고객' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>{r.channel}</span>
                       ) : '-'}
                     </TableCell>
-                    <TableCell className="text-xs text-gray-500 whitespace-nowrap">{(r as any).utm_campaign ?? '-'}</TableCell>
+                    <TableCell className="text-xs text-gray-500 whitespace-nowrap">{campaignLabel((r as any).utm_campaign)}</TableCell>
                     <TableCell className="whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <Select value={r.status} onValueChange={(v) => updateStatusInline(r.id, v as ReservationStatus)}>
                         <SelectTrigger className={`h-7 text-[11px] w-[132px] border-none font-semibold rounded-full px-2.5 ${RESERVATION_STATUS_LIST.find(s => s.value === r.status)?.color ?? 'bg-gray-100 text-gray-600'}`}>
