@@ -152,7 +152,7 @@ export async function deleteReservation(id: string, tables: ReservationTableName
 export async function fetchMemoLogs(reservationId: string, tables: ReservationTableNames): Promise<ReservationMemoLog[]> {
   const { data, error } = await supabase
     .from(tables.memoLogs as any)
-    .select('*, author:profiles!reservation_memo_logs_created_by_fkey(display_name)')
+    .select('*, author:profiles!created_by(display_name)')
     .eq('reservation_id', reservationId)
     .order('created_at', { ascending: false });
   if (error) throw error;
@@ -171,7 +171,7 @@ export async function addMemoLog(
   const { data, error } = await supabase
     .from(tables.memoLogs as any)
     .insert({ reservation_id: reservationId, content: trimmed, created_by: userId || null } as any)
-    .select('*, author:profiles!reservation_memo_logs_created_by_fkey(display_name)')
+    .select('*, author:profiles!created_by(display_name)')
     .single();
   if (error) throw error;
 
