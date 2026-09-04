@@ -159,7 +159,7 @@ export default function ConfirmedListPage() {
   const { isAdmin } = useRole();
   const { staff } = useDashboardStaff();
   const navigate = useNavigate();
-  const { tables } = useReservationCategory();
+  const { category, tables } = useReservationCategory();
 
   const [rows, setRows] = useState<ConfirmedRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -210,14 +210,14 @@ export default function ConfirmedListPage() {
         dateEnd: dateEnd || undefined,
         channel: channel || undefined,
         assignedTo: assignee || undefined,
-      }, tables.reservations);
+      }, tables.reservations, category);
       setRows(data);
     } catch (e: any) {
       toast.error('데이터 로드 실패: ' + e.message);
     } finally {
       setLoading(false);
     }
-  }, [dateStart, dateEnd, channel, assignee, tables]);
+  }, [dateStart, dateEnd, channel, assignee, tables, category]);
 
   useEffect(() => { load(); }, [load]);
 

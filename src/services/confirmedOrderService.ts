@@ -7,6 +7,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Reservation } from '@/types/reservation';
 import { DEVICE_COLOR_MAP } from '@/types/reservation';
+import type { ReservationCategory } from '@/hooks/useReservationCategory';
 
 // v20260731: 택배발송 완료된 건도 계속 "확정 파이프라인"에 남아 보여야 하므로
 // (발주표/스펙시트/팀리포트/2ND통계/본사대사에서 사라지면 안 됨) 확정+택배발송 둘 다 포함.
@@ -14,17 +15,49 @@ export const CONFIRMED_STATUS = '확정'; // 하위호환용 단일값 (신규 �
 export const CONFIRMED_STATUSES = ['확정', '택배발송'] as const;
 export const UNSET = '미정';
 
-// 정규화 기준값
+// ── 정규화 기준값 (카테고리별) ──────────────────────────────
+// v20260904: 폴더블/아이폰18 완전 분리에 맞춰 기기·용량·컬러 기준값도 카테고리별로 분리.
 // 대시보드 표시 순서: 좌(폴드8) / 가운데(폴드8 울트라) / 우(플립8)
-export const DEVICE_CANON = [
+const DEVICE_CANON_FOLDABLE = [
   '갤럭시 Z 폴드8',
   '갤럭시 Z 폴드8 울트라',
   '갤럭시 Z 플립8',
 ] as const;
 
-export const CAPACITY_CANON = ['256GB', '512GB', '1TB'] as const;
+// 실제 접수된 관심기기 원본 데이터 기준(아이폰 18 프로/프로맥스/울트라) — 컬러는 아직 미확정이라
+// COLOR_CANON/DEVICE_COLOR_MAP 쪽은 비워두고 자유입력으로 둠 (색상 확정되면 추가 예정)
+const DEVICE_CANON_IPHONE = [
+  '아이폰 18 프로',
+  '아이폰 18 프로맥스',
+  '아이폰 울트라',
+] as const;
 
-// 전체 컬러 목록 (중복 제거, 등장 순서 유지)
+export function getDeviceCanon(category: ReservationCategory): readonly string[] {
+  return category === 'iphone18' ? DEVICE_CANON_IPHONE : DEVICE_CANON_FOLDABLE;
+}
+
+// 하위호환용 — 폴더블 기본값 (category를 안 넘기는 기존 호출부용)
+export const DEVICE_CANON = DEVICE_CANON_FOLDABLE;
+
+const CAPACITY_CANON_FOLDABLE = ['256GB', '512GB', '1TB'] as const;
+const CAPACITY_CANON_IPHONE = ['256GB', '512GB', '1TB'] as const; // 실제 접수 데이터 기준(256/512GB 확인됨), 1TB는 잠정
+
+export function getCapacityCanon(category: ReservationCategory): readonly string[] {
+  return category === 'iphone18' ? CAPACITY_CANON_IPHONE : CAPACITY_CANON_FOLDABLE;
+}
+export const CAPACITY_CANON = CAPACITY_CANON_FOLDABLE;
+
+// 기기별 컬러 매핑 — 아이폰18은 아직 색상 확정 데이터가 없어 빈 매핑(=자유입력 취급)
+const DEVICE_COLOR_MAP_IPHONE: Record<string, string[]> = {};
+
+export function getDeviceColorMap(category: ReservationCategory): Record<string, string[]> {
+  return category === 'iphone18' ? DEVICE_COLOR_MAP_IPHONE : DEVICE_COLOR_MAP;
+}
+
+export function getColorCanon(category: ReservationCategory): string[] {
+  return Array.from(new Set(Object.values(getDeviceColorMap(category)).flat()));
+}
+// 하위호환용 — 폴더블 기본값
 export const COLOR_CANON = Array.from(
   new Set(Object.values(DEVICE_COLOR_MAP).flat()),
 );
@@ -32,9 +65,16 @@ export const COLOR_CANON = Array.from(
 // ── 정규화 ────────────────────────────────────────────────
 // 관심기기는 랜딩페이지/수기입력 혼재라 오타·구칭·띄어쓰기가 섞여 있음.
 // types/reservation.ts 의 getColorsForDevice 와 동일한 판정 로직을 사용.
-export function normalizeDevice(raw: string | null | undefined): string {
+export function normalizeDevice(raw: string | null | undefined, category: ReservationCategory = 'foldable'): string {
   if (!raw) return UNSET;
   const d = raw.replace(/\s+/g, '');
+  if (category === 'iphone18') {
+    // 프로맥스가 '프로'를 포함하므로 먼저 체크. '+' 등 접미사는 프로맥스로 흡수.
+    if (d.includes('프로맥스')) return '아이폰 18 프로맥스';
+    if (d.includes('울트라')) return '아이폰 울트라';
+    if (d.includes('프로')) return '아이폰 18 프로';
+    return raw.trim() || UNSET;
+  }
   if (d.includes('트라') || d.includes('와이드')) return '갤럭시 Z 폴드8 울트라';
   if (d.includes('플립')) return '갤럭시 Z 플립8';
   if (d.includes('폴드')) return '갤럭시 Z 폴드8';
@@ -51,11 +91,11 @@ export function normalizeCapacity(raw: string | null | undefined): string {
   return raw.trim() || UNSET;
 }
 
-export function normalizeColor(raw: string | null | undefined): string {
+export function normalizeColor(raw: string | null | undefined, category: ReservationCategory = 'foldable'): string {
   if (!raw) return UNSET;
   const c = raw.replace(/\s+/g, '');
   if (c === '' || c === UNSET) return UNSET;
-  const hit = COLOR_CANON.find((x) => x.replace(/\s+/g, '') === c);
+  const hit = getColorCanon(category).find((x) => x.replace(/\s+/g, '') === c);
   return hit ?? raw.trim();
 }
 
@@ -91,6 +131,7 @@ const CHUNK = 1000;
 export async function fetchConfirmedReservations(
   filters: ConfirmedFilters = {},
   reservationsTable: string,
+  category: ReservationCategory = 'foldable',
 ): Promise<ConfirmedRow[]> {
   const { dateStart, dateEnd, channel, assignedTo } = filters;
   const all: Reservation[] = [];
@@ -119,9 +160,9 @@ export async function fetchConfirmedReservations(
   }
 
   return all.map((r) => {
-    const device_norm = normalizeDevice(r.device_interest);
+    const device_norm = normalizeDevice(r.device_interest, category);
     const capacity_norm = normalizeCapacity(r.capacity);
-    const color_norm = normalizeColor(r.product_color);
+    const color_norm = normalizeColor(r.product_color, category);
     return {
       ...r,
       device_norm,
@@ -190,8 +231,12 @@ function toCountItems(map: Record<string, number>, total: number, order: readonl
   }));
 }
 
-export function buildConfirmedSummary(rows: ConfirmedRow[]): ConfirmedSummary {
+export function buildConfirmedSummary(rows: ConfirmedRow[], category: ReservationCategory = 'foldable'): ConfirmedSummary {
   const total = rows.length;
+  const deviceCanon = getDeviceCanon(category);
+  const capacityCanon = getCapacityCanon(category);
+  const colorCanon = getColorCanon(category);
+  const deviceColorMap = getDeviceColorMap(category);
 
   const dMap: Record<string, number> = {};
   const cMap: Record<string, number> = {};
@@ -206,7 +251,7 @@ export function buildConfirmedSummary(rows: ConfirmedRow[]): ConfirmedSummary {
     comboMap[key] = (comboMap[key] ?? 0) + 1;
   });
 
-  const deviceOrder = [...DEVICE_CANON] as string[];
+  const deviceOrder = [...deviceCanon] as string[];
 
   const combos: ComboItem[] = Object.entries(comboMap)
     .map(([key, count]) => {
@@ -227,7 +272,7 @@ export function buildConfirmedSummary(rows: ConfirmedRow[]): ConfirmedSummary {
 
   // 기기별 피벗 (행=용량, 열=컬러)
   // 대시보드는 좌/가운데/우 3단 고정 레이아웃이라, 확정 건이 0건이어도
-  // 폴드8/폴드8 울트라/플립8 3개 컬럼은 항상 노출한다 (그 외 미분류 기기는 뒤에 추가).
+  // 카테고리별 기준 기기 3개 컬럼은 항상 노출한다 (그 외 미분류 기기는 뒤에 추가).
   const nonCanonKeys = Object.keys(dMap)
     .filter((k) => !deviceOrder.includes(k) && k !== UNSET)
     .sort((a, b) => dMap[b] - dMap[a]);
@@ -236,7 +281,7 @@ export function buildConfirmedSummary(rows: ConfirmedRow[]): ConfirmedSummary {
   const pivots: DevicePivot[] = deviceKeys.map((device) => {
     const sub = rows.filter((r) => r.device_norm === device);
 
-    const baseColors = DEVICE_COLOR_MAP[device] ?? [];
+    const baseColors = deviceColorMap[device] ?? [];
     const usedColors = Array.from(new Set(sub.map((r) => r.color_norm)));
     const colors = [
       ...baseColors.filter((c) => usedColors.includes(c) || baseColors.length > 0),
@@ -247,8 +292,8 @@ export function buildConfirmedSummary(rows: ConfirmedRow[]): ConfirmedSummary {
     const usedCaps = Array.from(new Set(sub.map((r) => r.capacity_norm)));
     // 컬러축과 동일하게: 데이터가 0건이어도 256GB/512GB/1TB 축은 항상 노출 (빈 그리드로 보여줌)
     const capacities = [
-      ...CAPACITY_CANON,
-      ...usedCaps.filter((c) => !CAPACITY_CANON.includes(c as any) && c !== UNSET),
+      ...capacityCanon,
+      ...usedCaps.filter((c) => !capacityCanon.includes(c as any) && c !== UNSET),
     ];
     if (usedCaps.includes(UNSET)) capacities.push(UNSET);
 
@@ -281,8 +326,8 @@ export function buildConfirmedSummary(rows: ConfirmedRow[]): ConfirmedSummary {
     colorUnset: colMap[UNSET] ?? 0,
     orderReady: rows.filter((r) => r.order_ready).length,
     byDevice: toCountItems(dMap, total, deviceOrder),
-    byCapacity: toCountItems(cMap, total, CAPACITY_CANON),
-    byColor: toCountItems(colMap, total, COLOR_CANON),
+    byCapacity: toCountItems(cMap, total, capacityCanon),
+    byColor: toCountItems(colMap, total, colorCanon),
     combos,
     pivots,
   };

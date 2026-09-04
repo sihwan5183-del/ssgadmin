@@ -246,7 +246,7 @@ function BundleStatsSection({ rows }: { rows: ConfirmedRow[] }) {
 export default function ConfirmedDashboardPage() {
   const { staff } = useDashboardStaff();
   const navigate = useNavigate();
-  const { tables } = useReservationCategory();
+  const { category, tables } = useReservationCategory();
 
   const [rows, setRows] = useState<ConfirmedRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -264,21 +264,21 @@ export default function ConfirmedDashboardPage() {
         dateEnd: dateEnd || undefined,
         channel: channel || undefined,
         assignedTo: assignee || undefined,
-      }, tables.reservations);
+      }, tables.reservations, category);
       setRows(data);
     } catch (e: any) {
       toast.error('데이터 로드 실패: ' + e.message);
     } finally {
       setLoading(false);
     }
-  }, [dateStart, dateEnd, channel, assignee, tables]);
+  }, [dateStart, dateEnd, channel, assignee, tables, category]);
 
   useEffect(() => { load(); }, [load]);
 
   // 발주(재고 확보) 목적 화면이라 이미 택배발송 완료된 건은 매트릭스/발주표/KPI 집계에서 제외한다.
   // (2ND 워치·태블릿·인터넷 통계는 전체 확정 파이프라인 추적용이라 택배발송 포함 그대로 둔다.)
   // v20260805: 사장님 요청으로 확정+택배발송 완료 전부 합쳐서 집계 (이전엔 택배발송 제외했었음)
-  const summary = useMemo(() => buildConfirmedSummary(rows), [rows]);
+  const summary = useMemo(() => buildConfirmedSummary(rows, category), [rows, category]);
   const mnpSplit = useMemo(() => buildMnpSplitSummary(rows), [rows]);
 
   const handleReset = () => {
