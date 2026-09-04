@@ -68,11 +68,21 @@ export async function saveStatusLog({
   const now = new Date().toISOString();
 
   // 첫 대응 여부 (신규 → 다른 상태로 첫 변경)
+  // v20260904: 단순 시계 경과 대신 근무시간(평일 09:30~20:00, 일요일 제외) 기준으로 계산.
+  // DB의 fn_business_minutes_between과 동일 로직을 RPC로 호출해서, 과거 백필 데이터와
+  // 계산 기준이 어긋나지 않도록 한다.
   let responseMinutes: number | null = null;
   if (fromStatus === '신규' && contactDate) {
-    const inboundTime = new Date(contactDate).getTime();
-    const responseTime = new Date(now).getTime();
-    responseMinutes = Math.round((responseTime - inboundTime) / 60000);
+    const { data, error: rpcError } = await supabase.rpc('fn_business_minutes_between', {
+      start_ts: contactDate,
+      end_ts: now,
+    } as any);
+    if (!rpcError && typeof data === 'number') {
+      responseMinutes = data;
+    } else {
+      // RPC 실패 시에도 로그 저장 자체는 막지 않도록 기존 방식(단순 경과)으로 폴백
+      responseMinutes = Math.round((new Date(now).getTime() - new Date(contactDate).getTime()) / 60000);
+    }
   }
 
   await supabase.from(statusLogsTable as any).insert({
