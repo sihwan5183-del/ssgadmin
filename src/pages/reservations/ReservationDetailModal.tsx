@@ -49,6 +49,7 @@ interface Props {
   reservationId: string;
   onClose: () => void;
   onDone: () => void;
+  tables: import('@/hooks/useReservationCategory').ReservationTableNames;
 }
 
 function StatusBadge({ status, prospectGrade, absentCount }: { status: ReservationStatus; prospectGrade?: string | null; absentCount?: number | null }) {
@@ -71,7 +72,7 @@ function formatLogTime(iso: string) {
   });
 }
 
-export function ReservationDetailModal({ reservationId, onClose, onDone }: Props) {
+export function ReservationDetailModal({ reservationId, onClose, onDone, tables }: Props) {
   const { isAdmin } = useRole();
   const { user } = useAuth();
   const { staff } = useDashboardStaff();
@@ -121,7 +122,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
   const loadMemoLogs = async () => {
     setMemoLogsLoading(true);
     try {
-      const logs = await fetchMemoLogs(reservationId);
+      const logs = await fetchMemoLogs(reservationId, tables);
       setMemoLogs(logs);
     } catch (e: any) {
       toast.error('메모 히스토리 로드 실패: ' + e.message);
@@ -135,7 +136,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
       setLoading(true);
       try {
         const [r, fr] = await Promise.all([
-          fetchReservationById(reservationId),
+          fetchReservationById(reservationId, tables),
           fetchFailReasons(),
         ]);
         setRow(r);
@@ -162,7 +163,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
     };
     load();
     loadMemoLogs();
-  }, [reservationId]);
+  }, [reservationId, tables]);
 
   // 상태 변경 시 실패/취소 인터셉트
   const handleStatusChange = (val: ReservationStatus) => {
@@ -198,7 +199,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
     if (!newMemo.trim()) return;
     setMemoSaving(true);
     try {
-      await addMemoLog(reservationId, newMemo, user?.id);
+      await addMemoLog(reservationId, newMemo, user?.id, tables);
       setNewMemo('');
       await loadMemoLogs();
       toast.success('메모가 추가되었습니다');
@@ -222,6 +223,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
             toStatus: status,
             changedBy: user.id,
             contactDate: row.contact_date,
+            statusLogsTable: tables.statusLogs,
           });
         } catch (e) {
           console.warn('로그 저장 실패:', e);
@@ -241,7 +243,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
         fail_stage: status === '실패' ? '상담' as FailStage : null,
         fail_memo: status === '실패' ? failMemo.trim() || null : null,
         cancel_stage: status === '취소' ? cancelStage : null,
-      } as any);
+      } as any, tables);
       toast.success('저장되었습니다');
       onDone();
     } catch (e: any) {
@@ -255,7 +257,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone }: Props
     if (!row) return;
     setDeleting(true);
     try {
-      await deleteReservation(row.id);
+      await deleteReservation(row.id, tables);
       toast.success('삭제되었습니다');
       onDone();
     } catch (e: any) {

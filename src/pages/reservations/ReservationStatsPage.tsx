@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { WorkReportHeader, SectionCard } from '@/pages/work-report/_shared';
 import { fetchAllPaged } from '@/services/reservationService';
+import { useReservationCategory } from '@/hooks/useReservationCategory';
+import { ReservationCategoryToggle } from './ReservationCategoryToggle';
 
 // ── 상수 ──────────────────────────────────────────────────
 // v20260805: "기존고객" 채널이 빠져있어서 전체 합계랑 채널별 카드 합이 안 맞던 버그 수정
@@ -397,6 +399,7 @@ function GraphDrawer({ rows, step, channel, onClose }: { rows: Row[]; step: stri
 // ── 메인 ─────────────────────────────────────────────────
 export default function ReservationStatsPage() {
   const navigate = useNavigate();
+  const { category, tables } = useReservationCategory();
   const [allRows, setAllRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [failStats, setFailStats] = useState<{ reason: string; count: number }[]>([]);
@@ -414,11 +417,12 @@ export default function ReservationStatsPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const data = await fetchAllPaged<Row>('status, channel, created_at');
+      const data = await fetchAllPaged<Row>('status, channel, created_at', tables);
       setAllRows(data);
 
       const fd = await fetchAllPaged<any>(
         'fail_reason:reservation_fail_reasons(reason)',
+        tables,
         (q) => q.eq('status', '실패').not('fail_reason_id', 'is', null),
       );
       const rc: Record<string,number> = {};
@@ -427,13 +431,14 @@ export default function ReservationStatsPage() {
 
       const bd = await fetchAllPaged<BundleRow>(
         'bundle_watch, bundle_tablet, bundle_tablet_type',
+        tables,
         (q) => q.in('status', ['확정', '택배발송']),
       );
       setBundleRows(bd);
     } catch (e: any) { toast.error('통계 로드 실패: ' + e.message); }
     finally { setLoading(false); }
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [tables]);
 
   const rows = useMemo(() => filterByPeriod(allRows, periodMode, customStart, customEnd), [allRows, periodMode, customStart, customEnd]);
   const currentLabel = periodMode ? PERIOD_BTNS.find(b => b.value === periodMode)?.label : customStart ? `${customStart}${customEnd?' ~ '+customEnd:''}` : '전체';
@@ -442,9 +447,10 @@ export default function ReservationStatsPage() {
     <div className="p-6 space-y-5 max-w-[1400px] mx-auto">
       <WorkReportHeader
         title="사전예약 통계"
-        description="채널별 퍼널 · 기간비교 · 채널비교 분석"
+        description={`${tables.label} · 채널별 퍼널 · 기간비교 · 채널비교 분석`}
         rightSlot={
           <div className="flex items-center gap-2">
+            <ReservationCategoryToggle />
             <Button variant="outline" size="sm" onClick={() => navigate('/reservations')} className="gap-1.5"><ArrowLeft className="size-4" /> 목록</Button>
             <Button variant="ghost" size="icon" onClick={load}><RotateCw className={`size-4 ${loading ? 'animate-spin' : ''}`} /></Button>
           </div>

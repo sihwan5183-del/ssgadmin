@@ -13,6 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { insertReservation } from '@/services/reservationService';
+import type { ReservationTableNames } from '@/hooks/useReservationCategory';
 import { CARRIER_OPTIONS, CHANNEL_OPTIONS, DEVICE_OPTIONS, getColorsForDevice } from '@/types/reservation';
 import { useFieldOptions } from '@/hooks/useFieldOptions';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,9 +22,10 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onDone: () => void;
+  tables: ReservationTableNames;
 }
 
-export function ReservationAddModal({ open, onClose, onDone }: Props) {
+export function ReservationAddModal({ open, onClose, onDone, tables }: Props) {
   const { user } = useAuth();
   const { options: colorOptions, refresh: refreshColors } = useFieldOptions('reservation_color' as any);
 
@@ -57,7 +59,7 @@ export function ReservationAddModal({ open, onClose, onDone }: Props) {
         birth_date: birthDate || undefined,
         assigned_to: user?.id,
         status: '신규',
-      });
+      }, tables);
       toast.success('사전예약 고객이 등록되었습니다');
       onDone();
     } catch (e: any) {

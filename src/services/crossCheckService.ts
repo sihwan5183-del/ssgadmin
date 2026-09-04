@@ -15,6 +15,7 @@ export async function setHqCheckStatus(
   status: HqCheckStatus,
   note: string | null,
   userId: string | null,
+  reservationsTable: string,
 ): Promise<void> {
   const payload =
     status === '미확인'
@@ -32,8 +33,8 @@ export async function setHqCheckStatus(
         };
 
   const { error } = await supabase
-    .from('reservations')
-    .update(payload)
+    .from(reservationsTable as any)
+    .update(payload as any)
     .eq('id', reservationId);
   if (error) throw error;
 }

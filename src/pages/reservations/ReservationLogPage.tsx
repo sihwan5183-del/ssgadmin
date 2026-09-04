@@ -43,6 +43,8 @@ import {
   type IntakeLogRow,
   type NewOriginTransition,
 } from '@/services/reservationService';
+import { useReservationCategory } from '@/hooks/useReservationCategory';
+import { ReservationCategoryToggle } from './ReservationCategoryToggle';
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -78,6 +80,7 @@ const DEFAULT_DATE_START = '2026-08-02';
 
 export default function ReservationLogPage() {
   const { staff } = useDashboardStaff();
+  const { tables } = useReservationCategory();
   const [dateStart, setDateStart] = useState(DEFAULT_DATE_START);
   const [dateEnd, setDateEnd] = useState(todayStr());
   const [loading, setLoading] = useState(false);
@@ -100,10 +103,10 @@ export default function ReservationLogPage() {
     setLoading(true);
     try {
       const [intake, transitions, allAssignees, backlog] = await Promise.all([
-        fetchIntakeRowsForRange(dateStart, dateEnd),
-        fetchNewOriginTransitionsForRange(dateStart, dateEnd),
-        fetchAllAssigneeRows(),
-        fetchNewBacklogCount(),
+        fetchIntakeRowsForRange(dateStart, dateEnd, tables),
+        fetchNewOriginTransitionsForRange(dateStart, dateEnd, tables),
+        fetchAllAssigneeRows(tables),
+        fetchNewBacklogCount(tables),
       ]);
       setIntakeRows(intake);
       setTransitionRows(transitions);
@@ -119,7 +122,7 @@ export default function ReservationLogPage() {
     } finally {
       setLoading(false);
     }
-  }, [dateStart, dateEnd]);
+  }, [dateStart, dateEnd, tables]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -216,6 +219,7 @@ export default function ReservationLogPage() {
         description={`선택 기간의 접수량과 '신규 → 다른 상태' 처리 페이스, 담당자별 해결 현황입니다. 페이스(시간당)는 영업 시작 시각인 ${BUSINESS_START_HOUR}시부터 경과시간을 기준으로 계산합니다`}
         rightSlot={
           <>
+            <ReservationCategoryToggle />
             <input
               type="date"
               value={dateStart}

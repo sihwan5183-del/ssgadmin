@@ -43,6 +43,8 @@ import {
   type ConfirmedRow,
 } from '@/services/confirmedOrderService';
 import { setHqCheckStatus } from '@/services/crossCheckService';
+import { useReservationCategory } from '@/hooks/useReservationCategory';
+import { ReservationCategoryToggle } from './ReservationCategoryToggle';
 
 type ViewFilter = '전체' | '발주가능' | '미정';
 type CcFilter = '전체' | HqCheckStatus | '택배완료';
@@ -157,6 +159,7 @@ export default function ConfirmedListPage() {
   const { isAdmin } = useRole();
   const { staff } = useDashboardStaff();
   const navigate = useNavigate();
+  const { tables } = useReservationCategory();
 
   const [rows, setRows] = useState<ConfirmedRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -207,14 +210,14 @@ export default function ConfirmedListPage() {
         dateEnd: dateEnd || undefined,
         channel: channel || undefined,
         assignedTo: assignee || undefined,
-      });
+      }, tables.reservations);
       setRows(data);
     } catch (e: any) {
       toast.error('데이터 로드 실패: ' + e.message);
     } finally {
       setLoading(false);
     }
-  }, [dateStart, dateEnd, channel, assignee]);
+  }, [dateStart, dateEnd, channel, assignee, tables]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -244,7 +247,7 @@ export default function ConfirmedListPage() {
   // ── 스펙 필드 인라인 저장 (실패 시 throw → EditableCell이 에러상태 표시) ──
   const saveField = async (id: string, field: SpecField, val: string) => {
     const payload = { [field]: val.trim() === '' ? null : val.trim() };
-    const { error } = await supabase.from('reservations').update(payload).eq('id', id);
+    const { error } = await supabase.from(tables.reservations as any).update(payload).eq('id', id);
     if (error) {
       toast.error('저장 실패: ' + error.message);
       throw error;
@@ -260,7 +263,7 @@ export default function ConfirmedListPage() {
       if (note === null) return; // 취소
     }
     try {
-      await setHqCheckStatus(r.id, status, note, user?.id ?? null);
+      await setHqCheckStatus(r.id, status, note, user?.id ?? null, tables.reservations);
       toast.success(status === '미확인' ? '대사 상태를 초기화했습니다' : `"${status}"로 표시했습니다`);
       await load();
     } catch (e: any) {
@@ -271,7 +274,7 @@ export default function ConfirmedListPage() {
   // ── 2ND 태블릿 가입유형(신규/재가입) 토글 — 다시 누르면 해제 ──
   const handleSetTabletType = async (r: ConfirmedRow, type: TabletSubType) => {
     const next = r.bundle_tablet_type === type ? null : type;
-    const { error } = await supabase.from('reservations').update({ bundle_tablet_type: next }).eq('id', r.id);
+    const { error } = await supabase.from(tables.reservations as any).update({ bundle_tablet_type: next }).eq('id', r.id);
     if (error) return toast.error('저장 실패: ' + error.message);
     setRows((prev) => prev.map((row) => (row.id === r.id ? { ...row, bundle_tablet_type: next } : row)));
   };
@@ -279,7 +282,7 @@ export default function ConfirmedListPage() {
   // ── 홈상품 > 인터넷: TV 동시가입 토글 (다시 누르면 해제) ──
   const handleToggleInternetTv = async (r: ConfirmedRow) => {
     const next = !r.home_internet_tv_bundled;
-    const { error } = await supabase.from('reservations').update({ home_internet_tv_bundled: next }).eq('id', r.id);
+    const { error } = await supabase.from(tables.reservations as any).update({ home_internet_tv_bundled: next }).eq('id', r.id);
     if (error) return toast.error('저장 실패: ' + error.message);
     setRows((prev) => prev.map((row) => (row.id === r.id ? { ...row, home_internet_tv_bundled: next } : row)));
   };
@@ -287,7 +290,7 @@ export default function ConfirmedListPage() {
   // ── 홈상품 > TV프리: 번들/언번들 토글 (다시 누르면 해제) ──
   const handleSetTvBundleType = async (r: ConfirmedRow, type: TvBundleType) => {
     const next = r.home_tv_bundle_type === type ? null : type;
-    const { error } = await supabase.from('reservations').update({ home_tv_bundle_type: next }).eq('id', r.id);
+    const { error } = await supabase.from(tables.reservations as any).update({ home_tv_bundle_type: next }).eq('id', r.id);
     if (error) return toast.error('저장 실패: ' + error.message);
     setRows((prev) => prev.map((row) => (row.id === r.id ? { ...row, home_tv_bundle_type: next } : row)));
   };
@@ -357,6 +360,7 @@ export default function ConfirmedListPage() {
         description="확정(서류작성) 건을 본사 제출 양식대로 정리합니다. 기존 값은 자동으로 채워지고, 없는 값만 입력하면 됩니다"
         rightSlot={
           <>
+            <ReservationCategoryToggle />
             {isAdmin && (
               <Button variant="outline" size="sm" className="gap-1.5" onClick={handleCsv}>
                 <Download className="size-3.5" /> CSV
@@ -572,7 +576,7 @@ export default function ConfirmedListPage() {
                             onClick={async () => {
                               if (!window.confirm('택배발송을 취소하고 확정 상태로 되돌릴까요?')) return;
                               const { error } = await supabase
-                                .from('reservations')
+                                .from(tables.reservations as any)
                                 .update({ status: '확정', courier_sent: false, courier_sent_at: null })
                                 .eq('id', r.id);
                               if (!error) { toast.success('확정으로 되돌렸습니다'); await load(); }
@@ -815,6 +819,7 @@ export default function ConfirmedListPage() {
           reservationId={detailId}
           onClose={() => setDetailId(null)}
           onDone={() => { setDetailId(null); load(); }}
+          tables={tables}
         />
       )}
     </div>

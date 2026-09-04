@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { WorkReportHeader, SectionCard, KpiCard } from '@/pages/work-report/_shared';
 import { fetchResponseTimeStats } from '@/services/responseTimeService';
+import { useReservationCategory } from '@/hooks/useReservationCategory';
+import { ReservationCategoryToggle } from './ReservationCategoryToggle';
 
 const PERIOD_BTNS = [
   { label: '전체', value: '' },
@@ -49,6 +51,7 @@ const DAY_COLORS: Record<string, string> = {
 
 export default function ResponseTimePage() {
   const navigate = useNavigate();
+  const { tables } = useReservationCategory();
   const [stats, setStats] = useState<Awaited<ReturnType<typeof fetchResponseTimeStats>> | null>(null);
   const [loading, setLoading] = useState(false);
   const [periodMode, setPeriodMode] = useState('');
@@ -60,14 +63,14 @@ export default function ResponseTimePage() {
     try {
       let start = customStart, end = customEnd;
       if (!start && periodMode) { const r = getRange(periodMode); start = r.start; end = r.end; }
-      const data = await fetchResponseTimeStats(start || undefined, end || undefined);
+      const data = await fetchResponseTimeStats(tables, start || undefined, end || undefined);
       setStats(data);
     } catch (e: any) {
       toast.error('로드 실패: ' + e.message);
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, [periodMode, customStart, customEnd]);
+  useEffect(() => { load(); }, [periodMode, customStart, customEnd, tables]);
 
   const currentLabel = periodMode ? PERIOD_BTNS.find(b => b.value === periodMode)?.label :
     customStart ? `${customStart}${customEnd ? ' ~ ' + customEnd : ''}` : '전체';
@@ -90,6 +93,7 @@ export default function ResponseTimePage() {
         description="인입 → 첫 케어까지 걸린 시간 · 근무시간 기준 (월~토 09:30~20:00)"
         rightSlot={
           <div className="flex items-center gap-2">
+            <ReservationCategoryToggle />
             <Button variant="outline" size="sm" onClick={() => navigate('/reservations')} className="gap-1.5">
               <ArrowLeft className="size-4" /> 목록
             </Button>

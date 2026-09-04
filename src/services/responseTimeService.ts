@@ -56,12 +56,14 @@ export async function saveStatusLog({
   toStatus,
   changedBy,
   contactDate,
+  statusLogsTable,
 }: {
   reservationId: string;
   fromStatus: string | null;
   toStatus: string;
   changedBy: string;
   contactDate: string | null;
+  statusLogsTable: string;
 }): Promise<void> {
   const now = new Date().toISOString();
 
@@ -73,14 +75,14 @@ export async function saveStatusLog({
     responseMinutes = Math.round((responseTime - inboundTime) / 60000);
   }
 
-  await supabase.from('reservation_status_logs').insert({
+  await supabase.from(statusLogsTable as any).insert({
     reservation_id: reservationId,
     from_status: fromStatus,
     to_status: toStatus,
     changed_by: changedBy,
     changed_at: now,
     response_minutes: responseMinutes,
-  });
+  } as any);
 }
 
 // 기간 필터 적용
@@ -100,7 +102,13 @@ const LOG_CHUNK = 1000;
 // v20260903: reservation_status_logs가 1000건을 넘어가면서(현재 1000건대) Supabase가 요청 1건당
 // 최대 1000행만 돌려주는 기본 제한에 걸려, 오래된 로그가 팀 평균/담당자별/시간대별/일별 통계에서
 // 통째로 누락되던 버그 수정. 1000건씩 range로 끝까지 순회해서 빠짐없이 가져온다.
-export async function fetchResponseTimeStats(dateStart?: string, dateEnd?: string): Promise<{
+// v20260903-2: 폴더블/아이폰18 테이블 분리에 맞춰 tables 파라미터로 어느 로그 테이블을 볼지
+// 받는다. reservations 임베드 조인(FK 관계)도 카테고리에 맞는 테이블명으로 동적으로 구성.
+export async function fetchResponseTimeStats(
+  tables: import('@/hooks/useReservationCategory').ReservationTableNames,
+  dateStart?: string,
+  dateEnd?: string,
+): Promise<{
   logs: any[];
   byStaff: ResponseTimeStat[];
   hourlyDist: { hour: number; count: number; avgMin: number }[];
@@ -113,18 +121,19 @@ export async function fetchResponseTimeStats(dateStart?: string, dateEnd?: strin
     totalCount: number;
   };
 }> {
-  // 로그 + 프로필 + 예약 join
+  // 로그 + 프로필 + 예약 join (임베드 조인은 FK가 걸린 실제 테이블명을 알아야 해서 동적으로 구성)
   const rawLogs: any[] = [];
   for (let from = 0; ; from += LOG_CHUNK) {
     const { data, error } = await supabase
-      .from('reservation_status_logs')
+      .from(tables.statusLogs as any)
       .select(`
         *,
         profile:profiles!changed_by(user_id, display_name),
-        reservation:reservations!reservation_id(contact_date, name)
+        reservation:${tables.reservations}!reservation_id(contact_date, name)
       `)
       .not('response_minutes', 'is', null)
       .order('changed_at', { ascending: false })
+      .order('id', { ascending: true })
       .range(from, from + LOG_CHUNK - 1);
 
     if (error) throw error;

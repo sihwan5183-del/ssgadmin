@@ -31,6 +31,8 @@ import {
   type ConfirmedRow,
   type DevicePivot,
 } from '@/services/confirmedOrderService';
+import { useReservationCategory } from '@/hooks/useReservationCategory';
+import { ReservationCategoryToggle } from './ReservationCategoryToggle';
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -244,6 +246,7 @@ function BundleStatsSection({ rows }: { rows: ConfirmedRow[] }) {
 export default function ConfirmedDashboardPage() {
   const { staff } = useDashboardStaff();
   const navigate = useNavigate();
+  const { tables } = useReservationCategory();
 
   const [rows, setRows] = useState<ConfirmedRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -261,14 +264,14 @@ export default function ConfirmedDashboardPage() {
         dateEnd: dateEnd || undefined,
         channel: channel || undefined,
         assignedTo: assignee || undefined,
-      });
+      }, tables.reservations);
       setRows(data);
     } catch (e: any) {
       toast.error('데이터 로드 실패: ' + e.message);
     } finally {
       setLoading(false);
     }
-  }, [dateStart, dateEnd, channel, assignee]);
+  }, [dateStart, dateEnd, channel, assignee, tables]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -319,6 +322,7 @@ export default function ConfirmedDashboardPage() {
         description="확정(서류작성) + 택배발송 완료 건을 합쳐서 기기별 용량 · 컬러 분포로 보여줍니다. 기기가 다르면 같은 컬러명이라도 다른 제품이라 항상 기기 단위로 나눠 봅니다"
         rightSlot={
           <>
+            <ReservationCategoryToggle />
             <Button variant="outline" size="sm" className="gap-1.5" onClick={handleComboCsv}>
               <Download className="size-3.5" /> 발주표 CSV
             </Button>

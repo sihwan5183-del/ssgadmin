@@ -8,6 +8,7 @@ import { AlertTriangle, X, ExternalLink, ChevronDown, ChevronUp } from 'lucide-r
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { RESERVATION_CATEGORY_TABLES, type ReservationCategory } from '@/hooks/useReservationCategory';
 
 const ALERT_THRESHOLD_MIN = 20;
 const CHECK_INTERVAL_MS = 60 * 1000;
@@ -22,6 +23,7 @@ interface UncaredItem {
   channel: string;
   channelKey: string; // 'meta' | 'dogmaru' | 'reservation' | 'other'
   source: 'leads' | 'reservations';
+  reservationCategory?: ReservationCategory; // source가 reservations일 때만: 폴더블/아이폰18 어느 테이블 건인지
   contact_date: string;
   elapsed_min: number;
 }
@@ -76,20 +78,24 @@ export function ReservationAlertSystem() {
       results.push({ id, leadsId: r.id, name: r.customer_name ?? r.name ?? '이름없음', phone: r.customer_phone ?? r.phone ?? '', channel: CHANNEL_CONFIG[ck].label, channelKey: ck, source: 'leads', contact_date: r.created_at, elapsed_min: getElapsedMin(r.created_at) });
     });
 
-    // reservations
-    const { data: rd } = await supabase
-      .from('reservations')
-      .select('id, name, phone, channel, contact_date')
-      .eq('status', '신규')
-      .lt('contact_date', cutoff)
-      .gte('contact_date', START_DATE);
+    // reservations — 폴더블(reservations) + 아이폰18(reservations_iphone) 둘 다 감시.
+    // 이 위젯은 App.tsx에 전역으로 떠 있어서 특정 화면의 토글 상태를 따라가지 않고,
+    // 두 카테고리 모두 놓치는 건 없도록 항상 같이 체크한다.
+    for (const [cat, t] of Object.entries(RESERVATION_CATEGORY_TABLES) as [ReservationCategory, typeof RESERVATION_CATEGORY_TABLES[ReservationCategory]][]) {
+      const { data: rd } = await supabase
+        .from(t.reservations as any)
+        .select('id, name, phone, channel, contact_date')
+        .eq('status', '신규')
+        .lt('contact_date', cutoff)
+        .gte('contact_date', START_DATE);
 
-    (rd ?? []).forEach((r: any) => {
-      const id = `res_${r.id}`;
-      if (dismissed.has(id)) return;
-      if (new Date(r.contact_date) < new Date('2026-07-01T00:00:00+09:00')) return;
-      results.push({ id, leadsId: r.id, name: r.name, phone: r.phone, channel: '사전예약', channelKey: 'reservation', source: 'reservations', contact_date: r.contact_date, elapsed_min: getElapsedMin(r.contact_date) });
-    });
+      (rd ?? []).forEach((r: any) => {
+        const id = `res_${cat}_${r.id}`;
+        if (dismissed.has(id)) return;
+        if (new Date(r.contact_date) < new Date('2026-07-01T00:00:00+09:00')) return;
+        results.push({ id, leadsId: r.id, name: r.name, phone: r.phone, channel: '사전예약', channelKey: 'reservation', source: 'reservations', reservationCategory: cat, contact_date: r.contact_date, elapsed_min: getElapsedMin(r.contact_date) });
+      });
+    }
 
     // 채널별로 그룹핑
     const grouped: Record<string, UncaredItem[]> = {};
@@ -193,7 +199,13 @@ export function ReservationAlertSystem() {
                       </div>
                       <div className="flex flex-col gap-1 shrink-0">
                         <button
-                          onClick={() => { addDismissed(item.id); navigate(`${cfg.path}${cfg.path.includes('?') ? '&' : '?'}highlight=${item.leadsId}`); }}
+                          onClick={() => {
+                            addDismissed(item.id);
+                            if (item.source === 'reservations' && item.reservationCategory) {
+                              window.localStorage.setItem('ssg_reservation_category', item.reservationCategory);
+                            }
+                            navigate(`${cfg.path}${cfg.path.includes('?') ? '&' : '?'}highlight=${item.leadsId}`);
+                          }}
                           className="flex items-center gap-1 text-xs text-white px-2.5 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap"
                           style={{ backgroundColor: cfg.color }}
                         >

@@ -87,19 +87,23 @@ export interface ConfirmedFilters {
 
 const CHUNK = 1000;
 
-/** status='확정' 전체 건을 페이지네이션 없이 모두 가져옵니다. */
+/** status='확정'(+택배발송) 전체 건을 range로 끝까지 순회해서 모두 가져옵니다. */
 export async function fetchConfirmedReservations(
   filters: ConfirmedFilters = {},
+  reservationsTable: string,
 ): Promise<ConfirmedRow[]> {
   const { dateStart, dateEnd, channel, assignedTo } = filters;
   const all: Reservation[] = [];
 
   for (let from = 0; ; from += CHUNK) {
     let q = supabase
-      .from('reservations')
+      .from(reservationsTable as any)
       .select('*')
       .in('status', CONFIRMED_STATUSES)
       .order('created_at', { ascending: false })
+      // 정렬 기준(created_at)에 동률이 있으면 range 청크 경계에서 행이 누락될 수 있어
+      // id를 안정적인 2차 정렬(타이브레이커)로 추가한다.
+      .order('id', { ascending: true })
       .range(from, from + CHUNK - 1);
 
     if (channel) q = q.eq('channel', channel);

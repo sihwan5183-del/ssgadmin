@@ -1,7 +1,14 @@
 // ============================================================
 // 사전예약 관리 — Supabase 서비스 레이어
 // ============================================================
+// v20260903: 폴더블(reservations)/아이폰18(reservations_iphone)이 완전히
+// 분리된 테이블로 나뉘면서, 이 파일의 모든 함수는 어느 테이블 세트를 쓸지
+// 반드시 인자로 `tables`(ReservationTableNames)를 받습니다. 기본값을 두지
+// 않은 이유는, 호출부에서 실수로 빠뜨리면 조용히 엉뚱한 카테고리를 읽는 게
+// 아니라 바로 에러가 나서 눈에 띄도록 하기 위함입니다.
+// tables는 useReservationCategory() 훅에서 가져와 넘겨주세요.
 import { supabase } from '@/integrations/supabase/client';
+import type { ReservationTableNames } from '@/hooks/useReservationCategory';
 import type {
   Reservation,
   ReservationInsert,
@@ -11,7 +18,7 @@ import type {
   ReservationMemoLog,
 } from '@/types/reservation';
 
-// ── 실패 사유 목록 ─────────────────────────────────────────
+// ── 실패 사유 목록 (공용 lookup — 카테고리 무관, 그대로 유지) ──
 export async function fetchFailReasons(): Promise<ReservationFailReason[]> {
   const { data, error } = await supabase
     .from('reservation_fail_reasons')
@@ -37,23 +44,23 @@ export interface FetchReservationsParams {
   pageSize?: number;
 }
 
-export async function fetchReservations(params: FetchReservationsParams = {}): Promise<{
-  data: Reservation[];
-  count: number;
-}> {
+export async function fetchReservations(
+  params: FetchReservationsParams = {},
+  tables: ReservationTableNames,
+): Promise<{ data: Reservation[]; count: number }> {
   const { status, prospect_grade, absent_count, assigned_to, search, channel, campaign, device_interest, dateStart, dateEnd, page = 1, pageSize = 50 } = params;
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
   let query = supabase
-    .from('reservations')
+    .from(tables.reservations as any)
     .select(
       `*, 
        fail_reason:reservation_fail_reasons(id, reason, sort_order, created_at)`,
       { count: 'exact' }
     )
     .order('created_at', { ascending: false })
-    .range(from, to);
+    .range(from, to) as any;
 
   if (status) query = query.eq('status', status);
   if (prospect_grade) query = query.eq('prospect_grade', prospect_grade);
@@ -74,9 +81,9 @@ export async function fetchReservations(params: FetchReservationsParams = {}): P
 }
 
 // ── 단건 조회 ──────────────────────────────────────────────
-export async function fetchReservationById(id: string): Promise<Reservation> {
+export async function fetchReservationById(id: string, tables: ReservationTableNames): Promise<Reservation> {
   const { data, error } = await supabase
-    .from('reservations')
+    .from(tables.reservations as any)
     .select(
       `*, 
        fail_reason:reservation_fail_reasons(id, reason, sort_order, created_at)`
@@ -88,10 +95,10 @@ export async function fetchReservationById(id: string): Promise<Reservation> {
 }
 
 // ── 등록 ───────────────────────────────────────────────────
-export async function insertReservation(payload: ReservationInsert): Promise<Reservation> {
+export async function insertReservation(payload: ReservationInsert, tables: ReservationTableNames): Promise<Reservation> {
   const { data, error } = await supabase
-    .from('reservations')
-    .insert({ ...payload, status: payload.status ?? '신규' })
+    .from(tables.reservations as any)
+    .insert({ ...payload, status: payload.status ?? '신규' } as any)
     .select()
     .single();
   if (error) throw error;
@@ -101,7 +108,8 @@ export async function insertReservation(payload: ReservationInsert): Promise<Res
 // ── 수정 ───────────────────────────────────────────────────
 export async function updateReservation(
   id: string,
-  payload: ReservationUpdate
+  payload: ReservationUpdate,
+  tables: ReservationTableNames,
 ): Promise<Reservation> {
   // 실패 → fail_stage 자동 세팅
   if (payload.status === '실패' && !payload.fail_stage) {
@@ -123,8 +131,8 @@ export async function updateReservation(
   }
 
   const { data, error } = await supabase
-    .from('reservations')
-    .update(payload)
+    .from(tables.reservations as any)
+    .update(payload as any)
     .eq('id', id)
     .select()
     .single();
@@ -133,17 +141,17 @@ export async function updateReservation(
 }
 
 // ── 삭제 ───────────────────────────────────────────────────
-export async function deleteReservation(id: string): Promise<void> {
-  const { error } = await supabase.from('reservations').delete().eq('id', id);
+export async function deleteReservation(id: string, tables: ReservationTableNames): Promise<void> {
+  const { error } = await supabase.from(tables.reservations as any).delete().eq('id', id);
   if (error) throw error;
 }
 
 // ── 메모 히스토리 ──────────────────────────────────────────
-// 메모는 덮어쓰기가 아닌 누적 로그로 관리합니다 (reservation_memo_logs 테이블).
+// 메모는 덮어쓰기가 아닌 누적 로그로 관리합니다 (reservation_memo_logs 계열 테이블).
 // reservations.memo 컬럼은 목록/CSV 호환을 위해 "최신 메모" 요약만 계속 미러링합니다.
-export async function fetchMemoLogs(reservationId: string): Promise<ReservationMemoLog[]> {
+export async function fetchMemoLogs(reservationId: string, tables: ReservationTableNames): Promise<ReservationMemoLog[]> {
   const { data, error } = await supabase
-    .from('reservation_memo_logs')
+    .from(tables.memoLogs as any)
     .select('*, author:profiles!reservation_memo_logs_created_by_fkey(display_name)')
     .eq('reservation_id', reservationId)
     .order('created_at', { ascending: false });
@@ -154,14 +162,15 @@ export async function fetchMemoLogs(reservationId: string): Promise<ReservationM
 export async function addMemoLog(
   reservationId: string,
   content: string,
-  userId?: string | null
+  userId: string | null | undefined,
+  tables: ReservationTableNames,
 ): Promise<ReservationMemoLog> {
   const trimmed = content.trim();
   if (!trimmed) throw new Error('메모 내용을 입력해주세요');
 
   const { data, error } = await supabase
-    .from('reservation_memo_logs')
-    .insert({ reservation_id: reservationId, content: trimmed, created_by: userId || null })
+    .from(tables.memoLogs as any)
+    .insert({ reservation_id: reservationId, content: trimmed, created_by: userId || null } as any)
     .select('*, author:profiles!reservation_memo_logs_created_by_fkey(display_name)')
     .single();
   if (error) throw error;
@@ -172,8 +181,8 @@ export async function addMemoLog(
       month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
     });
     await supabase
-      .from('reservations')
-      .update({ memo: `[${stamp}] ${trimmed}` })
+      .from(tables.reservations as any)
+      .update({ memo: `[${stamp}] ${trimmed}` } as any)
       .eq('id', reservationId);
   } catch {
     /* noop */
@@ -189,9 +198,8 @@ export interface ReservationStats {
   successRate: number;
 }
 
-export async function fetchReservationStats(): Promise<ReservationStats> {
-  const data = await fetchAllPaged<{ status: string }>('status');
-  const rows = data;
+export async function fetchReservationStats(tables: ReservationTableNames): Promise<ReservationStats> {
+  const rows = await fetchAllPaged<{ status: string }>('status', tables);
   const total = rows.length;
   const byStatus: Record<string, number> = {};
   rows.forEach((r) => {
@@ -215,12 +223,13 @@ const LOG_CHUNK = 1000;
 
 export async function fetchAllPaged<T>(
   selectCols: string,
+  tables: ReservationTableNames,
   applyFilters?: (q: any) => any,
 ): Promise<T[]> {
   const all: T[] = [];
   for (let from = 0; ; from += LOG_CHUNK) {
     const to = from + LOG_CHUNK - 1;
-    let q = supabase.from('reservations').select(selectCols);
+    let q = supabase.from(tables.reservations as any).select(selectCols);
     if (applyFilters) q = applyFilters(q);
     // 정렬 없이 range()만 쓰면 청크 경계에서 행이 누락/중복될 수 있어(예: 중복전화 감지가
     // 안 잡히던 원인), id를 안정적인 타이브레이커로 항상 마지막에 추가한다.
@@ -242,9 +251,10 @@ export interface IntakeLogRow {
 }
 
 /** 선택한 기간(dateStart~dateEnd)에 접수(등록)된 건들 — 시간대별 접수량 + 담당자별 접수 집계용 */
-export async function fetchIntakeRowsForRange(dateStart: string, dateEnd: string): Promise<IntakeLogRow[]> {
+export async function fetchIntakeRowsForRange(dateStart: string, dateEnd: string, tables: ReservationTableNames): Promise<IntakeLogRow[]> {
   return fetchAllPaged<IntakeLogRow>(
     'id, assigned_to, created_at',
+    tables,
     (q) => q
       .gte('created_at', `${dateStart}T00:00:00`)
       .lte('created_at', `${dateEnd}T23:59:59`)
@@ -257,8 +267,8 @@ export interface AssigneeAllRow {
 }
 
 /** 담당자별 "현재 배정되어 있는 전체 건수" — 날짜 무관, 전체 파이프라인 기준 */
-export async function fetchAllAssigneeRows(): Promise<AssigneeAllRow[]> {
-  return fetchAllPaged<AssigneeAllRow>('assigned_to');
+export async function fetchAllAssigneeRows(tables: ReservationTableNames): Promise<AssigneeAllRow[]> {
+  return fetchAllPaged<AssigneeAllRow>('assigned_to', tables);
 }
 
 // v20260803-2: 처리량을 "신규 → 다른 상태" 전이만 정확히 집계하도록 변경.
@@ -276,12 +286,12 @@ export interface NewOriginTransition {
 
 /** 그 기간에 "신규" 상태에서 다른 상태로 넘어간 건들 — 시간대별 신규 처리 속도(페이스) +
  *  담당자별 처리 건수 집계용 (changed_by = 실제로 상태를 바꾼 사람) */
-export async function fetchNewOriginTransitionsForRange(dateStart: string, dateEnd: string): Promise<NewOriginTransition[]> {
+export async function fetchNewOriginTransitionsForRange(dateStart: string, dateEnd: string, tables: ReservationTableNames): Promise<NewOriginTransition[]> {
   const all: NewOriginTransition[] = [];
   for (let from = 0; ; from += LOG_CHUNK) {
     const to = from + LOG_CHUNK - 1;
     const { data, error } = await supabase
-      .from('reservation_status_logs')
+      .from(tables.statusLogs as any)
       .select('to_status, changed_at, changed_by')
       .eq('from_status', '신규')
       .gte('changed_at', `${dateStart}T00:00:00`)
@@ -297,9 +307,9 @@ export async function fetchNewOriginTransitionsForRange(dateStart: string, dateE
 }
 
 /** 현재 시점 기준 "신규" 상태로 남아있는 전체 건수 (날짜 무관 — 아직 손 안 댄 잔량) */
-export async function fetchNewBacklogCount(): Promise<number> {
+export async function fetchNewBacklogCount(tables: ReservationTableNames): Promise<number> {
   const { count, error } = await supabase
-    .from('reservations')
+    .from(tables.reservations as any)
     .select('id', { count: 'exact', head: true })
     .eq('status', '신규');
   if (error) throw error;

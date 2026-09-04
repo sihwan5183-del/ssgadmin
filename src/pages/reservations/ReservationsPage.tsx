@@ -23,6 +23,8 @@ import { maskName, maskPhone } from '@/lib/maskPii';
 import { useDashboardStaff } from '@/hooks/useDashboardStaff';
 import { WorkReportHeader, SectionCard } from '@/pages/work-report/_shared';
 import { fetchReservations, fetchAllPaged, deleteReservation } from '@/services/reservationService';
+import { useReservationCategory } from '@/hooks/useReservationCategory';
+import { ReservationCategoryToggle } from './ReservationCategoryToggle';
 import type { Reservation, ReservationStatus, ProspectGrade } from '@/types/reservation';
 import { RESERVATION_STATUS_LIST, PROSPECT_GRADE_OPTIONS, ABSENT_COUNT_OPTIONS, ABSENT_MAX } from '@/types/reservation';
 import type { AbsentCount } from '@/types/reservation';
@@ -73,6 +75,7 @@ export default function ReservationsPage() {
   const { isAdmin } = useRole();
   const { staff } = useDashboardStaff();
   const navigate = useNavigate();
+  const { category, tables } = useReservationCategory();
 
   // 전체 데이터 (채널별 카운트용)
   const [allRows, setAllRows] = useState<Reservation[]>([]);
@@ -129,7 +132,7 @@ export default function ReservationsPage() {
     if (!window.confirm(`선택한 ${selectedIds.size}건을 문자 ${label}으로 처리할까요?`)) return;
     try {
       const { error } = await supabase
-        .from('reservations')
+        .from(tables.reservations as any)
         .update({ sms_sent: sent, sms_sent_at: sent ? new Date().toISOString() : null })
         .in('id', [...selectedIds]);
       if (error) throw error;
@@ -148,7 +151,7 @@ export default function ReservationsPage() {
     if (!window.confirm(`선택한 ${selectedIds.size}건을 택배 ${label}으로 처리할까요?`)) return;
     try {
       const { error } = await supabase
-        .from('reservations')
+        .from(tables.reservations as any)
         .update({ courier_sent: sent, courier_sent_at: sent ? new Date().toISOString() : null })
         .in('id', [...selectedIds]);
       if (error) throw error;
@@ -164,7 +167,7 @@ export default function ReservationsPage() {
     if (selectedIds.size === 0) return;
     if (!window.confirm(`선택한 ${selectedIds.size}건을 삭제하시겠어요?`)) return;
     try {
-      await Promise.all([...selectedIds].map(id => deleteReservation(id)));
+      await Promise.all([...selectedIds].map(id => deleteReservation(id, tables)));
       toast.success(`${selectedIds.size}건 삭제 완료`);
       setSelectedIds(new Set());
       setPage(1);
@@ -251,7 +254,7 @@ export default function ReservationsPage() {
           campaign: campaignFilter || undefined,
           dateStart: dateStart || undefined,
           dateEnd: dateEnd || undefined,
-        } as any);
+        } as any, tables);
         all.push(...res.data);
         if (res.data.length < CHUNK || all.length >= res.count) break;
       }
@@ -278,12 +281,12 @@ export default function ReservationsPage() {
   // 건수보다 적게 표시되던 버그 수정. fetchAllPaged로 1000건씩 끝까지 순회해서 빠짐없이 가져온다.
   const loadAll = useCallback(async () => {
     try {
-      const data = await fetchAllPaged<any>('id, status, channel, contact_date, prospect_grade, absent_count, phone');
+      const data = await fetchAllPaged<any>('id, status, channel, contact_date, prospect_grade, absent_count, phone', tables);
       setAllRows(data);
     } catch (e: any) {
       toast.error('전체 데이터 로드 실패: ' + e.message);
     }
-  }, []);
+  }, [tables]);
 
   // 필터 적용 데이터 로드
   const load = useCallback(async () => {
@@ -301,7 +304,7 @@ export default function ReservationsPage() {
         campaign: campaignFilter || undefined,
         dateStart: dateStart || undefined,
         dateEnd: dateEnd || undefined,
-      } as any);
+      } as any, tables);
       setRows(res.data);
       setTotal(res.count);
     } catch (e: any) {
@@ -309,10 +312,12 @@ export default function ReservationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, gradeFilter, absentFilter, assigneeFilter, search, page, pageSize, channelTab, campaignFilter, dateStart, dateEnd]);
+  }, [statusFilter, gradeFilter, absentFilter, assigneeFilter, search, page, pageSize, channelTab, campaignFilter, dateStart, dateEnd, tables]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
   useEffect(() => { load(); }, [load]);
+  // 카테고리(폴더블/아이폰18) 전환 시 이전 카테고리의 페이지/선택 상태가 남아있지 않도록 초기화
+  useEffect(() => { setPage(1); setSelectedIds(new Set()); }, [category]);
   // 가망이 아닌 상태로 바뀌면 등급 필터는 의미가 없으므로 초기화
   useEffect(() => { if (statusFilter !== '가망') setGradeFilter(''); }, [statusFilter]);
   useEffect(() => { if (statusFilter !== '부재') setAbsentFilter(0); }, [statusFilter]);
@@ -329,7 +334,7 @@ export default function ReservationsPage() {
   // 테이블 인라인 즉시수정: 담당자
   async function updateAssignee(id: string, assigned_to: string | null) {
     const { error } = await supabase
-      .from('reservations')
+      .from(tables.reservations as any)
       .update({ assigned_to })
       .eq('id', id);
     if (error) { toast.error('담당자 변경 실패: ' + error.message); return; }
@@ -356,7 +361,7 @@ export default function ReservationsPage() {
     };
     if (status === '확정') payload.confirmed_at = new Date().toISOString();
     const { error } = await supabase
-      .from('reservations')
+      .from(tables.reservations as any)
       .update(payload)
       .eq('id', id);
     if (error) { toast.error('상태 변경 실패: ' + error.message); return; }
@@ -366,7 +371,7 @@ export default function ReservationsPage() {
 
   // 테이블 인라인 즉시수정: 부재 회차 (v20260901)
   async function updateAbsentCountInline(id: string, absent_count: AbsentCount) {
-    const { error } = await supabase.from('reservations').update({ absent_count }).eq('id', id);
+    const { error } = await supabase.from(tables.reservations as any).update({ absent_count }).eq('id', id);
     if (error) { toast.error('부재 회차 변경 실패: ' + error.message); return; }
     setRows((p) => p.map((r) => (r.id === id ? { ...r, absent_count } as any : r)));
     setAllRows((p) => p.map((r) => (r.id === id ? { ...r, absent_count } as any : r)));
@@ -422,9 +427,10 @@ export default function ReservationsPage() {
     <div className="p-6 space-y-4 max-w-[1400px] mx-auto">
       <WorkReportHeader
         title="사전예약 관리"
-        description="갤럭시 Z 폴더블8 사전예약 고객을 채널별·단계별로 관리합니다"
+        description={`${tables.label} 사전예약 고객을 채널별·단계별로 관리합니다`}
         rightSlot={
           <div className="flex items-center gap-2">
+            <ReservationCategoryToggle />
             <Button variant="outline" size="sm" onClick={() => navigate('/reservations/stats')} className="gap-1.5 text-gray-600">
               <BarChart2 className="size-4" /> 통계
             </Button>
@@ -814,7 +820,7 @@ export default function ReservationsPage() {
                         onClick={async () => {
                           const newVal = !(r as any).sms_sent;
                           const { error } = await supabase
-                            .from('reservations')
+                            .from(tables.reservations as any)
                             .update({ sms_sent: newVal, sms_sent_at: newVal ? new Date().toISOString() : null })
                             .eq('id', r.id);
                           if (!error) {
@@ -847,7 +853,7 @@ export default function ReservationsPage() {
                                 if (!canToggle) return;
                                 const goingToShipped = !shipped;
                                 const { error } = await supabase
-                                  .from('reservations')
+                                  .from(tables.reservations as any)
                                   .update({
                                     status: goingToShipped ? '택배발송' : '확정',
                                     courier_sent: goingToShipped,
@@ -889,7 +895,7 @@ export default function ReservationsPage() {
                             const v = e.target.value.trim();
                             if (v === ((r as any).courier_tracking_number ?? '')) return;
                             const { error } = await supabase
-                              .from('reservations')
+                              .from(tables.reservations as any)
                               .update({ courier_tracking_number: v || null })
                               .eq('id', r.id);
                             if (!error) {
@@ -919,10 +925,10 @@ export default function ReservationsPage() {
       </SectionCard>
 
       {addOpen && (
-        <ReservationAddModal open={addOpen} onClose={() => setAddOpen(false)} onDone={() => { setAddOpen(false); loadAll(); load(); }} />
+        <ReservationAddModal open={addOpen} onClose={() => setAddOpen(false)} onDone={() => { setAddOpen(false); loadAll(); load(); }} tables={tables} />
       )}
       {detailId && (
-        <ReservationDetailModal reservationId={detailId} onClose={() => setDetailId(null)} onDone={() => { setDetailId(null); loadAll(); load(); }} />
+        <ReservationDetailModal reservationId={detailId} onClose={() => setDetailId(null)} onDone={() => { setDetailId(null); loadAll(); load(); }} tables={tables} />
       )}
     </div>
   );
