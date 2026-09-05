@@ -98,6 +98,7 @@ export default function ReservationsPage() {
   // 필터 상태
   const [channelTab, setChannelTab] = useState('');
   const [campaignFilter, setCampaignFilter] = useState('');
+  const [carrierFilter, setCarrierFilter] = useState<'' | 'lgu' | 'mnp'>('');
   const [statusFilter, setStatusFilter] = useState<ReservationStatus | ''>('');
   const [gradeFilter, setGradeFilter] = useState<ProspectGrade | ''>('');
   const [absentFilter, setAbsentFilter] = useState<AbsentCount | 0>(0); // 부재 회차 필터 (v20260901) — 0=전체
@@ -252,6 +253,7 @@ export default function ReservationsPage() {
           pageSize: CHUNK,
           channel: channelTab || undefined,
           campaign: campaignFilter || undefined,
+          carrier: carrierFilter || undefined,
           dateStart: dateStart || undefined,
           dateEnd: dateEnd || undefined,
         } as any, tables);
@@ -302,6 +304,7 @@ export default function ReservationsPage() {
         pageSize,
         channel: channelTab || undefined,
         campaign: campaignFilter || undefined,
+        carrier: carrierFilter || undefined,
         dateStart: dateStart || undefined,
         dateEnd: dateEnd || undefined,
       } as any, tables);
@@ -312,7 +315,7 @@ export default function ReservationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, gradeFilter, absentFilter, assigneeFilter, search, page, pageSize, channelTab, campaignFilter, dateStart, dateEnd, tables]);
+  }, [statusFilter, gradeFilter, absentFilter, assigneeFilter, search, page, pageSize, channelTab, campaignFilter, carrierFilter, dateStart, dateEnd, tables]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
   useEffect(() => { load(); }, [load]);
@@ -617,6 +620,18 @@ export default function ReservationsPage() {
               {CAMPAIGN_OPTIONS.map((c) => (
                 <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+
+          {/* 통신사 필터 (LG U+ 기기변경 vs 그외 통신사 MNP 구분용) */}
+          <Select value={carrierFilter || '_all_'} onValueChange={(v) => { setCarrierFilter((v === '_all_' ? '' : v) as '' | 'lgu' | 'mnp'); setPage(1); }}>
+            <SelectTrigger className="w-[130px] text-sm">
+              <SelectValue placeholder="전체 통신사" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_all_">전체 통신사</SelectItem>
+              <SelectItem value="lgu">LG U+</SelectItem>
+              <SelectItem value="mnp">그외(MNP)</SelectItem>
             </SelectContent>
           </Select>
 

@@ -37,6 +37,7 @@ export interface FetchReservationsParams {
   search?: string;
   channel?: string;
   campaign?: string;
+  carrier?: 'lgu' | 'mnp';
   device_interest?: string;
   dateStart?: string;
   dateEnd?: string;
@@ -48,7 +49,7 @@ export async function fetchReservations(
   params: FetchReservationsParams = {},
   tables: ReservationTableNames,
 ): Promise<{ data: Reservation[]; count: number }> {
-  const { status, prospect_grade, absent_count, assigned_to, search, channel, campaign, device_interest, dateStart, dateEnd, page = 1, pageSize = 50 } = params;
+  const { status, prospect_grade, absent_count, assigned_to, search, channel, campaign, carrier, device_interest, dateStart, dateEnd, page = 1, pageSize = 50 } = params;
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
@@ -68,6 +69,8 @@ export async function fetchReservations(
   if (assigned_to) query = query.eq('assigned_to', assigned_to);
   if (channel) query = query.eq('channel', channel);
   if (campaign) query = query.eq('utm_campaign', campaign);
+  if (carrier === 'lgu') query = query.eq('carrier', 'LG U+');
+  else if (carrier === 'mnp') query = query.neq('carrier', 'LG U+');
   if (device_interest) query = query.eq('device_interest', device_interest);
   if (dateStart) query = query.gte('contact_date', dateStart);
   if (dateEnd) query = query.lte('contact_date', dateEnd + 'T23:59:59');
