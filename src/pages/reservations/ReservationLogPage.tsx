@@ -28,6 +28,13 @@
 //   하드코딩돼 있고 종료 시각 개념이 아예 없었음(지난 날짜를 24시까지 풀영업으로 계산해서
 //   페이스가 실제보다 낮게 나옴). 또한 일요일(고정휴무)이 조회 기간에 끼어도 영업일로 계산돼
 //   페이스를 더 낮추는 문제가 있었음 — 이제 09:30~20:00, 일요일 0시간으로 정확히 계산.
+// v20260907-2: 담당자별 현황에 성공률/가망률 추가.
+//   성공률 = (확정+택배발송)/분모, 가망률 = (예약완료+가망)/분모.
+//   분모는 "전체(부재포함) / 부재제외" 두 버전을 한 셀에 함께 표시.
+//     - 전체: 신규처리합계(그 담당자의 처리건수) 그대로
+//     - 부재제외: 신규처리합계 - 부재  (취소·유심MNP는 "진짜 상담이 아니다"로 콕 집어
+//       확인된 게 아니라서 두 버전 모두 분모에 포함 — V2_EXCLUDED_STATUSES에 추가하면 바로 뺄 수 있음)
+//   + 표 맨 위에 "전체(팀 합계)" 행 추가.
 // ============================================================
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { RotateCw } from 'lucide-react';
@@ -80,6 +87,29 @@ function isSunday(dateStr: string): boolean {
 const TRACKED_STATUSES = RESERVATION_STATUS_LIST.filter((s) => s.value !== '신규');
 
 const MEDALS = ['🥇', '🥈', '🥉'];
+
+// 성공률/가망률 "부재제외" 버전 계산 시 분모에서 뺄 상태들. 부재만 명시적으로
+// "진짜 상담이 아니다"로 확인됐고, 취소·유심MNP는 두 버전 모두 분모에 그대로 포함.
+const V2_EXCLUDED_STATUSES: string[] = ['부재'];
+
+// count/denom을 "72.3%" 형태 문자열로. denom이 0이면 집계할 처리 건수 자체가 없다는 뜻이라 "—".
+function formatRate(count: number, denom: number): string {
+  if (denom <= 0) return '—';
+  return `${Math.round((count / denom) * 1000) / 10}%`;
+}
+
+// 상태별 카운트(statusCounts)와 신규처리합계(denomAll)로 성공률/가망률을
+// "전체 / 부재제외" 두 버전을 합친 문자열로 계산.
+function computeRates(statusCounts: Record<string, number>, denomAll: number) {
+  const successCount = (statusCounts['확정'] ?? 0) + (statusCounts['택배발송'] ?? 0);
+  const prospectCount = (statusCounts['예약완료'] ?? 0) + (statusCounts['가망'] ?? 0);
+  const excluded = V2_EXCLUDED_STATUSES.reduce((sum, s) => sum + (statusCounts[s] ?? 0), 0);
+  const denomExAbsent = denomAll - excluded;
+  return {
+    successLabel: `${formatRate(successCount, denomAll)} / ${formatRate(successCount, denomExAbsent)}`,
+    prospectLabel: `${formatRate(prospectCount, denomAll)} / ${formatRate(prospectCount, denomExAbsent)}`,
+  };
+}
 
 // 시간당 페이스 계산의 기준 — 실제 영업시간(09:30~20:00, 일요일 고정휴무).
 // 시작이 30분 단위라 소수(9.5)로 두고, 표의 "시(0~23시)" 행 표시에는 정수 시(9)를 기준으로 씀.
@@ -205,9 +235,13 @@ export default function ReservationLogPage() {
       intakeCounts[key] = (intakeCounts[key] ?? 0) + 1;
     });
     const processedCounts: Record<string, number> = {};
+    // 담당자별 · 상태별 카운트 (성공률/가망률 계산용) — key -> to_status -> count
+    const statusCountsByAssignee: Record<string, Record<string, number>> = {};
     transitionRows.forEach((r) => {
       const key = r.changed_by ?? '__unknown__';
       processedCounts[key] = (processedCounts[key] ?? 0) + 1;
+      if (!statusCountsByAssignee[key]) statusCountsByAssignee[key] = {};
+      statusCountsByAssignee[key][r.to_status] = (statusCountsByAssignee[key][r.to_status] ?? 0) + 1;
     });
     const keys = new Set([
       ...Object.keys(intakeCounts),
@@ -217,10 +251,13 @@ export default function ReservationLogPage() {
     return Array.from(keys)
       .map((key) => {
         const processed = processedCounts[key] ?? 0;
+        const { successLabel, prospectLabel } = computeRates(statusCountsByAssignee[key] ?? {}, processed);
         return {
           key,
           name: key === '__unassigned__' ? '미배정' : key === '__unknown__' ? '알 수 없음' : (staffMap[key] || '알 수 없음'),
           processed,
+          successLabel,
+          prospectLabel,
           pace: elapsedHours > 0 ? Math.round((processed / elapsedHours) * 10) / 10 : 0,
           intake: intakeCounts[key] ?? 0,
           total: assigneeAllCounts[key] ?? 0,
@@ -229,6 +266,13 @@ export default function ReservationLogPage() {
       .filter((a) => a.processed > 0 || a.intake > 0 || a.total > 0)
       .sort((a, b) => (b.processed - a.processed) || (b.intake - a.intake));
   }, [intakeRows, transitionRows, assigneeAllCounts, staffMap, elapsedHours]);
+
+  // "담당자별 현황" 표 맨 위 "전체(팀 합계)" 행 — 이미 계산돼 있는 statusTotals/totalProcessed 재사용
+  const teamRates = useMemo(() => computeRates(statusTotals, totalProcessed), [statusTotals, totalProcessed]);
+  const teamTotalAssigned = useMemo(
+    () => Object.values(assigneeAllCounts).reduce((a, b) => a + b, 0),
+    [assigneeAllCounts],
+  );
 
   return (
     <div className="p-6 space-y-4">
@@ -346,21 +390,33 @@ export default function ReservationLogPage() {
         rightSlot={<span className="text-xs text-gray-400">기간 처리(해결) 순 · 페이스 = 영업시간({BUSINESS_HOURS_LABEL}, 일요일 제외) 기준 시간당 처리건수</span>}
       >
         <div className="overflow-auto">
-          <Table className="[&_td]:py-1.5 [&_th]:py-1.5 min-w-[520px]">
+          <Table className="[&_td]:py-1.5 [&_th]:py-1.5 min-w-[780px]">
             <TableHeader className="bg-gray-50">
               <TableRow className="bg-gray-50">
                 <TableHead className="text-xs w-[40px]">#</TableHead>
                 <TableHead className="text-xs">담당자</TableHead>
                 <TableHead className="text-xs text-center w-[100px] bg-indigo-50">기간 처리</TableHead>
+                <TableHead className="text-xs text-center w-[130px] whitespace-nowrap">성공률(전체/부재제외)</TableHead>
+                <TableHead className="text-xs text-center w-[130px] whitespace-nowrap">가망률(전체/부재제외)</TableHead>
                 <TableHead className="text-xs text-center w-[100px]">시간당 페이스</TableHead>
                 <TableHead className="text-xs text-center w-[90px]">기간 접수</TableHead>
                 <TableHead className="text-xs text-center w-[110px]">전체 배정건수</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
+              <TableRow className="bg-indigo-50/60 font-bold">
+                <TableCell className="text-xs text-gray-400">—</TableCell>
+                <TableCell className="text-sm">전체 (팀 합계)</TableCell>
+                <TableCell className="text-center text-sm text-indigo-700">{totalProcessed}</TableCell>
+                <TableCell className="text-center text-xs text-gray-700">{teamRates.successLabel}</TableCell>
+                <TableCell className="text-center text-xs text-gray-700">{teamRates.prospectLabel}</TableCell>
+                <TableCell className="text-center text-xs text-gray-700">{processPace}건/시간</TableCell>
+                <TableCell className="text-center text-xs text-pink-600">{totalIntake}</TableCell>
+                <TableCell className="text-center text-xs text-gray-600">{teamTotalAssigned}</TableCell>
+              </TableRow>
               {assigneeRows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 text-sm text-gray-400">데이터가 없습니다</TableCell>
+                  <TableCell colSpan={8} className="text-center py-10 text-sm text-gray-400">담당자별 처리 데이터가 없습니다</TableCell>
                 </TableRow>
               ) : (
                 assigneeRows.map((a, i) => (
@@ -371,6 +427,8 @@ export default function ReservationLogPage() {
                       {a.name}
                     </TableCell>
                     <TableCell className="text-center text-sm font-bold text-indigo-600 bg-indigo-50/40">{a.processed}</TableCell>
+                    <TableCell className="text-center text-xs text-gray-700">{a.successLabel}</TableCell>
+                    <TableCell className="text-center text-xs text-gray-700">{a.prospectLabel}</TableCell>
                     <TableCell className="text-center text-xs text-gray-700">{a.pace}건/시간</TableCell>
                     <TableCell className="text-center text-xs font-semibold text-pink-600">{a.intake}</TableCell>
                     <TableCell className="text-center text-xs text-gray-600">{a.total}</TableCell>
