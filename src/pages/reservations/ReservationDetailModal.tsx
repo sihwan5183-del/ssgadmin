@@ -258,7 +258,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone, tables 
     setDeleting(true);
     try {
       await deleteReservation(row.id, tables);
-      toast.success('삭제되었습니다');
+      toast.success('휴지통으로 이동했습니다');
       onDone();
     } catch (e: any) {
       toast.error('삭제 실패: ' + e.message);
@@ -723,8 +723,8 @@ export function ReservationDetailModal({ reservationId, onClose, onDone, tables 
           onClick={() => setConfirmDelete(false)}>
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6"
             onClick={(e) => e.stopPropagation()}>
-            <div className="font-bold text-sm mb-2">정말 삭제하시겠어요?</div>
-            <div className="text-xs text-gray-500 mb-4">삭제된 데이터는 복구할 수 없습니다.</div>
+            <div className="font-bold text-sm mb-2">휴지통으로 보내시겠어요?</div>
+            <div className="text-xs text-gray-500 mb-4">목록에서 사라지지만, 예약 목록 상단 "휴지통"에서 복원할 수 있습니다.</div>
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setConfirmDelete(false)}>
                 취소
@@ -734,7 +734,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone, tables 
                 onClick={handleDelete}
                 disabled={deleting}
               >
-                {deleting ? '삭제 중...' : '삭제'}
+                {deleting ? '이동 중...' : '휴지통으로'}
               </Button>
             </div>
           </div>

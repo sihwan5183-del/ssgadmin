@@ -43,13 +43,14 @@ export interface FetchReservationsParams {
   dateEnd?: string;
   page?: number;
   pageSize?: number;
+  trashOnly?: boolean;   // true면 휴지통(삭제된 건)만, 기본은 휴지통 제외 (v20260907)
 }
 
 export async function fetchReservations(
   params: FetchReservationsParams = {},
   tables: ReservationTableNames,
 ): Promise<{ data: Reservation[]; count: number }> {
-  const { status, prospect_grade, absent_count, assigned_to, search, channel, campaign, carrier, device_interest, dateStart, dateEnd, page = 1, pageSize = 50 } = params;
+  const { status, prospect_grade, absent_count, assigned_to, search, channel, campaign, carrier, device_interest, dateStart, dateEnd, page = 1, pageSize = 50, trashOnly = false } = params;
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
@@ -63,6 +64,7 @@ export async function fetchReservations(
     .order('created_at', { ascending: false })
     .range(from, to) as any;
 
+  query = trashOnly ? query.not('deleted_at', 'is', null) : query.is('deleted_at', null);
   if (status) query = query.eq('status', status);
   if (prospect_grade) query = query.eq('prospect_grade', prospect_grade);
   if (absent_count) query = query.eq('absent_count', absent_count);
@@ -143,8 +145,27 @@ export async function updateReservation(
   return data as unknown as Reservation;
 }
 
-// ── 삭제 ───────────────────────────────────────────────────
+// ── 삭제(휴지통 이동) / 복원 / 영구삭제 ──────────────────────
+// v20260907: 실수로 지운 건 복구가 아예 불가능했던 사고 이후, 삭제는 기본적으로
+// 휴지통행(soft delete)으로 바꿈. 진짜로 완전히 지우려면 영구삭제를 따로 호출해야 함.
 export async function deleteReservation(id: string, tables: ReservationTableNames): Promise<void> {
+  const { error } = await supabase
+    .from(tables.reservations as any)
+    .update({ deleted_at: new Date().toISOString() } as any)
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export async function restoreReservation(id: string, tables: ReservationTableNames): Promise<void> {
+  const { error } = await supabase
+    .from(tables.reservations as any)
+    .update({ deleted_at: null } as any)
+    .eq('id', id);
+  if (error) throw error;
+}
+
+// 진짜 완전 삭제 — 휴지통 화면에서만 노출할 것. 되돌릴 수 없음.
+export async function permanentlyDeleteReservation(id: string, tables: ReservationTableNames): Promise<void> {
   const { error } = await supabase.from(tables.reservations as any).delete().eq('id', id);
   if (error) throw error;
 }

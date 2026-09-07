@@ -22,7 +22,7 @@ import { useRole } from '@/hooks/useRole';
 import { maskName, maskPhone } from '@/lib/maskPii';
 import { useDashboardStaff } from '@/hooks/useDashboardStaff';
 import { WorkReportHeader, SectionCard } from '@/pages/work-report/_shared';
-import { fetchReservations, fetchAllPaged, deleteReservation } from '@/services/reservationService';
+import { fetchReservations, fetchAllPaged, deleteReservation, restoreReservation, permanentlyDeleteReservation } from '@/services/reservationService';
 import { useReservationCategory } from '@/hooks/useReservationCategory';
 import { ReservationCategoryToggle } from './ReservationCategoryToggle';
 import type { Reservation, ReservationStatus, ProspectGrade } from '@/types/reservation';
@@ -114,6 +114,10 @@ export default function ReservationsPage() {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  // 휴지통 (v20260907)
+  const [trashMode, setTrashMode] = useState(false);
+  const [trashCount, setTrashCount] = useState(0);
+
   const toggleSelect = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedIds(prev => {
@@ -167,15 +171,44 @@ export default function ReservationsPage() {
 
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
-    if (!window.confirm(`선택한 ${selectedIds.size}건을 삭제하시겠어요?`)) return;
+    if (!window.confirm(`선택한 ${selectedIds.size}건을 휴지통으로 보내시겠어요? (휴지통에서 복원 가능)`)) return;
     try {
       await Promise.all([...selectedIds].map(id => deleteReservation(id, tables)));
-      toast.success(`${selectedIds.size}건 삭제 완료`);
+      toast.success(`${selectedIds.size}건 휴지통으로 이동 완료`);
       setSelectedIds(new Set());
       setPage(1);
       await load();
     } catch (e: any) {
       toast.error('삭제 실패: ' + e.message);
+    }
+  };
+
+  const handleBulkRestore = async () => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`선택한 ${selectedIds.size}건을 복원하시겠어요?`)) return;
+    try {
+      await Promise.all([...selectedIds].map(id => restoreReservation(id, tables)));
+      toast.success(`${selectedIds.size}건 복원 완료`);
+      setSelectedIds(new Set());
+      setPage(1);
+      await load();
+    } catch (e: any) {
+      toast.error('복원 실패: ' + e.message);
+    }
+  };
+
+  const handleBulkPermanentDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`선택한 ${selectedIds.size}건을 영구 삭제하시겠어요? 이 작업은 되돌릴 수 없습니다.`)) return;
+    if (!window.confirm(`정말로 완전히 삭제합니다. 다시 한 번 확인해주세요 — 계속할까요?`)) return;
+    try {
+      await Promise.all([...selectedIds].map(id => permanentlyDeleteReservation(id, tables)));
+      toast.success(`${selectedIds.size}건 영구 삭제 완료`);
+      setSelectedIds(new Set());
+      setPage(1);
+      await load();
+    } catch (e: any) {
+      toast.error('영구 삭제 실패: ' + e.message);
     }
   };
 
@@ -284,7 +317,11 @@ export default function ReservationsPage() {
   // 건수보다 적게 표시되던 버그 수정. fetchAllPaged로 1000건씩 끝까지 순회해서 빠짐없이 가져온다.
   const loadAll = useCallback(async () => {
     try {
-      const data = await fetchAllPaged<any>('id, status, channel, contact_date, prospect_grade, absent_count, phone', tables);
+      const data = await fetchAllPaged<any>(
+        'id, status, channel, contact_date, prospect_grade, absent_count, phone',
+        tables,
+        (q: any) => q.is('deleted_at', null),
+      );
       setAllRows(data);
     } catch (e: any) {
       toast.error('전체 데이터 로드 실패: ' + e.message);
@@ -308,6 +345,7 @@ export default function ReservationsPage() {
         carrier: carrierFilter || undefined,
         dateStart: dateStart || undefined,
         dateEnd: dateEnd || undefined,
+        trashOnly: trashMode,
       } as any, tables);
       setRows(res.data);
       setTotal(res.count);
@@ -316,12 +354,21 @@ export default function ReservationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, gradeFilter, absentFilter, assigneeFilter, search, page, pageSize, channelTab, campaignFilter, carrierFilter, dateStart, dateEnd, tables]);
+  }, [statusFilter, gradeFilter, absentFilter, assigneeFilter, search, page, pageSize, channelTab, campaignFilter, carrierFilter, dateStart, dateEnd, tables, trashMode]);
+
+  // 휴지통 건수는 현재 필터와 무관하게 항상 표시 (토글 버튼 뱃지용)
+  useEffect(() => {
+    fetchReservations({ trashOnly: true, pageSize: 1 } as any, tables)
+      .then(res => setTrashCount(res.count))
+      .catch(() => {});
+  }, [tables, rows]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
   useEffect(() => { load(); }, [load]);
   // 카테고리(폴더블/아이폰18) 전환 시 이전 카테고리의 페이지/선택 상태가 남아있지 않도록 초기화
   useEffect(() => { setPage(1); setSelectedIds(new Set()); }, [category]);
+  // 휴지통 전환 시에도 페이지/선택 초기화
+  useEffect(() => { setPage(1); setSelectedIds(new Set()); }, [trashMode]);
   // 가망이 아닌 상태로 바뀌면 등급 필터는 의미가 없으므로 초기화
   useEffect(() => { if (statusFilter !== '가망') setGradeFilter(''); }, [statusFilter]);
   useEffect(() => { if (statusFilter !== '부재') setAbsentFilter(0); }, [statusFilter]);
@@ -441,7 +488,25 @@ export default function ReservationsPage() {
             <Button variant="outline" size="sm" onClick={() => navigate('/reservations/response-time')} className="gap-1.5 text-orange-500 border-orange-200 hover:bg-orange-50">
               <Clock className="size-4" /> 응답시간
             </Button>
-            {selectedIds.size > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setTrashMode(v => !v); setSelectedIds(new Set()); }}
+              className={`gap-1.5 ${trashMode ? 'bg-gray-700 text-white border-gray-700 hover:bg-gray-800' : 'text-gray-500 border-gray-300 hover:bg-gray-50'}`}
+            >
+              🗑 휴지통 ({trashCount}){trashMode ? ' 보는 중' : ''}
+            </Button>
+            {selectedIds.size > 0 && trashMode && (
+              <>
+                <Button size="sm" variant="outline" onClick={handleBulkRestore} className="gap-1.5 text-green-600 border-green-200 hover:bg-green-50">
+                  ↩ 복원 ({selectedIds.size})
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleBulkPermanentDelete} className="gap-1.5 text-red-700 border-red-300 hover:bg-red-50">
+                  영구삭제 ({selectedIds.size})
+                </Button>
+              </>
+            )}
+            {selectedIds.size > 0 && !trashMode && (
               <>
                 <Button size="sm" variant="outline" onClick={() => handleBulkSms(true)} className="gap-1.5 text-green-600 border-green-200 hover:bg-green-50">
                   📨 문자발송 O ({selectedIds.size})
@@ -465,14 +530,16 @@ export default function ReservationsPage() {
                 </Button>
               </>
             )}
-            {isAdmin && (
+            {isAdmin && !trashMode && (
             <Button size="sm" onClick={handleCsvAll} disabled={csvAllLoading} variant="outline" className="gap-1.5 text-green-600 border-green-200 hover:bg-green-50">
               {csvAllLoading ? '내보내는 중...' : 'CSV 전체'}
             </Button>
             )}
+            {!trashMode && (
             <Button size="sm" onClick={() => setAddOpen(true)} className="gap-1.5 bg-pink-500 hover:bg-pink-600 text-white">
               <Plus className="size-4" /> 신규 등록
             </Button>
+            )}
           </div>
         }
       />

@@ -116,6 +116,7 @@ export interface Reservation {
   courier_tracking_number: string | null; // 택배 송장번호
   created_at: string;
   updated_at: string;
+  deleted_at: string | null;   // 휴지통(soft delete) — v20260907. null이면 정상, 값 있으면 휴지통행
 
   // ── 확정 발주 스펙시트 (v20260729) — 본사 제출용 엑셀 양식 재현 ──
   customer_address: string | null;   // 고객주소
