@@ -24,6 +24,10 @@
 //   보여주던 걸 없앰 — 예: 신규→확정 건이 0이면 컬럼 자체가 통째로 사라져서
 //   빠진 것처럼 보이는 문제가 있었음. 이제 확정/택배발송/예약완료/가망/상담성공/
 //   재케어/부재/실패/취소 9개 상태 컬럼을 항상 전부 표시(0이어도 0으로 노출).
+// v20260907-1: 영업시간 상수 수정 — 실제 영업시간은 09:30~20:00인데 시작만 11시로
+//   하드코딩돼 있고 종료 시각 개념이 아예 없었음(지난 날짜를 24시까지 풀영업으로 계산해서
+//   페이스가 실제보다 낮게 나옴). 또한 일요일(고정휴무)이 조회 기간에 끼어도 영업일로 계산돼
+//   페이스를 더 낮추는 문제가 있었음 — 이제 09:30~20:00, 일요일 0시간으로 정확히 계산.
 // ============================================================
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { RotateCw } from 'lucide-react';
@@ -65,6 +69,11 @@ function enumerateDates(start: string, end: string): string[] {
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
+// 일요일(고정휴무) 여부
+function isSunday(dateStr: string): boolean {
+  return new Date(`${dateStr}T00:00:00`).getDay() === 0;
+}
+
 // 처리량 표에서 항상 보여줄 상태 목록 (신규 접수는 왼쪽 "접수" 열에서 이미 보여주므로 제외).
 // 건수가 0이어도 컬럼은 항상 노출 — 특정 상태(예: 확정)로 아직 아무도 안 넘어갔다는 것도
 // 중요한 정보라서, 0이라고 컬럼째 숨기면 "빠진 것처럼" 보여서 혼동을 줌.
@@ -72,8 +81,12 @@ const TRACKED_STATUSES = RESERVATION_STATUS_LIST.filter((s) => s.value !== '신�
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 
-// 시간당 페이스 계산의 기준 시각 — 영업(처리) 시작 시각. 필요하면 여기 숫자만 바꾸면 됨.
-const BUSINESS_START_HOUR = 11;
+// 시간당 페이스 계산의 기준 — 실제 영업시간(09:30~20:00, 일요일 고정휴무).
+// 시작이 30분 단위라 소수(9.5)로 두고, 표의 "시(0~23시)" 행 표시에는 정수 시(9)를 기준으로 씀.
+const BUSINESS_START_HOUR = 9.5;
+const BUSINESS_END_HOUR = 20;
+const BUSINESS_START_HOUR_ROW = Math.floor(BUSINESS_START_HOUR); // 9 — "영업시작" 행 표시 기준
+const BUSINESS_HOURS_LABEL = '09:30~20:00';
 
 // 기본 조회 기간 — 필요에 따라 날짜 선택기로 바꿀 수 있음
 const DEFAULT_DATE_START = '2026-08-02';
@@ -154,13 +167,18 @@ export default function ReservationLogPage() {
 
   const totalIntake = intakeRows.length;
 
-  // 페이스(시간당) 계산 — 기간에 포함된 날짜마다 "영업 시작 시각부터 경과한 시간"을 더함.
-  // 지난 날짜는 하루 풀로 영업한 것으로 간주(24시 - 영업시작시각), 오늘은 지금까지만.
+  // 페이스(시간당) 계산 — 기간에 포함된 "영업일(일요일 제외)"마다 실제 영업시간(09:30~20:00) 내에서
+  // 경과한 시간만 더함. 지난 날짜는 하루 풀로 영업(20:00-09:30=10.5시간), 오늘은 지금까지만(20:00 이후면 10.5시간에서 멈춤).
   const elapsedHours = useMemo(() => {
     const today = todayStr();
+    const nowDecimal = new Date().getHours() + new Date().getMinutes() / 60;
     return enumerateDates(dateStart, dateEnd).reduce((sum, d) => {
-      if (d < today) return sum + Math.max(0, 24 - BUSINESS_START_HOUR);
-      if (d === today) return sum + Math.max(0, new Date().getHours() - BUSINESS_START_HOUR + 1);
+      if (isSunday(d)) return sum; // 일요일 고정휴무 — 영업시간 0
+      if (d < today) return sum + (BUSINESS_END_HOUR - BUSINESS_START_HOUR);
+      if (d === today) {
+        const clamped = Math.min(Math.max(nowDecimal, BUSINESS_START_HOUR), BUSINESS_END_HOUR);
+        return sum + Math.max(0, clamped - BUSINESS_START_HOUR);
+      }
       return sum; // 미래 날짜는 0
     }, 0);
   }, [dateStart, dateEnd]);
@@ -216,7 +234,7 @@ export default function ReservationLogPage() {
     <div className="p-6 space-y-4">
       <WorkReportHeader
         title="사전예약 실시간 로그"
-        description={`선택 기간의 접수량과 '신규 → 다른 상태' 처리 페이스, 담당자별 해결 현황입니다. 페이스(시간당)는 영업 시작 시각인 ${BUSINESS_START_HOUR}시부터 경과시간을 기준으로 계산합니다`}
+        description={`선택 기간의 접수량과 '신규 → 다른 상태' 처리 페이스, 담당자별 해결 현황입니다. 페이스(시간당)는 실제 영업시간(${BUSINESS_HOURS_LABEL}, 일요일 휴무 제외) 경과시간을 기준으로 계산합니다`}
         rightSlot={
           <>
             <ReservationCategoryToggle />
@@ -243,7 +261,7 @@ export default function ReservationLogPage() {
       {/* KPI */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
         <KpiCard label="기간 총 접수" value={totalIntake} color="pink" sub={`${dateStart} ~ ${dateEnd}`} />
-        <KpiCard label="시간당 평균 접수" value={avgPerHour} color="blue" sub={`${BUSINESS_START_HOUR}시~ ${elapsedHours}시간 경과`} />
+        <KpiCard label="시간당 평균 접수" value={avgPerHour} color="blue" sub={`${BUSINESS_HOURS_LABEL} 기준 ${Math.round(elapsedHours * 10) / 10}시간 경과`} />
         <KpiCard label="기간 신규 처리" value={totalProcessed} color="indigo" sub="신규→다른 상태" />
         <KpiCard label="시간당 처리 페이스" value={processPace} color="indigo" sub="팀 전체, 건/시간" />
         <KpiCard
@@ -286,15 +304,18 @@ export default function ReservationLogPage() {
               ) : (
                 visibleHours.map((h) => {
                   const isNow = endIsToday && h === currentHour;
-                  const isBeforeBusiness = h < BUSINESS_START_HOUR;
+                  const isBeforeBusiness = h < BUSINESS_START_HOUR_ROW;
+                  const isAfterBusiness = h >= BUSINESS_END_HOUR;
+                  const isOffHours = isBeforeBusiness || isAfterBusiness;
                   const rowMap = hourlyTransitions[h] ?? {};
                   const rowTotal = Object.values(rowMap).reduce((a, b) => a + b, 0);
                   return (
-                    <TableRow key={h} className={isNow ? 'bg-pink-50/60' : isBeforeBusiness ? 'opacity-40' : ''}>
+                    <TableRow key={h} className={isNow ? 'bg-pink-50/60' : isOffHours ? 'opacity-40' : ''}>
                       <TableCell className="text-xs font-medium text-gray-700 whitespace-nowrap">
                         {String(h).padStart(2, '0')}시
                         {isNow && <span className="ml-1 text-[9px] text-pink-500 font-bold">NOW</span>}
-                        {h === BUSINESS_START_HOUR && <span className="ml-1 text-[9px] text-indigo-500 font-bold">영업시작</span>}
+                        {h === BUSINESS_START_HOUR_ROW && <span className="ml-1 text-[9px] text-indigo-500 font-bold">영업시작(9:30)</span>}
+                        {h === BUSINESS_END_HOUR && <span className="ml-1 text-[9px] text-gray-400 font-bold">영업종료(20:00)</span>}
                       </TableCell>
                       <TableCell className="text-center text-xs font-bold text-blue-700 bg-blue-50/50">
                         {hourlyIntake[h] ?? 0}
@@ -322,7 +343,7 @@ export default function ReservationLogPage() {
       {/* 담당자별 현황 */}
       <SectionCard
         title="담당자별 현황"
-        rightSlot={<span className="text-xs text-gray-400">기간 처리(해결) 순 · 페이스 = {BUSINESS_START_HOUR}시~ 시간당 처리건수</span>}
+        rightSlot={<span className="text-xs text-gray-400">기간 처리(해결) 순 · 페이스 = 영업시간({BUSINESS_HOURS_LABEL}, 일요일 제외) 기준 시간당 처리건수</span>}
       >
         <div className="overflow-auto">
           <Table className="[&_td]:py-1.5 [&_th]:py-1.5 min-w-[520px]">
