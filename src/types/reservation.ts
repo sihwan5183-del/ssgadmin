@@ -218,7 +218,7 @@ export interface ReservationMemoLog {
 }
 
 export const CARRIER_OPTIONS = ['LG U+', 'SKT', 'KT', '알뜰폰'];
-export const CHANNEL_OPTIONS = ['메타광고', '네이버 검색광고', '기타', '기존고객']; // v20260720
+export const CHANNEL_OPTIONS = ['메타광고', '네이버 검색광고', '기타', '기존고객', 'MGM 유치건']; // v20260907: MGM 유치건 채널 추가
 
 // 단말기 없이 유심만으로 번호이동하는 건 — 폴드/플립 실단말과 구분해서 별도로 추적 (v20260803)
 export const USIM_MNP_DEVICE = '유심 MNP';

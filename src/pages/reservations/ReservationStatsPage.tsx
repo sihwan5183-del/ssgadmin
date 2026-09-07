@@ -18,12 +18,14 @@ import { ReservationCategoryToggle } from './ReservationCategoryToggle';
 // ── 상수 ──────────────────────────────────────────────────
 // v20260805: "기존고객" 채널이 빠져있어서 전체 합계랑 채널별 카드 합이 안 맞던 버그 수정
 // (CHANNEL_OPTIONS엔 4개 다 있는데 여기 통계용 목록만 3개였음)
-const CHANNELS = ['메타광고', '네이버 검색광고', '기타', '기존고객'];
+// v20260907: MGM 유치건 채널 추가 — 위와 같은 이유로 CHANNEL_OPTIONS와 여기를 항상 같이 맞출 것
+const CHANNELS = ['메타광고', '네이버 검색광고', '기타', '기존고객', 'MGM 유치건'];
 const CHANNEL_COLORS: Record<string, string> = {
   '메타광고': '#f9a8d4',
   '네이버 검색광고': '#86efac',
   '기타': '#c4b5fd',
   '기존고객': '#fdba74',
+  'MGM 유치건': '#fcd34d',
 };
 // 화면 표시 순서(뱃지/드롭다운과 동일): 신규-확정-예약완료-가망-상담성공-재케어-부재-실패-취소
 const FUNNEL_STEPS = [

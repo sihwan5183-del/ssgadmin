@@ -42,6 +42,7 @@ const CHANNEL_TABS = [
   { value: '네이버 검색광고', label: '네이버 검색광고' },
   { value: '기타',       label: '기타' },
   { value: '기존고객',    label: '기존고객' },
+  { value: 'MGM 유치건',  label: 'MGM 유치건' },
 ];
 
 // iphone18 캠페인 — 기존1(전체통신사) / 신규2(MNP전용) 구분용
@@ -768,7 +769,7 @@ export default function ReservationsPage() {
                     <TableCell className="text-sm text-gray-600 whitespace-nowrap">{r.carrier ?? '-'}</TableCell>
                     <TableCell className="text-sm text-gray-600 whitespace-nowrap">
                       {r.channel ? (
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${ r.channel === '메타광고' ? 'bg-blue-100 text-blue-700' : r.channel === '네이버 검색광고' ? 'bg-green-100 text-green-700' : r.channel === '기존고객' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>{r.channel}</span>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${ r.channel === '메타광고' ? 'bg-blue-100 text-blue-700' : r.channel === '네이버 검색광고' ? 'bg-green-100 text-green-700' : r.channel === '기존고객' ? 'bg-purple-100 text-purple-700' : r.channel === 'MGM 유치건' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>{r.channel}</span>
                       ) : '-'}
                     </TableCell>
                     <TableCell className="text-xs text-gray-500 whitespace-nowrap">

@@ -121,10 +121,9 @@ export function ReservationAddModal({ open, onClose, onDone, tables }: Props) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="_none_">선택 안함</SelectItem>
-                  <SelectItem value="메타광고">메타광고</SelectItem>
-                  <SelectItem value="네이버 검색광고">네이버 검색광고</SelectItem>
-                  <SelectItem value="기타">기타</SelectItem>
-                  <SelectItem value="기존고객">기존고객</SelectItem>
+                  {CHANNEL_OPTIONS.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
