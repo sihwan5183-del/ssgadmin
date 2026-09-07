@@ -2,6 +2,34 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
+// ─── 배포 직후 옛날 탭에서 "Failed to fetch dynamically imported module" 자동 복구 ───
+// Vite 코드 스플리팅 특성상, 배포하면 청크 파일명이 바뀜. 배포 전부터 열려있던 탭이
+// 그 사이 새 페이지로 이동(지연 로딩)하면 이미 없어진 옛날 파일명을 찾다가 실패함.
+// 무한 새로고침 방지를 위해 세션당 1회만 자동 새로고침.
+if (typeof window !== "undefined") {
+  const isChunkLoadError = (msg: unknown) =>
+    typeof msg === "string" &&
+    (msg.includes("Failed to fetch dynamically imported module") ||
+      msg.includes("Importing a module script failed") ||
+      msg.includes("error loading dynamically imported module"));
+
+  const recoverFromStaleChunk = () => {
+    const key = "__stale_chunk_reload_done";
+    if (sessionStorage.getItem(key)) return; // 이미 한 번 시도했으면 무한루프 방지 위해 중단
+    sessionStorage.setItem(key, "1");
+    window.location.reload();
+  };
+
+  window.addEventListener("error", (e) => {
+    if (isChunkLoadError(e?.message)) recoverFromStaleChunk();
+  });
+  window.addEventListener("unhandledrejection", (e) => {
+    const reason = (e as PromiseRejectionEvent).reason;
+    const msg = typeof reason === "string" ? reason : reason?.message;
+    if (isChunkLoadError(msg)) recoverFromStaleChunk();
+  });
+}
+
 // ─── 빌드 버전이 바뀌면 구형 레이아웃/필터 캐시 자동 폐기 ───
 // 이 상수만 올리면 모든 직원 브라우저에서 다음 진입 시 1회 자동 초기화 수행.
 const APP_CACHE_VERSION = "2026-05-29-seg-daymodal";
@@ -56,3 +84,11 @@ if (
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
+
+// 정상적으로 앱이 떴다는 뜻이므로, 다음에 또 배포 직후 같은 문제가 생기면
+// 다시 자동 복구를 시도할 수 있게 가드를 잠시 후 해제.
+if (typeof window !== "undefined") {
+  setTimeout(() => {
+    try { sessionStorage.removeItem("__stale_chunk_reload_done"); } catch { /* 무시 */ }
+  }, 5000);
+}
