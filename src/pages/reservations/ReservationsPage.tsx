@@ -51,14 +51,18 @@ const CHANNEL_TABS = [
 const CAMPAIGN_OPTIONS = [
   { value: '120249648804880479', label: '기존1 (전체통신사)' },
   { value: '120249757384390479', label: '신규2 (MNP전용)' },
+  { value: '40/20', label: '40/20 (26.09.09 신규)' },
 ];
 const CAMPAIGN_LABELS: Record<string, string> = Object.fromEntries(
   CAMPAIGN_OPTIONS.map((c) => [c.value, c.label])
 );
-// 화면/CSV에는 MNP전용만 눈에 띄게 표시하고 나머지는 비워둡니다 (기존1은 기본값이라 따로 표시 안 함)
+// 화면/CSV에는 MNP전용·40/20처럼 표시가 등록된 캠페인만 눈에 띄게 보여주고 나머지는 비워둡니다
+// (기존1은 기본값이라 따로 표시 안 함). 새 캠페인이 생기면 위 CAMPAIGN_OPTIONS에 { value: '캠페인ID 또는 라벨', label: '표시할 이름' } 한 줄만 추가하면 자동 반영됩니다.
 const MNP_CAMPAIGN_ID = '120249757384390479';
 function campaignLabel(v?: string | null): string {
-  return v === MNP_CAMPAIGN_ID ? 'MNP전용' : '-';
+  if (!v) return '-';
+  if (v === MNP_CAMPAIGN_ID) return 'MNP전용';
+  return CAMPAIGN_LABELS[v] ?? '-';
 }
 
 function StatusBadge({ status, prospectGrade }: { status: ReservationStatus; prospectGrade?: string | null }) {
@@ -840,8 +844,8 @@ export default function ReservationsPage() {
                       ) : '-'}
                     </TableCell>
                     <TableCell className="text-xs text-gray-500 whitespace-nowrap">
-                      {(r as any).utm_campaign === MNP_CAMPAIGN_ID ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700">MNP전용</span>
+                      {campaignLabel((r as any).utm_campaign) !== '-' ? (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${(r as any).utm_campaign === MNP_CAMPAIGN_ID ? 'bg-red-100 text-red-700' : 'bg-pink-100 text-pink-700'}`}>{campaignLabel((r as any).utm_campaign)}</span>
                       ) : '-'}
                     </TableCell>
                     <TableCell className="whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
