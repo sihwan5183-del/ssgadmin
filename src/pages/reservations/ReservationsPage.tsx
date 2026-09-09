@@ -52,6 +52,7 @@ const CAMPAIGN_OPTIONS = [
   { value: '120249648804880479', label: '기존1 (전체통신사)' },
   { value: '120249757384390479', label: '신규2 (MNP전용)' },
   { value: '40/20', label: '40/20 (26.09.09 신규)' },
+  { value: '환승', label: '환승 (26.09.09 환승할 때)' },
 ];
 const CAMPAIGN_LABELS: Record<string, string> = Object.fromEntries(
   CAMPAIGN_OPTIONS.map((c) => [c.value, c.label])
