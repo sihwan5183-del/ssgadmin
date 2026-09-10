@@ -68,7 +68,9 @@ export async function fetchReservations(
   if (status) query = query.eq('status', status);
   if (prospect_grade) query = query.eq('prospect_grade', prospect_grade);
   if (absent_count) query = query.eq('absent_count', absent_count);
-  if (assigned_to) query = query.eq('assigned_to', assigned_to);
+  // '_unassigned_' 는 미배정(assigned_to IS NULL) 필터
+  if (assigned_to === '_unassigned_') query = query.is('assigned_to', null);
+  else if (assigned_to) query = query.eq('assigned_to', assigned_to);
   if (channel) query = query.eq('channel', channel);
   if (campaign) query = query.eq('utm_campaign', campaign);
   if (carrier === 'lgu') query = query.eq('carrier', 'LG U+');

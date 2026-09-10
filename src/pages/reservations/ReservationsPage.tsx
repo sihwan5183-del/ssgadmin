@@ -687,6 +687,7 @@ export default function ReservationsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="_all_">전체 담당자</SelectItem>
+              <SelectItem value="_unassigned_"><span className="text-orange-600 font-semibold">미배정</span></SelectItem>
               {staff.map((s) => (
                 <SelectItem key={s.user_id} value={s.user_id}>{s.display_name}</SelectItem>
               ))}
