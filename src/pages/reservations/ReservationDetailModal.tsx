@@ -509,6 +509,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone, tables 
                     <SelectItem value="_none_">선택 안함</SelectItem>
                     <SelectItem value="256GB">256GB</SelectItem>
                     <SelectItem value="512GB">512GB</SelectItem>
+                    <SelectItem value="1TB">1TB</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
