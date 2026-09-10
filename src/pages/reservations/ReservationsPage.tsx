@@ -60,6 +60,11 @@ const CAMPAIGN_LABELS: Record<string, string> = Object.fromEntries(
 // 화면/CSV에는 MNP전용·40/20처럼 표시가 등록된 캠페인만 눈에 띄게 보여주고 나머지는 비워둡니다
 // (기존1은 기본값이라 따로 표시 안 함). 새 캠페인이 생기면 위 CAMPAIGN_OPTIONS에 { value: '캠페인ID 또는 라벨', label: '표시할 이름' } 한 줄만 추가하면 자동 반영됩니다.
 const MNP_CAMPAIGN_ID = '120249757384390479';
+// 목록 뱃지용 짧은 라벨: "40/20 (26.09.09 신규)" -> "40/20" (전체 라벨은 title 툴팁)
+function campaignShort(v?: string | null): string {
+  const full = campaignLabel(v);
+  return full === '-' ? '-' : full.split(' (')[0];
+}
 function campaignLabel(v?: string | null): string {
   if (!v) return '-';
   if (v === MNP_CAMPAIGN_ID) return 'MNP전용';
@@ -784,18 +789,18 @@ export default function ReservationsPage() {
                     onChange={toggleAll} />
                 </TableHead>
                 <TableHead className="text-xs w-[36px]">#</TableHead>
-                <TableHead className="text-xs w-[120px]">접수일</TableHead>
-                <TableHead className="text-xs">고객명</TableHead>
-                <TableHead className="text-xs">연락처</TableHead>
-                <TableHead className="text-xs">생년월일</TableHead>
+                <TableHead className="text-xs w-[92px]">접수일</TableHead>
+                <TableHead className="text-xs whitespace-nowrap">고객명</TableHead>
+                <TableHead className="text-xs whitespace-nowrap">연락처</TableHead>
                 <TableHead className="text-xs whitespace-nowrap">통신사</TableHead>
-                <TableHead className="text-xs whitespace-nowrap">채널</TableHead>
+                <TableHead className="text-xs whitespace-nowrap">관심기기</TableHead>
+                <TableHead className="text-xs w-[62px] whitespace-nowrap">용량</TableHead>
+                <TableHead className="text-xs w-[62px] whitespace-nowrap">컬러</TableHead>
                 <TableHead className="text-xs whitespace-nowrap">캠페인</TableHead>
                 <TableHead className="text-xs whitespace-nowrap">상태</TableHead>
                 <TableHead className="text-xs whitespace-nowrap">담당자</TableHead>
-                <TableHead className="text-xs">관심기기</TableHead>
-                <TableHead className="text-xs w-[70px]">용량</TableHead>
-                <TableHead className="text-xs w-[90px]">컬러</TableHead>
+                <TableHead className="text-xs whitespace-nowrap">채널</TableHead>
+                <TableHead className="text-xs whitespace-nowrap">생년월일</TableHead>
                 <TableHead className="text-xs">메모</TableHead>
                 <TableHead className="text-xs w-[80px] text-center">문자발송</TableHead>
                 <TableHead className="text-xs w-[130px] text-center">택배발송 · 송장번호</TableHead>
@@ -828,8 +833,8 @@ export default function ReservationsPage() {
                           </span>
                         ) : '-'}
                     </TableCell>
-                    <TableCell className="text-sm font-medium">{isAdmin ? (r.name || '-') : maskName(r.name)}</TableCell>
-                    <TableCell className="text-sm text-gray-600">
+                    <TableCell className="text-sm font-medium whitespace-nowrap">{isAdmin ? (r.name || '-') : maskName(r.name)}</TableCell>
+                    <TableCell className="text-sm text-gray-600 whitespace-nowrap">
                       <span className={duplicatePhones.has(r.phone) ? "text-red-500 font-bold" : ""}>
                         {isAdmin ? formatPhone(r.phone) : maskPhone(r.phone)}
                       </span>
@@ -837,21 +842,18 @@ export default function ReservationsPage() {
                         <span className="ml-1 text-[10px] bg-red-100 text-red-600 px-1 py-0.5 rounded font-bold">중복</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-xs text-gray-500">{(r as any).birth_date ?? '-'}</TableCell>
                     <TableCell className="text-sm text-gray-600 whitespace-nowrap">{r.carrier ?? '-'}</TableCell>
-                    <TableCell className="text-sm text-gray-600 whitespace-nowrap">
-                      {r.channel ? (
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${ r.channel === '메타광고' ? 'bg-blue-100 text-blue-700' : r.channel === '네이버 검색광고' ? 'bg-green-100 text-green-700' : r.channel === '기존고객' ? 'bg-purple-100 text-purple-700' : r.channel === 'MGM 유치건' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>{r.channel}</span>
-                      ) : '-'}
-                    </TableCell>
+                    <TableCell className="text-xs text-blue-600 font-medium whitespace-nowrap">{(r as any).device_interest ?? '-'}</TableCell>
+                    <TableCell className="text-xs text-gray-500 text-center whitespace-nowrap">{(r as any).capacity ?? '-'}</TableCell>
+                    <TableCell className="text-xs text-gray-500 text-center whitespace-nowrap">{(r as any).product_color ?? '-'}</TableCell>
                     <TableCell className="text-xs text-gray-500 whitespace-nowrap">
                       {campaignLabel((r as any).utm_campaign) !== '-' ? (
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${(r as any).utm_campaign === MNP_CAMPAIGN_ID ? 'bg-red-100 text-red-700' : 'bg-pink-100 text-pink-700'}`}>{campaignLabel((r as any).utm_campaign)}</span>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${(r as any).utm_campaign === MNP_CAMPAIGN_ID ? 'bg-red-100 text-red-700' : 'bg-pink-100 text-pink-700'}`} title={campaignLabel((r as any).utm_campaign)}>{campaignShort((r as any).utm_campaign)}</span>
                       ) : '-'}
                     </TableCell>
                     <TableCell className="whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <Select value={r.status} onValueChange={(v) => updateStatusInline(r.id, v as ReservationStatus)}>
-                        <SelectTrigger className={`h-7 text-[11px] w-[132px] border-none font-semibold rounded-full px-2.5 ${RESERVATION_STATUS_LIST.find(s => s.value === r.status)?.color ?? 'bg-gray-100 text-gray-600'}`}>
+                        <SelectTrigger className={`h-7 text-[11px] w-[96px] border-none font-semibold rounded-full px-2.5 ${RESERVATION_STATUS_LIST.find(s => s.value === r.status)?.color ?? 'bg-gray-100 text-gray-600'}`}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -886,7 +888,7 @@ export default function ReservationsPage() {
                     </TableCell>
                     <TableCell className="whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <Select value={r.assigned_to ?? '_none_'} onValueChange={(v) => updateAssignee(r.id, v === '_none_' ? null : v)}>
-                        <SelectTrigger className="h-7 text-xs w-[100px]">
+                        <SelectTrigger className="h-7 text-xs w-[88px]">
                           <SelectValue placeholder="담당자 지정" />
                         </SelectTrigger>
                         <SelectContent>
@@ -897,9 +899,12 @@ export default function ReservationsPage() {
                         </SelectContent>
                       </Select>
                     </TableCell>
-                    <TableCell className="text-xs text-blue-600 font-medium whitespace-nowrap">{(r as any).device_interest ?? '-'}</TableCell>
-                    <TableCell className="text-xs text-gray-500 text-center">{(r as any).capacity ?? '-'}</TableCell>
-                    <TableCell className="text-xs text-gray-500 text-center whitespace-nowrap">{(r as any).product_color ?? '-'}</TableCell>
+                    <TableCell className="text-sm text-gray-600 whitespace-nowrap">
+                      {r.channel ? (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${ r.channel === '메타광고' ? 'bg-blue-100 text-blue-700' : r.channel === '네이버 검색광고' ? 'bg-green-100 text-green-700' : r.channel === '기존고객' ? 'bg-purple-100 text-purple-700' : r.channel === 'MGM 유치건' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>{r.channel}</span>
+                      ) : '-'}
+                    </TableCell>
+                    <TableCell className="text-xs text-gray-500 whitespace-nowrap">{(r as any).birth_date ?? '-'}</TableCell>
                     <TableCell className="text-xs text-gray-500 max-w-[220px]" title={r.memo ?? ''}>
                       <span className="line-clamp-2 whitespace-normal break-all leading-snug">{r.memo ?? '-'}</span>
                     </TableCell>
