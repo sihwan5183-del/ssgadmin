@@ -801,6 +801,7 @@ export default function ReservationsPage() {
                 <TableHead className="text-xs whitespace-nowrap">관심기기</TableHead>
                 <TableHead className="text-xs w-[62px] whitespace-nowrap">용량</TableHead>
                 <TableHead className="text-xs w-[62px] whitespace-nowrap">컬러</TableHead>
+                <TableHead className="text-xs w-[62px] whitespace-nowrap">할부</TableHead>
                 <TableHead className="text-xs whitespace-nowrap">캠페인</TableHead>
                 <TableHead className="text-xs whitespace-nowrap">상태</TableHead>
                 <TableHead className="text-xs whitespace-nowrap">담당자</TableHead>
@@ -851,6 +852,7 @@ export default function ReservationsPage() {
                     <TableCell className="text-xs text-blue-600 font-medium whitespace-nowrap">{(r as any).device_interest ?? '-'}</TableCell>
                     <TableCell className="text-xs text-gray-500 text-center whitespace-nowrap">{(r as any).capacity ?? '-'}</TableCell>
                     <TableCell className="text-xs text-gray-500 text-center whitespace-nowrap">{(r as any).product_color ?? '-'}</TableCell>
+                    <TableCell className="text-xs text-gray-500 text-center whitespace-nowrap">{(r as any).installment_months ?? '-'}</TableCell>
                     <TableCell className="text-xs text-gray-500 whitespace-nowrap">
                       {campaignLabel((r as any).utm_campaign) !== '-' ? (
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${(r as any).utm_campaign === MNP_CAMPAIGN_ID ? 'bg-red-100 text-red-700' : 'bg-pink-100 text-pink-700'}`} title={campaignLabel((r as any).utm_campaign)}>{campaignShort((r as any).utm_campaign)}</span>

@@ -95,6 +95,7 @@ export interface Reservation {
   device_interest: string | null;
   capacity: string | null;
   product_color: string | null;
+  installment_months?: string | null; // 할부 개월: 일시납/24개월/30개월/36개월
   status: ReservationStatus;
   prospect_grade: ProspectGrade | null;
   absent_count: AbsentCount | null;   // 부재 회차 (v20260901)
@@ -159,6 +160,7 @@ export interface ReservationInsert {
   absent_count?: AbsentCount | null;
   capacity?: string;
   product_color?: string;
+  installment_months?: string;
   assigned_to?: string;
   birth_date?: string;
   memo?: string;
@@ -174,6 +176,7 @@ export interface ReservationUpdate {
   device_interest?: string;
   capacity?: string;
   product_color?: string;
+  installment_months?: string;
   assigned_to?: string;
   memo?: string;
   fail_reason_id?: string | null;
@@ -223,6 +226,7 @@ export const CHANNEL_OPTIONS = ['메타광고', '네이버 검색광고', '기�
 
 // 단말기 없이 유심만으로 번호이동하는 건 — 폴드/플립 실단말과 구분해서 별도로 추적 (v20260803)
 export const USIM_MNP_DEVICE = '유심 MNP';
+export const INSTALLMENT_OPTIONS = ['일시납', '24개월', '30개월', '36개월'];
 export const DEVICE_OPTIONS = ['갤럭시 Z 플립8', '갤럭시 Z 폴드8', '갤럭시 Z 폴드8 울트라', USIM_MNP_DEVICE]; // v20260723: 와이드 → 울트라(정식 출시명)
 
 // 2ND 워치 번들 모델 옵션 (v20260729-6) — 자유입력 → 고정 옵션 전환

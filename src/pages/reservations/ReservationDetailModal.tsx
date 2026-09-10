@@ -36,8 +36,7 @@ import {
   getColorsForDevice,
   PROSPECT_GRADE_OPTIONS,
   ABSENT_COUNT_OPTIONS,
-  CANCEL_STAGE_OPTIONS,
-} from '@/types/reservation';
+  CANCEL_STAGE_OPTIONS, INSTALLMENT_OPTIONS } from '@/types/reservation';
 import type { ReservationFailReason } from '@/types/reservation';
 import { useRole } from '@/hooks/useRole';
 import { useAuth } from '@/contexts/AuthContext';
@@ -95,6 +94,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone, tables 
   const [device, setDevice] = useState('');
   const [isCustomDevice, setIsCustomDevice] = useState(false);
   const [capacity, setCapacity] = useState('');
+  const [installment, setInstallment] = useState('');
   const [color, setColor] = useState('');
   const [assignedTo, setAssignedTo] = useState<string>('');
 
@@ -151,6 +151,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone, tables 
         setDevice(initialDevice);
         setIsCustomDevice(!!initialDevice && !DEVICE_OPTIONS.includes(initialDevice));
         setCapacity(r.capacity ?? '');
+        setInstallment((r as any).installment_months ?? '');
         setColor((r as any).product_color ?? '');
         setAssignedTo(r.assigned_to ?? '');
         if (r.fail_reason_id) setSelectedFailReason(r.fail_reason_id);
@@ -177,6 +178,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone, tables 
       `선호기기: ${device || '미정'}`,
       `용량: ${capacity || '미정'}`,
       `컬러: ${color || '미정'}`,
+      `할부: ${installment || '미정'}`,
       `메모사항: ${latestMemo || '없음'}`,
     ].join('\n');
     navigator.clipboard.writeText(text)
@@ -256,6 +258,7 @@ export function ReservationDetailModal({ reservationId, onClose, onDone, tables 
         channel: channel || undefined,
         device_interest: device.trim() || undefined,
         capacity: capacity || undefined,
+        installment_months: installment || null,
         product_color: color || undefined,
         assigned_to: assignedTo || null,
         fail_reason_id: status === '실패' ? selectedFailReason || null : null,
@@ -564,6 +567,17 @@ export function ReservationDetailModal({ reservationId, onClose, onDone, tables 
                   <SelectContent position="item-aligned">
                     <SelectItem value="_none_">미정</SelectItem>
                     {colorSelectOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">할부 개월</label>
+                <Select value={installment || '_none_'} onValueChange={v => setInstallment(v === '_none_' ? '' : v)}>
+                  <SelectTrigger className="text-sm"><SelectValue placeholder="선택 안함" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none_">선택 안함</SelectItem>
+                    {INSTALLMENT_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

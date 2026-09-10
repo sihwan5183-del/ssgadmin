@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select';
 import { insertReservation } from '@/services/reservationService';
 import type { ReservationTableNames } from '@/hooks/useReservationCategory';
-import { CARRIER_OPTIONS, CHANNEL_OPTIONS, DEVICE_OPTIONS, getColorsForDevice } from '@/types/reservation';
+import { CARRIER_OPTIONS, CHANNEL_OPTIONS, DEVICE_OPTIONS, INSTALLMENT_OPTIONS, getColorsForDevice } from '@/types/reservation';
 import { useFieldOptions } from '@/hooks/useFieldOptions';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -37,6 +37,7 @@ export function ReservationAddModal({ open, onClose, onDone, tables }: Props) {
   const [isCustomDevice, setIsCustomDevice] = useState(false);
   const [birthDate, setBirthDate] = useState('');
   const [capacity, setCapacity] = useState('');
+  const [installment, setInstallment] = useState('');
   const [color, setColor] = useState('');
   const [memo, setMemo] = useState('');
   const [loading, setLoading] = useState(false);
@@ -54,6 +55,7 @@ export function ReservationAddModal({ open, onClose, onDone, tables }: Props) {
         channel: channel || undefined,
         device_interest: device.trim() || undefined,
         capacity: capacity || undefined,
+        installment_months: installment || undefined,
         product_color: color || undefined,
         memo: memo.trim() || undefined,
         birth_date: birthDate || undefined,
@@ -175,6 +177,17 @@ export function ReservationAddModal({ open, onClose, onDone, tables }: Props) {
                 <SelectItem value="256GB">256GB</SelectItem>
                 <SelectItem value="512GB">512GB</SelectItem>
                 <SelectItem value="1TB">1TB</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">할부 개월</label>
+            <Select value={installment || '_none_'} onValueChange={v => setInstallment(v === '_none_' ? '' : v)}>
+              <SelectTrigger className="text-sm"><SelectValue placeholder="선택" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_none_">선택 안함</SelectItem>
+                {INSTALLMENT_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
