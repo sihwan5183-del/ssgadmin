@@ -828,10 +828,10 @@ export default function ReservationsPage() {
                           </span>
                         ) : '-'}
                     </TableCell>
-                    <TableCell className="text-sm font-medium">{maskName(r.name)}</TableCell>
+                    <TableCell className="text-sm font-medium">{isAdmin ? (r.name || '-') : maskName(r.name)}</TableCell>
                     <TableCell className="text-sm text-gray-600">
                       <span className={duplicatePhones.has(r.phone) ? "text-red-500 font-bold" : ""}>
-                        {maskPhone(r.phone)}
+                        {isAdmin ? formatPhone(r.phone) : maskPhone(r.phone)}
                       </span>
                       {duplicatePhones.has(r.phone) && (
                         <span className="ml-1 text-[10px] bg-red-100 text-red-600 px-1 py-0.5 rounded font-bold">중복</span>
