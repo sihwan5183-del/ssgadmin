@@ -60,6 +60,11 @@ const CAMPAIGN_LABELS: Record<string, string> = Object.fromEntries(
 // 화면/CSV에는 MNP전용·40/20처럼 표시가 등록된 캠페인만 눈에 띄게 보여주고 나머지는 비워둡니다
 // (기존1은 기본값이라 따로 표시 안 함). 새 캠페인이 생기면 위 CAMPAIGN_OPTIONS에 { value: '캠페인ID 또는 라벨', label: '표시할 이름' } 한 줄만 추가하면 자동 반영됩니다.
 const MNP_CAMPAIGN_ID = '120249757384390479';
+// 목록 고객명: 외국인 등 긴 이름은 4글자 + … 로 줄여서 표시 (전체 이름은 툴팁/상세모달)
+function shortName(n?: string | null): string {
+  const t = (n ?? '').trim();
+  return t.length > 4 ? t.slice(0, 4) + '…' : t;
+}
 // 목록 뱃지용 짧은 라벨: "40/20 (26.09.09 신규)" -> "40/20" (전체 라벨은 title 툴팁)
 function campaignShort(v?: string | null): string {
   const full = campaignLabel(v);
@@ -833,7 +838,7 @@ export default function ReservationsPage() {
                           </span>
                         ) : '-'}
                     </TableCell>
-                    <TableCell className="text-sm font-medium whitespace-nowrap">{isAdmin ? (r.name || '-') : maskName(r.name)}</TableCell>
+                    <TableCell className="text-sm font-medium whitespace-nowrap" title={r.name ?? ''}>{shortName(isAdmin ? (r.name || '-') : maskName(r.name))}</TableCell>
                     <TableCell className="text-sm text-gray-600 whitespace-nowrap">
                       <span className={duplicatePhones.has(r.phone) ? "text-red-500 font-bold" : ""}>
                         {isAdmin ? formatPhone(r.phone) : maskPhone(r.phone)}
