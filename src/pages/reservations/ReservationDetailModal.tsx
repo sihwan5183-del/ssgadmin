@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { MessageCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -165,6 +166,24 @@ export function ReservationDetailModal({ reservationId, onClose, onDone, tables 
     loadMemoLogs();
   }, [reservationId, tables]);
 
+  // 카톡 공유용 텍스트 정리 + 클립보드 복사 (v20260910)
+  const handleCopyForKakao = () => {
+    if (!row) return;
+    const latestMemo = memoLogs[0]?.content?.trim();
+    const text = [
+      `고객명: ${row.name}`,
+      `통신사: ${carrier || '미정'}`,
+      `연락처: ${formatPhone(row.phone)}`,
+      `선호기기: ${device || '미정'}`,
+      `용량: ${capacity || '미정'}`,
+      `컬러: ${color || '미정'}`,
+      `메모사항: ${latestMemo || '없음'}`,
+    ].join('\n');
+    navigator.clipboard.writeText(text)
+      .then(() => toast.success('카톡으로 보낼 내용이 클립보드에 복사되었습니다'))
+      .catch(() => toast.error('클립보드 복사에 실패했습니다'));
+  };
+
   // 상태 변경 시 실패/취소 인터셉트
   const handleStatusChange = (val: ReservationStatus) => {
     if (val === '실패') {
@@ -278,6 +297,19 @@ export function ReservationDetailModal({ reservationId, onClose, onDone, tables 
               {row && <span className="ml-2"><StatusBadge status={row.status} prospectGrade={row.prospect_grade} absentCount={(row as any).absent_count} /></span>}
             </DialogTitle>
           </DialogHeader>
+
+          {row && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full text-yellow-700 border-yellow-300 bg-yellow-50 hover:bg-yellow-100"
+              onClick={handleCopyForKakao}
+            >
+              <MessageCircle size={14} className="mr-1.5" />
+              카톡으로 보내기 (복사)
+            </Button>
+          )}
 
           {loading ? (
             <div className="py-12 text-center text-sm text-gray-400">로딩 중...</div>
