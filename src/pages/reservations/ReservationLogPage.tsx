@@ -52,9 +52,12 @@ import {
   fetchAllTransitionsForRange,
   fetchAllAssigneeRows,
   fetchNewBacklogCount,
+  fetchAllReservationCreations,
+  fetchAllTransitionsEver,
   type IntakeLogRow,
   type NewOriginTransition,
   type StatusTransition,
+  type ReservationCreationRow,
 } from '@/services/reservationService';
 import { useReservationCategory } from '@/hooks/useReservationCategory';
 import { ReservationCategoryToggle } from './ReservationCategoryToggle';
@@ -81,6 +84,22 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i);
 // 일요일(고정휴무) 여부
 function isSunday(dateStr: string): boolean {
   return new Date(`${dateStr}T00:00:00`).getDay() === 0;
+}
+
+// 스냅샷 추이용 10분 버킷 — 영업시간(09:30~20:00) 내에서만 생성.
+// 오늘 날짜면 현재 시각을 넘는 미래 버킷은 만들지 않는다(아직 안 지난 시간이라 의미 없음).
+const SNAPSHOT_BUCKET_MINUTES = 10;
+function generateSnapshotBuckets(dateStr: string): Date[] {
+  const start = new Date(`${dateStr}T09:30:00`);
+  const end = new Date(`${dateStr}T20:00:00`);
+  const now = new Date();
+  const isToday = dateStr === todayStr();
+  const buckets: Date[] = [];
+  for (let t = start.getTime(); t <= end.getTime(); t += SNAPSHOT_BUCKET_MINUTES * 60 * 1000) {
+    if (isToday && t > now.getTime()) break;
+    buckets.push(new Date(t));
+  }
+  return buckets;
 }
 
 // 처리량 표에서 항상 보여줄 상태 목록 (신규 접수는 왼쪽 "접수" 열에서 이미 보여주므로 제외).
@@ -135,6 +154,31 @@ export default function ReservationLogPage() {
   const [expandedStaff, setExpandedStaff] = useState<Set<string>>(new Set());
   const [assigneeAllCounts, setAssigneeAllCounts] = useState<Record<string, number>>({});
   const [newBacklog, setNewBacklog] = useState(0);
+
+  // ── 상태별 스냅샷 추이 (10분 단위) — 전체 이력이 필요해서 위 dateStart~dateEnd 필터와 별개로 관리 ──
+  const [snapshotDate, setSnapshotDate] = useState(todayStr());
+  const [creationRows, setCreationRows] = useState<ReservationCreationRow[]>([]);
+  const [everTransitions, setEverTransitions] = useState<StatusTransition[]>([]);
+  const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const [expandedBucket, setExpandedBucket] = useState<number | null>(null);
+
+  const loadSnapshotHistory = useCallback(async () => {
+    setSnapshotLoading(true);
+    try {
+      const [creations, everTx] = await Promise.all([
+        fetchAllReservationCreations(tables),
+        fetchAllTransitionsEver(tables),
+      ]);
+      setCreationRows(creations);
+      setEverTransitions(everTx);
+    } catch (e: any) {
+      toast.error('스냅샷 이력 로드 실패: ' + e.message);
+    } finally {
+      setSnapshotLoading(false);
+    }
+  }, [tables]);
+
+  useEffect(() => { loadSnapshotHistory(); }, [loadSnapshotHistory]);
 
   const staffMap = useMemo(() => {
     const m: Record<string, string> = {};
@@ -307,6 +351,48 @@ export default function ReservationLogPage() {
       return next;
     });
   };
+
+  // ── 상태별 스냅샷 추이 계산 ──────────────────────────────────
+  // "9시 가망 200건 → 9시10분 가망 198건"처럼 특정 시각에 각 상태에 몇 건이 있었는지는
+  // 이벤트 개수만으론 알 수 없고, 그 시각까지의 모든 생성/전환을 순서대로 누적 재생해야
+  // 함. 전체 생성 이력(모든 건은 생성 시각에 '신규'로 시작)과 전체 전환 이력을 하나의
+  // 시간순 이벤트 스트림으로 합친 뒤, 10분 버킷을 지날 때마다 누적 집계(tally)를
+  // 스냅샷으로 남기고, 그 버킷 구간 안에서 일어난 전환들은 별도로 모아서
+  // "어디로 갔는지" 펼쳐보기용 상세로 함께 저장한다.
+  const snapshotSeries = useMemo(() => {
+    type Ev = { time: number; from: string | null; to: string };
+    const events: Ev[] = [];
+    creationRows.forEach((r) => {
+      events.push({ time: new Date(r.created_at).getTime(), from: null, to: '신규' });
+    });
+    everTransitions.forEach((t) => {
+      events.push({ time: new Date(t.changed_at).getTime(), from: t.from_status, to: t.to_status });
+    });
+    events.sort((a, b) => a.time - b.time);
+
+    const buckets = generateSnapshotBuckets(snapshotDate);
+    const tally: Record<string, number> = {};
+    RESERVATION_STATUS_LIST.forEach((s) => { tally[s.value] = 0; });
+
+    let idx = 0;
+    return buckets.map((bucketTime) => {
+      const bucketMs = bucketTime.getTime();
+      const deltas: Record<string, number> = {};
+      while (idx < events.length && events[idx].time <= bucketMs) {
+        const ev = events[idx];
+        if (ev.from) {
+          tally[ev.from] = (tally[ev.from] ?? 0) - 1;
+          const key = `${ev.from}→${ev.to}`;
+          deltas[key] = (deltas[key] ?? 0) + 1;
+        } else {
+          deltas['신규 접수'] = (deltas['신규 접수'] ?? 0) + 1;
+        }
+        tally[ev.to] = (tally[ev.to] ?? 0) + 1;
+        idx += 1;
+      }
+      return { time: bucketTime, tally: { ...tally }, deltas };
+    });
+  }, [snapshotDate, creationRows, everTransitions]);
 
   return (
     <div className="p-6 space-y-4">
@@ -525,6 +611,103 @@ export default function ReservationLogPage() {
                                 </span>
                               ))}
                             </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </Fragment>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </SectionCard>
+
+      {/* 상태별 스냅샷 추이 (10분 단위) — 특정 시각에 각 상태에 몇 건이 있었는지 + 그 구간에 뭐가 바뀌었는지 */}
+      <SectionCard
+        title="상태별 스냅샷 추이 (10분 단위)"
+        rightSlot={
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400">영업시간(09:30~20:00) 기준 · 행을 눌러 그 10분간 전환 내역 펼쳐보기</span>
+            <input
+              type="date"
+              value={snapshotDate}
+              onChange={(e) => { setSnapshotDate(e.target.value); setExpandedBucket(null); }}
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700"
+            />
+            <Button variant="ghost" size="icon" onClick={loadSnapshotHistory} className="shrink-0">
+              <RotateCw className={`size-4 ${snapshotLoading ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
+        }
+      >
+        <div className="overflow-auto max-h-[520px]">
+          <Table className="[&_td]:py-1 [&_th]:py-1.5 min-w-[900px]">
+            <TableHeader className="sticky top-0 z-10 bg-gray-50 shadow-[0_1px_0_0_#e5e7eb]">
+              <TableRow className="bg-gray-50">
+                <TableHead className="text-xs w-[24px]"></TableHead>
+                <TableHead className="text-xs w-[64px]">시각</TableHead>
+                {RESERVATION_STATUS_LIST.map((s) => (
+                  <TableHead key={s.value} className="text-xs text-center whitespace-nowrap">{s.label}</TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {snapshotSeries.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={RESERVATION_STATUS_LIST.length + 2} className="text-center py-10 text-sm text-gray-400">
+                    {snapshotLoading ? '불러오는 중...' : '이 날짜는 아직 영업시간이 시작 전이거나 데이터가 없습니다'}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                snapshotSeries.map((row, i) => {
+                  const prev = i > 0 ? snapshotSeries[i - 1].tally : null;
+                  const expanded = expandedBucket === i;
+                  const deltaEntries = Object.entries(row.deltas).sort((a, b) => b[1] - a[1]);
+                  const isLast = i === snapshotSeries.length - 1;
+                  return (
+                    <Fragment key={row.time.getTime()}>
+                      <TableRow
+                        className={`cursor-pointer hover:bg-gray-50 ${isLast ? 'bg-pink-50/50' : ''}`}
+                        onClick={() => setExpandedBucket(expanded ? null : i)}
+                      >
+                        <TableCell className="text-gray-400">
+                          {expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+                        </TableCell>
+                        <TableCell className="text-xs font-medium text-gray-700 whitespace-nowrap">
+                          {row.time.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                          {isLast && <span className="ml-1 text-[9px] text-pink-500 font-bold">NOW</span>}
+                        </TableCell>
+                        {RESERVATION_STATUS_LIST.map((s) => {
+                          const val = row.tally[s.value] ?? 0;
+                          const diff = prev ? val - (prev[s.value] ?? 0) : 0;
+                          return (
+                            <TableCell key={s.value} className="text-center text-xs">
+                              <span className="font-semibold text-gray-800">{val}</span>
+                              {diff !== 0 && (
+                                <span className={`ml-1 text-[10px] font-bold ${diff > 0 ? 'text-blue-500' : 'text-red-500'}`}>
+                                  {diff > 0 ? `+${diff}` : diff}
+                                </span>
+                              )}
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                      {expanded && (
+                        <TableRow className="bg-gray-50/60 hover:bg-gray-50/60">
+                          <TableCell colSpan={RESERVATION_STATUS_LIST.length + 2} className="py-3">
+                            {deltaEntries.length === 0 ? (
+                              <div className="text-xs text-gray-400 pl-6">이 10분 동안은 변동이 없었습니다</div>
+                            ) : (
+                              <div className="flex flex-wrap gap-2 pl-6">
+                                {deltaEntries.map(([p, c]) => (
+                                  <span key={p} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-gray-200 text-xs">
+                                    <span className="text-gray-600">{p}</span>
+                                    <span className="font-bold text-indigo-600">{c}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </TableCell>
                         </TableRow>
                       )}
