@@ -41,6 +41,9 @@ import { RotateCw, ChevronRight, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { useDashboardStaff } from '@/hooks/useDashboardStaff';
@@ -54,10 +57,12 @@ import {
   fetchNewBacklogCount,
   fetchAllReservationCreations,
   fetchAllTransitionsEver,
+  fetchAllReservationAssignees,
   type IntakeLogRow,
   type NewOriginTransition,
   type StatusTransition,
   type ReservationCreationRow,
+  type ReservationAssigneeRow,
 } from '@/services/reservationService';
 import { useReservationCategory } from '@/hooks/useReservationCategory';
 import { ReservationCategoryToggle } from './ReservationCategoryToggle';
@@ -157,20 +162,24 @@ export default function ReservationLogPage() {
 
   // ── 상태별 스냅샷 추이 (10분 단위) — 전체 이력이 필요해서 위 dateStart~dateEnd 필터와 별개로 관리 ──
   const [snapshotDate, setSnapshotDate] = useState(todayStr());
+  const [snapshotStaffFilter, setSnapshotStaffFilter] = useState(''); // ''=전체
   const [creationRows, setCreationRows] = useState<ReservationCreationRow[]>([]);
   const [everTransitions, setEverTransitions] = useState<StatusTransition[]>([]);
+  const [currentAssignees, setCurrentAssignees] = useState<ReservationAssigneeRow[]>([]);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [expandedBucket, setExpandedBucket] = useState<number | null>(null);
 
   const loadSnapshotHistory = useCallback(async () => {
     setSnapshotLoading(true);
     try {
-      const [creations, everTx] = await Promise.all([
+      const [creations, everTx, assignees] = await Promise.all([
         fetchAllReservationCreations(tables),
         fetchAllTransitionsEver(tables),
+        fetchAllReservationAssignees(tables),
       ]);
       setCreationRows(creations);
       setEverTransitions(everTx);
+      setCurrentAssignees(assignees);
     } catch (e: any) {
       toast.error('스냅샷 이력 로드 실패: ' + e.message);
     } finally {
@@ -179,6 +188,14 @@ export default function ReservationLogPage() {
   }, [tables]);
 
   useEffect(() => { loadSnapshotHistory(); }, [loadSnapshotHistory]);
+
+  // 예약건 id -> 현재 담당자. 담당자 필터가 걸리면 "지금 그 사람 앞으로 배정된 건들"의
+  // 생성/전환 이력만 추려서 스냅샷을 재구성한다 (중간에 배정이 바뀐 이력까진 못 따라감).
+  const idToAssignee = useMemo(() => {
+    const m: Record<string, string | null> = {};
+    currentAssignees.forEach((r) => { m[r.id] = r.assigned_to; });
+    return m;
+  }, [currentAssignees]);
 
   const staffMap = useMemo(() => {
     const m: Record<string, string> = {};
@@ -361,11 +378,15 @@ export default function ReservationLogPage() {
   // "어디로 갔는지" 펼쳐보기용 상세로 함께 저장한다.
   const snapshotSeries = useMemo(() => {
     type Ev = { time: number; from: string | null; to: string };
+    const includeId = (id: string) => !snapshotStaffFilter || idToAssignee[id] === snapshotStaffFilter;
+
     const events: Ev[] = [];
     creationRows.forEach((r) => {
+      if (!includeId(r.id)) return;
       events.push({ time: new Date(r.created_at).getTime(), from: null, to: '신규' });
     });
     everTransitions.forEach((t) => {
+      if (!includeId(t.reservation_id)) return;
       events.push({ time: new Date(t.changed_at).getTime(), from: t.from_status, to: t.to_status });
     });
     events.sort((a, b) => a.time - b.time);
@@ -392,7 +413,7 @@ export default function ReservationLogPage() {
       }
       return { time: bucketTime, tally: { ...tally }, deltas };
     });
-  }, [snapshotDate, creationRows, everTransitions]);
+  }, [snapshotDate, creationRows, everTransitions, snapshotStaffFilter, idToAssignee]);
 
   return (
     <div className="p-6 space-y-4">
@@ -629,6 +650,17 @@ export default function ReservationLogPage() {
         rightSlot={
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-400">영업시간(09:30~20:00) 기준 · 행을 눌러 그 10분간 전환 내역 펼쳐보기</span>
+            <Select value={snapshotStaffFilter || '_all_'} onValueChange={(v) => { setSnapshotStaffFilter(v === '_all_' ? '' : v); setExpandedBucket(null); }}>
+              <SelectTrigger className="w-[110px] text-xs h-8">
+                <SelectValue placeholder="전체" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_all_">전체(팀)</SelectItem>
+                {staff.map((s) => (
+                  <SelectItem key={s.user_id} value={s.user_id}>{s.display_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <input
               type="date"
               value={snapshotDate}
@@ -641,6 +673,12 @@ export default function ReservationLogPage() {
           </div>
         }
       >
+        {snapshotStaffFilter && (
+          <div className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 mb-3">
+            <b className="text-gray-700">{staffMap[snapshotStaffFilter] || snapshotStaffFilter}</b>님에게 <b>현재</b> 배정돼 있는 건들만 필터링해서, 그 건들의 생성·전환 이력을 재구성한 수치예요.
+            중간에 담당자가 바뀐 건은 배정 변경 이력까진 반영 못 해서, 바뀌기 전 기간 수치는 오차가 있을 수 있어요.
+          </div>
+        )}
         <div className="overflow-auto max-h-[520px]">
           <Table className="[&_td]:py-1 [&_th]:py-1.5 min-w-[900px]">
             <TableHeader className="sticky top-0 z-10 bg-gray-50 shadow-[0_1px_0_0_#e5e7eb]">
