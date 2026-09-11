@@ -115,6 +115,7 @@ export default function ReservationsPage() {
   const [channelTab, setChannelTab] = useState('');
   const [campaignFilter, setCampaignFilter] = useState('');
   const [carrierFilter, setCarrierFilter] = useState<'' | 'lgu' | 'mnp'>('');
+  const [capacityFilter, setCapacityFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<ReservationStatus | ''>('');
   const [gradeFilter, setGradeFilter] = useState<ProspectGrade | ''>('');
   const [absentFilter, setAbsentFilter] = useState<AbsentCount | 0>(0); // 부재 회차 필터 (v20260901) — 0=전체
@@ -303,6 +304,7 @@ export default function ReservationsPage() {
           channel: channelTab || undefined,
           campaign: campaignFilter || undefined,
           carrier: carrierFilter || undefined,
+          capacity: capacityFilter || undefined,
           dateStart: dateStart || undefined,
           dateEnd: dateEnd || undefined,
         } as any, tables);
@@ -333,7 +335,7 @@ export default function ReservationsPage() {
   const loadAll = useCallback(async () => {
     try {
       const data = await fetchAllPaged<any>(
-        'id, status, channel, contact_date, prospect_grade, absent_count, phone',
+        'id, status, channel, contact_date, prospect_grade, absent_count, phone, capacity',
         tables,
         (q: any) => q.is('deleted_at', null),
       );
@@ -358,6 +360,7 @@ export default function ReservationsPage() {
         channel: channelTab || undefined,
         campaign: campaignFilter || undefined,
         carrier: carrierFilter || undefined,
+        capacity: capacityFilter || undefined,
         dateStart: dateStart || undefined,
         dateEnd: dateEnd || undefined,
         trashOnly: trashMode,
@@ -369,7 +372,7 @@ export default function ReservationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, gradeFilter, absentFilter, assigneeFilter, search, page, pageSize, channelTab, campaignFilter, carrierFilter, dateStart, dateEnd, tables, trashMode]);
+  }, [statusFilter, gradeFilter, absentFilter, assigneeFilter, search, page, pageSize, channelTab, campaignFilter, carrierFilter, capacityFilter, dateStart, dateEnd, tables, trashMode]);
 
   // 휴지통 건수는 현재 필터와 무관하게 항상 표시 (토글 버튼 뱃지용)
   useEffect(() => {
@@ -395,6 +398,14 @@ export default function ReservationsPage() {
       counts[tab.value] = allRows.filter(r => (r as any).channel === tab.value).length;
     });
     return counts;
+  }, [allRows]);
+
+  // 용량 필터 옵션 — 폴더블/아이폰18 카테고리마다 실제 값이 다를 수 있어 하드코딩하지 않고
+  // 현재 데이터에 존재하는 값만 동적으로 뽑아서 보여준다.
+  const capacityOptions = useMemo(() => {
+    const set = new Set<string>();
+    allRows.forEach((r: any) => { if (r.capacity) set.add(r.capacity); });
+    return Array.from(set).sort();
   }, [allRows]);
 
   // 테이블 인라인 즉시수정: 담당자
@@ -482,7 +493,7 @@ export default function ReservationsPage() {
 
   const handleSearch = () => { setSearch(searchInput); setPage(1); };
   const handleReset = () => {
-    setSearch(''); setSearchInput(''); setStatusFilter(''); setGradeFilter(''); setAbsentFilter(0); setAssigneeFilter(''); setCampaignFilter('');
+    setSearch(''); setSearchInput(''); setStatusFilter(''); setGradeFilter(''); setAbsentFilter(0); setAssigneeFilter(''); setCampaignFilter(''); setCarrierFilter(''); setCapacityFilter('');
     setDateStart(''); setDateEnd(''); setPage(1);
   };
   const handleTabChange = (val: string) => {
@@ -716,6 +727,19 @@ export default function ReservationsPage() {
               <SelectItem value="_all_">전체 통신사</SelectItem>
               <SelectItem value="lgu">LG U+</SelectItem>
               <SelectItem value="mnp">그외(MNP)</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* 용량 필터 */}
+          <Select value={capacityFilter || '_all_'} onValueChange={(v) => { setCapacityFilter(v === '_all_' ? '' : v); setPage(1); }}>
+            <SelectTrigger className="w-[110px] text-sm">
+              <SelectValue placeholder="전체 용량" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_all_">전체 용량</SelectItem>
+              {capacityOptions.map((c) => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
