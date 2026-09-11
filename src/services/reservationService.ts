@@ -352,6 +352,7 @@ export async function fetchNewBacklogCount(tables: ReservationTableNames): Promi
 // 가망으로 회복되는지 등) 감사하려면 출발 상태를 가리지 않고 전부 봐야 한다.
 // ============================================================
 export interface StatusTransition {
+  reservation_id: string;
   from_status: string;
   to_status: ReservationStatus;
   changed_at: string;
@@ -366,7 +367,7 @@ export async function fetchAllTransitionsForRange(dateStart: string, dateEnd: st
     const to = from + LOG_CHUNK - 1;
     const { data, error } = await supabase
       .from(tables.statusLogs as any)
-      .select('from_status, to_status, changed_at, changed_by')
+      .select('reservation_id, from_status, to_status, changed_at, changed_by')
       .gte('changed_at', `${dateStart}T00:00:00`)
       .lte('changed_at', `${dateEnd}T23:59:59`)
       .order('changed_at', { ascending: true })
@@ -396,6 +397,18 @@ export async function fetchAllReservationCreations(tables: ReservationTableNames
   return fetchAllPaged<ReservationCreationRow>('id, created_at', tables, (q: any) => q.is('deleted_at', null));
 }
 
+export interface ReservationAssigneeRow {
+  id: string;
+  assigned_to: string | null;
+}
+
+/** 예약건 id -> 현재 담당자 매핑 (휴지통 제외) — 스냅샷 추이를 담당자별로 필터링할 때,
+ *  "지금 그 담당자 앞으로 배정돼 있는 건들"의 생성/전환 이력만 추려내는 데 사용.
+ *  담당자가 도중에 바뀐 건은 배정이력이 따로 안 남아있어 "현재 배정 기준"이라는 한계가 있음. */
+export async function fetchAllReservationAssignees(tables: ReservationTableNames): Promise<ReservationAssigneeRow[]> {
+  return fetchAllPaged<ReservationAssigneeRow>('id, assigned_to', tables, (q: any) => q.is('deleted_at', null));
+}
+
 /** 카테고리 전체 기간(날짜 필터 없음)의 모든 상태 전환 — 스냅샷은 "누적" 결과라 표시 구간
  *  이전의 오래된 전환까지 전부 반영해야 정확해서, 기간 필터가 있는 위 함수와 별도로 둔다. */
 export async function fetchAllTransitionsEver(tables: ReservationTableNames): Promise<StatusTransition[]> {
@@ -404,7 +417,7 @@ export async function fetchAllTransitionsEver(tables: ReservationTableNames): Pr
     const to = from + LOG_CHUNK - 1;
     const { data, error } = await supabase
       .from(tables.statusLogs as any)
-      .select('from_status, to_status, changed_at, changed_by')
+      .select('reservation_id, from_status, to_status, changed_at, changed_by')
       .order('changed_at', { ascending: true })
       .range(from, to);
     if (error) throw error;
