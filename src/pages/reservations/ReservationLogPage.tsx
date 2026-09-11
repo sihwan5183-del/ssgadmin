@@ -36,8 +36,8 @@
 //       확인된 게 아니라서 두 버전 모두 분모에 포함 — V2_EXCLUDED_STATUSES에 추가하면 바로 뺄 수 있음)
 //   + 표 맨 위에 "전체(팀 합계)" 행 추가.
 // ============================================================
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { RotateCw } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo, Fragment } from 'react';
+import { RotateCw, ChevronRight, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -49,10 +49,12 @@ import { RESERVATION_STATUS_LIST } from '@/types/reservation';
 import {
   fetchIntakeRowsForRange,
   fetchNewOriginTransitionsForRange,
+  fetchAllTransitionsForRange,
   fetchAllAssigneeRows,
   fetchNewBacklogCount,
   type IntakeLogRow,
   type NewOriginTransition,
+  type StatusTransition,
 } from '@/services/reservationService';
 import { useReservationCategory } from '@/hooks/useReservationCategory';
 import { ReservationCategoryToggle } from './ReservationCategoryToggle';
@@ -129,6 +131,8 @@ export default function ReservationLogPage() {
   const [loading, setLoading] = useState(false);
   const [intakeRows, setIntakeRows] = useState<IntakeLogRow[]>([]);
   const [transitionRows, setTransitionRows] = useState<NewOriginTransition[]>([]);
+  const [allTransitionRows, setAllTransitionRows] = useState<StatusTransition[]>([]);
+  const [expandedStaff, setExpandedStaff] = useState<Set<string>>(new Set());
   const [assigneeAllCounts, setAssigneeAllCounts] = useState<Record<string, number>>({});
   const [newBacklog, setNewBacklog] = useState(0);
 
@@ -145,14 +149,16 @@ export default function ReservationLogPage() {
     }
     setLoading(true);
     try {
-      const [intake, transitions, allAssignees, backlog] = await Promise.all([
+      const [intake, transitions, allTransitions, allAssignees, backlog] = await Promise.all([
         fetchIntakeRowsForRange(dateStart, dateEnd, tables),
         fetchNewOriginTransitionsForRange(dateStart, dateEnd, tables),
+        fetchAllTransitionsForRange(dateStart, dateEnd, tables),
         fetchAllAssigneeRows(tables),
         fetchNewBacklogCount(tables),
       ]);
       setIntakeRows(intake);
       setTransitionRows(transitions);
+      setAllTransitionRows(allTransitions);
       setNewBacklog(backlog);
       const counts: Record<string, number> = {};
       allAssignees.forEach((r) => {
@@ -273,6 +279,34 @@ export default function ReservationLogPage() {
     () => Object.values(assigneeAllCounts).reduce((a, b) => a + b, 0),
     [assigneeAllCounts],
   );
+
+  // ── 담당자별 전체 상태 전환 상세 (출발 상태 무관 — 가망→부재, 재케어→가망 등 전부 포함) ──
+  const staffTransitionDetail = useMemo(() => {
+    const byStaff: Record<string, { pairs: Record<string, number>; total: number }> = {};
+    allTransitionRows.forEach((r) => {
+      const key = r.changed_by ?? '__unknown__';
+      if (!byStaff[key]) byStaff[key] = { pairs: {}, total: 0 };
+      const pairKey = `${r.from_status}→${r.to_status}`;
+      byStaff[key].pairs[pairKey] = (byStaff[key].pairs[pairKey] ?? 0) + 1;
+      byStaff[key].total += 1;
+    });
+    return Object.entries(byStaff)
+      .map(([key, v]) => ({
+        key,
+        name: key === '__unknown__' ? '알 수 없음' : (staffMap[key] || '알 수 없음'),
+        total: v.total,
+        pairs: Object.entries(v.pairs).sort((a, b) => b[1] - a[1]) as [string, number][],
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [allTransitionRows, staffMap]);
+
+  const toggleExpand = (key: string) => {
+    setExpandedStaff((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
 
   return (
     <div className="p-6 space-y-4">
@@ -434,6 +468,69 @@ export default function ReservationLogPage() {
                     <TableCell className="text-center text-xs text-gray-600">{a.total}</TableCell>
                   </TableRow>
                 ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </SectionCard>
+
+      {/* 담당자별 전체 상태 전환 상세 — 신규 기준이 아닌 모든 전환(가망→부재, 재케어→가망 등) */}
+      <SectionCard
+        title="담당자별 전체 상태 전환 상세"
+        rightSlot={<span className="text-xs text-gray-400">신규 처리뿐 아니라 이후 단계 전환까지 전부 포함 · 행을 눌러 펼쳐보기</span>}
+      >
+        <div className="overflow-auto">
+          <Table className="[&_td]:py-1.5 [&_th]:py-1.5 min-w-[600px]">
+            <TableHeader className="bg-gray-50">
+              <TableRow className="bg-gray-50">
+                <TableHead className="text-xs w-[28px]"></TableHead>
+                <TableHead className="text-xs">담당자</TableHead>
+                <TableHead className="text-xs text-center w-[100px] bg-indigo-50">전체 전환건수</TableHead>
+                <TableHead className="text-xs">전환 유형 미리보기</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {staffTransitionDetail.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-10 text-sm text-gray-400">이 기간엔 상태 전환 이력이 없습니다</TableCell>
+                </TableRow>
+              ) : (
+                staffTransitionDetail.map((s) => {
+                  const expanded = expandedStaff.has(s.key);
+                  const preview = s.pairs.slice(0, 4).map(([p, c]) => `${p} ${c}`).join(' · ');
+                  const restCount = s.pairs.length - 4;
+                  return (
+                    <Fragment key={s.key}>
+                      <TableRow
+                        className="cursor-pointer hover:bg-gray-50"
+                        onClick={() => toggleExpand(s.key)}
+                      >
+                        <TableCell className="text-gray-400">
+                          {expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+                        </TableCell>
+                        <TableCell className="text-sm font-medium">{s.name}</TableCell>
+                        <TableCell className="text-center text-sm font-bold text-indigo-600 bg-indigo-50/40">{s.total}</TableCell>
+                        <TableCell className="text-xs text-gray-500">
+                          {preview}{restCount > 0 && ` 외 ${restCount}종`}
+                        </TableCell>
+                      </TableRow>
+                      {expanded && (
+                        <TableRow className="bg-gray-50/60 hover:bg-gray-50/60">
+                          <TableCell colSpan={4} className="py-3">
+                            <div className="flex flex-wrap gap-2 pl-6">
+                              {s.pairs.map(([p, c]) => (
+                                <span key={p} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-gray-200 text-xs">
+                                  <span className="text-gray-600">{p}</span>
+                                  <span className="font-bold text-indigo-600">{c}</span>
+                                </span>
+                              ))}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </Fragment>
+                  );
+                })
               )}
             </TableBody>
           </Table>
