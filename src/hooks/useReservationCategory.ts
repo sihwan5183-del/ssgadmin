@@ -17,7 +17,7 @@
 // → 같은 탭 안의 모든 훅 인스턴스에게도 커스텀 이벤트로 즉시 알려서 동기화한다.
 import { useState, useEffect, useCallback } from 'react';
 
-export type ReservationCategory = 'foldable' | 'iphone18';
+export type ReservationCategory = 'foldable' | 'iphone18' | 'iphoneUltra';
 
 export interface ReservationTableNames {
   reservations: string;
@@ -28,6 +28,10 @@ export interface ReservationTableNames {
 
 const STORAGE_KEY = 'ssg_reservation_category';
 const CATEGORY_CHANGE_EVENT = 'ssg-reservation-category-change';
+const VALID_CATEGORIES: ReservationCategory[] = ['foldable', 'iphone18', 'iphoneUltra'];
+function isValidCategory(v: unknown): v is ReservationCategory {
+  return VALID_CATEGORIES.includes(v as ReservationCategory);
+}
 
 export const RESERVATION_CATEGORY_TABLES: Record<ReservationCategory, ReservationTableNames> = {
   foldable: {
@@ -42,13 +46,20 @@ export const RESERVATION_CATEGORY_TABLES: Record<ReservationCategory, Reservatio
     memoLogs: 'reservation_memo_logs_iphone',
     label: '아이폰18',
   },
+  // v20260911: 아이폰18 예약 중 device_interest에 "울트라"가 포함된 건들을 전용 테이블로 분리 이관.
+  iphoneUltra: {
+    reservations: 'reservations_iphone_ultra',
+    statusLogs: 'reservation_status_logs_iphone_ultra',
+    memoLogs: 'reservation_memo_logs_iphone_ultra',
+    label: '아이폰 울트라',
+  },
 };
 
-// 기본값은 아이폰18. 사용자가 명시적으로 '폴더블'을 선택해 저장해둔 경우에만 폴더블로 시작한다.
+// 기본값은 아이폰18. 사용자가 명시적으로 '폴더블'이나 '아이폰 울트라'를 선택해 저장해둔 경우에만 그걸로 시작한다.
 function readStoredCategory(): ReservationCategory {
   if (typeof window === 'undefined') return 'iphone18';
   const saved = window.localStorage.getItem(STORAGE_KEY);
-  return saved === 'foldable' ? 'foldable' : 'iphone18';
+  return isValidCategory(saved) ? saved : 'iphone18';
 }
 
 export function useReservationCategory() {
@@ -57,14 +68,14 @@ export function useReservationCategory() {
   useEffect(() => {
     // 다른 탭/창에서 카테고리를 바꾼 경우 동기화
     const onStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY && (e.newValue === 'foldable' || e.newValue === 'iphone18')) {
+      if (e.key === STORAGE_KEY && isValidCategory(e.newValue)) {
         setCategoryState(e.newValue);
       }
     };
     // 같은 탭 안의 다른 컴포넌트(토글 버튼 등)에서 바꾼 경우 동기화 — 핵심 수정 사항
     const onLocalChange = (e: Event) => {
       const next = (e as CustomEvent<ReservationCategory>).detail;
-      if (next === 'foldable' || next === 'iphone18') setCategoryState(next);
+      if (isValidCategory(next)) setCategoryState(next);
     };
     window.addEventListener('storage', onStorage);
     window.addEventListener(CATEGORY_CHANGE_EVENT, onLocalChange as EventListener);
