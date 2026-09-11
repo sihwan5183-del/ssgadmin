@@ -378,3 +378,39 @@ export async function fetchAllTransitionsForRange(dateStart: string, dateEnd: st
   }
   return all;
 }
+
+// ============================================================
+// v20260911-2: 상태별 "스냅샷 추이"(예: 9:00 가망 200건 → 9:10 가망 198건) 재구성용.
+// 특정 시각의 "그 상태에 몇 건이 있었는지"는 이벤트 카운트만으론 안 되고, 그 시점까지의
+// 모든 생성/전환 이력을 순서대로 누적 재생해야 한다. 그래서 기간 필터 없이 전체 이력을
+// 가져오는 전용 함수 두 개를 둔다 (화면에서 표시 구간 이전 이력까지 반영해서 정확한
+// 시작 스냅샷을 계산함). 모든 건은 생성 시각에 '신규'로 시작한다는 게 전제.
+// ============================================================
+export interface ReservationCreationRow {
+  id: string;
+  created_at: string;
+}
+
+/** 카테고리 전체 예약건의 생성시각 (휴지통 제외) — 스냅샷 재구성의 시작점("생성 = 신규 진입")용 */
+export async function fetchAllReservationCreations(tables: ReservationTableNames): Promise<ReservationCreationRow[]> {
+  return fetchAllPaged<ReservationCreationRow>('id, created_at', tables, (q: any) => q.is('deleted_at', null));
+}
+
+/** 카테고리 전체 기간(날짜 필터 없음)의 모든 상태 전환 — 스냅샷은 "누적" 결과라 표시 구간
+ *  이전의 오래된 전환까지 전부 반영해야 정확해서, 기간 필터가 있는 위 함수와 별도로 둔다. */
+export async function fetchAllTransitionsEver(tables: ReservationTableNames): Promise<StatusTransition[]> {
+  const all: StatusTransition[] = [];
+  for (let from = 0; ; from += LOG_CHUNK) {
+    const to = from + LOG_CHUNK - 1;
+    const { data, error } = await supabase
+      .from(tables.statusLogs as any)
+      .select('from_status, to_status, changed_at, changed_by')
+      .order('changed_at', { ascending: true })
+      .range(from, to);
+    if (error) throw error;
+    const page = (data ?? []) as StatusTransition[];
+    all.push(...page);
+    if (page.length < LOG_CHUNK) break;
+  }
+  return all;
+}
