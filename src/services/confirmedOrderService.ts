@@ -32,8 +32,14 @@ const DEVICE_CANON_IPHONE = [
   '아이폰 울트라',
 ] as const;
 
+// v20260911: 아이폰 울트라가 iphone18에서 전용 테이블로 분리됐지만, 기기/용량/컬러
+// 정규화 기준은 iphone18과 동일한 "아이폰 계열" 규칙을 그대로 써야 함(폴더블 규칙 아님).
+function isIphoneFamily(category: ReservationCategory): boolean {
+  return category === 'iphone18' || category === 'iphoneUltra';
+}
+
 export function getDeviceCanon(category: ReservationCategory): readonly string[] {
-  return category === 'iphone18' ? DEVICE_CANON_IPHONE : DEVICE_CANON_FOLDABLE;
+  return isIphoneFamily(category) ? DEVICE_CANON_IPHONE : DEVICE_CANON_FOLDABLE;
 }
 
 // 하위호환용 — 폴더블 기본값 (category를 안 넘기는 기존 호출부용)
@@ -43,7 +49,7 @@ const CAPACITY_CANON_FOLDABLE = ['256GB', '512GB', '1TB'] as const;
 const CAPACITY_CANON_IPHONE = ['256GB', '512GB', '1TB'] as const; // 실제 접수 데이터 기준(256/512GB 확인됨), 1TB는 잠정
 
 export function getCapacityCanon(category: ReservationCategory): readonly string[] {
-  return category === 'iphone18' ? CAPACITY_CANON_IPHONE : CAPACITY_CANON_FOLDABLE;
+  return isIphoneFamily(category) ? CAPACITY_CANON_IPHONE : CAPACITY_CANON_FOLDABLE;
 }
 export const CAPACITY_CANON = CAPACITY_CANON_FOLDABLE;
 
@@ -51,7 +57,7 @@ export const CAPACITY_CANON = CAPACITY_CANON_FOLDABLE;
 const DEVICE_COLOR_MAP_IPHONE: Record<string, string[]> = {};
 
 export function getDeviceColorMap(category: ReservationCategory): Record<string, string[]> {
-  return category === 'iphone18' ? DEVICE_COLOR_MAP_IPHONE : DEVICE_COLOR_MAP;
+  return isIphoneFamily(category) ? DEVICE_COLOR_MAP_IPHONE : DEVICE_COLOR_MAP;
 }
 
 export function getColorCanon(category: ReservationCategory): string[] {
@@ -68,7 +74,7 @@ export const COLOR_CANON = Array.from(
 export function normalizeDevice(raw: string | null | undefined, category: ReservationCategory = 'foldable'): string {
   if (!raw) return UNSET;
   const d = raw.replace(/\s+/g, '');
-  if (category === 'iphone18') {
+  if (isIphoneFamily(category)) {
     // 프로맥스가 '프로'를 포함하므로 먼저 체크. '+' 등 접미사는 프로맥스로 흡수.
     if (d.includes('프로맥스')) return '아이폰 18 프로맥스';
     if (d.includes('울트라')) return '아이폰 울트라';
