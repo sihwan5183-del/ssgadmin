@@ -343,3 +343,38 @@ export async function fetchNewBacklogCount(tables: ReservationTableNames): Promi
   if (error) throw error;
   return count ?? 0;
 }
+
+// ============================================================
+// v20260911: 담당자별 "전체" 상태 전환 감사 — 위 fetchNewOriginTransitionsForRange는
+// from_status='신규'인 것만 잡아서 "신규 처리 페이스"용으로 쓰지만, 실제로는 가망→부재,
+// 재케어→가망, 가망→실패처럼 신규 이후 단계에서도 계속 상태가 바뀐다. 담당자가 이런
+// 후속 전환들을 어떻게 진행하고 있는지(가망을 부재로 자주 놓치는지, 재케어가 잘
+// 가망으로 회복되는지 등) 감사하려면 출발 상태를 가리지 않고 전부 봐야 한다.
+// ============================================================
+export interface StatusTransition {
+  from_status: string;
+  to_status: ReservationStatus;
+  changed_at: string;
+  changed_by: string | null;
+}
+
+/** 그 기간에 발생한 모든 상태 전환(출발 상태 무관) — 담당자별 전체 전환 패턴 감사용.
+ *  fetchNewOriginTransitionsForRange와 같은 로그 테이블을 쓰되 from_status 필터만 뺀 버전. */
+export async function fetchAllTransitionsForRange(dateStart: string, dateEnd: string, tables: ReservationTableNames): Promise<StatusTransition[]> {
+  const all: StatusTransition[] = [];
+  for (let from = 0; ; from += LOG_CHUNK) {
+    const to = from + LOG_CHUNK - 1;
+    const { data, error } = await supabase
+      .from(tables.statusLogs as any)
+      .select('from_status, to_status, changed_at, changed_by')
+      .gte('changed_at', `${dateStart}T00:00:00`)
+      .lte('changed_at', `${dateEnd}T23:59:59`)
+      .order('changed_at', { ascending: true })
+      .range(from, to);
+    if (error) throw error;
+    const page = (data ?? []) as StatusTransition[];
+    all.push(...page);
+    if (page.length < LOG_CHUNK) break;
+  }
+  return all;
+}
