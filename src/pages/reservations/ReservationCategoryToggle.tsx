@@ -3,6 +3,7 @@ import { useReservationCategory, type ReservationCategory } from '@/hooks/useRes
 const OPTIONS: { value: ReservationCategory; label: string }[] = [
   { value: 'foldable', label: '폴더블' },
   { value: 'iphone18', label: '아이폰18' },
+  { value: 'iphoneUltra', label: '아이폰 울트라' },
 ];
 
 /**
