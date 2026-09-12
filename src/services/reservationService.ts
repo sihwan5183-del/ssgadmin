@@ -40,6 +40,8 @@ export interface FetchReservationsParams {
   carrier?: 'lgu' | 'mnp';
   device_interest?: string;
   capacity?: string;
+  /** 색상 필터. '__undecided__'면 미입력/빈값/'미정' 전부 매칭 */
+  color?: string;
   dateStart?: string;
   dateEnd?: string;
   page?: number;
@@ -51,7 +53,7 @@ export async function fetchReservations(
   params: FetchReservationsParams = {},
   tables: ReservationTableNames,
 ): Promise<{ data: Reservation[]; count: number }> {
-  const { status, prospect_grade, absent_count, assigned_to, search, channel, campaign, carrier, device_interest, capacity, dateStart, dateEnd, page = 1, pageSize = 50, trashOnly = false } = params;
+  const { status, prospect_grade, absent_count, assigned_to, search, channel, campaign, carrier, device_interest, capacity, color, dateStart, dateEnd, page = 1, pageSize = 50, trashOnly = false } = params;
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
@@ -78,6 +80,8 @@ export async function fetchReservations(
   else if (carrier === 'mnp') query = query.neq('carrier', 'LG U+');
   if (device_interest) query = query.eq('device_interest', device_interest);
   if (capacity) query = query.eq('capacity', capacity);
+  if (color === '__undecided__') query = query.or('product_color.is.null,product_color.eq.,product_color.eq.미정');
+  else if (color) query = query.eq('product_color', color);
   if (dateStart) query = query.gte('contact_date', dateStart);
   if (dateEnd) query = query.lte('contact_date', dateEnd + 'T23:59:59');
   if (search) {
