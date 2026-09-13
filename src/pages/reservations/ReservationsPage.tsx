@@ -32,6 +32,7 @@ import { ReservationAddModal } from './ReservationAddModal';
 import { ReservationDetailModal } from './ReservationDetailModal';
 import { formatPhone } from '@/lib/phoneFormat';
 import { supabase } from '@/integrations/supabase/client';
+import { saveStatusLog } from '@/services/responseTimeService';
 
 const PAGE_SIZE = 50;
 
@@ -451,6 +452,17 @@ export default function ReservationsPage() {
       .update(payload)
       .eq('id', id);
     if (error) { toast.error('상태 변경 실패: ' + error.message); return; }
+    // v20260913: 인라인 변경도 상세모달과 동일하게 전환 로그를 남긴다.
+    // (이게 빠져 있어서 실시간 로그/스냅샷 추이가 대시보드와 어긋났음)
+    if (cur && cur.status !== status) {
+      try {
+        await saveStatusLog({
+          reservationId: id, fromStatus: cur.status, toStatus: status,
+          changedBy: user?.id ?? null, contactDate: (cur as any).contact_date ?? null,
+          statusLogsTable: tables.statusLogs,
+        });
+      } catch (e) { console.warn('상태 로그 저장 실패:', e); }
+    }
     setRows((p) => p.map((r) => (r.id === id ? { ...r, ...payload } as any : r)));
     toast.success('상태가 변경되었습니다');
   }

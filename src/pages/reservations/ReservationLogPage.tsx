@@ -380,14 +380,32 @@ export default function ReservationLogPage() {
     type Ev = { time: number; from: string | null; to: string };
     const includeId = (id: string) => !snapshotStaffFilter || idToAssignee[id] === snapshotStaffFilter;
 
+    // v20260913 정합성 보정 두 가지:
+    //  (1) 휴지통(삭제)된 건의 전환 로그는 제외 — 생성은 안 세면서 전환만 세면 집계가 어긋남.
+    //  (2) 로그 없이 status만 바뀐 건(인라인 변경 등)은 updated_at 시점에 "마지막 로그 상태 → 현재 상태"
+    //      전환이 있었던 것으로 간주해 마지막 행이 항상 대시보드의 실제 건수와 일치하도록 한다.
+    const liveIds = new Set(creationRows.map((r) => r.id));
+    const lastLog: Record<string, { to: string; time: number }> = {};
     const events: Ev[] = [];
     creationRows.forEach((r) => {
       if (!includeId(r.id)) return;
       events.push({ time: new Date(r.created_at).getTime(), from: null, to: '신규' });
     });
     everTransitions.forEach((t) => {
-      if (!includeId(t.reservation_id)) return;
-      events.push({ time: new Date(t.changed_at).getTime(), from: t.from_status, to: t.to_status });
+      if (!liveIds.has(t.reservation_id) || !includeId(t.reservation_id)) return;
+      const time = new Date(t.changed_at).getTime();
+      events.push({ time, from: t.from_status, to: t.to_status });
+      const prev = lastLog[t.reservation_id];
+      if (!prev || time >= prev.time) lastLog[t.reservation_id] = { to: t.to_status, time };
+    });
+    creationRows.forEach((r) => {
+      if (!includeId(r.id)) return;
+      const last = lastLog[r.id];
+      const logStatus = last ? last.to : '신규';
+      if (r.status !== logStatus) {
+        const time = Math.max(new Date(r.updated_at).getTime(), (last ? last.time : new Date(r.created_at).getTime()) + 1);
+        events.push({ time, from: logStatus, to: r.status });
+      }
     });
     events.sort((a, b) => a.time - b.time);
 

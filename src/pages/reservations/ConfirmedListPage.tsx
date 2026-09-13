@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { saveStatusLog } from '@/services/responseTimeService';
 import { useRole } from '@/hooks/useRole';
 import { useDashboardStaff } from '@/hooks/useDashboardStaff';
 import { maskName, maskPhone } from '@/lib/maskPii';
@@ -579,7 +580,10 @@ export default function ConfirmedListPage() {
                                 .from(tables.reservations as any)
                                 .update({ status: '확정', courier_sent: false, courier_sent_at: null })
                                 .eq('id', r.id);
-                              if (!error) { toast.success('확정으로 되돌렸습니다'); await load(); }
+                              if (!error) {
+                                try { await saveStatusLog({ reservationId: r.id, fromStatus: '택배발송', toStatus: '확정', changedBy: user?.id ?? null, contactDate: (r as any).contact_date ?? null, statusLogsTable: tables.statusLogs }); } catch {}
+                                toast.success('확정으로 되돌렸습니다'); await load();
+                              }
                               else toast.error('처리 실패');
                             }}
                             title="다시 누르면 확정으로 되돌립니다"

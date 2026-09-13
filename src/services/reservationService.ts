@@ -394,11 +394,13 @@ export async function fetchAllTransitionsForRange(dateStart: string, dateEnd: st
 export interface ReservationCreationRow {
   id: string;
   created_at: string;
+  status: string;
+  updated_at: string;
 }
 
 /** 카테고리 전체 예약건의 생성시각 (휴지통 제외) — 스냅샷 재구성의 시작점("생성 = 신규 진입")용 */
 export async function fetchAllReservationCreations(tables: ReservationTableNames): Promise<ReservationCreationRow[]> {
-  return fetchAllPaged<ReservationCreationRow>('id, created_at', tables, (q: any) => q.is('deleted_at', null));
+  return fetchAllPaged<ReservationCreationRow>('id, created_at, status, updated_at', tables, (q: any) => q.is('deleted_at', null));
 }
 
 export interface ReservationAssigneeRow {
